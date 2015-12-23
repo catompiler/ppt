@@ -717,15 +717,15 @@ static void init_tim1(void)
     TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
 
     TIM_OCInitTypeDef tim1_is;
-        tim1_is.TIM_OCMode = 0;
-        tim1_is.TIM_OutputState = 0;
-        tim1_is.TIM_OutputNState = 0;
-        tim1_is.TIM_Pulse = 0;
-        tim1_is.TIM_OCPolarity = 0;
-        tim1_is.TIM_OCNPolarity = 0;
-        tim1_is.TIM_OCIdleState = 0;
-        tim1_is.TIM_OCNIdleState = 0;
-    TIM_OCInit(TIM1, &tim1_is);
+        tim1_is.TIM_OCMode = TIM_OCMode_Active;
+        tim1_is.TIM_OutputState = TIM_OutputState_Disable;
+        tim1_is.TIM_OutputNState = TIM_OutputNState_Disable;
+        tim1_is.TIM_Pulse = 1;
+        tim1_is.TIM_OCPolarity = TIM_OCPolarity_High;
+        tim1_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+        tim1_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+        tim1_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
+    TIM_OC3Init(TIM1, &tim1_is);
     TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
     //NVIC_SetPriority(TIM1_IRQn, 1);
     //NVIC_EnableIRQ (TIM1_IRQn); 		// Разрешаем прерывания по Таймеру2
@@ -1190,6 +1190,7 @@ int main(void)
             gui_number_label_set_number(&label_num12, adc_raw_buffer[2]);
             gui_number_label_set_number(&label_num13, adc_raw_buffer[4]);
             gui_number_label_set_number(&label_num14, adc_raw_buffer[6]);
+            
             gui_number_label_set_number(&label_num21, adc_raw_buffer[1]);
             gui_number_label_set_number(&label_num22, adc_raw_buffer[3]);
             gui_number_label_set_number(&label_num23, adc_raw_buffer[5]);
