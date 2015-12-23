@@ -904,12 +904,14 @@ static void init_gpio (void)
 #define THEME_COLOR_BORDER MAKE_RGB(0xb1, 0xb1, 0xb1)
 #define THEME_COLOR_FONT MAKE_RGB(0x00, 0x00, 0x00)
 #define THEME_COLOR_FOCUS MAKE_RGB(0x00, 0x78, 0xd7)
+#define THEME_COLOR_PRESSED MAKE_RGB(0xcd, 0xe3, 0xf8)
 
 static gui_theme_t theme = MAKE_GUI_THEME(
                     THEME_COLOR_BACK, THEME_COLOR_FRONT,
                     THEME_COLOR_PANEL, THEME_COLOR_WIDGET,
                     THEME_COLOR_BORDER, THEME_COLOR_FONT,
-                    THEME_COLOR_FOCUS, &font5x8, &font10x16);
+                    THEME_COLOR_FOCUS, THEME_COLOR_PRESSED,
+                    &font5x8, &font10x16);
 static gui_t gui = MAKE_GUI(&graphics, &theme);
 // GUI.
 static gui_widget_t root_widget;
