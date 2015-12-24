@@ -119,6 +119,8 @@ uint16_t time_A, time_B, time_C;
 #define ADC_RAW_BUFFER_LN 8
 //! Буфер ADC.
 static volatile uint16_t adc_raw_buffer[ADC_RAW_BUFFER_LN] = {0};
+
+static volatile int timer_cc_count = 0;
     
 //static DriveState_t DriveState;
 /******************************************************************************/
@@ -393,6 +395,8 @@ static void init_periph_clock(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
     // I2C1.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+    // TIM1.
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);	// Включаем тактирование General-purpose TIM2
     // TIM2.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);	// Включаем тактирование General-purpose TIM2
     // TIM3.
@@ -527,15 +531,15 @@ static void init_adc(void)
         {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_2, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
     GPIO_InitTypeDef gpio_adcB =
         {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
-    GPIO_InitTypeDef gpio_adcC =
-        {.GPIO_Pin = GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
+    /*GPIO_InitTypeDef gpio_adcC =
+        {.GPIO_Pin = GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};*/
     GPIO_Init(GPIOB, &gpio_adcA);
     GPIO_Init(GPIOB, &gpio_adcB);
-    GPIO_Init(GPIOC, &gpio_adcC);
-
+    //GPIO_Init(GPIOC, &gpio_adcC);
     
+    dma_channel_lock(DMA1_Channel1);
     
-     dma_channel_lock(DMA1_Channel1);
+    DMA_DeInit(DMA1_Channel1);
 
     DMA_InitTypeDef dma_is;     //Variable used to setup the DMA               
     DMA_StructInit(&dma_is);
@@ -553,12 +557,15 @@ static void init_adc(void)
        //DMA_ITConfig(DMA1_Channel1, DMA1_IT_TC1, ENABLE);
     DMA_Init(DMA1_Channel1, &dma_is); //Initialise the DMA
         
+    ADC_DeInit(ADC1);
+    ADC_DeInit(ADC2);
+    
     ADC_InitTypeDef adc1_is;
     ADC_StructInit(&adc1_is);
         //Настройка параметров  ADC1
-        adc1_is.ADC_Mode = ADC_Mode_RegSimult;
+        adc1_is.ADC_Mode = ADC_Mode_RegSimult;//ADC_Mode_Independent
         adc1_is.ADC_ScanConvMode = ENABLE;
-        adc1_is.ADC_ContinuousConvMode = ENABLE;
+        adc1_is.ADC_ContinuousConvMode = DISABLE; //ENABLE;//
         adc1_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
         adc1_is.ADC_DataAlign = ADC_DataAlign_Right;
         adc1_is.ADC_NbrOfChannel = ADC_RAW_BUFFER_LEN; //We using 3 channels
@@ -569,7 +576,7 @@ static void init_adc(void)
         //Настройка параметров  ADC1
         adc2_is.ADC_Mode = ADC_Mode_RegSimult;
         adc2_is.ADC_ScanConvMode = ENABLE;
-        adc2_is.ADC_ContinuousConvMode = ENABLE;
+        adc2_is.ADC_ContinuousConvMode = DISABLE; //ENABLE;//
         adc2_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
         adc2_is.ADC_DataAlign = ADC_DataAlign_Right;
         adc2_is.ADC_NbrOfChannel = ADC_RAW_BUFFER_LEN; //We using 3 channels
@@ -586,11 +593,20 @@ static void init_adc(void)
     ADC_RegularChannelConfig(ADC2, ADC_Channel_13, 2, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_0, 3, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 4, ADC_SampleTime_55Cycles5);
+
+    //ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
     
     ADC_DMACmd(ADC1, ENABLE); //Enable ADC1 DMA
     DMA_Cmd(DMA1_Channel1, ENABLE);
-
-    //ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
+    
+    ADC_DiscModeChannelCountConfig(ADC1, ADC_RAW_BUFFER_LEN);
+    ADC_DiscModeCmd(ADC1, ENABLE);
+    
+    ADC_DiscModeChannelCountConfig(ADC2, ADC_RAW_BUFFER_LEN);
+    ADC_DiscModeCmd(ADC2, ENABLE);
+    
+    ADC_ExternalTrigConvCmd(ADC1, ENABLE);
+    ADC_ExternalTrigConvCmd(ADC2, ENABLE);
 
     ADC_Cmd(ADC1, ENABLE); //Enable ADC1 
     ADC_Cmd(ADC2, ENABLE); //Enable ADC1 
@@ -609,8 +625,8 @@ static void init_adc(void)
     //NVIC_SetPriority(ADC1_2_IRQn, 1);
     //NVIC_EnableIRQ(ADC1_2_IRQn);
 
-    ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-    ADC_SoftwareStartConvCmd(ADC2, ENABLE);
+    //ADC_SoftwareStartConvCmd(ADC1, ENABLE);
+    //ADC_SoftwareStartConvCmd(ADC2, ENABLE);
 }
 
 static void init_ioport(void)
@@ -703,32 +719,49 @@ static void init_tft(void)
     tft9341_sleep_out(&tft);
     tft9341_display_on(&tft);
 }
+
+void TIM1_CC_IRQHandler(void)
+{
+    if(TIM_GetITStatus(TIM1, TIM_IT_CC3)){
+        TIM_ClearITPendingBit(TIM1, TIM_IT_CC3);
+        
+        timer_cc_count ++;
+    }
+}
+
 /******************************************************************************/
 static void init_tim1(void)
 {
-    TIM_TimeBaseInitTypeDef TIM1_InitStructure;
-            TIM1_InitStructure.TIM_Prescaler = 7200-1;					// Делитель (0000...FFFF)
-            TIM1_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;	// Режим счетчика
-            TIM1_InitStructure.TIM_Period = 10000;						// Значение периода (0000...FFFF)
-            TIM1_InitStructure.TIM_ClockDivision = 0;					// определяет тактовое деление
-    TIM_TimeBaseInit(TIM1, &TIM1_InitStructure);
-    //TIM_SelectOnePulseMode(TIM1, TIM_OPMode_Single);				// Однопульсный режим таймера
-    TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);						// Разрешаем прерывание от таймера
-    TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
+    TIM_DeInit(TIM1);
+    
+    TIM_TimeBaseInitTypeDef tim1_is;
+    TIM_TimeBaseStructInit(&tim1_is);
+            tim1_is.TIM_Prescaler = 1125-1;					// Делитель (0000...FFFF)
+            tim1_is.TIM_CounterMode = TIM_CounterMode_Up;	// Режим счетчика
+            tim1_is.TIM_Period = 9;						// Значение периода (0000...FFFF)
+            tim1_is.TIM_ClockDivision = 0;					// определяет тактовое деление
+    TIM_TimeBaseInit(TIM1, &tim1_is);
 
-    TIM_OCInitTypeDef tim1_is;
-        tim1_is.TIM_OCMode = TIM_OCMode_Active;
-        tim1_is.TIM_OutputState = TIM_OutputState_Disable;
-        tim1_is.TIM_OutputNState = TIM_OutputNState_Disable;
-        tim1_is.TIM_Pulse = 1;
-        tim1_is.TIM_OCPolarity = TIM_OCPolarity_High;
-        tim1_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
-        tim1_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
-        tim1_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
-    TIM_OC3Init(TIM1, &tim1_is);
+    TIM_OCInitTypeDef tim1_oc_is;
+    TIM_OCStructInit(&tim1_oc_is);
+        tim1_oc_is.TIM_OCMode = TIM_OCMode_PWM1;
+        tim1_oc_is.TIM_OutputState = TIM_OutputState_Disable;
+        tim1_oc_is.TIM_OutputNState = TIM_OutputNState_Disable;
+        tim1_oc_is.TIM_Pulse = tim1_is.TIM_Period / 2;
+        tim1_oc_is.TIM_OCPolarity = TIM_OCPolarity_Low;
+        tim1_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+        tim1_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+        tim1_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
+    TIM_OC3Init(TIM1, &tim1_oc_is);
     TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
-    //NVIC_SetPriority(TIM1_IRQn, 1);
-    //NVIC_EnableIRQ (TIM1_IRQn); 		// Разрешаем прерывания по Таймеру2
+    
+    TIM_ITConfig(TIM1, TIM_IT_CC3, ENABLE);
+    
+    TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    
+    NVIC_SetPriority(TIM1_CC_IRQn, 6);
+    NVIC_EnableIRQ (TIM1_CC_IRQn); 		// Разрешаем прерывания по Таймеру2
 }
 
 static void init_tim2(void)
@@ -1124,8 +1157,9 @@ static void make_gui(void)
 
 static void gui_iter(void)
 {
+    gui_number_label_set_number(&label_num, timer_cc_count);
     int secs = counter / 1000;
-    gui_number_label_set_number(&label_num, secs);
+    //gui_number_label_set_number(&label_num, secs);
     gui_checkbox_set_checked(&checkbox1, secs & 0x1);
     gui_checkbox_set_checked(&checkbox2, !gui_checkbox_checked(&checkbox1));
 }
@@ -1154,13 +1188,13 @@ int main(void)
     init_periph_clock();
     remap_config();
     init_usart();
+    init_adc();    
     init_tim1();
     init_tim2();
     init_tim3();
     init_tim6();
     init_exti();
     init_gpio();
-    init_adc();    
     printf("STM32 MCU\r\n");
     
     init_i2c();
@@ -1177,7 +1211,6 @@ int main(void)
         if(system_counter_diff(&counter) >= system_counter_ticks_per_sec()){
         //if(need_update){
             //need_update = false;
-            counter = system_counter_ticks();
             
             printf("%d\r\n", ((int)counter));
             
@@ -1185,7 +1218,9 @@ int main(void)
             
             ioport_next_leds();
             
-
+            counter = system_counter_ticks();
+            
+            timer_cc_count = 0;
             
         }
             gui_number_label_set_number(&label_num11, adc_raw_buffer[0]);
