@@ -96,12 +96,12 @@ const font_bitmap_t font_10x16_utf8_bitmaps[] = {
 static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
 
 #ifdef WORK_RELAY
-#define TFT_DC_GPIO		GPIOB
-#define TFT_DC_PIN		GPIO_Pin_4
-#define TFT_CE_GPIO		GPIOA//
-#define TFT_CE_PIN		GPIO_Pin_15//
+#define TFT_DC_GPIO        GPIOB
+#define TFT_DC_PIN        GPIO_Pin_4
+#define TFT_CE_GPIO        GPIOA//
+#define TFT_CE_PIN        GPIO_Pin_15//
 #define TFT_RST_GPIO            GPIOC
-#define TFT_RST_PIN		GPIO_Pin_12//10
+#define TFT_RST_PIN        GPIO_Pin_12//10
 #endif
 
 
@@ -193,156 +193,165 @@ void I2C1_ER_IRQHandler(void)
     i2c_bus_error_irq_handler(&i2c);
 }
 
+void DMA1_Channel1_IRQHandler(void)
+{
+    if(DMA_GetITStatus(DMA1_IT_TC1)){
+        DMA_ClearITPendingBit(DMA1_IT_TC1);
+        
+        timer_cc_count ++;
+    }
+}
+
 /******************************************************************************/
 /****************************************************************************************/
-/***********	Прерывание от регистра PCA9555 по изменению состояния кнопок	*********/
+/***********    Прерывание от регистра PCA9555 по изменению состояния кнопок    *********/
 void EXTI9_5_IRQHandler(void)
 {
-	if (EXTI_GetITStatus(EXTI_Line7) != RESET)
+    if (EXTI_GetITStatus(EXTI_Line7) != RESET)
     {
-		PCA_interrupt_flag = ENABLE;						// Флаг прерывания по нажатию кнопки
-	EXTI_ClearITPendingBit(EXTI_Line7);						// очищаем флаг прерывания 7
+        PCA_interrupt_flag = ENABLE;                        // Флаг прерывания по нажатию кнопки
+        EXTI_ClearITPendingBit(EXTI_Line7);                        // очищаем флаг прерывания 7
     }
 
 }
 
 /****************************************************************************************/
-/***************	Прерывание по датчикам нуля		*************************************/
+/***************    Прерывание по датчикам нуля        *************************************/
 void EXTI15_10_IRQHandler(void)
 {
 
-	if (EXTI_GetITStatus(EXTI_Line13) != RESET)
+    if (EXTI_GetITStatus(EXTI_Line13) != RESET)
     {
-		time_A = interrupt_time_count();						// получаем значение со счетчика и управляем счетным таймером
-		phase_state_handle(PHASE_A);				// детектируем срабатывание фазы
-		nul_A = phase_state_drive_direction();		// получаем направление вращения
-		//open_tiristor(alfa_pid);					// открываем тиристор с углом альфа и последующей подачей импульсов на вторую пару
-		if (impuls_timer_2 == 0) {
-			impuls_timer_2 = 11;
-			TIM_SetCounter(TIM2, TARGET_ANGLE);			// Устанавливаем счетный регистр в значение.
-			TIM_Cmd(TIM2, ENABLE);   					// Начать отсчёт.
-		}
-		EXTI_ClearFlag(EXTI_Line13);				// очищаем флаг прерывания 13
+        time_A = interrupt_time_count();                        // получаем значение со счетчика и управляем счетным таймером
+        phase_state_handle(PHASE_A);                // детектируем срабатывание фазы
+        nul_A = phase_state_drive_direction();        // получаем направление вращения
+        //open_tiristor(alfa_pid);                    // открываем тиристор с углом альфа и последующей подачей импульсов на вторую пару
+        if (impuls_timer_2 == 0) {
+            impuls_timer_2 = 11;
+            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+        }
+        EXTI_ClearFlag(EXTI_Line13);                // очищаем флаг прерывания 13
     }
 
-	if (EXTI_GetITStatus(EXTI_Line14) != RESET)
+    if (EXTI_GetITStatus(EXTI_Line14) != RESET)
     {
-		time_B = interrupt_time_count();
-		phase_state_handle(PHASE_B);
-		nul_A = phase_state_drive_direction();
-		if (impuls_timer_2 == 0) {
-			impuls_timer_2 = 21;
-			TIM_SetCounter(TIM2, TARGET_ANGLE);			// Устанавливаем счетный регистр в значение.
-			TIM_Cmd(TIM2, ENABLE);   					// Начать отсчёт.
-		}
-		EXTI_ClearFlag(EXTI_Line14);				// очищаем флаг прерывания 14
+        time_B = interrupt_time_count();
+        phase_state_handle(PHASE_B);
+        nul_A = phase_state_drive_direction();
+        if (impuls_timer_2 == 0) {
+            impuls_timer_2 = 21;
+            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+        }
+        EXTI_ClearFlag(EXTI_Line14);                // очищаем флаг прерывания 14
     }
 
-	if (EXTI_GetITStatus(EXTI_Line15) != RESET)
+    if (EXTI_GetITStatus(EXTI_Line15) != RESET)
     {
-		time_C = interrupt_time_count();
-		phase_state_handle(PHASE_C);
-		nul_A = phase_state_drive_direction();
-		if (impuls_timer_2 == 0) {
-			impuls_timer_2 = 31;
-			TIM_SetCounter(TIM2, TARGET_ANGLE);			// Устанавливаем счетный регистр в значение.
-			TIM_Cmd(TIM2, ENABLE);   					// Начать отсчёт.
-		}
-		EXTI_ClearFlag(EXTI_Line15);				// очищаем флаг прерывания 15
+        time_C = interrupt_time_count();
+        phase_state_handle(PHASE_C);
+        nul_A = phase_state_drive_direction();
+        if (impuls_timer_2 == 0) {
+            impuls_timer_2 = 31;
+            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+        }
+        EXTI_ClearFlag(EXTI_Line15);                // очищаем флаг прерывания 15
     }
 }
 
 // Timer2 подача импульсов на верхнее плечо
 void TIM2_IRQHandler(void)
 {
-	// Если прерывание произошло успешно то делаем следующее
-	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
-	{
-		//if (DriveState==DriveReadyForw){
+    // Если прерывание произошло успешно то делаем следующее
+    if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+    {
+        //if (DriveState==DriveReadyForw){
         First_Pulse_Sequence();
-			
-		//}
+            
+        //}
 /*
-		if (DriveState==DriveReadyBack){
-			if (impuls_timer_2 == 11) {
-				THYRISTOR_VS5_ON; THYRISTOR_VS2_ON;
-				TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора.
-				TIM_Cmd(TIM2, ENABLE);								// Старт таймера.
-				impuls_timer_2 = 12;
-			} else if (impuls_timer_2 == 12) {
-				THYRISTOR_VS5_OFF; THYRISTOR_VS2_OFF;
-				TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);		// Выставляем угол открытия тиристора 60гр
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_2 = 0;
-				impuls_timer_3 = 13;
-			} else if (impuls_timer_2 == 21) {
-				THYRISTOR_VS3_ON; THYRISTOR_VS6_ON;
-				TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора
-				TIM_Cmd(TIM2, ENABLE);
-				impuls_timer_2 = 22;
-			} else if (impuls_timer_2 == 22) {
-				THYRISTOR_VS3_OFF; THYRISTOR_VS6_OFF;
-				TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);		// Выставляем угол открытия тиристора 60гр
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_2 = 0;
-				impuls_timer_3 = 23;
-			} else if (impuls_timer_2 == 31) {
-				THYRISTOR_VS1_ON; THYRISTOR_VS4_ON;
-				TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора
-				TIM_Cmd(TIM2, ENABLE);
-				impuls_timer_2 = 32;
-			} else if (impuls_timer_2 == 32) {
-				THYRISTOR_VS1_OFF; THYRISTOR_VS4_OFF;
-				TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);		// Выставляем угол открытия тиристора 60гр
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_2 = 0;
-				impuls_timer_3 = 33;
-			}
-		}*/
-		// Очищаем флаг прерывания UIF
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-	}
+        if (DriveState==DriveReadyBack){
+            if (impuls_timer_2 == 11) {
+                THYRISTOR_VS5_ON; THYRISTOR_VS2_ON;
+                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора.
+                TIM_Cmd(TIM2, ENABLE);                                // Старт таймера.
+                impuls_timer_2 = 12;
+            } else if (impuls_timer_2 == 12) {
+                THYRISTOR_VS5_OFF; THYRISTOR_VS2_OFF;
+                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_2 = 0;
+                impuls_timer_3 = 13;
+            } else if (impuls_timer_2 == 21) {
+                THYRISTOR_VS3_ON; THYRISTOR_VS6_ON;
+                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
+                TIM_Cmd(TIM2, ENABLE);
+                impuls_timer_2 = 22;
+            } else if (impuls_timer_2 == 22) {
+                THYRISTOR_VS3_OFF; THYRISTOR_VS6_OFF;
+                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_2 = 0;
+                impuls_timer_3 = 23;
+            } else if (impuls_timer_2 == 31) {
+                THYRISTOR_VS1_ON; THYRISTOR_VS4_ON;
+                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
+                TIM_Cmd(TIM2, ENABLE);
+                impuls_timer_2 = 32;
+            } else if (impuls_timer_2 == 32) {
+                THYRISTOR_VS1_OFF; THYRISTOR_VS4_OFF;
+                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_2 = 0;
+                impuls_timer_3 = 33;
+            }
+        }*/
+        // Очищаем флаг прерывания UIF
+        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    }
 }
 
 // Timer3 подача импульсов на нижнее плечо
 void TIM3_IRQHandler(void)
 {
-	// Если прерывание произошло успешно то делаем следующее
-	if(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
-	{
-		//if (DriveState==DriveReadyForw){
-			Second_Pulse_Sequence();
-		//}
-		/*if (DriveState==DriveReadyBack){
-			if (impuls_timer_3 == 13) {
-				THYRISTOR_VS3_ON; THYRISTOR_VS2_ON;
-				TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_3 = 14;
-			} else if (impuls_timer_3 == 14) {
-				THYRISTOR_VS3_OFF; THYRISTOR_VS2_OFF;
-				impuls_timer_3 = 0;
-			} else if (impuls_timer_3 == 23) {
-				THYRISTOR_VS1_ON; THYRISTOR_VS6_ON;
-				TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_3 = 24;
-			} else if (impuls_timer_3 == 24) {
-				THYRISTOR_VS1_OFF; THYRISTOR_VS6_OFF;
-				impuls_timer_3 = 0;
-			} else if (impuls_timer_3 == 33) {
-				THYRISTOR_VS5_ON; THYRISTOR_VS4_ON;
-				TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);		// Выставляем угол открытия тиристора
-				TIM_Cmd(TIM3, ENABLE);
-				impuls_timer_3 = 34;
-			} else if (impuls_timer_3 == 34) {
-				THYRISTOR_VS5_OFF; THYRISTOR_VS4_OFF;
-				impuls_timer_3 = 0;
-			}
-		}*/
-	// Очищаем флаг прерывания UIF
-	TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-	}
+    // Если прерывание произошло успешно то делаем следующее
+    if(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+    {
+        //if (DriveState==DriveReadyForw){
+            Second_Pulse_Sequence();
+        //}
+        /*if (DriveState==DriveReadyBack){
+            if (impuls_timer_3 == 13) {
+                THYRISTOR_VS3_ON; THYRISTOR_VS2_ON;
+                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_3 = 14;
+            } else if (impuls_timer_3 == 14) {
+                THYRISTOR_VS3_OFF; THYRISTOR_VS2_OFF;
+                impuls_timer_3 = 0;
+            } else if (impuls_timer_3 == 23) {
+                THYRISTOR_VS1_ON; THYRISTOR_VS6_ON;
+                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_3 = 24;
+            } else if (impuls_timer_3 == 24) {
+                THYRISTOR_VS1_OFF; THYRISTOR_VS6_OFF;
+                impuls_timer_3 = 0;
+            } else if (impuls_timer_3 == 33) {
+                THYRISTOR_VS5_ON; THYRISTOR_VS4_ON;
+                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
+                TIM_Cmd(TIM3, ENABLE);
+                impuls_timer_3 = 34;
+            } else if (impuls_timer_3 == 34) {
+                THYRISTOR_VS5_OFF; THYRISTOR_VS4_OFF;
+                impuls_timer_3 = 0;
+            }
+        }*/
+    // Очищаем флаг прерывания UIF
+    TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+    }
 }
 /******************************************************************************/
 
@@ -396,15 +405,15 @@ static void init_periph_clock(void)
     // I2C1.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
     // TIM1.
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);	// Включаем тактирование General-purpose TIM2
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);    // Включаем тактирование General-purpose TIM2
     // TIM2.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);	// Включаем тактирование General-purpose TIM2
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);    // Включаем тактирование General-purpose TIM2
     // TIM3.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);	// Включаем тактирование General-purpose TIM3
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);    // Включаем тактирование General-purpose TIM3
     // TIM6.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);	// Включаем тактирование Basic TIM6
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
     // SPI2.
-    //RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);	// Запуск тактирования SPI2
+    //RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);    // Запуск тактирования SPI2
 }
 
 static void init_usart(void)
@@ -622,11 +631,10 @@ static void init_adc(void)
     while (ADC_GetCalibrationStatus(ADC1)); //Check the end of ADC1 calibration
     ADC_StartCalibration(ADC2);
     while (ADC_GetCalibrationStatus(ADC2)); //Check the end of ADC1 calibration
-    //NVIC_SetPriority(ADC1_2_IRQn, 1);
-    //NVIC_EnableIRQ(ADC1_2_IRQn);
-
-    //ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-    //ADC_SoftwareStartConvCmd(ADC2, ENABLE);
+    
+    DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
+    NVIC_SetPriority(DMA1_Channel1_IRQn, 1);
+    NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
 static void init_ioport(void)
@@ -720,15 +728,6 @@ static void init_tft(void)
     tft9341_display_on(&tft);
 }
 
-void TIM1_CC_IRQHandler(void)
-{
-    if(TIM_GetITStatus(TIM1, TIM_IT_CC3)){
-        TIM_ClearITPendingBit(TIM1, TIM_IT_CC3);
-        
-        timer_cc_count ++;
-    }
-}
-
 /******************************************************************************/
 static void init_tim1(void)
 {
@@ -736,10 +735,10 @@ static void init_tim1(void)
     
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = 1125-1;					// Делитель (0000...FFFF)
-            tim1_is.TIM_CounterMode = TIM_CounterMode_Up;	// Режим счетчика
-            tim1_is.TIM_Period = 9;						// Значение периода (0000...FFFF)
-            tim1_is.TIM_ClockDivision = 0;					// определяет тактовое деление
+            tim1_is.TIM_Prescaler = 1125-1;                    // Делитель (0000...FFFF)
+            tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim1_is.TIM_Period = 9;                        // Значение периода (0000...FFFF)
+            tim1_is.TIM_ClockDivision = 0;                    // определяет тактовое деление
     TIM_TimeBaseInit(TIM1, &tim1_is);
 
     TIM_OCInitTypeDef tim1_oc_is;
@@ -755,29 +754,24 @@ static void init_tim1(void)
     TIM_OC3Init(TIM1, &tim1_oc_is);
     TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
     
-    TIM_ITConfig(TIM1, TIM_IT_CC3, ENABLE);
-    
     TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
-    
-    NVIC_SetPriority(TIM1_CC_IRQn, 6);
-    NVIC_EnableIRQ (TIM1_CC_IRQn); 		// Разрешаем прерывания по Таймеру2
 }
 
 static void init_tim2(void)
 {
     TIM_TimeBaseInitTypeDef TIM2_InitStructure;
-            TIM2_InitStructure.TIM_Prescaler = 72-1;					// Делитель (0000...FFFF)
-            TIM2_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;	// Режим счетчика
-            TIM2_InitStructure.TIM_Period = 60000;						// Значение периода (0000...FFFF)
-            TIM2_InitStructure.TIM_ClockDivision = 0;					// определяет тактовое деление
+            TIM2_InitStructure.TIM_Prescaler = 72-1;                    // Делитель (0000...FFFF)
+            TIM2_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;    // Режим счетчика
+            TIM2_InitStructure.TIM_Period = 60000;                        // Значение периода (0000...FFFF)
+            TIM2_InitStructure.TIM_ClockDivision = 0;                    // определяет тактовое деление
     TIM_TimeBaseInit(TIM2, &TIM2_InitStructure);
-    TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);				// Однопульсный режим таймера
-    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);						// Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM2, ENABLE);   										// Начать отсчёт!
+    TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);                // Однопульсный режим таймера
+    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    //TIM_Cmd(TIM2, ENABLE);                                           // Начать отсчёт!
     
     NVIC_SetPriority(TIM2_IRQn, 1);
-    NVIC_EnableIRQ (TIM2_IRQn); 		// Разрешаем прерывания по Таймеру2
+    NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
 }
 
 static void init_tim3(void)
@@ -793,27 +787,27 @@ static void init_tim3(void)
     //TIM_Cmd(TIM3, ENABLE);                                                // Начать отсчёт!    
     
     NVIC_SetPriority(TIM3_IRQn, 1);
-    NVIC_EnableIRQ (TIM3_IRQn); 		// Разрешаем прерывания по Таймеру3
+    NVIC_EnableIRQ (TIM3_IRQn);         // Разрешаем прерывания по Таймеру3
 }
 
 static void init_tim6(void)
 {
     TIM_TimeBaseInitTypeDef TIM6_InitStructure;
-            TIM6_InitStructure.TIM_Prescaler = 72-1;			// Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
-            TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;	// Режим счетчика
-            TIM6_InitStructure.TIM_Period = 60000;			// Значение периода (0000...FFFF)
-            TIM6_InitStructure.TIM_ClockDivision = 0;			// определяет тактовое деление
+            TIM6_InitStructure.TIM_Prescaler = 72-1;            // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            TIM6_InitStructure.TIM_Period = 60000;            // Значение периода (0000...FFFF)
+            TIM6_InitStructure.TIM_ClockDivision = 0;            // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
-    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);			// Однопульсный режим таймера
-    TIM_SetCounter(TIM6, 0);						// Сбрасываем счетный регистр в ноль
-    //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);			// Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM6, ENABLE);   						// Начать отсчёт!    
+    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);            // Однопульсный режим таймера
+    TIM_SetCounter(TIM6, 0);                        // Сбрасываем счетный регистр в ноль
+    //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);            // Разрешаем прерывание от таймера
+    //TIM_Cmd(TIM6, ENABLE);                           // Начать отсчёт!    
 }
 
 static void init_exti(void)
 {
 /**********************************************************************************************************/
-/*******************	PCA9555: I2c1 and Interrupt		***************************************************/
+/*******************    PCA9555: I2c1 and Interrupt        ***************************************************/
     GPIO_InitTypeDef GPIO_InitStructure;
     /* GPIOB Configuration: 95 (PD7 - Int_PCA9555) as input pull-down */
             GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
@@ -823,7 +817,7 @@ static void init_exti(void)
         
         
 /**********************************************************************************************************/
-/******************		Zero sensor		*******************************************************************/
+/******************        Zero sensor        *******************************************************************/
     /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
             GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
             GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
@@ -832,7 +826,7 @@ static void init_exti(void)
         
         
 /**********************************************************************************************************/
-/***************	Привязка Прерывания к портам МК		***************************************************/       
+/***************    Привязка Прерывания к портам МК        ***************************************************/       
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOD, GPIO_PinSource7);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource13);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource14);
@@ -849,83 +843,83 @@ static void init_exti(void)
     NVIC_SetPriority(EXTI9_5_IRQn, 3);
     NVIC_SetPriority(EXTI15_10_IRQn, 2);
  
-    NVIC_EnableIRQ (EXTI9_5_IRQn); 		// Разрешаем прерывание от 5-9 ног
-    NVIC_EnableIRQ (EXTI15_10_IRQn); 	// Разрешаем прерывание от 10-15 ног
+    NVIC_EnableIRQ (EXTI9_5_IRQn);         // Разрешаем прерывание от 5-9 ног
+    NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
 }
 
 static void init_gpio (void)
 {
 /**********************************************************************************************************/
-/******************		Digital Outputs	(Relay)		*******************************************************/
+/******************        Digital Outputs    (Relay)        *******************************************************/
         GPIO_InitTypeDef GPIO_InitStructure;
-	/* GPIOB Configuration: 7 (PC13 - DigitalOut_4) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+    /* GPIOB Configuration: 7 (PC13 - DigitalOut_4) as output push-pull */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	/* GPIOE Configuration: 3 (PE4 - DigitalOut_3); 4 (PE5 - DigitalOut_2); 5 (PE6 - DigitalOut_1) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
+    /* GPIOE Configuration: 3 (PE4 - DigitalOut_3); 4 (PE5 - DigitalOut_2); 5 (PE6 - DigitalOut_1) as output push-pull */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOE, &GPIO_InitStructure);
 
-	
+    
 /**********************************************************************************************************/
-/******************		Digital Inputs	(24v)	***********************************************************/
+/******************        Digital Inputs    (24v)    ***********************************************************/
 
-	/* GPIOB Configuration: 96 (PB9 - DigitalIn_1) as input floating */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
+    /* GPIOB Configuration: 96 (PB9 - DigitalIn_1) as input floating */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-	/* GPIOB Configuration: 97 (PE0 - DigitalIn_2); 98 (PE1 - DigitalIn_3);
-	 * 						1 (PE2 - DigitalIn_4); 2 (PE3 - DigitalIn_5) 	as input floating */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-
-/**********************************************************************************************************/
-/******************		Thyristors and Triac	***********************************************************/
-
-	/* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
-	 * 						60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain	*/
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_Init(GPIOD, &GPIO_InitStructure);
-
-	/* GPIOB Configuration: 63 (PC6 - VS_xS) as output open drain */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+    /* GPIOB Configuration: 97 (PE0 - DigitalIn_2); 98 (PE1 - DigitalIn_3);
+     *                         1 (PE2 - DigitalIn_4); 2 (PE3 - DigitalIn_5)     as input floating */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOE, &GPIO_InitStructure);
 
 
 /**********************************************************************************************************/
-/*******************	Dip 8 switch	*******************************************************************/
+/******************        Thyristors and Triac    ***********************************************************/
 
-	/* GPIOB Configuration: 37 (PB2 - Dip_1) as input floating */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
+    /* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
+     *                         60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain    */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOD, &GPIO_InitStructure);
 
-	/* GPIOB Configuration: 38 (PE7 - Dip_2);  39 (PE8 - Dip_3);  40 (PE9 - Dip_4);
-	 * 						41 (PE10 - Dip_5); 42 (PE11 - Dip_6); 43 (PE12 - Dip_7)  as input floating */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
+    /* GPIOB Configuration: 63 (PC6 - VS_xS) as output open drain */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	/* GPIOB Configuration: 65 (PC8 - Dip_8) as input floating */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+/**********************************************************************************************************/
+/*******************    Dip 8 switch    *******************************************************************/
+
+    /* GPIOB Configuration: 37 (PB2 - Dip_1) as input floating */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    /* GPIOB Configuration: 38 (PE7 - Dip_2);  39 (PE8 - Dip_3);  40 (PE9 - Dip_4);
+     *                         41 (PE10 - Dip_5); 42 (PE11 - Dip_6); 43 (PE12 - Dip_7)  as input floating */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+    /* GPIOB Configuration: 65 (PC8 - Dip_8) as input floating */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 /******************************************************************************/
 
