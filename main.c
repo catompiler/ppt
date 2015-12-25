@@ -1,4 +1,6 @@
-//Проект gui_test (из шаблона).
+/**
+ * @file main.c Главный файл проекта ППТ.
+ */
 #include "stm32f10x.h"
 #define USART_STDIO
 #include "usart/usart.h"
@@ -34,15 +36,15 @@
 #include "phase_state/phase_state.h"
 /******************************************************************************/
 
-
+//! Буфер записи USART.
 #define USART_WRITE_BUFFER_SIZE 64
 static uint8_t usart_write_buffer[USART_WRITE_BUFFER_SIZE];
-
+//! Буфер чтения USART.
 #define USART_READ_BUFFER_SIZE 32
 static uint8_t usart_read_buffer[USART_READ_BUFFER_SIZE];
-
+//! Буферизированый USART.
 static usart_buf_t usart_buf;
-
+//! Счётчик.
 static counter_t counter;
 
 //! Шина spi.
@@ -54,56 +56,63 @@ static i2c_bus_t i2c;
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
 
-#define TFT_IOPIN PCA9555_PIN_0
-//#define TFT_IOPIN PCA9555_PIN_0
-
-//static volatile bool need_update = false;
-
+//! TFT9341.
 static tft9341_t tft;
+//! Размер пиксела - 2 байта (16 бит).
 #define TFT_PIXEL_SIZE 2
+//! Ширина экрана.
 #define TFT_WIDTH 320
+//! Высота экрана.
 #define TFT_HEIGHT 240
-
+//! Пин ресета TFT контроллера ввода-вывода.
+#define TFT_RST_IOPIN PCA9555_PIN_0
+// Порты и пины GPIO для TFT.
+#define TFT_DC_GPIO        GPIOB
+#define TFT_DC_PIN         GPIO_Pin_4
+#define TFT_CE_GPIO        GPIOA
+#define TFT_CE_PIN         GPIO_Pin_15
+#define TFT_RST_GPIO       GPIOC
+#define TFT_RST_PIN        GPIO_Pin_12
+//! Число буферов кэша TFT.
 #define TFT_CACHE_BUFS_COUNT 2
+//! Размер первого буфера.
 #define TFT_CACHE_BUF0_PIXELS 240
 #define TFT_CACHE_BUF0_SIZE (TFT_CACHE_BUF0_PIXELS * TFT_PIXEL_SIZE)
+//! Размер второго буфера.
 #define TFT_CACHE_BUF1_PIXELS 80
 #define TFT_CACHE_BUF1_SIZE (TFT_CACHE_BUF1_PIXELS * TFT_PIXEL_SIZE)
-
+//! Первый буфер кэша TFT.
 static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
+//! Второй буфер кэша TFT.
 static uint8_t tft_cache_buf_data1[TFT_CACHE_BUF1_SIZE];
-
+//! Буферы кэша TFT.
 static tft9341_cache_buffer_t tft_cache_bufs[TFT_CACHE_BUFS_COUNT] = {
     make_tft9341_cache_buffer(tft_cache_buf_data0, TFT_CACHE_BUF0_SIZE),
     make_tft9341_cache_buffer(tft_cache_buf_data1, TFT_CACHE_BUF1_SIZE)
 };
+//! Кэш TFT.
 static tft9341_cache_t tft_cache = make_tft9341_cache(&tft, TFT_PIXEL_SIZE, tft_cache_bufs, TFT_CACHE_BUFS_COUNT, TFT9341_ROW_COL_REVERSE_MODE);
+//! Виртуальный буфер изображения..
 static graphics_vbuf_t graph_vbuf = make_tft9341_cache_vbuf();
+//! Изображение на экране.
 static graphics_t graphics = make_tft9341_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 //static painter_t painter = make_painter(&graphics);
+//! Битмапы шрифта 5x8.
 static const font_bitmap_t font_5x8_utf8_bitmaps[] = {
     make_font_bitmap(32, 127, font_5x8_utf8_part0_data, FONT_5X8_UTF8_PART0_WIDTH, FONT_5X8_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
     make_font_bitmap(0xb0, 0xb0, font_5x8_utf8_part1_data, FONT_5X8_UTF8_PART1_WIDTH, FONT_5X8_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
     make_font_bitmap(0x400, 0x451, font_5x8_utf8_part2_data, FONT_5X8_UTF8_PART2_WIDTH, FONT_5X8_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
 };
+//! Шрифт 5x8.
 static font_t font5x8 = make_font(font_5x8_utf8_bitmaps, 3, 5, 8, 1, 0);
-
+//! Битмапы шрифта 10x16.
 const font_bitmap_t font_10x16_utf8_bitmaps[] = {
     make_font_bitmap(32, 127, font_10x16_utf8_part0_data, FONT_10X16_UTF8_PART0_WIDTH, FONT_10X16_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
     make_font_bitmap(0xb0, 0xb0, font_10x16_utf8_part1_data, FONT_10X16_UTF8_PART1_WIDTH, FONT_10X16_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
     make_font_bitmap(0x400, 0x451, font_10x16_utf8_part2_data, FONT_10X16_UTF8_PART2_WIDTH, FONT_10X16_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
 };
+//! Шрифт 10x16.
 static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
-
-#ifdef WORK_RELAY
-#define TFT_DC_GPIO        GPIOB
-#define TFT_DC_PIN        GPIO_Pin_4
-#define TFT_CE_GPIO        GPIOA//
-#define TFT_CE_PIN        GPIO_Pin_15//
-#define TFT_RST_GPIO            GPIOC
-#define TFT_RST_PIN        GPIO_Pin_12//10
-#endif
-
 
 /******************************************************************************/
 #define TARGET_ANGLE 5000
@@ -113,40 +122,20 @@ uint8_t value=0, value1=0, value2=0, PCA_interrupt_flag = DISABLE;
 uint8_t nul_A = 0, nul_B = 0, nul_C = 0, impuls_timer_2 = 0, impuls_timer_3 = 0;
 uint16_t time_A, time_B, time_C;
 
-#define ADC1_DR_Address    ((uint32_t)0x4001244C)
-//! Длина буфера для DMA.
-#define ADC_RAW_BUFFER_LEN 4
-#define ADC_RAW_BUFFER_LN 8
+//! Длина буфера DMA.
+#define ADC12_RAW_BUFFER_DMA_TRANSFERS 4
+//! Размер буфера DMA в байтах.
+#define ADC12_RAW_BUFFER_SIZE (ADC12_RAW_BUFFER_DMA_TRANSFERS * 2)
 //! Буфер ADC.
-static volatile uint16_t adc_raw_buffer[ADC_RAW_BUFFER_LN] = {0};
+static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE] = {0};
 
+//! Число измерений ADC.
 static volatile int timer_cc_count = 0;
     
-//static DriveState_t DriveState;
-/******************************************************************************/
 
-
-// fucking spi remap && i2c smbus
-/* удалить
-   static void i2c_io_begin(void)
-{
-    spi_bus_wait(&spi);
-    SPI_Cmd(SPI1, DISABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, DISABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
-    I2C_Cmd(I2C1, ENABLE);
-}
-
-
-static void spi_io_begin(void)
-{
-    i2c_bus_wait(&i2c);
-    I2C_Cmd(I2C1, DISABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, DISABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
-    SPI_Cmd(SPI1, ENABLE);
-}
-*/
+/*
+ * Обработчики прерываний.
+ */
 
 void USART1_IRQHandler(void)
 {
@@ -202,34 +191,35 @@ void DMA1_Channel1_IRQHandler(void)
     }
 }
 
-/******************************************************************************/
-/****************************************************************************************/
-/***********    Прерывание от регистра PCA9555 по изменению состояния кнопок    *********/
+/**
+ * Прерывание от регистра PCA9555 по изменению состояния кнопок.
+ */
 void EXTI9_5_IRQHandler(void)
 {
     if (EXTI_GetITStatus(EXTI_Line7) != RESET)
     {
         PCA_interrupt_flag = ENABLE;                        // Флаг прерывания по нажатию кнопки
-        EXTI_ClearITPendingBit(EXTI_Line7);                        // очищаем флаг прерывания 7
+        EXTI_ClearITPendingBit(EXTI_Line7);                 // очищаем флаг прерывания 7
     }
 
 }
 
-/****************************************************************************************/
-/***************    Прерывание по датчикам нуля        *************************************/
+/**
+ * Прерывание по датчикам нуля.
+ */
 void EXTI15_10_IRQHandler(void)
 {
 
     if (EXTI_GetITStatus(EXTI_Line13) != RESET)
     {
-        time_A = interrupt_time_count();                        // получаем значение со счетчика и управляем счетным таймером
+        time_A = interrupt_time_count();            // получаем значение со счетчика и управляем счетным таймером
         phase_state_handle(PHASE_A);                // детектируем срабатывание фазы
-        nul_A = phase_state_drive_direction();        // получаем направление вращения
-        //open_tiristor(alfa_pid);                    // открываем тиристор с углом альфа и последующей подачей импульсов на вторую пару
+        nul_A = phase_state_drive_direction();      // получаем направление вращения
+        //open_tiristor(alfa_pid);                  // открываем тиристор с углом альфа и последующей подачей импульсов на вторую пару
         if (impuls_timer_2 == 0) {
             impuls_timer_2 = 11;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
         }
         EXTI_ClearFlag(EXTI_Line13);                // очищаем флаг прерывания 13
     }
@@ -241,8 +231,8 @@ void EXTI15_10_IRQHandler(void)
         nul_A = phase_state_drive_direction();
         if (impuls_timer_2 == 0) {
             impuls_timer_2 = 21;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
         }
         EXTI_ClearFlag(EXTI_Line14);                // очищаем флаг прерывания 14
     }
@@ -254,8 +244,8 @@ void EXTI15_10_IRQHandler(void)
         nul_A = phase_state_drive_direction();
         if (impuls_timer_2 == 0) {
             impuls_timer_2 = 31;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);            // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                       // Начать отсчёт.
+            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
+            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
         }
         EXTI_ClearFlag(EXTI_Line15);                // очищаем флаг прерывания 15
     }
@@ -353,10 +343,11 @@ void TIM3_IRQHandler(void)
     TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
-/******************************************************************************/
 
 
-
+/*
+ * Функции обратного вызова (каллбэки).
+ */
 
 static bool i2c_callback(void)
 {
@@ -368,6 +359,10 @@ static bool spi_callback(void)
     //printf("[SPI] callback\r\n");
     return tft9341_spi_callback(&tft);
 }
+
+/*
+ * Инициализация.
+ */
 
 static void init_sys_counter(void)
 {
@@ -443,11 +438,6 @@ static void init_usart(void)
 
 static void init_spi(void)
 {
-    /*GPIO_InitTypeDef gpio_sck_mosi =
-        {.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_7, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
-    GPIO_InitTypeDef gpio_miso =
-        {.GPIO_Pin = GPIO_Pin_6, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};*/
-    
     GPIO_InitTypeDef gpio_sck_mosi =
         {.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_3, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
     //GPIO_InitTypeDef gpio_miso =
@@ -550,87 +540,87 @@ static void init_adc(void)
     
     DMA_DeInit(DMA1_Channel1);
 
-    DMA_InitTypeDef dma_is;     //Variable used to setup the DMA               
+    DMA_InitTypeDef dma_is;
     DMA_StructInit(&dma_is);
-       dma_is.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR; // ADC1_DR_Address;
-       dma_is.DMA_MemoryBaseAddr = (uint32_t)adc_raw_buffer; //Variable to which ADC values will be stored
-       dma_is.DMA_DIR = DMA_DIR_PeripheralSRC;
-       dma_is.DMA_BufferSize = ADC_RAW_BUFFER_LEN; // ADC_CH; //Buffer size (8 because we using 8 channels)
-       dma_is.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-       dma_is.DMA_MemoryInc = DMA_MemoryInc_Enable;
-       dma_is.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-       dma_is.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
-       dma_is.DMA_Mode = DMA_Mode_Circular;
-       dma_is.DMA_Priority = DMA_Priority_Medium;
-       dma_is.DMA_M2M = DMA_M2M_Disable;
-       //DMA_ITConfig(DMA1_Channel1, DMA1_IT_TC1, ENABLE);
-    DMA_Init(DMA1_Channel1, &dma_is); //Initialise the DMA
+    dma_is.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR;
+    dma_is.DMA_MemoryBaseAddr = (uint32_t)adc_raw_buffer;
+    dma_is.DMA_DIR = DMA_DIR_PeripheralSRC;
+    dma_is.DMA_BufferSize = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    dma_is.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    dma_is.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    dma_is.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+    dma_is.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+    dma_is.DMA_Mode = DMA_Mode_Circular;
+    dma_is.DMA_Priority = DMA_Priority_Medium;
+    dma_is.DMA_M2M = DMA_M2M_Disable;
+
+    DMA_Init(DMA1_Channel1, &dma_is);
         
     ADC_DeInit(ADC1);
     ADC_DeInit(ADC2);
     
     ADC_InitTypeDef adc1_is;
     ADC_StructInit(&adc1_is);
-        //Настройка параметров  ADC1
-        adc1_is.ADC_Mode = ADC_Mode_RegSimult;//ADC_Mode_Independent
-        adc1_is.ADC_ScanConvMode = ENABLE;
-        adc1_is.ADC_ContinuousConvMode = DISABLE; //ENABLE;//
-        adc1_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
-        adc1_is.ADC_DataAlign = ADC_DataAlign_Right;
-        adc1_is.ADC_NbrOfChannel = ADC_RAW_BUFFER_LEN; //We using 3 channels
-    ADC_Init(ADC1, &adc1_is); //Initialise ADC1
+    //Настройка параметров  ADC1
+    adc1_is.ADC_Mode = ADC_Mode_RegSimult;
+    adc1_is.ADC_ScanConvMode = ENABLE;
+    adc1_is.ADC_ContinuousConvMode = DISABLE;
+    adc1_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
+    adc1_is.ADC_DataAlign = ADC_DataAlign_Right;
+    adc1_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    
+    ADC_Init(ADC1, &adc1_is);
     
     ADC_InitTypeDef adc2_is;
     ADC_StructInit(&adc2_is);
-        //Настройка параметров  ADC1
-        adc2_is.ADC_Mode = ADC_Mode_RegSimult;
-        adc2_is.ADC_ScanConvMode = ENABLE;
-        adc2_is.ADC_ContinuousConvMode = DISABLE; //ENABLE;//
-        adc2_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
-        adc2_is.ADC_DataAlign = ADC_DataAlign_Right;
-        adc2_is.ADC_NbrOfChannel = ADC_RAW_BUFFER_LEN; //We using 3 channels
-    ADC_Init(ADC2, &adc2_is); //Initialise ADC1
+    //Настройка параметров  ADC2
+    adc2_is.ADC_Mode = ADC_Mode_RegSimult;
+    adc2_is.ADC_ScanConvMode = ENABLE;
+    adc2_is.ADC_ContinuousConvMode = DISABLE;
+    adc2_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
+    adc2_is.ADC_DataAlign = ADC_DataAlign_Right;
+    adc2_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
     
-    //Порядок оцифровки
+    ADC_Init(ADC2, &adc2_is);
+    
+    //Порядок оцифровки ADC1.
     ADC_RegularChannelConfig(ADC1, ADC_Channel_15, 1, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC1, ADC_Channel_8, 2, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC1, ADC_Channel_9, 3, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 4, ADC_SampleTime_55Cycles5);
     
-    //Порядок оцифровки
+    //Порядок оцифровки ADC2.
     ADC_RegularChannelConfig(ADC2, ADC_Channel_12, 1, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_13, 2, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_0, 3, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 4, ADC_SampleTime_55Cycles5);
-
-    //ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
     
-    ADC_DMACmd(ADC1, ENABLE); //Enable ADC1 DMA
+    ADC_DMACmd(ADC1, ENABLE); //Enable ADC1 DMA.
     DMA_Cmd(DMA1_Channel1, ENABLE);
     
-    ADC_DiscModeChannelCountConfig(ADC1, ADC_RAW_BUFFER_LEN);
+    ADC_DiscModeChannelCountConfig(ADC1, ADC12_RAW_BUFFER_DMA_TRANSFERS);
     ADC_DiscModeCmd(ADC1, ENABLE);
     
-    ADC_DiscModeChannelCountConfig(ADC2, ADC_RAW_BUFFER_LEN);
+    ADC_DiscModeChannelCountConfig(ADC2, ADC12_RAW_BUFFER_DMA_TRANSFERS);
     ADC_DiscModeCmd(ADC2, ENABLE);
     
     ADC_ExternalTrigConvCmd(ADC1, ENABLE);
     ADC_ExternalTrigConvCmd(ADC2, ENABLE);
 
-    ADC_Cmd(ADC1, ENABLE); //Enable ADC1 
-    ADC_Cmd(ADC2, ENABLE); //Enable ADC1 
+    ADC_Cmd(ADC1, ENABLE); //Enable ADC1.
+    ADC_Cmd(ADC2, ENABLE); //Enable ADC2.
     
-    //Калибровка ADC1
-    //Enable ADC1 reset calibaration register
+    //Калибровка ADC.
+    //Enable reset calibaration register.
     ADC_ResetCalibration(ADC1);
-    while (ADC_GetResetCalibrationStatus(ADC1)); //Check the end of ADC1 reset calibration register
+    while (ADC_GetResetCalibrationStatus(ADC1)); //Check the end of ADC1 reset calibration register.
     ADC_ResetCalibration(ADC2);
-    while (ADC_GetResetCalibrationStatus(ADC2)); //Check the end of ADC1 reset calibration register
-    //Start ADC1 calibaration
+    while (ADC_GetResetCalibrationStatus(ADC2)); //Check the end of ADC2 reset calibration register.
+    //Start calibaration.
     ADC_StartCalibration(ADC1);
-    while (ADC_GetCalibrationStatus(ADC1)); //Check the end of ADC1 calibration
+    while (ADC_GetCalibrationStatus(ADC1)); //Check the end of ADC1 calibration.
     ADC_StartCalibration(ADC2);
-    while (ADC_GetCalibrationStatus(ADC2)); //Check the end of ADC1 calibration
+    while (ADC_GetCalibrationStatus(ADC2)); //Check the end of ADC2 calibration.
     
     DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
     NVIC_SetPriority(DMA1_Channel1_IRQn, 1);
@@ -639,14 +629,13 @@ static void init_adc(void)
 
 static void init_ioport(void)
 {
-    //удалить i2c_io_begin();
     pca9555_init(&ioport, &i2c, PCA9555_I2C_DEFAULT_ADDRESS);
     pca9555_set_pins_direction(&ioport, PCA9555_PIN_ALL, PCA9555_PIN_INPUT);
     pca9555_set_pins_direction(&ioport, 
             PCA9555_PIN_1 | PCA9555_PIN_3 | PCA9555_PIN_4 |
             PCA9555_PIN_5 | PCA9555_PIN_6 | PCA9555_PIN_7
             , PCA9555_PIN_OUTPUT);
-    pca9555_set_pins_direction(&ioport, TFT_IOPIN, PCA9555_PIN_OUTPUT);
+    pca9555_set_pins_direction(&ioport, TFT_RST_IOPIN, PCA9555_PIN_OUTPUT);
     pca9555_write_pins_direction(&ioport);
     pca9555_set_pins_state(&ioport, PCA9555_PIN_ALL, PCA9555_PIN_ON);
     /*pca9555_set_pins_state(&ioport, 
@@ -660,7 +649,6 @@ static void init_ioport(void)
 
 static void ioport_next_leds(void)
 {
-    //удалить i2c_io_begin();
     pca9555_pins_t on_pins = pca9555_pins_output_state(&ioport, PCA9555_PIN_OFF);
     
     if(on_pins & PCA9555_PIN_7){
@@ -676,11 +664,10 @@ static void ioport_next_leds(void)
 
 static void ioport_reset_tft(void)
 {
-    //удалить i2c_io_begin();
-    pca9555_set_pins_state(&ioport, TFT_IOPIN, PCA9555_PIN_OFF);
+    pca9555_set_pins_state(&ioport, TFT_RST_IOPIN, PCA9555_PIN_OFF);
     pca9555_write_pins_state(&ioport);
     delay_ms(10);
-    pca9555_set_pins_state(&ioport, TFT_IOPIN, PCA9555_PIN_ON);
+    pca9555_set_pins_state(&ioport, TFT_RST_IOPIN, PCA9555_PIN_ON);
     pca9555_write_pins_state(&ioport);
     pca9555_wait(&ioport);
     delay_ms(150);
@@ -712,8 +699,6 @@ static void init_tft(void)
     //tft9341_reset(&tft);
     ioport_reset_tft();
     
-    // удалить spi_io_begin();
-    
     tft9341_madctl_t madctl;
     madctl.row_address_order = TFT9341_ROW_BOTTOM_TO_TOP;//TFT9341_ROW_TOP_TO_BOTTOM;
     madctl.col_address_order = TFT9341_COL_RIGHT_TO_LEFT;//TFT9341_COL_LEFT_TO_RIGHT;
@@ -735,10 +720,10 @@ static void init_tim1(void)
     
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = 1125-1;                    // Делитель (0000...FFFF)
+            tim1_is.TIM_Prescaler = 1125-1;                  // Делитель (0000...FFFF)
             tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim1_is.TIM_Period = 9;                        // Значение периода (0000...FFFF)
-            tim1_is.TIM_ClockDivision = 0;                    // определяет тактовое деление
+            tim1_is.TIM_Period = 9;                          // Значение периода (0000...FFFF)
+            tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
     TIM_TimeBaseInit(TIM1, &tim1_is);
 
     TIM_OCInitTypeDef tim1_oc_is;
@@ -762,13 +747,13 @@ static void init_tim2(void)
 {
     TIM_TimeBaseInitTypeDef TIM2_InitStructure;
             TIM2_InitStructure.TIM_Prescaler = 72-1;                    // Делитель (0000...FFFF)
-            TIM2_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;    // Режим счетчика
-            TIM2_InitStructure.TIM_Period = 60000;                        // Значение периода (0000...FFFF)
-            TIM2_InitStructure.TIM_ClockDivision = 0;                    // определяет тактовое деление
+            TIM2_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;  // Режим счетчика
+            TIM2_InitStructure.TIM_Period = 60000;                      // Значение периода (0000...FFFF)
+            TIM2_InitStructure.TIM_ClockDivision = 0;                   // определяет тактовое деление
     TIM_TimeBaseInit(TIM2, &TIM2_InitStructure);
-    TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);                // Однопульсный режим таймера
-    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM2, ENABLE);                                           // Начать отсчёт!
+    TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);                    // Однопульсный режим таймера
+    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);                          // Разрешаем прерывание от таймера
+    //TIM_Cmd(TIM2, ENABLE);                                            // Начать отсчёт!
     
     NVIC_SetPriority(TIM2_IRQn, 1);
     NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
@@ -793,40 +778,43 @@ static void init_tim3(void)
 static void init_tim6(void)
 {
     TIM_TimeBaseInitTypeDef TIM6_InitStructure;
-            TIM6_InitStructure.TIM_Prescaler = 72-1;            // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            TIM6_InitStructure.TIM_Prescaler = 72-1;                    // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            TIM6_InitStructure.TIM_Period = 60000;            // Значение периода (0000...FFFF)
-            TIM6_InitStructure.TIM_ClockDivision = 0;            // определяет тактовое деление
+            TIM6_InitStructure.TIM_Period = 60000;                      // Значение периода (0000...FFFF)
+            TIM6_InitStructure.TIM_ClockDivision = 0;                   // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
-    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);            // Однопульсный режим таймера
-    TIM_SetCounter(TIM6, 0);                        // Сбрасываем счетный регистр в ноль
-    //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);            // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM6, ENABLE);                           // Начать отсчёт!    
+    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
+    TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
+    //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!    
 }
 
 static void init_exti(void)
 {
-/**********************************************************************************************************/
-/*******************    PCA9555: I2c1 and Interrupt        ***************************************************/
+    /*
+     * PCA9555 Interrupt.
+     */
     GPIO_InitTypeDef GPIO_InitStructure;
     /* GPIOB Configuration: 95 (PD7 - Int_PCA9555) as input pull-down */
-            GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-            GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-            GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
     GPIO_Init(GPIOD, &GPIO_InitStructure);
         
         
-/**********************************************************************************************************/
-/******************        Zero sensor        *******************************************************************/
+    /*
+     * Zero sensor
+     */
     /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
-            GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-            GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-            GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOE, &GPIO_InitStructure);
         
         
-/**********************************************************************************************************/
-/***************    Привязка Прерывания к портам МК        ***************************************************/       
+    /*
+     * Привязка Прерывания к портам МК.
+     */       
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOD, GPIO_PinSource7);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource13);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource14);
@@ -843,16 +831,17 @@ static void init_exti(void)
     NVIC_SetPriority(EXTI9_5_IRQn, 3);
     NVIC_SetPriority(EXTI15_10_IRQn, 2);
  
-    NVIC_EnableIRQ (EXTI9_5_IRQn);         // Разрешаем прерывание от 5-9 ног
+    NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
     NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
 }
 
 static void init_gpio (void)
 {
-/**********************************************************************************************************/
-/******************        Digital Outputs    (Relay)        *******************************************************/
-        GPIO_InitTypeDef GPIO_InitStructure;
-    /* GPIOB Configuration: 7 (PC13 - DigitalOut_4) as output push-pull */
+    /*
+     * Digital Outputs    (Relay)
+    */
+    GPIO_InitTypeDef GPIO_InitStructure;
+     /* GPIOB Configuration: 7 (PC13 - DigitalOut_4) as output push-pull */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -865,9 +854,9 @@ static void init_gpio (void)
     GPIO_Init(GPIOE, &GPIO_InitStructure);
 
     
-/**********************************************************************************************************/
-/******************        Digital Inputs    (24v)    ***********************************************************/
-
+    /*
+     * Digital Inputs (24v)
+     */
     /* GPIOB Configuration: 96 (PB9 - DigitalIn_1) as input floating */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
@@ -875,18 +864,19 @@ static void init_gpio (void)
     GPIO_Init(GPIOB, &GPIO_InitStructure);
 
     /* GPIOB Configuration: 97 (PE0 - DigitalIn_2); 98 (PE1 - DigitalIn_3);
-     *                         1 (PE2 - DigitalIn_4); 2 (PE3 - DigitalIn_5)     as input floating */
+     *                       1 (PE2 - DigitalIn_4); 2 (PE3 - DigitalIn_5)     as input floating */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOE, &GPIO_InitStructure);
 
 
-/**********************************************************************************************************/
-/******************        Thyristors and Triac    ***********************************************************/
+    /*
+     * Thyristors and Triac
+     */
 
     /* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
-     *                         60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain    */
+     *                      60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -899,9 +889,9 @@ static void init_gpio (void)
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
 
-/**********************************************************************************************************/
-/*******************    Dip 8 switch    *******************************************************************/
-
+    /*
+     * Dip 8 switch
+     */
     /* GPIOB Configuration: 37 (PB2 - Dip_1) as input floating */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
@@ -909,7 +899,7 @@ static void init_gpio (void)
     GPIO_Init(GPIOB, &GPIO_InitStructure);
 
     /* GPIOB Configuration: 38 (PE7 - Dip_2);  39 (PE8 - Dip_3);  40 (PE9 - Dip_4);
-     *                         41 (PE10 - Dip_5); 42 (PE11 - Dip_6); 43 (PE12 - Dip_7)  as input floating */
+     *                      41 (PE10 - Dip_5); 42 (PE11 - Dip_6); 43 (PE12 - Dip_7)  as input floating */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
@@ -944,147 +934,147 @@ static gui_t gui = MAKE_GUI(&graphics, &theme);
 static gui_widget_t root_widget;
 static gui_widget_t parent_widget;
 static gui_label_t label1;
-static gui_label_t label11;
-static gui_label_t label12;
-static gui_label_t label13;
-static gui_label_t label14;
-static gui_label_t label21;
-static gui_label_t label22;
-static gui_label_t label23;
-static gui_label_t label24;
+static gui_label_t lbl_adc1_in1;
+static gui_label_t lbl_adc1_in2;
+static gui_label_t lbl_adc1_in3;
+static gui_label_t lbl_adc1_in4;
+static gui_label_t lbl_adc2_in1;
+static gui_label_t lbl_adc2_in2;
+static gui_label_t lbl_adc2_in3;
+static gui_label_t lbl_adc2_in4;
 static gui_number_label_t label_num;
-static gui_number_label_t label_num11;
-static gui_number_label_t label_num12;
-static gui_number_label_t label_num13;
-static gui_number_label_t label_num14;
-static gui_number_label_t label_num21;
-static gui_number_label_t label_num22;
-static gui_number_label_t label_num23;
-static gui_number_label_t label_num24;
+static gui_number_label_t lbl_num_adc1_in1;
+static gui_number_label_t lbl_num_adc1_in2;
+static gui_number_label_t lbl_num_adc1_in3;
+static gui_number_label_t lbl_num_adc1_in4;
+static gui_number_label_t lbl_num_adc2_in1;
+static gui_number_label_t lbl_num_adc2_in2;
+static gui_number_label_t lbl_num_adc2_in3;
+static gui_number_label_t lbl_num_adc2_in4;
 static gui_checkbox_t checkbox1;
 static gui_checkbox_t checkbox2;
 
 static void make_gui_adc(void)
 {
-    gui_label_init_parent(&label11, &gui, &parent_widget);
-    gui_label_set_text(&label11, "adc1_in1:");
-    gui_widget_move(GUI_WIDGET(&label11), 120, 10);
-    gui_widget_resize(GUI_WIDGET(&label11), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label11), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label11), true);
+    gui_label_init_parent(&lbl_adc1_in1, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc1_in1, "adc1_in1:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc1_in1), 120, 10);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc1_in1), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in1), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in1), true);
     
-    gui_label_init_parent(&label12, &gui, &parent_widget);
-    gui_label_set_text(&label12, "adc1_in2:");
-    gui_widget_move(GUI_WIDGET(&label12), 120, 30);
-    gui_widget_resize(GUI_WIDGET(&label12), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label12), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label12), true); 
+    gui_label_init_parent(&lbl_adc1_in2, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc1_in2, "adc1_in2:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc1_in2), 120, 30);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc1_in2), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in2), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in2), true); 
     
-    gui_label_init_parent(&label13, &gui, &parent_widget);
-    gui_label_set_text(&label13, "adc1_in3:");
-    gui_widget_move(GUI_WIDGET(&label13), 120, 50);
-    gui_widget_resize(GUI_WIDGET(&label13), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label13), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label13), true);
+    gui_label_init_parent(&lbl_adc1_in3, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc1_in3, "adc1_in3:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc1_in3), 120, 50);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc1_in3), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in3), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in3), true);
 
-    gui_label_init_parent(&label14, &gui, &parent_widget);
-    gui_label_set_text(&label14, "adc1_in4:");
-    gui_widget_move(GUI_WIDGET(&label14), 120, 70);
-    gui_widget_resize(GUI_WIDGET(&label14), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label14), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label14), true);
+    gui_label_init_parent(&lbl_adc1_in4, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc1_in4, "adc1_in4:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc1_in4), 120, 70);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc1_in4), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in4), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in4), true);
     
-    gui_label_init_parent(&label21, &gui, &parent_widget);
-    gui_label_set_text(&label21, "adc2_in1:");
-    gui_widget_move(GUI_WIDGET(&label21), 120, 110);
-    gui_widget_resize(GUI_WIDGET(&label21), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label21), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label21), true);
+    gui_label_init_parent(&lbl_adc2_in1, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc2_in1, "adc2_in1:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc2_in1), 120, 110);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc2_in1), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in1), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in1), true);
     
-    gui_label_init_parent(&label22, &gui, &parent_widget);
-    gui_label_set_text(&label22, "adc2_in2:");
-    gui_widget_move(GUI_WIDGET(&label22), 120, 130);
-    gui_widget_resize(GUI_WIDGET(&label22), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label22), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label22), true);
+    gui_label_init_parent(&lbl_adc2_in2, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc2_in2, "adc2_in2:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc2_in2), 120, 130);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc2_in2), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in2), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in2), true);
     
-    gui_label_init_parent(&label23, &gui, &parent_widget);
-    gui_label_set_text(&label23, "adc2_in3:");
-    gui_widget_move(GUI_WIDGET(&label23), 120, 150);
-    gui_widget_resize(GUI_WIDGET(&label23), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label23), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label23), true);
+    gui_label_init_parent(&lbl_adc2_in3, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc2_in3, "adc2_in3:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc2_in3), 120, 150);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc2_in3), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in3), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in3), true);
 
-    gui_label_init_parent(&label24, &gui, &parent_widget);
-    gui_label_set_text(&label24, "adc2_in4:");
-    gui_widget_move(GUI_WIDGET(&label24), 120, 170);
-    gui_widget_resize(GUI_WIDGET(&label24), 60, 20);
-    gui_widget_set_border(GUI_WIDGET(&label24), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label24), true);
+    gui_label_init_parent(&lbl_adc2_in4, &gui, &parent_widget);
+    gui_label_set_text(&lbl_adc2_in4, "adc2_in4:");
+    gui_widget_move(GUI_WIDGET(&lbl_adc2_in4), 120, 170);
+    gui_widget_resize(GUI_WIDGET(&lbl_adc2_in4), 60, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in4), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in4), true);
     
-    gui_number_label_init_parent(&label_num11, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num11, 1);//0x1234
-    gui_number_label_set_format(&label_num11, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num11), 180, 10);
-    gui_widget_resize(GUI_WIDGET(&label_num11), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num11), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num11), true);
+    gui_number_label_init_parent(&lbl_num_adc1_in1, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc1_in1, 1);//0x1234
+    gui_number_label_set_format(&lbl_num_adc1_in1, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in1), 180, 10);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in1), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in1), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc1_in1), true);
     
-    gui_number_label_init_parent(&label_num12, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num12, 2);//0x1234
-    gui_number_label_set_format(&label_num12, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num12), 180, 30);
-    gui_widget_resize(GUI_WIDGET(&label_num12), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num12), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num12), true);
+    gui_number_label_init_parent(&lbl_num_adc1_in2, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc1_in2, 2);//0x1234
+    gui_number_label_set_format(&lbl_num_adc1_in2, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in2), 180, 30);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in2), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in2), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc1_in2), true);
     
-    gui_number_label_init_parent(&label_num13, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num13, 3);//0x1234
-    gui_number_label_set_format(&label_num13, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num13), 180, 50);
-    gui_widget_resize(GUI_WIDGET(&label_num13), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num13), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num13), true);
+    gui_number_label_init_parent(&lbl_num_adc1_in3, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc1_in3, 3);//0x1234
+    gui_number_label_set_format(&lbl_num_adc1_in3, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in3), 180, 50);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in3), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in3), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc1_in3), true);
     
-    gui_number_label_init_parent(&label_num14, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num14, 3);//0x1234
-    gui_number_label_set_format(&label_num14, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num14), 180, 70);
-    gui_widget_resize(GUI_WIDGET(&label_num14), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num14), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num14), true);
+    gui_number_label_init_parent(&lbl_num_adc1_in4, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc1_in4, 3);//0x1234
+    gui_number_label_set_format(&lbl_num_adc1_in4, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in4), 180, 70);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in4), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in4), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc1_in4), true);
     
-    gui_number_label_init_parent(&label_num21, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num21, 4);//0x1234
-    gui_number_label_set_format(&label_num21, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num21), 180, 110);
-    gui_widget_resize(GUI_WIDGET(&label_num21), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num21), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num21), true);
+    gui_number_label_init_parent(&lbl_num_adc2_in1, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc2_in1, 4);//0x1234
+    gui_number_label_set_format(&lbl_num_adc2_in1, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc2_in1), 180, 110);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc2_in1), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc2_in1), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc2_in1), true);
     
-    gui_number_label_init_parent(&label_num22, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num22, 5);//0x1234
-    gui_number_label_set_format(&label_num22, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num22), 180, 130);
-    gui_widget_resize(GUI_WIDGET(&label_num22), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num22), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num22), true);
+    gui_number_label_init_parent(&lbl_num_adc2_in2, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc2_in2, 5);//0x1234
+    gui_number_label_set_format(&lbl_num_adc2_in2, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc2_in2), 180, 130);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc2_in2), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc2_in2), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc2_in2), true);
     
-    gui_number_label_init_parent(&label_num23, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num23, 6);//0x1234
-    gui_number_label_set_format(&label_num23, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num23), 180, 150);
-    gui_widget_resize(GUI_WIDGET(&label_num23), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num23), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num23), true);
+    gui_number_label_init_parent(&lbl_num_adc2_in3, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc2_in3, 6);//0x1234
+    gui_number_label_set_format(&lbl_num_adc2_in3, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc2_in3), 180, 150);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc2_in3), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc2_in3), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc2_in3), true);
  
-    gui_number_label_init_parent(&label_num24, &gui, &parent_widget);
-    gui_number_label_set_number(&label_num24, 6);//0x1234
-    gui_number_label_set_format(&label_num24, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num24), 180, 170);
-    gui_widget_resize(GUI_WIDGET(&label_num24), 50, 20);
-    gui_widget_set_border(GUI_WIDGET(&label_num24), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&label_num24), true);
+    gui_number_label_init_parent(&lbl_num_adc2_in4, &gui, &parent_widget);
+    gui_number_label_set_number(&lbl_num_adc2_in4, 6);//0x1234
+    gui_number_label_set_format(&lbl_num_adc2_in4, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&lbl_num_adc2_in4), 180, 170);
+    gui_widget_resize(GUI_WIDGET(&lbl_num_adc2_in4), 50, 20);
+    gui_widget_set_border(GUI_WIDGET(&lbl_num_adc2_in4), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&lbl_num_adc2_in4), true);
     
 }
 
@@ -1141,15 +1131,9 @@ static void make_gui(void)
     gui_set_root_widget(&gui, &root_widget);
 
     gui_widget_set_visible(&root_widget, true);
-    //gui_focus_next_widget(&gui);
-    //gui_focus_prev_widget(&gui);
-    //gui_focus_next_widget(&gui);
-    
-    gui_widget_t* widget = gui_widget_from_point(&gui, 30, 80);
-    gui_set_focus_widget(&gui, widget);
 }
 
-static void gui_iter(void)
+static void gui_update_values(void)
 {
     gui_number_label_set_number(&label_num, timer_cc_count);
     int secs = counter / 1000;
@@ -1169,7 +1153,7 @@ static void screen_repaint(void)
 {
     // удалить spi_io_begin();
     
-    gui_iter();
+    gui_update_values();
 }
 
 
@@ -1217,15 +1201,15 @@ int main(void)
             timer_cc_count = 0;
             
         }
-            gui_number_label_set_number(&label_num11, adc_raw_buffer[0]);
-            gui_number_label_set_number(&label_num12, adc_raw_buffer[2]);
-            gui_number_label_set_number(&label_num13, adc_raw_buffer[4]);
-            gui_number_label_set_number(&label_num14, adc_raw_buffer[6]);
-            
-            gui_number_label_set_number(&label_num21, adc_raw_buffer[1]);
-            gui_number_label_set_number(&label_num22, adc_raw_buffer[3]);
-            gui_number_label_set_number(&label_num23, adc_raw_buffer[5]);
-            gui_number_label_set_number(&label_num24, adc_raw_buffer[7]);
+        gui_number_label_set_number(&lbl_num_adc1_in1, adc_raw_buffer[0]);
+        gui_number_label_set_number(&lbl_num_adc1_in2, adc_raw_buffer[2]);
+        gui_number_label_set_number(&lbl_num_adc1_in3, adc_raw_buffer[4]);
+        gui_number_label_set_number(&lbl_num_adc1_in4, adc_raw_buffer[6]);
+
+        gui_number_label_set_number(&lbl_num_adc2_in1, adc_raw_buffer[1]);
+        gui_number_label_set_number(&lbl_num_adc2_in2, adc_raw_buffer[3]);
+        gui_number_label_set_number(&lbl_num_adc2_in3, adc_raw_buffer[5]);
+        gui_number_label_set_number(&lbl_num_adc2_in4, adc_raw_buffer[7]);
     }
     return 0;
 }
