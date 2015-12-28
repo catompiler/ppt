@@ -11,7 +11,7 @@ SRC_LIBS += circular_buffer usart newlib_stubs\
 			i2c pca9555 list\
 			gui gui_object gui_widget gui_label\
 			gui_number_label gui_checkbox\
-			phase_state mylib\
+			phase_state mylib power\
 			
 
 # Стандартные драйвера периферии.
