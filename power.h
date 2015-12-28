@@ -41,10 +41,17 @@ typedef enum _Power_Channel {
 //! Тип нескольких каналов АЦП.
 typedef uint16_t power_channels_t;
 
+//! Тип канала.
+typedef enum _Power_Channel_Type {
+    POWER_CHANNEL_DC = 0, //!< DC.
+    POWER_CHANNEL_AC = 1, //!< AC.
+} power_channel_type_t;
+
 /**
  * Структура значения, полученного с канала АЦП.
  */
 typedef struct _Power_Value {
+    power_channel_type_t type; //!< Тип канала.
     fixed32_t k; //!< Коэффициент пропорциональности.
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
@@ -56,14 +63,18 @@ typedef struct _Power_Value {
     int32_t sum_avg; //!< Сумма значений (среднее).
     int32_t sum_rms; //!< Сумма значений (RMS).
     int32_t count; //!< Число значений.
+    bool calibrated; //!< Флаг калибровки.
+    bool data_avail; //!< Флаг доступности данных.
 } power_value_t;
 
 //! Инициализирует структуру значения канала АЦП по месту объявления.
-#define MAKE_POWER_CHANNEL(arg_k) { .k = arg_k, .cal_zero = 0,\
-                                    .cur_zero = 0, .sum_zero = 0,\
+#define MAKE_POWER_CHANNEL(arg_type, arg_k) { .type = arg_type, .k = arg_k,\
+                                    .raw_zero_cal = 0,\
+                                    .raw_zero_cur = 0, .sum_zero = 0,\
                                     .raw_value_avg = 0, .raw_value_rms = 0,\
                                     .real_value_avg = 0, .real_value_rms = 0,\
-                                    .sum_avg = 0, .sum_rms = 0, .count = 0 }
+                                    .sum_avg = 0, .sum_rms = 0, .count = 0,\
+                                    .calibrated = false, .data_avail = false }
 
 /**
  * Структура питания.
@@ -74,7 +85,7 @@ typedef struct _Power{
 } power_t;
 
 //! Инициализирует структуру питания по месту объявления.
-#define MAKE_POWER(arg_channels, arg_count) { .channels = arg_channels, .count = arg_count }
+#define MAKE_POWER(arg_channels, arg_count) { .channels = arg_channels, .channels_count = arg_count }
 
 
 /**
@@ -109,7 +120,35 @@ extern err_t power_calc_values(power_t* power, power_channels_t channels);
  * @param channels Маска каналов АЦП.
  * @return Код ошибки.
  */
-extern err_t power_calibrate_zero(power_t* power, power_channels_t channels);
+extern err_t power_calibrate(power_t* power, power_channels_t channels);
+
+/**
+ * Получает флаг доступности данных на всех заданных каналах АЦП.
+ * @param power Питание.
+ * @param channels Маска каналов АЦП.
+ * @return Флаг доступности данных.
+ */
+extern bool power_data_avail(power_t* power, power_channels_t channels);
+
+/**
+ * Получает флаг калибровки.
+ * @param power Питание.
+ * @return Флаг калибровки.
+ */
+ALWAYS_INLINE static bool power_channel_calibrated(power_t* power, size_t channel)
+{
+    return power->channels[channel].calibrated;
+}
+
+/**
+ * Получает флаг доступности данных.
+ * @param power Питание.
+ * @return Флаг доступности данных.
+ */
+ALWAYS_INLINE static bool power_channel_data_avail(power_t* power, size_t channel)
+{
+    return power->channels[channel].data_avail;
+}
 
 /**
  * Получает сырое среднее значение канала АЦП.
@@ -153,6 +192,39 @@ ALWAYS_INLINE static fixed32_t power_channel_real_value_avg(power_t* power, size
 ALWAYS_INLINE static fixed32_t power_channel_real_value_rms(power_t* power, size_t channel)
 {
     return power->channels[channel].real_value_rms;
+}
+
+/**
+ * Получает сырое среднее калиброванное значение нуля канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Сырое среднее калиброванное значение нуля канала АЦП.
+ */
+ALWAYS_INLINE static int16_t power_channel_raw_zero_calibrated(power_t* power, size_t channel)
+{
+    return power->channels[channel].raw_zero_cal;
+}
+
+/**
+ * Получает сырое среднее текущее значение нуля канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Сырое среднее текущее значение нуля канала АЦП.
+ */
+ALWAYS_INLINE static int16_t power_channel_raw_zero_current(power_t* power, size_t channel)
+{
+    return power->channels[channel].raw_zero_cur;
+}
+
+/**
+ * Получает текущее число выборок канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Текущее число выборок канала АЦП.
+ */
+ALWAYS_INLINE static size_t power_channel_samples_count(power_t* power, size_t channel)
+{
+    return (size_t)power->channels[channel].count;
 }
 
 #endif	/* POWER_H */

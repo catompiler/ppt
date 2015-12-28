@@ -34,6 +34,7 @@
 #include "Mylib/mylib.h"
 #include "I2Clib/I2Clib.h"
 #include "phase_state/phase_state.h"
+#include "power.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
@@ -131,7 +132,39 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE] = {0};
 
 //! Число измерений ADC.
 static volatile int timer_cc_count = 0;
-    
+
+//! Число значений каналов АЦП.
+#define POWER_VALUES_COUNT 8
+//! Значения каналов АЦП.
+static power_value_t power_values[POWER_VALUES_COUNT] = {
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000)
+};
+//! Питание.
+static power_t power = MAKE_POWER(power_values, POWER_VALUES_COUNT);
+// Алиасы значений токов и напряжений в массиве.
+#define POWER_VALUE_Ia 0
+#define POWER_VALUE_Ua 1
+#define POWER_VALUE_Ib 2
+#define POWER_VALUE_Ub 3
+#define POWER_VALUE_Ic 4
+#define POWER_VALUE_Uc 5
+#define POWER_VALUE_Irot 6
+#define POWER_VALUE_Urot 7
+
+//! Каналы АЦП.
+#define POWER_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
+                        POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
+                        POWER_CHANNEL_6 | POWER_CHANNEL_7)
+
+//! Флаг калибровки питания.
+static bool power_calibrated = false;
 
 /*
  * Обработчики прерываний.
@@ -182,10 +215,15 @@ void I2C1_ER_IRQHandler(void)
     i2c_bus_error_irq_handler(&i2c);
 }
 
+/**
+ * Обработчик окончания передачи данных от ADC.
+ */
 void DMA1_Channel1_IRQHandler(void)
 {
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
+        
+        power_process_adc_values(&power, POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
         timer_cc_count ++;
     }
@@ -1140,6 +1178,20 @@ static void gui_update_values(void)
     //gui_number_label_set_number(&label_num, secs);
     gui_checkbox_set_checked(&checkbox1, secs & 0x1);
     gui_checkbox_set_checked(&checkbox2, !gui_checkbox_checked(&checkbox1));
+
+    if(power_data_avail(&power, POWER_CHANNELS)){
+        gui_number_label_set_number(&lbl_num_adc1_in1, power_channel_raw_value_avg(&power, 0));
+        gui_number_label_set_number(&lbl_num_adc1_in2, power_channel_raw_value_avg(&power, 2));
+        gui_number_label_set_number(&lbl_num_adc1_in3, power_channel_raw_value_avg(&power, 4));
+        gui_number_label_set_number(&lbl_num_adc1_in4, power_channel_raw_value_avg(&power, 6));
+
+        gui_number_label_set_number(&lbl_num_adc2_in1, power_channel_raw_value_avg(&power, 1));
+        gui_number_label_set_number(&lbl_num_adc2_in2, power_channel_raw_value_avg(&power, 3));
+        //gui_number_label_set_number(&lbl_num_adc2_in3, power_channel_raw_value_avg(&power, 5));
+        //gui_number_label_set_number(&lbl_num_adc2_in4, power_channel_raw_value_avg(&power, 7));
+        gui_number_label_set_number(&lbl_num_adc2_in3, power_channel_raw_zero_calibrated(&power, 1));
+        gui_number_label_set_number(&lbl_num_adc2_in4, power_channel_raw_zero_current(&power, 1));
+    }
 }
 
 static void screen_clear(void)
@@ -1184,15 +1236,34 @@ int main(void)
     
     screen_repaint();
     
+    counter_t update_period = system_counter_ticks_per_sec() / 10;
+    /*counter_t calibration_timer = system_counter_ticks();
+    
+    for(;;){
+        __WFI();
+        if(system_counter_diff(&calibration_timer) >= system_counter_ticks_per_sec()) break;
+    }
+    
+    power_calc_values(&power, POWER_CHANNELS);
+    power_calibrate(&power, POWER_CHANNELS);
+    power_calibrated = true;*/
+    
     for(;;){
         
-        if(system_counter_diff(&counter) >= system_counter_ticks_per_sec()){
+        if(system_counter_diff(&counter) >= update_period){
         //if(need_update){
             //need_update = false;
             
             printf("%d\r\n", ((int)counter));
             
             screen_repaint();
+            if(power_calibrated){
+                power_calc_values(&power, POWER_CHANNELS);
+            }else{
+                power_calc_values(&power, POWER_CHANNELS);
+                power_calibrate(&power, POWER_CHANNELS);
+                power_calibrated = true;
+            }
             
             ioport_next_leds();
             
@@ -1201,6 +1272,7 @@ int main(void)
             timer_cc_count = 0;
             
         }
+        /*
         gui_number_label_set_number(&lbl_num_adc1_in1, adc_raw_buffer[0]);
         gui_number_label_set_number(&lbl_num_adc1_in2, adc_raw_buffer[2]);
         gui_number_label_set_number(&lbl_num_adc1_in3, adc_raw_buffer[4]);
@@ -1210,6 +1282,7 @@ int main(void)
         gui_number_label_set_number(&lbl_num_adc2_in2, adc_raw_buffer[3]);
         gui_number_label_set_number(&lbl_num_adc2_in3, adc_raw_buffer[5]);
         gui_number_label_set_number(&lbl_num_adc2_in4, adc_raw_buffer[7]);
+         */
     }
     return 0;
 }
