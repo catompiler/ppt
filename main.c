@@ -123,20 +123,27 @@ uint8_t value=0, value1=0, value2=0, PCA_interrupt_flag = DISABLE;
 uint8_t nul_A = 0, nul_B = 0, nul_C = 0, impuls_timer_2 = 0, impuls_timer_3 = 0;
 uint16_t time_A, time_B, time_C;
 
-//! Длина буфера DMA.
+//! Длина буфера ADC 1 и 2 в трансферах 32 бит.
 #define ADC12_RAW_BUFFER_DMA_TRANSFERS 4
-//! Размер буфера DMA в байтах.
+//! Размер буфера ADC 1 и 2.
 #define ADC12_RAW_BUFFER_SIZE (ADC12_RAW_BUFFER_DMA_TRANSFERS * 2)
+//! Длина буфера ADC 3 в трансферах 16 бит.
+#define ADC3_RAW_BUFFER_DMA_TRANSFERS 3
+//! Размер буфера ADC 3.
+#define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS)
 //! Буфер ADC.
-static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE] = {0};
+static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
 
 //! Число измерений ADC.
 static volatile int timer_cc_count = 0;
 
 //! Число значений каналов АЦП.
-#define POWER_VALUES_COUNT 8
+#define POWER_VALUES_COUNT (ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE)
 //! Значения каналов АЦП.
 static power_value_t power_values[POWER_VALUES_COUNT] = {
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
+    MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
     MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
     MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
     MAKE_POWER_CHANNEL(POWER_CHANNEL_DC, 0x10000),
@@ -429,10 +436,12 @@ static void init_periph_clock(void)
     RCC_ADCCLKConfig(RCC_PCLK2_Div6);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
     // USART.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     // DMA.
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
     // SPI.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
     // I2C1.
@@ -563,20 +572,21 @@ static void init_i2c(void)
 
 static void init_adc(void)
 {
-
     GPIO_InitTypeDef gpio_adcA =
-        {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_2, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
+        {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
     GPIO_InitTypeDef gpio_adcB =
         {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
-    /*GPIO_InitTypeDef gpio_adcC =
-        {.GPIO_Pin = GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};*/
-    GPIO_Init(GPIOB, &gpio_adcA);
+    GPIO_InitTypeDef gpio_adcC =
+        {.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_2MHz, .GPIO_Mode = GPIO_Mode_AIN};
+    GPIO_Init(GPIOA, &gpio_adcA);
     GPIO_Init(GPIOB, &gpio_adcB);
-    //GPIO_Init(GPIOC, &gpio_adcC);
+    GPIO_Init(GPIOC, &gpio_adcC);
     
     dma_channel_lock(DMA1_Channel1);
+    dma_channel_lock(DMA2_Channel5);
     
     DMA_DeInit(DMA1_Channel1);
+    DMA_DeInit(DMA2_Channel5);
 
     DMA_InitTypeDef dma_is;
     DMA_StructInit(&dma_is);
@@ -593,33 +603,59 @@ static void init_adc(void)
     dma_is.DMA_M2M = DMA_M2M_Disable;
 
     DMA_Init(DMA1_Channel1, &dma_is);
+
+    DMA_StructInit(&dma_is);
+    dma_is.DMA_PeripheralBaseAddr = (uint32_t)&ADC3->DR;
+    dma_is.DMA_MemoryBaseAddr = (uint32_t)(adc_raw_buffer + ADC12_RAW_BUFFER_SIZE);
+    dma_is.DMA_DIR = DMA_DIR_PeripheralSRC;
+    dma_is.DMA_BufferSize = ADC3_RAW_BUFFER_DMA_TRANSFERS;
+    dma_is.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    dma_is.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    dma_is.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+    dma_is.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+    dma_is.DMA_Mode = DMA_Mode_Circular;
+    dma_is.DMA_Priority = DMA_Priority_Medium;
+    dma_is.DMA_M2M = DMA_M2M_Disable;
+
+    DMA_Init(DMA2_Channel5, &dma_is);
         
     ADC_DeInit(ADC1);
     ADC_DeInit(ADC2);
+    ADC_DeInit(ADC3);
     
-    ADC_InitTypeDef adc1_is;
-    ADC_StructInit(&adc1_is);
+    ADC_InitTypeDef adc_is;
+    ADC_StructInit(&adc_is);
     //Настройка параметров  ADC1
-    adc1_is.ADC_Mode = ADC_Mode_RegSimult;
-    adc1_is.ADC_ScanConvMode = ENABLE;
-    adc1_is.ADC_ContinuousConvMode = DISABLE;
-    adc1_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
-    adc1_is.ADC_DataAlign = ADC_DataAlign_Right;
-    adc1_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    adc_is.ADC_Mode = ADC_Mode_RegSimult;
+    adc_is.ADC_ScanConvMode = ENABLE;
+    adc_is.ADC_ContinuousConvMode = DISABLE;
+    adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
+    adc_is.ADC_DataAlign = ADC_DataAlign_Right;
+    adc_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
     
-    ADC_Init(ADC1, &adc1_is);
+    ADC_Init(ADC1, &adc_is);
     
-    ADC_InitTypeDef adc2_is;
-    ADC_StructInit(&adc2_is);
+    ADC_StructInit(&adc_is);
     //Настройка параметров  ADC2
-    adc2_is.ADC_Mode = ADC_Mode_RegSimult;
-    adc2_is.ADC_ScanConvMode = ENABLE;
-    adc2_is.ADC_ContinuousConvMode = DISABLE;
-    adc2_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
-    adc2_is.ADC_DataAlign = ADC_DataAlign_Right;
-    adc2_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    adc_is.ADC_Mode = ADC_Mode_RegSimult;
+    adc_is.ADC_ScanConvMode = ENABLE;
+    adc_is.ADC_ContinuousConvMode = DISABLE;
+    adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
+    adc_is.ADC_DataAlign = ADC_DataAlign_Right;
+    adc_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
     
-    ADC_Init(ADC2, &adc2_is);
+    ADC_Init(ADC2, &adc_is);
+    
+    ADC_StructInit(&adc_is);
+    //Настройка параметров  ADC3
+    adc_is.ADC_Mode = ADC_Mode_Independent;
+    adc_is.ADC_ScanConvMode = ENABLE;
+    adc_is.ADC_ContinuousConvMode = DISABLE;
+    adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
+    adc_is.ADC_DataAlign = ADC_DataAlign_Right;
+    adc_is.ADC_NbrOfChannel = ADC3_RAW_BUFFER_DMA_TRANSFERS;
+    
+    ADC_Init(ADC3, &adc_is);
     
     //Порядок оцифровки ADC1.
     ADC_RegularChannelConfig(ADC1, ADC_Channel_15, 1, ADC_SampleTime_55Cycles5);
@@ -633,8 +669,16 @@ static void init_adc(void)
     ADC_RegularChannelConfig(ADC2, ADC_Channel_0, 3, ADC_SampleTime_55Cycles5);
     ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 4, ADC_SampleTime_55Cycles5);
     
+    //Порядок оцифровки ADC3.
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_11, 2, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_10, 3, ADC_SampleTime_55Cycles5);
+    
     ADC_DMACmd(ADC1, ENABLE); //Enable ADC1 DMA.
     DMA_Cmd(DMA1_Channel1, ENABLE);
+    
+    ADC_DMACmd(ADC3, ENABLE); //Enable ADC3 DMA.
+    DMA_Cmd(DMA2_Channel5, ENABLE);
     
     ADC_DiscModeChannelCountConfig(ADC1, ADC12_RAW_BUFFER_DMA_TRANSFERS);
     ADC_DiscModeCmd(ADC1, ENABLE);
@@ -642,11 +686,16 @@ static void init_adc(void)
     ADC_DiscModeChannelCountConfig(ADC2, ADC12_RAW_BUFFER_DMA_TRANSFERS);
     ADC_DiscModeCmd(ADC2, ENABLE);
     
+    ADC_DiscModeChannelCountConfig(ADC3, ADC3_RAW_BUFFER_DMA_TRANSFERS);
+    ADC_DiscModeCmd(ADC3, ENABLE);
+    
     ADC_ExternalTrigConvCmd(ADC1, ENABLE);
     ADC_ExternalTrigConvCmd(ADC2, ENABLE);
+    ADC_ExternalTrigConvCmd(ADC3, ENABLE);
 
     ADC_Cmd(ADC1, ENABLE); //Enable ADC1.
     ADC_Cmd(ADC2, ENABLE); //Enable ADC2.
+    ADC_Cmd(ADC3, ENABLE); //Enable ADC2.
     
     //Калибровка ADC.
     //Enable reset calibaration register.
@@ -654,11 +703,15 @@ static void init_adc(void)
     while (ADC_GetResetCalibrationStatus(ADC1)); //Check the end of ADC1 reset calibration register.
     ADC_ResetCalibration(ADC2);
     while (ADC_GetResetCalibrationStatus(ADC2)); //Check the end of ADC2 reset calibration register.
+    ADC_ResetCalibration(ADC3);
+    while (ADC_GetResetCalibrationStatus(ADC3)); //Check the end of ADC3 reset calibration register.
     //Start calibaration.
     ADC_StartCalibration(ADC1);
     while (ADC_GetCalibrationStatus(ADC1)); //Check the end of ADC1 calibration.
     ADC_StartCalibration(ADC2);
     while (ADC_GetCalibrationStatus(ADC2)); //Check the end of ADC2 calibration.
+    ADC_StartCalibration(ADC3);
+    while (ADC_GetCalibrationStatus(ADC3)); //Check the end of ADC3 calibration.
     
     DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
     NVIC_SetPriority(DMA1_Channel1_IRQn, 1);
