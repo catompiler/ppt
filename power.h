@@ -56,8 +56,10 @@ typedef struct _Power_Value {
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
+    int16_t raw_value; //!< Сырое значение с АЦП.
     int16_t raw_value_avg; //!< Сырое значение с АЦП (среднее).
     int16_t raw_value_rms; //!< Сырое значение с АЦП (RMS).
+    fixed32_t real_value; //!< Значение в СИ.
     fixed32_t real_value_avg; //!< Значение в СИ (среднее).
     fixed32_t real_value_rms; //!< Значение в СИ (RMS).
     int32_t sum_avg; //!< Сумма значений (среднее).
@@ -69,9 +71,10 @@ typedef struct _Power_Value {
 
 //! Инициализирует структуру значения канала АЦП по месту объявления.
 #define MAKE_POWER_CHANNEL(arg_type, arg_k) { .type = arg_type, .k = arg_k,\
-                                    .raw_zero_cal = 0,\
-                                    .raw_zero_cur = 0, .sum_zero = 0,\
+                                    .raw_zero_cal = 0, .raw_zero_cur = 0,\
+                                    .raw_value = 0, .sum_zero = 0,\
                                     .raw_value_avg = 0, .raw_value_rms = 0,\
+                                    .real_value = 0,\
                                     .real_value_avg = 0, .real_value_rms = 0,\
                                     .sum_avg = 0, .sum_rms = 0, .count = 0,\
                                     .calibrated = false, .data_avail = false }
@@ -151,6 +154,17 @@ ALWAYS_INLINE static bool power_channel_data_avail(power_t* power, size_t channe
 }
 
 /**
+ * Получает сырое последнее значение канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Сырое последнее значение канала АЦП.
+ */
+ALWAYS_INLINE static int16_t power_channel_raw_value(power_t* power, size_t channel)
+{
+    return power->channels[channel].raw_value;
+}
+
+/**
  * Получает сырое среднее значение канала АЦП.
  * @param power Питание.
  * @param channel Номер канала.
@@ -170,6 +184,17 @@ ALWAYS_INLINE static int16_t power_channel_raw_value_avg(power_t* power, size_t 
 ALWAYS_INLINE static int16_t power_channel_raw_value_rms(power_t* power, size_t channel)
 {
     return power->channels[channel].raw_value_rms;
+}
+
+/**
+ * Получает реальное последнее значение канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Реальное последнее значение канала АЦП.
+ */
+ALWAYS_INLINE static fixed32_t power_channel_real_value(power_t* power, size_t channel)
+{
+    return power->channels[channel].real_value;
 }
 
 /**

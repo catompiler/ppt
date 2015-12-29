@@ -24,6 +24,9 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
         abs_value = ABS(abs_value);
     }
     
+    channel->raw_value = value;
+    channel->real_value = fixed32_mul((int64_t)channel->raw_value, channel->k);
+    
     channel->sum_zero += value;
     channel->sum_avg += abs_value;
     channel->sum_rms += abs_value * abs_value;
@@ -86,8 +89,8 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
     //! @todo Вычислени квадратного корня для RMS.
     channel->raw_value_rms = channel->raw_value_avg;
     
-    channel->real_value_avg = fixed32_mul((int64_t)channel->real_value_avg, channel->k);
-    channel->real_value_rms = fixed32_mul((int64_t)channel->real_value_rms, channel->k);
+    channel->real_value_avg = fixed32_mul((int64_t)channel->raw_value_avg, channel->k);
+    channel->real_value_rms = fixed32_mul((int64_t)channel->raw_value_rms, channel->k);
     
     power_channel_reset_sums(channel);
     
