@@ -35,6 +35,7 @@
 #include "I2Clib/I2Clib.h"
 #include "phase_state/phase_state.h"
 #include "power.h"
+#include "triac.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
