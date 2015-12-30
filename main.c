@@ -36,6 +36,7 @@
 #include "phase_state/phase_state.h"
 #include "power.h"
 #include "triac.h"
+#include "triac_pair.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
