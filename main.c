@@ -179,6 +179,27 @@ static power_t power = MAKE_POWER(power_values, POWER_VALUES_COUNT);
 //! Флаг калибровки питания.
 static bool power_calibrated = false;
 
+// Тиристоры.
+//! Число пар тиристоров.
+#define TRIAC_PAIRS_COUNT 6
+//! Пары тиристоров.
+static triac_pair_t triac_pairs[TRIAC_PAIRS_COUNT];
+// Алиасы пар.
+//! Пара 1 - 6.
+#define TRIAC_PAIR_1_6  0
+//! Пара 3 - 6.
+#define TRIAC_PAIR_3_6  1
+//! Пара 3 - 2.
+#define TRIAC_PAIR_3_2  2
+//! Пара 5 - 2.
+#define TRIAC_PAIR_5_2  3
+//! Пара 5 - 4.
+#define TRIAC_PAIR_5_4  4
+//! Пара 1 - 4.
+#define TRIAC_PAIR_1_4  5
+//! Тиристор возбуждения.
+static triac_t triac_exc;
+
 /*
  * Обработчики прерываний.
  */
@@ -886,6 +907,32 @@ static void init_tim6(void)
     //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!    
 }
 
+static void init_triacs(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    /* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
+     *                      60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+    /* GPIOB Configuration: 63 (PC6 - VS_xS) as output open drain */
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_1_6], GPIOD, GPIO_Pin_10, GPIOD, GPIO_Pin_15);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_3_6], GPIOD, GPIO_Pin_12, GPIOD, GPIO_Pin_15);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_3_2], GPIOD, GPIO_Pin_12, GPIOD, GPIO_Pin_11);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_5_2], GPIOD, GPIO_Pin_14, GPIOD, GPIO_Pin_11);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_5_4], GPIOD, GPIO_Pin_14, GPIOD, GPIO_Pin_13);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_1_4], GPIOD, GPIO_Pin_10, GPIOD, GPIO_Pin_13);
+    
+    triac_init(&triac_exc, GPIOC, GPIO_Pin_6);
+}
+
 static void init_exti(void)
 {
     /*
@@ -966,25 +1013,6 @@ static void init_gpio (void)
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-
-    /*
-     * Thyristors and Triac
-     */
-
-    /* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
-     *                      60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOD, &GPIO_InitStructure);
-
-    /* GPIOB Configuration: 63 (PC6 - VS_xS) as output open drain */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-
 
     /*
      * Dip 8 switch
@@ -1331,17 +1359,27 @@ int main(void)
     NVIC_SetPriorityGrouping(0x3);
     
     init_sys_counter();
+    
     init_periph_clock();
+    
     remap_config();
+    
     init_usart();
-    init_adc();    
+    
+    printf("STM32 MCU\r\n");
+    
+    init_adc();
     init_tim1();
+    
+    init_exti();
+    
+    init_gpio();
+    
+    init_triacs();
+    
     init_tim2();
     init_tim3();
     init_tim6();
-    init_exti();
-    init_gpio();
-    printf("STM32 MCU\r\n");
     
     init_i2c();
     init_spi();
