@@ -118,12 +118,17 @@ const font_bitmap_t font_10x16_utf8_bitmaps[] = {
 static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
 
 /******************************************************************************/
-#define TARGET_ANGLE 5000
-#define ADC_CH          4  //количество каналов
 
-uint8_t value=0, value1=0, value2=0, PCA_interrupt_flag = DISABLE;
-uint8_t nul_A = 0, nul_B = 0, nul_C = 0, impuls_timer_2 = 0, impuls_timer_3 = 0;
-uint16_t time_A, time_B, time_C;
+// EXTI.
+//! Линия фазы A.
+#define EXTI_PHASE_A_LINE EXTI_Line13
+//! Линия фазы B.
+#define EXTI_PHASE_B_LINE EXTI_Line14
+//! Линия фазы C.
+#define EXTI_PHASE_C_LINE EXTI_Line15
+
+static FunctionalState PCA_interrupt_flag = DISABLE;
+static uint16_t time_A, time_B, time_C;
 
 //! Длина буфера ADC 1 и 2 в трансферах 32 бит.
 #define ADC12_RAW_BUFFER_DMA_TRANSFERS 4
@@ -185,20 +190,95 @@ static bool power_calibrated = false;
 //! Пары тиристоров.
 static triac_pair_t triac_pairs[TRIAC_PAIRS_COUNT];
 // Алиасы пар.
-//! Пара 1 - 6.
-#define TRIAC_PAIR_1_6  0
 //! Пара 3 - 6.
-#define TRIAC_PAIR_3_6  1
+#define TRIAC_PAIR_3_6  0
 //! Пара 3 - 2.
-#define TRIAC_PAIR_3_2  2
+#define TRIAC_PAIR_3_2  1
 //! Пара 5 - 2.
-#define TRIAC_PAIR_5_2  3
+#define TRIAC_PAIR_5_2  2
 //! Пара 5 - 4.
-#define TRIAC_PAIR_5_4  4
+#define TRIAC_PAIR_5_4  3
 //! Пара 1 - 4.
-#define TRIAC_PAIR_1_4  5
+#define TRIAC_PAIR_1_4  4
+//! Пара 1 - 6.
+#define TRIAC_PAIR_1_6  5
 //! Тиристор возбуждения.
 static triac_t triac_exc;
+
+//! Тип номера тиристора.
+typedef size_t triac_number_t;
+
+// Смещения в массивах последовательностей направления для датчиков нуля.
+//! Датчик нуля фазы A.
+#define PHASE_A_NULL_TRIAC_OFFSET 0
+//! Датчик нуля фазы B.
+#define PHASE_B_NULL_TRIAC_OFFSET 2
+//! Датчик нуля фазы C.
+#define PHASE_C_NULL_TRIAC_OFFSET 4
+
+//! Последовательность открытия тиристоров для прямого направления.
+static const triac_number_t triac_open_seq_fwd[TRIAC_PAIRS_COUNT] = {
+    TRIAC_PAIR_3_6,
+    TRIAC_PAIR_3_2,
+    TRIAC_PAIR_5_2,
+    TRIAC_PAIR_5_4,
+    TRIAC_PAIR_1_4,
+    TRIAC_PAIR_1_6
+};
+
+//! Последовательность открытия тиристоров для обратного направления.
+static const triac_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
+    TRIAC_PAIR_5_2,
+    TRIAC_PAIR_3_2,
+    TRIAC_PAIR_3_6,
+    TRIAC_PAIR_1_6,
+    TRIAC_PAIR_1_4,
+    TRIAC_PAIR_5_4
+};
+
+//! Число таймеров для открытия тиристоров.
+#define TRIACS_TIMERS_COUNT 2
+//! Тип структуры таймера для открытия тиристора.
+typedef struct _Timer_Triacs {
+    TIM_TypeDef* timer; //!< Таймер для включения тиристоров.
+    triac_number_t triacs_a; //!< Пара тиристоров А.
+    triac_number_t triacs_b; //!< Пара тиристоров B.
+} timer_triacs_t;
+//! Тиристоры таймеров и таймеры.
+static timer_triacs_t timers_triacs[TRIACS_TIMERS_COUNT];
+//! Текущий индекс таймеров тиристоров.
+static size_t current_timer_triacs = 0;
+// Номера таймеров для открытия тиристоров.
+//! Таймер 0.
+#define TRIACS_TIMER_TIM2 0
+//! Таймер 1.
+#define TRIACS_TIMER_TIM3 1
+//! Параметры таймеров для открытия тиристора.
+//! Число тиков за период.
+#define TRIACS_TIM_TICKS (36000)
+//! Период.
+#define TRIACS_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
+//! Предделитель.
+#define TRIACS_TIM_PRESCALER (40 - 1)
+//! Время в тиках таймера открытия тиристоров.
+#define TRIACS_TIM_OPEN_TIME (180)
+//! Смещение между первой и второй парой тиристоров.
+#define TRIACS_TIM_OFFSET (TRIACS_TIM_TICKS / 6)
+//! Максимальный угол открытия тиристоров в тиках таймера.
+#define TRIACS_TIM_ANGLE_TICKS_MAX (TRIACS_TIM_TICKS / 3)
+
+//! Тип задания.
+typedef uint32_t reference_t;
+//! Задание.
+static reference_t reference = 0;
+//! Угол открытия тиристора - значение регистра сравнения таймера.
+static uint16_t timer_angle_ticks = 0;
+//! Алиас для текущего значения угла открытия тиристоров в тиках таймера.
+#define CURRENT_TIMER_ANGLE_TICKS (timer_angle_ticks)
+
+//! Тип состояния двигателя.
+
+
 
 /*
  * Обработчики прерываний.
@@ -277,145 +357,250 @@ void EXTI9_5_IRQHandler(void)
 }
 
 /**
+ * Получает текущуий таймер тиристоров.
+ * @return Текущий таймер тиристоров.
+ */
+ALWAYS_INLINE static timer_triacs_t* timer_triacs_current(void)
+{
+    return &timers_triacs[current_timer_triacs];
+}
+
+/**
+ * Устанавливает следующий таймер тиристоров.
+ * @return Следующий таймер тиристоров.
+ */
+static timer_triacs_t* timer_triacs_next(void)
+{
+    if(++ current_timer_triacs >= TRIACS_TIMERS_COUNT){
+        current_timer_triacs = 0;
+    }
+    return timer_triacs_current();
+}
+
+/**
+ * Инициализирует таймер для открытия пар тиристоров.
+ * @param triacs_a Номер первой пары тиристоров.
+ * @param triacs_b Номер второй пары тиристоров.
+ * @param angle_ticks Угол открытия (0 ... TRIACS_TIM_ANGLE_TICKS_MAX)
+ */
+static void timer_triacs_setup_next(triac_number_t triacs_a, triac_number_t triacs_b, uint16_t angle_ticks)
+{
+    // Получим следующий свободный таймер тиристоров.
+    timer_triacs_t* tim_trcs = timer_triacs_next();
+    // Остановим таймер.
+    TIM_Cmd(tim_trcs->timer, DISABLE);
+    // Сбросим счётчик.
+    TIM_SetCounter(tim_trcs->timer, 0);
+    // Установим тиристорные пары таймера.
+    // Первая пара тиристоров.
+    tim_trcs->triacs_a = triacs_a;
+    // Вторая пара тиристоров.
+    tim_trcs->triacs_b = triacs_b;
+    // Установим каналы таймера.
+    // Открытие первой пары тиристоров.
+    TIM_SetCompare1(tim_trcs->timer, angle_ticks);
+    // Закрытие первой пары тиристоров.
+    TIM_SetCompare2(tim_trcs->timer, angle_ticks + TRIACS_TIM_OPEN_TIME);
+    // Открытие второй пары тиристоров.
+    TIM_SetCompare3(tim_trcs->timer, angle_ticks + TRIACS_TIM_OFFSET);
+    // Закрытие второй пары тиристоров.
+    TIM_SetCompare4(tim_trcs->timer, angle_ticks + TRIACS_TIM_OFFSET + TRIACS_TIM_OPEN_TIME);
+    //! Запустим таймер.
+    TIM_Cmd(tim_trcs->timer, ENABLE);
+}
+
+/**
+ * Разрешает прерывание от заданных линий EXTI.
+ * @param lines_mask Линии EXTI.
+ */
+ALWAYS_INLINE static void exti_enable_lines(uint16_t lines_mask)
+{
+    EXTI->IMR |= lines_mask;
+}
+
+/**
+ * Запрещает прерывание от заданных линий EXTI.
+ * @param lines_mask Линии EXTI.
+ */
+ALWAYS_INLINE static void exti_disable_lines(uint16_t lines_mask)
+{
+    EXTI->IMR &= ~lines_mask;
+}
+
+/**
+ * Обрабатывает прерывание датчика нуля фазы.
+ * @param phase Фаза.
+ */
+static void null_sensor_handle_phase(phase_t phase)
+{
+    // Нужна определённая фаза.
+    if(phase == PHASE_UNK) return;
+    // Нужно какое-либо направление.
+    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return;
+    // add run drive state handle here.
+    
+    // Индекс пары тиристоров.
+    size_t triacs_index = 0;
+    // Последовательность тиристоров.
+    const triac_number_t* triacs_seq = triac_open_seq_fwd;
+    
+    drive_dir_t dir = phase_state_drive_direction();
+    
+    switch(dir){
+        case DRIVE_DIR_FORW:
+            // Вращение вперёд.
+            triacs_seq = triac_open_seq_fwd;
+            break;
+        case DRIVE_DIR_BACKW:
+            // Вращение назад.
+            triacs_seq = triac_open_seq_bwd;
+            break;
+        default:
+            return;
+    }
+    
+    // Обработаем фазу.
+    switch(phase){
+        case PHASE_A:
+            // Фаза A - первые две пары тиристоров.
+            triacs_index = PHASE_A_NULL_TRIAC_OFFSET;
+            exti_disable_lines(EXTI_PHASE_A_LINE);
+            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_B_LINE : EXTI_PHASE_C_LINE);
+            break;
+        case PHASE_B:
+            // Фаза B - вторые две пары тиристоров.
+            triacs_index = PHASE_B_NULL_TRIAC_OFFSET;
+            exti_disable_lines(EXTI_PHASE_B_LINE);
+            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_C_LINE : EXTI_PHASE_A_LINE);
+            break;
+        case PHASE_C:
+            // Фаза C - третьи две пары тиристоров.
+            triacs_index = PHASE_C_NULL_TRIAC_OFFSET;
+            exti_disable_lines(EXTI_PHASE_C_LINE);
+            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_A_LINE : EXTI_PHASE_B_LINE);
+            break;
+        default:
+            return;
+    }
+    
+    timer_triacs_setup_next(triacs_seq[triacs_index], triacs_seq[triacs_index + 1], CURRENT_TIMER_ANGLE_TICKS);
+}
+
+/**
  * Прерывание по датчикам нуля.
  */
 void EXTI15_10_IRQHandler(void)
 {
-
-    if (EXTI_GetITStatus(EXTI_Line13) != RESET)
+    // Датчик нуля фазы A.
+    if (EXTI_GetITStatus(EXTI_PHASE_A_LINE) != RESET)
     {
         time_A = interrupt_time_count();            // получаем значение со счетчика и управляем счетным таймером
         phase_state_handle(PHASE_A);                // детектируем срабатывание фазы
-        nul_A = phase_state_drive_direction();      // получаем направление вращения
-        //open_tiristor(alfa_pid);                  // открываем тиристор с углом альфа и последующей подачей импульсов на вторую пару
-        if (impuls_timer_2 == 0) {
-            impuls_timer_2 = 11;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
-        }
-        EXTI_ClearFlag(EXTI_Line13);                // очищаем флаг прерывания 13
+        
+        null_sensor_handle_phase(PHASE_A);          // Обрабатывает событие.
+        
+        EXTI_ClearFlag(EXTI_PHASE_A_LINE);                // очищаем флаг прерывания 13
     }
 
-    if (EXTI_GetITStatus(EXTI_Line14) != RESET)
+    // Датчик нуля фазы B.
+    if (EXTI_GetITStatus(EXTI_PHASE_B_LINE) != RESET)
     {
         time_B = interrupt_time_count();
         phase_state_handle(PHASE_B);
-        nul_A = phase_state_drive_direction();
-        if (impuls_timer_2 == 0) {
-            impuls_timer_2 = 21;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
-        }
-        EXTI_ClearFlag(EXTI_Line14);                // очищаем флаг прерывания 14
+        
+        null_sensor_handle_phase(PHASE_B);          // Обрабатывает событие.
+        
+        EXTI_ClearFlag(EXTI_PHASE_B_LINE);                // очищаем флаг прерывания 14
     }
 
-    if (EXTI_GetITStatus(EXTI_Line15) != RESET)
+    // Датчик нуля фазы C.
+    if (EXTI_GetITStatus(EXTI_PHASE_C_LINE) != RESET)
     {
         time_C = interrupt_time_count();
         phase_state_handle(PHASE_C);
-        nul_A = phase_state_drive_direction();
-        if (impuls_timer_2 == 0) {
-            impuls_timer_2 = 31;
-            TIM_SetCounter(TIM2, TARGET_ANGLE);     // Устанавливаем счетный регистр в значение.
-            TIM_Cmd(TIM2, ENABLE);                  // Начать отсчёт.
-        }
-        EXTI_ClearFlag(EXTI_Line15);                // очищаем флаг прерывания 15
+        
+        null_sensor_handle_phase(PHASE_C);          // Обрабатывает событие.
+        
+        EXTI_ClearFlag(EXTI_PHASE_C_LINE);                // очищаем флаг прерывания 15
     }
 }
 
-// Timer2 подача импульсов на верхнее плечо
+/**
+ * Получает тиристорную пару с заданным номером.
+ * @param n Номер тиристорной пары.
+ * @return Тиристорная пара.
+ */
+ALWAYS_INLINE static triac_pair_t* get_triac_pair(triac_number_t n)
+{
+    return &triac_pairs[n];
+}
+
+/**
+ * Обработчик прерывания таймера открытия тиристоров.
+ * Используются каналы сравнения:
+ * Канал1 - Первая пара тиристоров, открытие.
+ * Канал2 - Первая пара тиристоров, закрытие.
+ * Канал3 - Вторая пара тиристоров, открытие.
+ * Канал4 - Вторая пара тиристоров, закрытие.
+ */
 void TIM2_IRQHandler(void)
 {
-    // Если прерывание произошло успешно то делаем следующее
-    if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
-    {
-        //if (DriveState==DriveReadyForw){
-        First_Pulse_Sequence();
-            
-        //}
-/*
-        if (DriveState==DriveReadyBack){
-            if (impuls_timer_2 == 11) {
-                THYRISTOR_VS5_ON; THYRISTOR_VS2_ON;
-                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора.
-                TIM_Cmd(TIM2, ENABLE);                                // Старт таймера.
-                impuls_timer_2 = 12;
-            } else if (impuls_timer_2 == 12) {
-                THYRISTOR_VS5_OFF; THYRISTOR_VS2_OFF;
-                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_2 = 0;
-                impuls_timer_3 = 13;
-            } else if (impuls_timer_2 == 21) {
-                THYRISTOR_VS3_ON; THYRISTOR_VS6_ON;
-                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
-                TIM_Cmd(TIM2, ENABLE);
-                impuls_timer_2 = 22;
-            } else if (impuls_timer_2 == 22) {
-                THYRISTOR_VS3_OFF; THYRISTOR_VS6_OFF;
-                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_2 = 0;
-                impuls_timer_3 = 23;
-            } else if (impuls_timer_2 == 31) {
-                THYRISTOR_VS1_ON; THYRISTOR_VS4_ON;
-                TIM_SetCounter(TIM2, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
-                TIM_Cmd(TIM2, ENABLE);
-                impuls_timer_2 = 32;
-            } else if (impuls_timer_2 == 32) {
-                THYRISTOR_VS1_OFF; THYRISTOR_VS4_OFF;
-                TIM_SetCounter(TIM3, THYRISTOR_ON_INTERVAL);        // Выставляем угол открытия тиристора 60гр
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_2 = 0;
-                impuls_timer_3 = 33;
-            }
-        }*/
-        // Очищаем флаг прерывания UIF
-        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    // Если нужно открыть тиристорную пару 1.
+    if(TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET){
+        triac_pair_open(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_a)
+                );
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC1);
+    }else // Если нужно закрыть тиристорную пару 1.
+    if(TIM_GetITStatus(TIM2, TIM_IT_CC2) != RESET){
+        triac_pair_close(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_a)
+                );
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC2);
+    }else // Если нужно открыть тиристорную пару 2.
+    if(TIM_GetITStatus(TIM2, TIM_IT_CC3) != RESET){
+        triac_pair_open(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_b)
+                );
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC3);
+    }else // Если нужно закрыть тиристорную пару 2.
+    if(TIM_GetITStatus(TIM2, TIM_IT_CC4) != RESET){
+        triac_pair_close(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_b)
+                );
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC4);
     }
 }
 
 // Timer3 подача импульсов на нижнее плечо
 void TIM3_IRQHandler(void)
 {
-    // Если прерывание произошло успешно то делаем следующее
-    if(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
-    {
-        //if (DriveState==DriveReadyForw){
-            Second_Pulse_Sequence();
-        //}
-        /*if (DriveState==DriveReadyBack){
-            if (impuls_timer_3 == 13) {
-                THYRISTOR_VS3_ON; THYRISTOR_VS2_ON;
-                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_3 = 14;
-            } else if (impuls_timer_3 == 14) {
-                THYRISTOR_VS3_OFF; THYRISTOR_VS2_OFF;
-                impuls_timer_3 = 0;
-            } else if (impuls_timer_3 == 23) {
-                THYRISTOR_VS1_ON; THYRISTOR_VS6_ON;
-                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_3 = 24;
-            } else if (impuls_timer_3 == 24) {
-                THYRISTOR_VS1_OFF; THYRISTOR_VS6_OFF;
-                impuls_timer_3 = 0;
-            } else if (impuls_timer_3 == 33) {
-                THYRISTOR_VS5_ON; THYRISTOR_VS4_ON;
-                TIM_SetCounter(TIM3, THYRISTOR_IMPULS_TIME);        // Выставляем угол открытия тиристора
-                TIM_Cmd(TIM3, ENABLE);
-                impuls_timer_3 = 34;
-            } else if (impuls_timer_3 == 34) {
-                THYRISTOR_VS5_OFF; THYRISTOR_VS4_OFF;
-                impuls_timer_3 = 0;
-            }
-        }*/
-    // Очищаем флаг прерывания UIF
-    TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+    // Если нужно открыть тиристорную пару 1.
+    if(TIM_GetITStatus(TIM3, TIM_IT_CC1) != RESET){
+        triac_pair_open(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_a)
+                );
+        TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
+    }else // Если нужно закрыть тиристорную пару 1.
+    if(TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET){
+        triac_pair_close(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_a)
+                );
+        TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
+    }else // Если нужно открыть тиристорную пару 2.
+    if(TIM_GetITStatus(TIM3, TIM_IT_CC3) != RESET){
+        triac_pair_open(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_b)
+                );
+        TIM_ClearITPendingBit(TIM3, TIM_IT_CC3);
+    }else // Если нужно закрыть тиристорную пару 2.
+    if(TIM_GetITStatus(TIM3, TIM_IT_CC4) != RESET){
+        triac_pair_close(
+                    get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_b)
+                );
+        TIM_ClearITPendingBit(TIM3, TIM_IT_CC4);
     }
 }
-
 
 /*
  * Функции обратного вызова (каллбэки).
@@ -861,36 +1046,21 @@ static void init_tim1(void)
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 }
 
-static void init_tim2(void)
+static void triacs_timer_init(TIM_TypeDef* TIM)
 {
-    TIM_TimeBaseInitTypeDef TIM2_InitStructure;
-            TIM2_InitStructure.TIM_Prescaler = 72-1;                    // Делитель (0000...FFFF)
-            TIM2_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;  // Режим счетчика
-            TIM2_InitStructure.TIM_Period = 60000;                      // Значение периода (0000...FFFF)
-            TIM2_InitStructure.TIM_ClockDivision = 0;                   // определяет тактовое деление
-    TIM_TimeBaseInit(TIM2, &TIM2_InitStructure);
-    TIM_SelectOnePulseMode(TIM2, TIM_OPMode_Single);                    // Однопульсный режим таймера
-    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);                          // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM2, ENABLE);                                            // Начать отсчёт!
-    
-    NVIC_SetPriority(TIM2_IRQn, 1);
-    NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
-}
-
-static void init_tim3(void)
-{
-    TIM_TimeBaseInitTypeDef TIM3_InitStructure;
-            TIM3_InitStructure.TIM_Prescaler = 72-1;                        // Делитель (0000...FFFF)
-            TIM3_InitStructure.TIM_CounterMode = TIM_CounterMode_Down;      // Режим счетчика
-            TIM3_InitStructure.TIM_Period = 60000;                          // Значение периода (0000...FFFF)
-            TIM3_InitStructure.TIM_ClockDivision = 0;                       // определяет тактовое деление
-    TIM_TimeBaseInit(TIM3, &TIM3_InitStructure);
-    TIM_SelectOnePulseMode(TIM3, TIM_OPMode_Single);                        // Однопульсный режим таймера
-    TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);                              // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM3, ENABLE);                                                // Начать отсчёт!    
-    
-    NVIC_SetPriority(TIM3_IRQn, 1);
-    NVIC_EnableIRQ (TIM3_IRQn);         // Разрешаем прерывания по Таймеру3
+    TIM_TimeBaseInitTypeDef TIM_InitStructure;
+    TIM_TimeBaseStructInit(&TIM_InitStructure);
+            TIM_InitStructure.TIM_Prescaler = TRIACS_TIM_PRESCALER;   // Делитель (0000...FFFF)
+            TIM_InitStructure.TIM_CounterMode = TIM_CounterMode_Down; // Режим счетчика
+            TIM_InitStructure.TIM_Period = TRIACS_TIM_PERIOD;         // Значение периода (0000...FFFF)
+            TIM_InitStructure.TIM_ClockDivision = 0;                  // определяет тактовое деление
+    TIM_TimeBaseInit(TIM, &TIM_InitStructure);
+    TIM_SetCounter(TIM, 0);
+    TIM_SelectOnePulseMode(TIM, TIM_OPMode_Single);                   // Однопульсный режим таймера
+    TIM_ITConfig(TIM, TIM_IT_CC1, ENABLE);                            // Разрешаем прерывание OC 1 от таймера
+    TIM_ITConfig(TIM, TIM_IT_CC2, ENABLE);                            // Разрешаем прерывание OC 2 от таймера
+    TIM_ITConfig(TIM, TIM_IT_CC3, ENABLE);                            // Разрешаем прерывание OC 3 от таймера
+    TIM_ITConfig(TIM, TIM_IT_CC4, ENABLE);                            // Разрешаем прерывание OC 4 от таймера
 }
 
 static void init_tim6(void)
@@ -923,14 +1093,30 @@ static void init_triacs(void)
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
     
-    triac_pair_init(&triac_pairs[TRIAC_PAIR_1_6], GPIOD, GPIO_Pin_10, GPIOD, GPIO_Pin_15);
     triac_pair_init(&triac_pairs[TRIAC_PAIR_3_6], GPIOD, GPIO_Pin_12, GPIOD, GPIO_Pin_15);
     triac_pair_init(&triac_pairs[TRIAC_PAIR_3_2], GPIOD, GPIO_Pin_12, GPIOD, GPIO_Pin_11);
     triac_pair_init(&triac_pairs[TRIAC_PAIR_5_2], GPIOD, GPIO_Pin_14, GPIOD, GPIO_Pin_11);
     triac_pair_init(&triac_pairs[TRIAC_PAIR_5_4], GPIOD, GPIO_Pin_14, GPIOD, GPIO_Pin_13);
     triac_pair_init(&triac_pairs[TRIAC_PAIR_1_4], GPIOD, GPIO_Pin_10, GPIOD, GPIO_Pin_13);
+    triac_pair_init(&triac_pairs[TRIAC_PAIR_1_6], GPIOD, GPIO_Pin_10, GPIOD, GPIO_Pin_15);
     
     triac_init(&triac_exc, GPIOC, GPIO_Pin_6);
+}
+
+static void init_triacs_timers(void)
+{
+    memset(timers_triacs, 0x0, sizeof(timer_triacs_t));
+    
+    timers_triacs[TRIACS_TIMER_TIM2].timer = TIM2;
+    timers_triacs[TRIACS_TIMER_TIM2].timer = TIM3;
+    
+    triacs_timer_init(TIM2);
+    triacs_timer_init(TIM3);
+    
+    NVIC_SetPriority(TIM2_IRQn, 1);
+    NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
+    NVIC_SetPriority(TIM3_IRQn, 1);
+    NVIC_EnableIRQ (TIM3_IRQn);         // Разрешаем прерывания по Таймеру3
 }
 
 static void init_exti(void)
@@ -966,7 +1152,7 @@ static void init_exti(void)
     
     
     EXTI_InitTypeDef EXTI_InitStructure;
-    EXTI_InitStructure.EXTI_Line = EXTI_Line7 | EXTI_Line13 | EXTI_Line14 | EXTI_Line15;
+    EXTI_InitStructure.EXTI_Line = EXTI_Line7 | EXTI_PHASE_A_LINE | EXTI_PHASE_B_LINE | EXTI_PHASE_C_LINE;
     EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
     EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
     EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -1376,9 +1562,8 @@ int main(void)
     init_gpio();
     
     init_triacs();
+    init_triacs_timers();
     
-    init_tim2();
-    init_tim3();
     init_tim6();
     
     init_i2c();
