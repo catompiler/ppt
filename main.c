@@ -25,6 +25,10 @@
 #include "gui/gui_label.h"
 #include "gui/gui_number_label.h"
 #include "gui/gui_checkbox.h"
+#include "gui/gui_spinbox.h"
+#include "input/key_input.h"
+#include "input/key_layout_ru.h"
+#include "input/key_layout_en.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -58,6 +62,21 @@ static i2c_bus_t i2c;
 
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
+//! Входа.
+#define PCA9555_INPUTS (PCA9555_PIN_8  | PCA9555_PIN_9  | PCA9555_PIN_10 | PCA9555_PIN_11 |\
+                        PCA9555_PIN_12 | PCA9555_PIN_13 | PCA9555_PIN_14 | PCA9555_PIN_15)
+
+#define PCA9555_IN_MINUS 0x8000
+#define PCA9555_IN_LEFT  0x8000
+#define PCA9555_IN_UP    0x4000
+#define PCA9555_IN_DOWN  0x2000
+#define PCA9555_IN_ESC   0x1000
+#define PCA9555_IN_ENTER 0x0800
+#define PCA9555_IN_OK    0x0800
+#define PCA9555_IN_PLUS  0x0400
+#define PCA9555_IN_RIGHT 0x0400
+#define PCA9555_IN_STOP  0x0200
+#define PCA9555_IN_START 0x0100
 
 //! TFT9341.
 static tft9341_t tft;
@@ -117,6 +136,12 @@ const font_bitmap_t font_10x16_utf8_bitmaps[] = {
 //! Шрифт 10x16.
 static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
 
+//! Раскладки клавиатуры.
+/*#define KEY_LAYOUTS_COUNT 2
+const key_layout_t* key_layouts[KEY_LAYOUTS_COUNT] = {
+    &key_layout_en, &key_layout_ru
+};*/
+
 /******************************************************************************/
 
 // EXTI.
@@ -127,7 +152,12 @@ static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
 //! Линия фазы C.
 #define EXTI_PHASE_C_LINE EXTI_Line15
 
-static FunctionalState PCA_interrupt_flag = DISABLE;
+//! Состояние клавиатуры.
+static enum _KbdState { KBD_UPDATED = 0, KBD_NEED_UPDATE, KBD_UPDATING } kbd_state = KBD_UPDATED;
+//! Флаг необходимости обновления.
+static bool kbd_need_update = false;
+
+//! Время между датчиками нуля.
 static uint16_t time_A, time_B, time_C;
 
 //! Длина буфера ADC 1 и 2 в трансферах 32 бит.
@@ -142,7 +172,7 @@ static uint16_t time_A, time_B, time_C;
 static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
 
 //! Число измерений ADC.
-static volatile int timer_cc_count = 0;
+//static volatile int timer_cc_count = 0;
 
 //! Число значений каналов АЦП.
 #define POWER_VALUES_COUNT (ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE)
@@ -230,10 +260,10 @@ static const triac_number_t triac_open_seq_fwd[TRIAC_PAIRS_COUNT] = {
 static const triac_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
     TRIAC_PAIR_5_2,
     TRIAC_PAIR_3_2,
+    TRIAC_PAIR_1_4,
+    TRIAC_PAIR_5_4,
     TRIAC_PAIR_3_6,
     TRIAC_PAIR_1_6,
-    TRIAC_PAIR_1_4,
-    TRIAC_PAIR_5_4
 };
 
 //! Число таймеров для открытия тиристоров.
@@ -255,22 +285,26 @@ static size_t current_timer_triacs = 0;
 #define TRIACS_TIMER_TIM3 1
 //! Параметры таймеров для открытия тиристора.
 //! Число тиков за период.
-#define TRIACS_TIM_TICKS (36000)
+#define TRIACS_TIM_TICKS (36000UL)
 //! Период.
 #define TRIACS_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
 //! Предделитель.
 #define TRIACS_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
-#define TRIACS_TIM_OPEN_TIME (180)
-//! Смещение между первой и второй парой тиристоров.
-#define TRIACS_TIM_OFFSET (TRIACS_TIM_TICKS / 6)
+#define TRIACS_TIM_OPEN_TIME (360)//180
 //! Максимальный угол открытия тиристоров в тиках таймера.
 #define TRIACS_TIM_ANGLE_TICKS_MAX (TRIACS_TIM_TICKS / 3)
+//! Смещение между первой и второй парой тиристоров.
+#define TRIACS_TIM_OFFSET (TRIACS_TIM_ANGLE_TICKS_MAX / 2)
 
 //! Тип задания.
 typedef uint32_t reference_t;
+//! Минимальное задание.
+#define REFERENCE_MIN 5
+//! Максимальное задание.
+#define REFERENCE_MAX 95
 //! Задание.
-static reference_t reference = 0;
+static reference_t reference = REFERENCE_MAX;
 //! Угол открытия тиристора - значение регистра сравнения таймера.
 static uint16_t timer_angle_ticks = 0;
 //! Алиас для текущего значения угла открытия тиристоров в тиках таймера.
@@ -339,7 +373,7 @@ void DMA1_Channel1_IRQHandler(void)
         
         power_process_adc_values(&power, POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
-        timer_cc_count ++;
+        //timer_cc_count ++;
     }
 }
 
@@ -350,7 +384,7 @@ void EXTI9_5_IRQHandler(void)
 {
     if (EXTI_GetITStatus(EXTI_Line7) != RESET)
     {
-        PCA_interrupt_flag = ENABLE;                        // Флаг прерывания по нажатию кнопки
+        kbd_need_update = true;                        // Флаг прерывания по нажатию кнопки
         EXTI_ClearITPendingBit(EXTI_Line7);                 // очищаем флаг прерывания 7
     }
 
@@ -385,6 +419,8 @@ static timer_triacs_t* timer_triacs_next(void)
  */
 static void timer_triacs_setup_next(triac_number_t triacs_a, triac_number_t triacs_b, uint16_t angle_ticks)
 {
+    // Если выходим за границу - возврат.
+    if(angle_ticks >= TRIACS_TIM_ANGLE_TICKS_MAX) return;
     // Получим следующий свободный таймер тиристоров.
     timer_triacs_t* tim_trcs = timer_triacs_next();
     // Остановим таймер.
@@ -398,13 +434,13 @@ static void timer_triacs_setup_next(triac_number_t triacs_a, triac_number_t tria
     tim_trcs->triacs_b = triacs_b;
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
-    TIM_SetCompare1(tim_trcs->timer, angle_ticks);
+    TIM_SetCompare1(tim_trcs->timer, (TRIACS_TIM_ANGLE_TICKS_MAX) - angle_ticks);
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(tim_trcs->timer, angle_ticks + TRIACS_TIM_OPEN_TIME);
+    TIM_SetCompare2(tim_trcs->timer, (TRIACS_TIM_ANGLE_TICKS_MAX + TRIACS_TIM_OPEN_TIME) - angle_ticks);
     // Открытие второй пары тиристоров.
-    TIM_SetCompare3(tim_trcs->timer, angle_ticks + TRIACS_TIM_OFFSET);
+    TIM_SetCompare3(tim_trcs->timer, (TRIACS_TIM_ANGLE_TICKS_MAX + TRIACS_TIM_OFFSET) - angle_ticks);
     // Закрытие второй пары тиристоров.
-    TIM_SetCompare4(tim_trcs->timer, angle_ticks + TRIACS_TIM_OFFSET + TRIACS_TIM_OPEN_TIME);
+    TIM_SetCompare4(tim_trcs->timer, (TRIACS_TIM_ANGLE_TICKS_MAX + TRIACS_TIM_OFFSET + TRIACS_TIM_OPEN_TIME) - angle_ticks);
     //! Запустим таймер.
     TIM_Cmd(tim_trcs->timer, ENABLE);
 }
@@ -438,11 +474,12 @@ static void null_sensor_handle_phase(phase_t phase)
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return;
     // add run drive state handle here.
+    if(timer_angle_ticks == 0) return;
     
     // Индекс пары тиристоров.
     size_t triacs_index = 0;
     // Последовательность тиристоров.
-    const triac_number_t* triacs_seq = triac_open_seq_fwd;
+    const triac_number_t* triacs_seq = NULL;
     
     drive_dir_t dir = phase_state_drive_direction();
     
@@ -551,19 +588,19 @@ void TIM2_IRQHandler(void)
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_a)
                 );
         TIM_ClearITPendingBit(TIM2, TIM_IT_CC1);
-    }else // Если нужно закрыть тиристорную пару 1.
+    } // Если нужно закрыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM2, TIM_IT_CC2) != RESET){
         triac_pair_close(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_a)
                 );
         TIM_ClearITPendingBit(TIM2, TIM_IT_CC2);
-    }else // Если нужно открыть тиристорную пару 2.
+    } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM2, TIM_IT_CC3) != RESET){
         triac_pair_open(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_b)
                 );
         TIM_ClearITPendingBit(TIM2, TIM_IT_CC3);
-    }else // Если нужно закрыть тиристорную пару 2.
+    } // Если нужно закрыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM2, TIM_IT_CC4) != RESET){
         triac_pair_close(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM2].triacs_b)
@@ -581,19 +618,19 @@ void TIM3_IRQHandler(void)
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_a)
                 );
         TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
-    }else // Если нужно закрыть тиристорную пару 1.
+    } // Если нужно закрыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET){
         triac_pair_close(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_a)
                 );
         TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
-    }else // Если нужно открыть тиристорную пару 2.
+    } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM3, TIM_IT_CC3) != RESET){
         triac_pair_open(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_b)
                 );
         TIM_ClearITPendingBit(TIM3, TIM_IT_CC3);
-    }else // Если нужно закрыть тиристорную пару 2.
+    } // Если нужно закрыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM3, TIM_IT_CC4) != RESET){
         triac_pair_close(
                     get_triac_pair(timers_triacs[TRIACS_TIMER_TIM3].triacs_b)
@@ -926,7 +963,7 @@ static void init_adc(void)
     while (ADC_GetCalibrationStatus(ADC3)); //Check the end of ADC3 calibration.
     
     DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
-    NVIC_SetPriority(DMA1_Channel1_IRQn, 1);
+    NVIC_SetPriority(DMA1_Channel1_IRQn, 2);
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
@@ -941,12 +978,7 @@ static void init_ioport(void)
     pca9555_set_pins_direction(&ioport, TFT_RST_IOPIN, PCA9555_PIN_OUTPUT);
     pca9555_write_pins_direction(&ioport);
     pca9555_set_pins_state(&ioport, PCA9555_PIN_ALL, PCA9555_PIN_ON);
-    /*pca9555_set_pins_state(&ioport, 
-            PCA9555_PIN_8 | PCA9555_PIN_9 | PCA9555_PIN_10 |
-            PCA9555_PIN_11 | PCA9555_PIN_12 | PCA9555_PIN_13
-            , PCA9555_PIN_OFF);*/
-    pca9555_set_pins_state(&ioport, 
-            PCA9555_PIN_5, PCA9555_PIN_OFF);
+    pca9555_set_pins_state(&ioport, PCA9555_PIN_5, PCA9555_PIN_OFF);
     pca9555_write_pins_state(&ioport);
 }
 
@@ -1017,7 +1049,7 @@ static void init_tft(void)
 }
 
 /******************************************************************************/
-static void init_tim1(void)
+static void init_adc_timer(void)
 {
     TIM_DeInit(TIM1);
     
@@ -1048,15 +1080,37 @@ static void init_tim1(void)
 
 static void triacs_timer_init(TIM_TypeDef* TIM)
 {
-    TIM_TimeBaseInitTypeDef TIM_InitStructure;
-    TIM_TimeBaseStructInit(&TIM_InitStructure);
-            TIM_InitStructure.TIM_Prescaler = TRIACS_TIM_PRESCALER;   // Делитель (0000...FFFF)
-            TIM_InitStructure.TIM_CounterMode = TIM_CounterMode_Down; // Режим счетчика
-            TIM_InitStructure.TIM_Period = TRIACS_TIM_PERIOD;         // Значение периода (0000...FFFF)
-            TIM_InitStructure.TIM_ClockDivision = 0;                  // определяет тактовое деление
-    TIM_TimeBaseInit(TIM, &TIM_InitStructure);
+    TIM_DeInit(TIM);
+    TIM_TimeBaseInitTypeDef tim_is;
+    TIM_TimeBaseStructInit(&tim_is);
+            tim_is.TIM_Prescaler = TRIACS_TIM_PRESCALER;   // Делитель (0000...FFFF)
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;   // Режим счетчика
+            tim_is.TIM_Period = TRIACS_TIM_PERIOD;         // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;       // определяет тактовое деление
+    TIM_TimeBaseInit(TIM, &tim_is);
     TIM_SetCounter(TIM, 0);
-    TIM_SelectOnePulseMode(TIM, TIM_OPMode_Single);                   // Однопульсный режим таймера
+    TIM_SelectOnePulseMode(TIM, TIM_OPMode_Single);        // Однопульсный режим таймера
+    
+    TIM_OCInitTypeDef tim_oc_is;
+    TIM_OCStructInit(&tim_oc_is);
+        tim_oc_is.TIM_OCMode = TIM_OCMode_Timing;
+        tim_oc_is.TIM_OutputState = TIM_OutputState_Disable;
+        tim_oc_is.TIM_OutputNState = TIM_OutputNState_Disable;
+        tim_oc_is.TIM_Pulse = 0;
+        tim_oc_is.TIM_OCPolarity = TIM_OCPolarity_Low;
+        tim_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+        tim_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+        tim_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
+    TIM_OC1Init(TIM, &tim_oc_is);
+    TIM_OC2Init(TIM, &tim_oc_is);
+    TIM_OC3Init(TIM, &tim_oc_is);
+    TIM_OC4Init(TIM, &tim_oc_is);
+    
+    TIM_CCxCmd (TIM, TIM_Channel_1, TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TIM_Channel_2, TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TIM_Channel_3, TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TIM_Channel_4, TIM_CCx_Enable);
+    
     TIM_ITConfig(TIM, TIM_IT_CC1, ENABLE);                            // Разрешаем прерывание OC 1 от таймера
     TIM_ITConfig(TIM, TIM_IT_CC2, ENABLE);                            // Разрешаем прерывание OC 2 от таймера
     TIM_ITConfig(TIM, TIM_IT_CC3, ENABLE);                            // Разрешаем прерывание OC 3 от таймера
@@ -1069,7 +1123,7 @@ static void init_tim6(void)
             TIM6_InitStructure.TIM_Prescaler = 72-1;                    // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
             TIM6_InitStructure.TIM_Period = 60000;                      // Значение периода (0000...FFFF)
-            TIM6_InitStructure.TIM_ClockDivision = 0;                   // определяет тактовое деление
+            TIM6_InitStructure.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
     TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
@@ -1083,13 +1137,13 @@ static void init_triacs(void)
     /* GPIOB Configuration: 57 (PD10 - VS_1); 58 (PD11 - VS_2); 59 (PD12 - VS_3); as output open drain
      *                      60 (PD13 - VS_4); 61 (PD14 - VS_5); 62 (PD15 - VS_6); as output open drain */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOD, &GPIO_InitStructure);
 
     /* GPIOB Configuration: 63 (PC6 - VS_xS) as output open drain */
         GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
     
@@ -1108,7 +1162,7 @@ static void init_triacs_timers(void)
     memset(timers_triacs, 0x0, sizeof(timer_triacs_t));
     
     timers_triacs[TRIACS_TIMER_TIM2].timer = TIM2;
-    timers_triacs[TRIACS_TIMER_TIM2].timer = TIM3;
+    timers_triacs[TRIACS_TIMER_TIM3].timer = TIM3;
     
     triacs_timer_init(TIM2);
     triacs_timer_init(TIM3);
@@ -1245,6 +1299,7 @@ static gui_t gui = MAKE_GUI(&graphics, &theme);
 static gui_widget_t root_widget;
 static gui_widget_t parent_widget;
 static gui_label_t label1;
+static gui_spinbox_t spinbox1;
 static gui_label_t lbl_adc1_in1;
 static gui_label_t lbl_adc1_in2;
 static gui_label_t lbl_adc1_in3;
@@ -1273,6 +1328,100 @@ static gui_checkbox_t checkbox2;
 
 #define GUI_LABEL_HEIGHT 15
 #define GUI_LABEL_TOP(N) (5 + GUI_LABEL_HEIGHT * N)
+
+
+static void on_key_pressed_callback(keycode_t key)
+{
+    switch(key){
+        case KEY_LEFT:
+            gui_focus_prev_widget(&gui);
+            return;
+        case KEY_RIGHT:
+            gui_focus_next_widget(&gui);
+            return;
+        default:
+            break;
+    }
+    gui_key_pressed(&gui, key);
+}
+
+static void on_key_released_callback(keycode_t key)
+{
+    switch(key){
+        case KEY_LEFT:
+        case KEY_RIGHT:
+            return;
+        default:
+            break;
+    }
+    gui_key_released(&gui, key);
+}
+
+static void init_key_input(void)
+{
+    key_input_init();
+    key_input_set_on_pressed_callback(on_key_pressed_callback);
+    key_input_set_on_released_callback(on_key_released_callback);
+}
+
+static void ioport_update_inputs(void)
+{
+    pca9555_read_pins_state(&ioport);
+    //pca9555_wait(&ioport);
+}
+
+static void ioport_process_inputs(void)
+{
+    static pca9555_pins_t ioport_old_pins = 0;
+    pca9555_pins_t cur_pins = pca9555_pins_state(&ioport, PCA9555_PIN_OFF) & PCA9555_INPUTS;
+    pca9555_pins_t changed_pins = cur_pins ^ ioport_old_pins;
+    
+    if(cur_pins & changed_pins & PCA9555_IN_ESC  ) key_input_pressed(KEY_ESC);
+    if(cur_pins & changed_pins & PCA9555_IN_ENTER) key_input_pressed(KEY_ENTER);
+    if(cur_pins & changed_pins & PCA9555_IN_LEFT ) key_input_pressed(KEY_LEFT);
+    if(cur_pins & changed_pins & PCA9555_IN_RIGHT) key_input_pressed(KEY_RIGHT);
+    if(cur_pins & changed_pins & PCA9555_IN_UP   ) key_input_pressed(KEY_UP);
+    if(cur_pins & changed_pins & PCA9555_IN_DOWN ) key_input_pressed(KEY_DOWN);
+    //if(cur_pins & changed_pins & PCA9555_IN_START) key_input_pressed(KEY_START);
+    //if(cur_pins & changed_pins & PCA9555_IN_STOP ) key_input_pressed(KEY_STOP);
+    
+    if(~cur_pins & changed_pins & PCA9555_IN_ESC  ) key_input_released(KEY_ESC);
+    if(~cur_pins & changed_pins & PCA9555_IN_ENTER) key_input_released(KEY_ENTER);
+    if(~cur_pins & changed_pins & PCA9555_IN_LEFT ) key_input_released(KEY_LEFT);
+    if(~cur_pins & changed_pins & PCA9555_IN_RIGHT) key_input_released(KEY_RIGHT);
+    if(~cur_pins & changed_pins & PCA9555_IN_UP   ) key_input_released(KEY_UP);
+    if(~cur_pins & changed_pins & PCA9555_IN_DOWN ) key_input_released(KEY_DOWN);
+    //if(~cur_pins & changed_pins & PCA9555_IN_START) key_input_released(KEY_START);
+    //if(~cur_pins & changed_pins & PCA9555_IN_STOP ) key_input_released(KEY_STOP);
+    
+    ioport_old_pins = cur_pins;
+}
+
+static void key_input_process(void)
+{
+    if(kbd_need_update && kbd_state == KBD_UPDATED){
+        kbd_state = KBD_NEED_UPDATE;
+    }
+    switch(kbd_state){
+        case KBD_NEED_UPDATE:
+            kbd_state = KBD_UPDATING;
+            ioport_update_inputs();
+            break;
+        case KBD_UPDATING:
+            if(pca9555_done(&ioport)){
+                kbd_state = KBD_UPDATED;
+                ioport_process_inputs();
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+static void spinbox_reference_on_value_changed(gui_spinbox_t* spinbox, int value)
+{
+    reference = CLAMP(value, 0, 100);
+}
 
 static void make_gui_adc(void)
 {
@@ -1491,6 +1640,15 @@ static void make_gui(void)
     //gui_widget_set_back_color(GUI_WIDGET(&checkbox2), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&checkbox2), true);
     
+    gui_spinbox_init_parent(&spinbox1, &gui, &parent_widget);
+    gui_spinbox_set_value(&spinbox1, reference);
+    gui_spinbox_set_format(&spinbox1, GUI_NUMBER_LABEL_DEC);
+    gui_spinbox_set_range(&spinbox1, 0, 100);
+    gui_spinbox_set_on_value_changed(&spinbox1, spinbox_reference_on_value_changed);
+    gui_widget_move(GUI_WIDGET(&spinbox1), 5, GUI_LABEL_TOP(3));
+    gui_widget_resize(GUI_WIDGET(&spinbox1), 50, 20);
+    gui_widget_set_visible(GUI_WIDGET(&spinbox1), true);
+    
     //gui_set_focus_widget(&gui, GUI_WIDGET(&label2));
     gui_set_root_widget(&gui, &root_widget);
 
@@ -1499,7 +1657,8 @@ static void make_gui(void)
 
 static void gui_update_values(void)
 {
-    gui_number_label_set_number(&label_num, timer_cc_count);
+    //gui_number_label_set_number(&label_num, timer_cc_count);
+    gui_number_label_set_number(&label_num, phase_state_drive_direction());
     int secs = counter / 1000;
     //gui_number_label_set_number(&label_num, secs);
     gui_checkbox_set_checked(&checkbox1, secs & 0x1);
@@ -1538,7 +1697,16 @@ static void screen_repaint(void)
     gui_update_values();
 }
 
-
+static void reference_update(void)
+{
+    // 0 ... 100 == 12000 (TRIACS_TIM_ANGLE_TICKS_MAX) ... 0
+    if(reference > REFERENCE_MAX) return;
+    if(reference < REFERENCE_MIN){
+        timer_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
+        return;
+    }
+    timer_angle_ticks = (uint32_t)reference * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
+}
 
 int main(void)
 {
@@ -1555,7 +1723,7 @@ int main(void)
     printf("STM32 MCU\r\n");
     
     init_adc();
-    init_tim1();
+    init_adc_timer();
     
     init_exti();
     
@@ -1570,6 +1738,7 @@ int main(void)
     init_spi();
     init_ioport();
     init_tft();
+    init_key_input();
     
     screen_clear();
     
@@ -1588,6 +1757,10 @@ int main(void)
     power_calibrated = true;*/
     
     for(;;){
+        
+        key_input_process();
+        
+        reference_update();
         
         if(system_counter_diff(&counter) >= update_period){
         //if(need_update){
@@ -1608,7 +1781,7 @@ int main(void)
             
             counter = system_counter_ticks();
             
-            timer_cc_count = 0;
+            //timer_cc_count = 0;
             
         }
         /*
