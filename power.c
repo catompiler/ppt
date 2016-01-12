@@ -1,7 +1,18 @@
 #include "power.h"
 #include "utils/utils.h"
+#include <string.h>
 
 
+
+err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k)
+{
+    memset(value, 0x0, sizeof(power_value_t));
+    
+    value->type = type;
+    value->k = k;
+    
+    return E_NO_ERROR;
+}
 
 err_t power_init(power_t* power, power_value_t* channels, size_t channels_count)
 {
@@ -143,7 +154,7 @@ err_t power_calibrate(power_t* power, power_channels_t channels)
     return E_NO_ERROR;
 }
 
-bool power_data_avail(power_t* power, power_channels_t channels)
+bool power_data_avail(const power_t* power, power_channels_t channels)
 {
     if(channels == POWER_CHANNEL_NONE) return false;
     

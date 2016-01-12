@@ -92,6 +92,15 @@ typedef struct _Power{
 
 
 /**
+ * Инициализирует канал АЦП.
+ * @param channel Канал АЦП.
+ * @param type Тип канала АЦП.
+ * @param k Коэффициент пропорциональности LSB^-1.
+ * @return Код ошибки.
+ */
+extern err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k);
+
+/**
  * Инициализирует структуру питания.
  * @param power Питание.
  * @param channels Значения каналов АЦП.
@@ -131,14 +140,14 @@ extern err_t power_calibrate(power_t* power, power_channels_t channels);
  * @param channels Маска каналов АЦП.
  * @return Флаг доступности данных.
  */
-extern bool power_data_avail(power_t* power, power_channels_t channels);
+extern bool power_data_avail(const power_t* power, power_channels_t channels);
 
 /**
  * Получает флаг калибровки.
  * @param power Питание.
  * @return Флаг калибровки.
  */
-ALWAYS_INLINE static bool power_channel_calibrated(power_t* power, size_t channel)
+ALWAYS_INLINE static bool power_channel_calibrated(const power_t* power, size_t channel)
 {
     return power->channels[channel].calibrated;
 }
@@ -148,7 +157,7 @@ ALWAYS_INLINE static bool power_channel_calibrated(power_t* power, size_t channe
  * @param power Питание.
  * @return Флаг доступности данных.
  */
-ALWAYS_INLINE static bool power_channel_data_avail(power_t* power, size_t channel)
+ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t channel)
 {
     return power->channels[channel].data_avail;
 }
@@ -159,7 +168,7 @@ ALWAYS_INLINE static bool power_channel_data_avail(power_t* power, size_t channe
  * @param channel Номер канала.
  * @return Сырое последнее значение канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_value(power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_value(const power_t* power, size_t channel)
 {
     return power->channels[channel].raw_value;
 }
@@ -170,7 +179,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_value(power_t* power, size_t chan
  * @param channel Номер канала.
  * @return Сырое среднее значение канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_value_avg(power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_value_avg(const power_t* power, size_t channel)
 {
     return power->channels[channel].raw_value_avg;
 }
@@ -181,7 +190,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_value_avg(power_t* power, size_t 
  * @param channel Номер канала.
  * @return Сырое RMS значение канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_value_rms(power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_value_rms(const power_t* power, size_t channel)
 {
     return power->channels[channel].raw_value_rms;
 }
@@ -192,7 +201,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_value_rms(power_t* power, size_t 
  * @param channel Номер канала.
  * @return Реальное последнее значение канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_channel_real_value(power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_channel_real_value(const power_t* power, size_t channel)
 {
     return power->channels[channel].real_value;
 }
@@ -203,7 +212,7 @@ ALWAYS_INLINE static fixed32_t power_channel_real_value(power_t* power, size_t c
  * @param channel Номер канала.
  * @return Реальное среднее значение канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_channel_real_value_avg(power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_channel_real_value_avg(const power_t* power, size_t channel)
 {
     return power->channels[channel].real_value_avg;
 }
@@ -214,7 +223,7 @@ ALWAYS_INLINE static fixed32_t power_channel_real_value_avg(power_t* power, size
  * @param channel Номер канала.
  * @return Реальное RMS значение канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_channel_real_value_rms(power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_channel_real_value_rms(const power_t* power, size_t channel)
 {
     return power->channels[channel].real_value_rms;
 }
@@ -225,7 +234,7 @@ ALWAYS_INLINE static fixed32_t power_channel_real_value_rms(power_t* power, size
  * @param channel Номер канала.
  * @return Сырое среднее калиброванное значение нуля канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_zero_calibrated(power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_zero_calibrated(const power_t* power, size_t channel)
 {
     return power->channels[channel].raw_zero_cal;
 }
@@ -236,7 +245,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_zero_calibrated(power_t* power, s
  * @param channel Номер канала.
  * @return Сырое среднее текущее значение нуля канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_zero_current(power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_zero_current(const power_t* power, size_t channel)
 {
     return power->channels[channel].raw_zero_cur;
 }
@@ -247,7 +256,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_zero_current(power_t* power, size
  * @param channel Номер канала.
  * @return Текущее число выборок канала АЦП.
  */
-ALWAYS_INLINE static size_t power_channel_samples_count(power_t* power, size_t channel)
+ALWAYS_INLINE static size_t power_channel_samples_count(const power_t* power, size_t channel)
 {
     return (size_t)power->channels[channel].count;
 }
