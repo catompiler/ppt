@@ -90,20 +90,30 @@ err_t drive_init(void)
     drive.triacs_open_tim_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     
     power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ia
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ua
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ib
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ub
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ic
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Uc
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_DC, 0x10000); // Irot
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_DC, 0x10000); // Urot
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_DC, 0x10000); // Iexc
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_DC, 0x10000); // Ifan
+    power_value_init(&drive.power_values[1],POWER_CHANNEL_AC, 0x10000); // Ua
+    power_value_init(&drive.power_values[2],POWER_CHANNEL_AC, 0x10000); // Ib
+    power_value_init(&drive.power_values[3],POWER_CHANNEL_AC, 0x10000); // Ub
+    power_value_init(&drive.power_values[4],POWER_CHANNEL_AC, 0x10000); // Ic
+    power_value_init(&drive.power_values[5],POWER_CHANNEL_AC, 0x10000); // Uc
+    power_value_init(&drive.power_values[6],POWER_CHANNEL_DC, 0x10000); // Irot
+    power_value_init(&drive.power_values[7],POWER_CHANNEL_DC, 0x10000); // Urot
+    power_value_init(&drive.power_values[8],POWER_CHANNEL_DC, 0x10000); // Iexc
+    power_value_init(&drive.power_values[9],POWER_CHANNEL_DC, 0x10000); // Iref
+    power_value_init(&drive.power_values[10],POWER_CHANNEL_DC, 0x10000); // Ifan
     
     power_init(&drive.power, drive.power_values, POWER_CHANNELS);
     
     return E_NO_ERROR;
+}
+
+ALWAYS_INLINE static void drive_set_flag(drive_flag_t flag)
+{
+    drive.flags |= flag;
+}
+
+ALWAYS_INLINE static void drive_clear_flag(drive_flag_t flag)
+{
+    drive.flags &= ~flag;
 }
 
 bool drive_flag(drive_flag_t flag)
@@ -315,9 +325,50 @@ void drive_triacs_timer1_irq_handler(void)
     }
 }
 
+
+/**
+ * Производит вычисление значений питания и калибровку, если это необходимо.
+ * @param phase Текущая фаза.
+ */
+static void drive_process_power(phase_t phase)
+{
+    switch(drive.power_calibration){
+        default:
+        case DRIVE_PWR_CALIBRATION_NONE:
+            
+            power_calc_values(&drive.power, POWER_CHANNELS);
+            
+            if(power_data_avail(&drive.power, POWER_CHANNELS)){
+                drive.power_calibration_phase = phase;
+                drive.power_calibration = DRIVE_PWR_CALIBRATION_RUNNING;
+            }
+            break;
+        case DRIVE_PWR_CALIBRATION_RUNNING:
+            
+            if(phase == drive.power_calibration_phase){
+                
+                power_calc_values(&drive.power, POWER_CHANNELS);
+                
+                power_calibrate(&drive.power, POWER_CHANNELS);
+                
+                drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
+                
+                drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
+            }
+            break;
+        case DRIVE_PWR_CALIBRATION_DONE:
+            
+            if(phase == drive.power_calibration_phase){
+                power_calc_values(&drive.power, POWER_CHANNELS);
+            }
+            break;
+    }
+}
+
 err_t drive_process_null_sensor(phase_t phase)
 {
-    #warning add power calibration here.
+    // Обработка калибровки питания.
+    drive_process_power(phase);
     
     // Обработаем текущую фазу.
     phase_state_handle(phase);

@@ -1416,17 +1416,17 @@ int main(void)
     
     drive_init();
     
-    init_adc();
-    init_adc_timer();
-    
-    init_exti();
-    
     init_gpio();
     
     init_triacs();
     init_triacs_timers();
     
     init_tim6();
+    
+    init_adc();
+    init_adc_timer();
+    
+    init_exti();
     
     init_i2c();
     init_spi();
