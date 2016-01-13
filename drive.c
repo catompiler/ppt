@@ -45,6 +45,9 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 //! Число периодов калибровки питания.
 #define DRIVE_POWER_CALIBRATION_PERIODS 5
 
+//! Необходимые для готовности флаги.
+#define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
+
 
 //! Тип структуры таймера для открытия тиристора.
 typedef struct _Timer_Triacs {
@@ -57,7 +60,7 @@ typedef struct _Timer_Triacs {
 typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
     drive_state_t state; //!< Состояние.
-    drive_error_t error; //!< Ошибка.
+    drive_errors_t errors; //!< Ошибка.
     drive_power_calibration_t power_calibration; //!< Состояние калибровки питания.
     phase_t power_calibration_phase; //!< Фаза начала калибровки питания.
     size_t power_calibration_periods; //!< Число периодов калибровки питания.
@@ -89,8 +92,8 @@ err_t drive_init(void)
     memset(&drive, 0x0, sizeof(drive_t));
     
     drive.flags = DRIVE_FLAG_NONE;
-    drive.state = DRIVE_STATE_NONE;
-    drive.error = DRIVE_ERROR_NONE;
+    drive.state = DRIVE_STATE_IDLE;
+    drive.errors = DRIVE_ERROR_NONE;
     
     drive.triacs_open_tim_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     
@@ -126,14 +129,34 @@ bool drive_flag(drive_flag_t flag)
     return (drive.flags & flag) != 0;
 }
 
+drive_flags_t drive_flags(void)
+{
+    return drive.flags;
+}
+
 drive_state_t drive_state(void)
 {
     return drive.state;
 }
 
-drive_error_t drive_error(void)
+ALWAYS_INLINE static void drive_set_error(drive_error_t error)
 {
-    return drive.error;
+    drive.errors |= error;
+}
+
+ALWAYS_INLINE static void drive_clear_error(drive_error_t error)
+{
+    drive.errors &= ~error;
+}
+
+bool drive_error(drive_error_t error)
+{
+    return (drive.errors & error) != 0;
+}
+
+drive_errors_t drive_errors(void)
+{
+    return drive.errors;
 }
 
 drive_power_calibration_t drive_power_calibration(void)
@@ -159,6 +182,27 @@ err_t drive_set_reference(reference_t reference)
         drive.timer_angle_ticks = (uint32_t)reference * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
     }
     return E_NO_ERROR;
+}
+
+bool drive_ready(void)
+{
+    return (drive.errors) == 0 &&
+           ((drive.flags & DRIVE_READY_FLAGS) == DRIVE_READY_FLAGS);
+}
+
+bool drive_start(void)
+{
+    return false;
+}
+
+bool drive_stop(void)
+{
+    return false;
+}
+
+bool drive_running(void)
+{
+    return false;
 }
 
 uint16_t drive_triacs_open_time_us(void)
@@ -330,15 +374,13 @@ void drive_triacs_timer1_irq_handler(void)
     }
 }
 
-
 /**
- * Производит вычисление значений питания и калибровку, если это необходимо.
+ * Производит калибровку питания.
  * @param phase Текущая фаза.
  */
-static void drive_process_power(phase_t phase)
+static void drive_process_power_calibration(phase_t phase)
 {
     switch(drive.power_calibration){
-        default:
         case DRIVE_PWR_CALIBRATION_NONE:
             
             power_calc_values(&drive.power, POWER_CHANNELS);
@@ -362,11 +404,50 @@ static void drive_process_power(phase_t phase)
             }
             break;
         case DRIVE_PWR_CALIBRATION_DONE:
-            
-            if(phase == drive.power_calibration_phase){
-                power_calc_values(&drive.power, POWER_CHANNELS);
-            }
+        default:
             break;
+    }
+}
+
+static void drive_check_power_idle(void)
+{
+    #warning add idle power check here.
+}
+
+static void drive_check_power_running(void)
+{
+    #warning add running power check here.
+}
+
+static void drive_check_power(void)
+{
+    #warning add power check here.
+    
+    if(drive.state == DRIVE_STATE_RUNNING){
+        drive_check_power_running();
+    }else{
+        drive_check_power_idle();
+    }
+}
+
+/**
+ * Производит вычисление значений питания и калибровку, если это необходимо.
+ * @param phase Текущая фаза.
+ */
+static void drive_process_power(phase_t phase)
+{
+    if(!drive_flag(DRIVE_FLAG_POWER_CALIBRATED)){
+        drive_process_power_calibration(phase);
+    }else
+    if(phase == drive.power_calibration_phase){
+        power_calc_values(&drive.power, POWER_CHANNELS);
+
+        if(power_data_avail(&drive.power, POWER_CHANNELS)){
+            drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
+            drive_check_power();
+        }else{
+            drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
+        }
     }
 }
 
@@ -431,6 +512,8 @@ err_t drive_process_null_sensor(phase_t phase)
     
     // Обработка калибровки питания.
     drive_process_power(phase);
+    
+    #warning add power fail detection code here.
     
     return E_NO_ERROR;
 }

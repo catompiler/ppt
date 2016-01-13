@@ -16,27 +16,69 @@
 #include "triac.h"
 #include "triac_pair.h"
 
+//! Флаги привода - тип флага.
+typedef enum _Drive_Flag {
+    DRIVE_FLAG_NONE             = 0x0,
+    DRIVE_FLAG_POWER_CALIBRATED = 0x1,
+    DRIVE_FLAG_POWER_DATA_AVAIL = 0x2,
+    DRIVE_FLAG_POWER_GOOD_Ua    = 0x4,
+    DRIVE_FLAG_POWER_GOOD_Ub    = 0x8,
+    DRIVE_FLAG_POWER_GOOD_Uc    = 0x10,
+    DRIVE_FLAG_POWER_GOOD_Urot  = 0x20,
+    DRIVE_FLAG_POWER_GOOD_Ia    = 0x40,
+    DRIVE_FLAG_POWER_GOOD_Ib    = 0x80,
+    DRIVE_FLAG_POWER_GOOD_Ic    = 0x100,
+    DRIVE_FLAG_POWER_GOOD_Irot  = 0x200,
+    DRIVE_FLAG_POWER_GOOD_Iexc  = 0x400,
+    DRIVE_FLAG_POWER_GOOD_Ifan  = 0x800,
+    DRIVE_FLAG_POWER_GOOD_Iref  = 0x1000
+} drive_flag_t;
+
 //! Тип флагов привода.
 typedef uint32_t drive_flags_t;
 
-//! Флаги привода - тип флага.
-typedef enum _Drive_Flag {
-    DRIVE_FLAG_NONE = 0,
-    DRIVE_FLAG_POWER_CALIBRATED = 1,
-    DRIVE_FLAG_
-} drive_flag_t;
-
 //! Тип состояния привода.
 typedef enum _Drive_State {
-    DRIVE_STATE_NONE = 0,
-    DRIVE_STATE_
+    DRIVE_STATE_IDLE       = 0,
+    DRIVE_STATE_RUNNING    = 1,
+    DRIVE_STATE_ERROR      = 2
 } drive_state_t;
 
 //! Тип ошибки привода.
 typedef enum _Drive_Error {
-    DRIVE_ERROR_NONE = 0,
-    DRIVE_ERROR_
+    DRIVE_ERROR_NONE                 = 0x0,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ua   = 0x1,
+    DRIVE_ERROR_POWER_OVERFLOW_Ua    = 0x2,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ub   = 0x4,
+    DRIVE_ERROR_POWER_OVERFLOW_Ub    = 0x8,
+    DRIVE_ERROR_POWER_UNDERFLOW_Uc   = 0x10,
+    DRIVE_ERROR_POWER_OVERFLOW_Uc    = 0x20,
+    DRIVE_ERROR_POWER_UNDERFLOW_Urot = 0x40,
+    DRIVE_ERROR_POWER_OVERFLOW_Urot  = 0x80,
+    DRIVE_ERROR_POWER_IDLE_Urot      = 0x100,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ia   = 0x200,
+    DRIVE_ERROR_POWER_OVERFLOW_Ia    = 0x400,
+    DRIVE_ERROR_POWER_IDLE_Ia        = 0x800,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ib   = 0x1000,
+    DRIVE_ERROR_POWER_OVERFLOW_Ib    = 0x2000,
+    DRIVE_ERROR_POWER_IDLE_Ib        = 0x4000,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ic   = 0x8000,
+    DRIVE_ERROR_POWER_OVERFLOW_Ic    = 0x10000,
+    DRIVE_ERROR_POWER_IDLE_Ic        = 0x20000,
+    DRIVE_ERROR_POWER_UNDERFLOW_Irot = 0x40000,
+    DRIVE_ERROR_POWER_OVERFLOW_Irot  = 0x80000,
+    DRIVE_ERROR_POWER_IDLE_Irot      = 0x100000,
+    DRIVE_ERROR_POWER_UNDERFLOW_Iexc = 0x200000,
+    DRIVE_ERROR_POWER_OVERFLOW_Iexc  = 0x400000,
+    DRIVE_ERROR_POWER_IDLE_Iexc      = 0x800000,
+    DRIVE_ERROR_POWER_UNDERFLOW_Ifan = 0x1000000,
+    DRIVE_ERROR_POWER_OVERFLOW_Ifan  = 0x2000000,
+    DRIVE_ERROR_POWER_UNDERFLOW_Iref = 0x4000000,
+    DRIVE_ERROR_POWER_OVERFLOW_Iref  = 0x8000000
 } drive_error_t;
+
+//! Тип ошибок привода.
+typedef uint64_t drive_errors_t;
 
 //! Перечисление состояний калибровки питания.
 typedef enum _Drive_Power_Calibration {
@@ -158,16 +200,29 @@ extern err_t drive_init(void);
 extern bool drive_flag(drive_flag_t flag);
 
 /**
+ * Получает состояние флагов привода.
+ * @return Состояние флагов привода.
+ */
+extern drive_flags_t drive_flags(void);
+
+/**
  * Получает состояние привода.
  * @return Состояние привода.
  */
 extern drive_state_t drive_state(void);
 
 /**
- * Получает ошибку привода.
- * @return Ошибка привода.
+ * Получает наличие ошибки привода.
+ * @param error Ошибка привода.
+ * @return Наличие ошибки привода.
  */
-extern drive_error_t drive_error(void);
+extern bool drive_error(drive_error_t error);
+
+/**
+ * Получает ошибки привода.
+ * @return Ошибки привода.
+ */
+extern drive_errors_t drive_errors(void);
 
 /**
  * Получает состояние калибровки питания привода.
@@ -195,6 +250,30 @@ extern reference_t drive_reference(void);
  * @return Код ошибки.
  */
 extern err_t drive_set_reference(reference_t reference);
+
+/**
+ * Получает флаг готовности привода.
+ * @return Флаг готовности привода.
+ */
+extern bool drive_ready(void);
+
+/**
+ * Запускает привод.
+ * @return Флаг запуска привода.
+ */
+extern bool drive_start(void);
+
+/**
+ * Останавливает привод.
+ * @return Флаг останова привода.
+ */
+extern bool drive_stop(void);
+
+/**
+ * Получает флаг работы привода.
+ * @return Флаг работы привода.
+ */
+extern bool drive_running(void);
 
 /**
  * Получает время открытия тиристоров.

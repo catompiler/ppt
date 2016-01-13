@@ -1003,8 +1003,9 @@ static gui_t gui = MAKE_GUI(&graphics, &theme);
 // GUI.
 static gui_widget_t root_widget;
 static gui_widget_t parent_widget;
-static gui_label_t label1;
-static gui_spinbox_t spinbox1;
+static gui_label_t label_val;
+static gui_label_t label_ref;
+static gui_spinbox_t spinbox_ref;
 static gui_label_t lbl_adc1_in1;
 static gui_label_t lbl_adc1_in2;
 static gui_label_t lbl_adc1_in3;
@@ -1028,8 +1029,6 @@ static gui_number_label_t lbl_num_adc2_in4;
 static gui_number_label_t lbl_num_adc3_in1;
 static gui_number_label_t lbl_num_adc3_in2;
 static gui_number_label_t lbl_num_adc3_in3;
-static gui_checkbox_t checkbox1;
-static gui_checkbox_t checkbox2;
 
 #define GUI_LABEL_HEIGHT 15
 #define GUI_LABEL_TOP(N) (5 + GUI_LABEL_HEIGHT * N)
@@ -1308,54 +1307,44 @@ static void make_gui(void)
     gui_widget_set_border(&parent_widget, GUI_BORDER_SOLID);
     gui_widget_set_visible(&parent_widget, true);
     
-    gui_label_init_parent(&label1, &gui, &parent_widget);
-    gui_label_set_text(&label1, "Метка:");
-    gui_widget_move(GUI_WIDGET(&label1), 5, GUI_LABEL_TOP(0));
-    gui_widget_resize(GUI_WIDGET(&label1), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&label1), GUI_BORDER_SOLID);
+    gui_label_init_parent(&label_val, &gui, &parent_widget);
+    gui_label_set_text(&label_val, "Флаги:");
+    gui_widget_move(GUI_WIDGET(&label_val), 5, GUI_LABEL_TOP(0));
+    gui_widget_resize(GUI_WIDGET(&label_val), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_val), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&label1), true);
+    gui_widget_set_visible(GUI_WIDGET(&label_val), true);
     
     gui_number_label_init_parent(&label_num, &gui, &parent_widget);
     gui_number_label_set_number(&label_num, 0);//0x1234
     gui_number_label_set_format(&label_num, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num), 60, 5);
+    gui_widget_move(GUI_WIDGET(&label_num), 60, GUI_LABEL_TOP(0));
     gui_widget_resize(GUI_WIDGET(&label_num), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&label_num), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&label_num), true);
     
+    gui_label_init_parent(&label_ref, &gui, &parent_widget);
+    gui_label_set_text(&label_ref, "Задание:");
+    gui_widget_move(GUI_WIDGET(&label_ref), 5, GUI_LABEL_TOP(1));
+    gui_widget_resize(GUI_WIDGET(&label_ref), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_ref), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_ref), true);
+    
+    gui_spinbox_init_parent(&spinbox_ref, &gui, &parent_widget);
+    gui_spinbox_set_value(&spinbox_ref, drive_reference());
+    gui_spinbox_set_format(&spinbox_ref, GUI_NUMBER_LABEL_DEC);
+    gui_spinbox_set_range(&spinbox_ref, 0, 100);
+    gui_spinbox_set_on_value_changed(&spinbox_ref, spinbox_reference_on_value_changed);
+    gui_widget_move(GUI_WIDGET(&spinbox_ref), 60, GUI_LABEL_TOP(1));
+    gui_widget_resize(GUI_WIDGET(&spinbox_ref), 50, 20);
+    gui_widget_set_visible(GUI_WIDGET(&spinbox_ref), true);
+    
     make_gui_adc();
-            
-    gui_checkbox_init_parent(&checkbox1, &gui, &parent_widget);
-    gui_checkbox_set_text(&checkbox1, "Флажок 0");
-    gui_checkbox_set_checked(&checkbox1, false);
-    gui_widget_move(GUI_WIDGET(&checkbox1), 5, GUI_LABEL_TOP(1));
-    gui_widget_resize(GUI_WIDGET(&checkbox1), 70, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&checkbox1), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&checkbox1), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&checkbox1), true);
     
-    gui_checkbox_init_parent(&checkbox2, &gui, &parent_widget);
-    gui_checkbox_set_text(&checkbox2, "Флажок 1");
-    gui_checkbox_set_checked(&checkbox2, true);
-    gui_widget_move(GUI_WIDGET(&checkbox2), 5, GUI_LABEL_TOP(2));
-    gui_widget_resize(GUI_WIDGET(&checkbox2), 70, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&checkbox2), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&checkbox2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&checkbox2), true);
-    
-    gui_spinbox_init_parent(&spinbox1, &gui, &parent_widget);
-    gui_spinbox_set_value(&spinbox1, drive_reference());
-    gui_spinbox_set_format(&spinbox1, GUI_NUMBER_LABEL_DEC);
-    gui_spinbox_set_range(&spinbox1, 0, 100);
-    gui_spinbox_set_on_value_changed(&spinbox1, spinbox_reference_on_value_changed);
-    gui_widget_move(GUI_WIDGET(&spinbox1), 5, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&spinbox1), 50, 20);
-    gui_widget_set_visible(GUI_WIDGET(&spinbox1), true);
-    
-    //gui_set_focus_widget(&gui, GUI_WIDGET(&label2));
     gui_set_root_widget(&gui, &root_widget);
+    gui_set_focus_widget(&gui, GUI_WIDGET(&spinbox_ref));
 
     gui_widget_set_visible(&root_widget, true);
 }
@@ -1363,11 +1352,7 @@ static void make_gui(void)
 static void gui_update_values(void)
 {
     //gui_number_label_set_number(&label_num, timer_cc_count);
-    gui_number_label_set_number(&label_num, phase_state_drive_direction());
-    int secs = counter / 1000;
-    //gui_number_label_set_number(&label_num, secs);
-    gui_checkbox_set_checked(&checkbox1, secs & 0x1);
-    gui_checkbox_set_checked(&checkbox2, !gui_checkbox_checked(&checkbox1));
+    gui_number_label_set_number(&label_num, drive_flags());
 
     if(drive_power_data_avail(POWER_CHANNELS)){
         gui_number_label_set_number(&lbl_num_adc1_in1, drive_power_channel_raw_value_avg(0));
@@ -1414,9 +1399,9 @@ int main(void)
     
     printf("STM32 MCU\r\n");
     
-    drive_init();
-    
     init_gpio();
+    
+    drive_init();
     
     init_triacs();
     init_triacs_timers();
