@@ -42,6 +42,10 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 #define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * TRIACS_TIM_PERIOD_US) / TRIACS_TIM_PERIOD)
 
 
+//! Число периодов калибровки питания.
+#define DRIVE_POWER_CALIBRATION_PERIODS 5
+
+
 //! Тип структуры таймера для открытия тиристора.
 typedef struct _Timer_Triacs {
     TIM_TypeDef* timer; //!< Таймер для включения тиристоров.
@@ -56,6 +60,7 @@ typedef struct _Drive {
     drive_error_t error; //!< Ошибка.
     drive_power_calibration_t power_calibration; //!< Состояние калибровки питания.
     phase_t power_calibration_phase; //!< Фаза начала калибровки питания.
+    size_t power_calibration_periods; //!< Число периодов калибровки питания.
     
     reference_t reference; //!< Задание.
     uint16_t timer_angle_ticks; //!< Угол открытия тиристора - значение регистра сравнения таймера.
@@ -347,13 +352,13 @@ static void drive_process_power(phase_t phase)
             
             if(phase == drive.power_calibration_phase){
                 
-                power_calc_values(&drive.power, POWER_CHANNELS);
-                
-                power_calibrate(&drive.power, POWER_CHANNELS);
-                
-                drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
-                
-                drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
+                if(++ drive.power_calibration_periods >= DRIVE_POWER_CALIBRATION_PERIODS){
+                    power_calc_values(&drive.power, POWER_CHANNELS);
+                    
+                    power_calibrate(&drive.power, POWER_CHANNELS);
+                    drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
+                    drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
+                }
             }
             break;
         case DRIVE_PWR_CALIBRATION_DONE:
@@ -365,14 +370,8 @@ static void drive_process_power(phase_t phase)
     }
 }
 
-err_t drive_process_null_sensor(phase_t phase)
+static err_t drive_setup_triacs(phase_t phase)
 {
-    // Обработка калибровки питания.
-    drive_process_power(phase);
-    
-    // Обработаем текущую фазу.
-    phase_state_handle(phase);
-    
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Нужно какое-либо направление.
@@ -418,6 +417,20 @@ err_t drive_process_null_sensor(phase_t phase)
     }
     
     timer_triacs_setup_next(triacs_seq[triacs_index], triacs_seq[triacs_index + 1], CURRENT_TIMER_ANGLE_TICKS);
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_process_null_sensor(phase_t phase)
+{
+    // Обработаем текущую фазу.
+    phase_state_handle(phase);
+    
+    // Настроем открытие тиристоров.
+    drive_setup_triacs(phase);
+    
+    // Обработка калибровки питания.
+    drive_process_power(phase);
     
     return E_NO_ERROR;
 }
