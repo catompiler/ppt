@@ -39,46 +39,70 @@ typedef uint32_t drive_flags_t;
 
 //! Тип состояния привода.
 typedef enum _Drive_State {
-    DRIVE_STATE_IDLE       = 0,
-    DRIVE_STATE_RUNNING    = 1,
-    DRIVE_STATE_ERROR      = 2
+    DRIVE_STATE_INIT       = 0,
+    DRIVE_STATE_IDLE       = 1,
+    DRIVE_STATE_RUNNING    = 2,
+    DRIVE_STATE_ERROR      = 3
 } drive_state_t;
 
 //! Тип ошибки привода.
 typedef enum _Drive_Error {
-    DRIVE_ERROR_NONE                 = 0x0,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ua   = 0x1,
-    DRIVE_ERROR_POWER_OVERFLOW_Ua    = 0x2,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ub   = 0x4,
-    DRIVE_ERROR_POWER_OVERFLOW_Ub    = 0x8,
-    DRIVE_ERROR_POWER_UNDERFLOW_Uc   = 0x10,
-    DRIVE_ERROR_POWER_OVERFLOW_Uc    = 0x20,
-    DRIVE_ERROR_POWER_UNDERFLOW_Urot = 0x40,
-    DRIVE_ERROR_POWER_OVERFLOW_Urot  = 0x80,
-    DRIVE_ERROR_POWER_IDLE_Urot      = 0x100,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ia   = 0x200,
-    DRIVE_ERROR_POWER_OVERFLOW_Ia    = 0x400,
-    DRIVE_ERROR_POWER_IDLE_Ia        = 0x800,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ib   = 0x1000,
-    DRIVE_ERROR_POWER_OVERFLOW_Ib    = 0x2000,
-    DRIVE_ERROR_POWER_IDLE_Ib        = 0x4000,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ic   = 0x8000,
-    DRIVE_ERROR_POWER_OVERFLOW_Ic    = 0x10000,
-    DRIVE_ERROR_POWER_IDLE_Ic        = 0x20000,
-    DRIVE_ERROR_POWER_UNDERFLOW_Irot = 0x40000,
-    DRIVE_ERROR_POWER_OVERFLOW_Irot  = 0x80000,
-    DRIVE_ERROR_POWER_IDLE_Irot      = 0x100000,
-    DRIVE_ERROR_POWER_UNDERFLOW_Iexc = 0x200000,
-    DRIVE_ERROR_POWER_OVERFLOW_Iexc  = 0x400000,
-    DRIVE_ERROR_POWER_IDLE_Iexc      = 0x800000,
-    DRIVE_ERROR_POWER_UNDERFLOW_Ifan = 0x1000000,
-    DRIVE_ERROR_POWER_OVERFLOW_Ifan  = 0x2000000,
-    DRIVE_ERROR_POWER_UNDERFLOW_Iref = 0x4000000,
-    DRIVE_ERROR_POWER_OVERFLOW_Iref  = 0x8000000
+    DRIVE_ERROR_NONE                 = 0x0, //!< Нет ошибки.
+    DRIVE_ERROR_POWER_DATA_NOT_AVAIL = 0x1, //!< Данные питания не поступают с АЦП.
+    DRIVE_ERROR_POWER_INVALID        = 0x2, //!< Неправильные значения питания, см. drive_power_error_t.
+    DRIVE_ERROR_EMERGENCY_STOP       = 0x4 //!< Аварийный останов (Грибок).
 } drive_error_t;
 
 //! Тип ошибок привода.
-typedef uint64_t drive_errors_t;
+typedef uint32_t drive_errors_t;
+
+//! Тип ошибки питания привода.
+typedef enum _Drive_Power_Error {
+    DRIVE_POWER_ERROR_NONE           = 0x0,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ua   = 0x1,
+    DRIVE_POWER_ERROR_OVERFLOW_Ua    = 0x2,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ub   = 0x4,
+    DRIVE_POWER_ERROR_OVERFLOW_Ub    = 0x8,
+    DRIVE_POWER_ERROR_UNDERFLOW_Uc   = 0x10,
+    DRIVE_POWER_ERROR_OVERFLOW_Uc    = 0x20,
+    DRIVE_POWER_ERROR_UNDERFLOW_Urot = 0x40,
+    DRIVE_POWER_ERROR_OVERFLOW_Urot  = 0x80,
+    DRIVE_POWER_ERROR_IDLE_Urot      = 0x100,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ia   = 0x200,
+    DRIVE_POWER_ERROR_OVERFLOW_Ia    = 0x400,
+    DRIVE_POWER_ERROR_IDLE_Ia        = 0x800,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ib   = 0x1000,
+    DRIVE_POWER_ERROR_OVERFLOW_Ib    = 0x2000,
+    DRIVE_POWER_ERROR_IDLE_Ib        = 0x4000,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ic   = 0x8000,
+    DRIVE_POWER_ERROR_OVERFLOW_Ic    = 0x10000,
+    DRIVE_POWER_ERROR_IDLE_Ic        = 0x20000,
+    DRIVE_POWER_ERROR_UNDERFLOW_Irot = 0x40000,
+    DRIVE_POWER_ERROR_OVERFLOW_Irot  = 0x80000,
+    DRIVE_POWER_ERROR_IDLE_Irot      = 0x100000,
+    DRIVE_POWER_ERROR_UNDERFLOW_Iexc = 0x200000,
+    DRIVE_POWER_ERROR_OVERFLOW_Iexc  = 0x400000,
+    DRIVE_POWER_ERROR_IDLE_Iexc      = 0x800000,
+    DRIVE_POWER_ERROR_UNDERFLOW_Ifan = 0x1000000,
+    DRIVE_POWER_ERROR_OVERFLOW_Ifan  = 0x2000000,
+    DRIVE_POWER_ERROR_UNDERFLOW_Iref = 0x4000000,
+    DRIVE_POWER_ERROR_OVERFLOW_Iref  = 0x8000000
+} drive_power_error_t;
+
+//! Тип ошибок питания привода.
+typedef uint32_t drive_power_errors_t;
+
+typedef enum _Drive_Warning {
+    DRIVE_WARNING_NONE               = 0x0,
+    DRIVE_WARNING_POWER_OVERFLOW_Ua  = 0x1,
+    DRIVE_WARNING_POWER_UNDERFLOW_Ua = 0x2,
+    DRIVE_WARNING_POWER_OVERFLOW_Ub  = 0x4,
+    DRIVE_WARNING_POWER_UNDERFLOW_Ub = 0x8,
+    DRIVE_WARNING_POWER_OVERFLOW_Uc  = 0x10,
+    DRIVE_WARNING_POWER_UNDERFLOW_Uc = 0x20
+} drive_warning_t;
+
+typedef uint32_t drive_warnings_t;
 
 //! Перечисление состояний калибровки питания.
 typedef enum _Drive_Power_Calibration {
@@ -109,7 +133,7 @@ typedef size_t triac_pair_number_t;
 
 
 /**
- * Таймеры.
+ * Таймеры для открытия тиристорных пар.
  * Используются каналы сравнения:
  * Канал1 - Первая пара тиристоров, открытие.
  * Канал2 - Первая пара тиристоров, закрытие.
@@ -142,7 +166,7 @@ typedef size_t triac_pair_number_t;
 //! Флаг прерывания канала закрытия тиристорной пары Б.
 #define TRIACS_B_CLOSE_CHANNEL_IT  TIM_IT_CC4
 
-//! Параметры таймеров для открытия тиристора.
+//! Параметры таймеров для открытия тиристорных пар.
 //! Число тиков за период.
 #define TRIACS_TIM_TICKS (36000UL)
 //! Период в микросекундах.
@@ -153,6 +177,49 @@ typedef size_t triac_pair_number_t;
 #define TRIACS_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
 #define TRIACS_TIM_OPEN_TIME_DEFAULT (180)
+
+
+/**
+ * Таймер октрытия симистора возбуждения.
+ * Используются каналы сравнения:
+ * Канал1 - Первый полупериод, открытие.
+ * Канал2 - Первый полупериод, закрытие.
+ * Канал3 - Второй полупериод, открытие.
+ * Канал4 - Второй полупериод, закрытие.
+ */
+//! Число таймеров для открытия тиристоров.
+#define TRIAC_EXC_TIMERS_COUNT 1
+//! Число необходимых каналов выхода/сравнения на таймер.
+#define TRIAC_EXC_TIMER_OC_CHANNELS 4
+//! Канал открытия в первом полупериоде.
+#define TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL      TIM_Channel_1
+//! Флаг прерывания канала открытия в первом полупериоде.
+#define TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT   TIM_IT_CC1
+//! Канал закрытия в первом полупериоде.
+#define TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL     TIM_Channel_2
+//! Флаг прерывания канала закрытия в первом полупериоде.
+#define TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT  TIM_IT_CC2
+//! Канал открытия во втором полупериоде.
+#define TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL      TIM_Channel_3
+//! Флаг прерывания канала открытия во втором полупериоде.
+#define TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT   TIM_IT_CC3
+//! Канал закрытия во втором полупериоде.
+#define TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL     TIM_Channel_4
+//! Флаг прерывания канала закрытия во втором полупериоде.
+#define TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT  TIM_IT_CC4
+
+
+//! Параметры таймеров для открытия симистора возбуждения.
+//! Число тиков за период.
+#define TRIAC_EXC_TIM_TICKS (36000UL)
+//! Период в микросекундах.
+#define TRIAC_EXC_TIM_PERIOD_US (20000)
+//! Значение счётчика за период.
+#define TRIAC_EXC_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
+//! Предделитель.
+#define TRIAC_EXC_TIM_PRESCALER (40 - 1)
+//! Время в тиках таймера открытия тиристоров.
+#define TRIAC_EXC_TIM_OPEN_TIME_DEFAULT (180)
 
 
 //! Тип задания.
@@ -225,6 +292,32 @@ extern bool drive_error(drive_error_t error);
 extern drive_errors_t drive_errors(void);
 
 /**
+ * Получает наличие предупреждения привода.
+ * @param warning Предупреждение привода.
+ * @return Наличие предупреждения привода.
+ */
+extern bool drive_warning(drive_warning_t warning);
+
+/**
+ * Получает предупреждения привода.
+ * @return Предупреждения привода.
+ */
+extern drive_warnings_t drive_warnings(void);
+
+/**
+ * Получает наличие ошибки питания привода.
+ * @param error Ошибка питания привода.
+ * @return Наличие ошибки питания привода.
+ */
+extern bool drive_power_error(drive_power_error_t error);
+
+/**
+ * Получает ошибки питания привода.
+ * @return Ошибки питания привода.
+ */
+extern drive_power_errors_t drive_power_errors(void);
+
+/**
  * Получает состояние калибровки питания привода.
  * @return Состояние калибровки питания привода.
  */
@@ -289,6 +382,26 @@ extern uint16_t drive_triacs_open_time_us(void);
 extern err_t drive_set_triacs_open_time_us(uint16_t time);
 
 /**
+ * Получает время открытия симистора возбуждения.
+ * @return Время открытия симистора возбуждения в мкс.
+ */
+extern uint16_t drive_triac_exc_open_time_us(void);
+
+/**
+ * Устанавливает время открытия симистора возбуждения.
+ * @param time Время открытия симистора возбуждения в мкс.
+ * @return Код ошибки.
+ */
+extern err_t drive_set_triac_exc_open_time_us(uint16_t time);
+
+/**
+ * Устанавливает фазу возбуждения.
+ * @param phase Фаза возбуждения.
+ * @return Код ошибки.
+ */
+extern err_t drive_set_exc_phase(phase_t phase);
+
+/**
  * Устанавливает порт вывода для заданной пары тиристоров.
  * @param triac_pair Номер пары тиристоров.
  * @param GPIO_a Порт тиристора А.
@@ -313,7 +426,14 @@ extern err_t drive_set_triac_exc_gpio(GPIO_TypeDef* GPIO, uint16_t pin);
  * @param TIM Таймер.
  * @return Код ошибки.
  */
-extern err_t drive_set_triac_timer(size_t index, TIM_TypeDef* TIM);
+extern err_t drive_set_triacs_pairs_timer(size_t index, TIM_TypeDef* TIM);
+
+/**
+ * Устанавливает таймер для открытия симистора возбуждения.
+ * @param TIM Таймер.
+ * @return Код ошибки.
+ */
+extern err_t drive_set_triac_exc_timer(TIM_TypeDef* TIM);
 
 /**
  * Обработчик прерывания таймера 0 открытия тиристоров.
@@ -324,6 +444,11 @@ extern void drive_triacs_timer0_irq_handler(void);
  * Обработчик прерывания таймера 1 открытия тиристоров.
  */
 extern void drive_triacs_timer1_irq_handler(void);
+
+/**
+ * Обработчик прерывания таймера открытия тиристора возбуждения.
+ */
+extern void drive_triac_exc_timer_irq_handler(void);
 
 /**
  * Обрабатывает событие датчика нуля по заданной фазе.

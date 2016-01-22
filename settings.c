@@ -6,16 +6,18 @@ typedef struct _Settings {
     uint8_t nominal_voltage;
     uint8_t allowed_nominal_voltage_variation;
     uint8_t critical_nominal_voltage_variation;
-    uint16_t zero_voltage_noise;
+    uint8_t zero_voltage_noise;
     uint16_t zero_current_noise;
+    uint8_t excitation_phase;
 } settings_t;
 
 
 #define SETTINGS_DEFAULT_NOMINAL_VOLTAGE 220
 #define SETTINGS_DEFAULT_ALLOWED_NOMINAL_VOLTAGE_VARIATION 5
 #define SETTINGS_DEFAULT_CRITICAL_NOMINAL_VOLTAGE_VARIATION 10
-#define SETTINGS_DEFAULT_ZERO_VOLTAGE_NOISE 1000
+#define SETTINGS_DEFAULT_ZERO_VOLTAGE_NOISE 1
 #define SETTINGS_DEFAULT_ZERO_CURRENT_NOISE 100
+#define SETTINGS_DEFAULT_EXCITATION_PHASE PHASE_A
 
 
 static settings_t settings;
@@ -34,6 +36,7 @@ void settings_init(void)
     settings.critical_nominal_voltage_variation = SETTINGS_DEFAULT_CRITICAL_NOMINAL_VOLTAGE_VARIATION;
     settings.zero_voltage_noise = SETTINGS_DEFAULT_ZERO_VOLTAGE_NOISE;
     settings.zero_current_noise = SETTINGS_DEFAULT_ZERO_CURRENT_NOISE;
+    settings.excitation_phase = SETTINGS_DEFAULT_EXCITATION_PHASE;
 }
 
 err_t settings_read(void)
@@ -92,12 +95,12 @@ bool settings_set_critical_nominal_voltage_variation(uint8_t variation)
     return true;
 }
 
-uint16_t settings_zero_voltage_noise(void)
+uint8_t settings_zero_voltage_noise(void)
 {
     return settings.zero_voltage_noise;
 }
 
-bool settings_set_zero_voltage_noise(uint16_t noise)
+bool settings_set_zero_voltage_noise(uint8_t noise)
 {
     if(ro()) return false;
     settings.zero_voltage_noise = noise;
@@ -116,3 +119,14 @@ bool settings_set_zero_current_noise(uint16_t noise)
     return true;
 }
 
+phase_t settings_excitation_phase(void)
+{
+    return settings.excitation_phase;
+}
+
+bool settings_set_excitation_phase(phase_t phase)
+{
+    if(ro()) return false;
+    settings.excitation_phase = phase;
+    return true;
+}

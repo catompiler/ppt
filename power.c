@@ -93,7 +93,10 @@ ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
  */
 ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
 {
-    if(channel->count == 0) return;
+    if(channel->count == 0){
+        channel->data_avail = false;
+        return;
+    }
     
     channel->raw_zero_cur = channel->sum_zero / channel->count;
     channel->raw_value_avg = channel->sum_avg / channel->count;

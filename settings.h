@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include "fixed/fixed32.h"
 #include "errors/errors.h"
+#include "phase_state/phase_state.h"
 
 
 /**
@@ -80,17 +81,17 @@ extern uint8_t settings_critical_nominal_voltage_variation(void);
 extern bool settings_set_critical_nominal_voltage_variation(uint8_t variation);
 
 /**
- * Получает допустимый шум нуля по напряжению, мВ.
- * @return Допустимый шим нуля по напряжению, мВ.
+ * Получает допустимый шум нуля по напряжению, В.
+ * @return Допустимый шим нуля по напряжению, В.
  */
-extern uint16_t settings_zero_voltage_noise(void);
+extern uint8_t settings_zero_voltage_noise(void);
 
 /**
- * Устанавливает допустимый шум нуля по напряжению, мВ.
- * @param noise Допустимый шум нуля по напряжению, мВ.
+ * Устанавливает допустимый шум нуля по напряжению, В.
+ * @param noise Допустимый шум нуля по напряжению, В.
  * @return Флаг успешности установки.
  */
-extern bool settings_set_zero_voltage_noise(uint16_t noise);
+extern bool settings_set_zero_voltage_noise(uint8_t noise);
 
 /**
  * Получает допустимый шум нуля по току, мА.
@@ -104,5 +105,17 @@ extern uint16_t settings_zero_current_noise(void);
  * @return Флаг успешности установки.
  */
 extern bool settings_set_zero_current_noise(uint16_t noise);
+
+/**
+ * Получает фазу возбуждения.
+ * @return Фаза возбуждения.
+ */
+extern phase_t settings_excitation_phase(void);
+
+/**
+ * Устанавливает фазу возбуждения.
+ * @param phase Фаза возбуждения.
+ */
+extern bool settings_set_excitation_phase(phase_t phase);
 
 #endif	/* SETTINGS_H */

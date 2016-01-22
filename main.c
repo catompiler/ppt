@@ -869,8 +869,8 @@ static void init_triacs_timers(void)
     triacs_timer_init(TIM2);
     triacs_timer_init(TIM3);
     
-    drive_set_triac_timer(TRIACS_TIMER_0, TIM2);
-    drive_set_triac_timer(TRIACS_TIMER_1, TIM3);
+    drive_set_triacs_pairs_timer(TRIACS_TIMER_0, TIM2);
+    drive_set_triacs_pairs_timer(TRIACS_TIMER_1, TIM3);
     
     NVIC_SetPriority(TIM2_IRQn, 1);
     NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
@@ -1425,7 +1425,7 @@ int main(void)
     
     counter_t update_period = system_counter_ticks_per_sec() / 10;
     
-    drive_set_reference(REFERENCE_MAX);
+    //drive_set_reference(REFERENCE_MAX);
     
     for(;;){
         
