@@ -9,13 +9,84 @@
 #include <stdbool.h>
 #include "fixed/fixed32.h"
 #include "errors/errors.h"
-#include "phase_state/phase_state.h"
+
+
+// Список идентификаторов параметров.
+#include "parameters_ids.h"
+
+
+//! Тип значения параметра.
+typedef enum _Parameter_Type {
+    PARAM_TYPE_INT = 0,
+    PARAM_TYPE_UINT = 1,
+    PARAM_TYPE_FRACT_10 = 2,
+    PARAM_TYPE_FRACT_100 = 3,
+    PARAM_TYPE_FRACT_1000 = 4
+} param_type_t;
+
+//! Тип данных в массиве значений параметров.
+typedef uint16_t param_data_t;
+
+//! Тип индекса параметра в массиве.
+typedef uint16_t param_index_t;
+
+//! Тип идентификатора параметра.
+typedef uint16_t param_id_t;
+
+//! Тип значения параметра.
+typedef union _Param_Value {
+    fixed32_t fixed_value;
+    uint32_t uint_value;
+    int32_t int_value;
+} param_value_t;
+
+//! Тип вида значения параметра.
+typedef enum _Param_Value_Type {
+    PARAM_VALUE_TYPE_FIXED = 0,
+    PARAM_VALUE_TYPE_INT = 1,
+    PARAM_VALUE_TYPE_UINT = 2
+} param_value_type_t;
+
+//! Флаги параметров.
+typedef enum _Param_Flag {
+    PARAM_FLAG_NONE = 0,
+    PARAM_FLAG_VIRTUAL = 1
+} param_flag_t;
+
+//! Тип флагов параметров.
+typedef uint32_t param_flags_t;
+
+//! Тип дескриптора параметра.
+typedef struct _Param_Descr {
+    param_id_t id;
+    param_type_t type;
+    param_value_t min;
+    param_value_t max;
+    param_value_t def;
+    param_flags_t flags;
+} param_descr_t;
+
+//! Тип параметра.
+typedef struct _Param {
+    param_index_t descr_index;
+    union {
+        param_value_t value;
+        param_index_t data_index;
+    };
+} param_t;
 
 
 /**
  * Инициализирует настройки значениями по-умолчанию.
+ * @return Код ошибки.
  */
-extern void settings_init(void);
+extern err_t settings_init(void);
+
+/**
+ * Применяет настройки по-умолчанию.
+ * @return Код ошибки.
+ */
+extern err_t settings_default(void);
 
 /**
  * Читает настройки.
@@ -42,80 +113,76 @@ extern bool settings_readonly(void);
 extern void settings_set_readonly(bool readonly);
 
 /**
- * Получает номинальное напряжение, В.
- * @return Номинальное напряжение, В.
+ * Получает параметр по идентификатору.
+ * @param id Идентификатор параметра.
+ * @return Параметр с заданным идентификатором.
  */
-extern uint8_t settings_nominal_voltage(void);
+extern param_t* settings_param_by_id(param_id_t id);
 
 /**
- * Устанавливает номинальное напряжение, В.
- * @param voltage Номинальное напряжение, В.
- * @return Флаг успешности установки.
+ * Получает знаковое целочисленное значение параметра.
+ * @param param Параметр.
+ * @return Знаковое целочисленное значение параметра.
  */
-extern bool settings_set_nominal_voltage(uint8_t voltage);
+extern int32_t settings_param_valuei(param_t* param);
 
 /**
- * Получает разрешённое отклонение от номинального напряжения, %.
- * @return Разрешённое отклонение от номинального напряжения, %.
+ * Устанавливает знаковое целочисленное значение параметра.
+ * @param param Параметр.
+ * @param value Знаковое целочисленное значение параметра.
+ * @return true в случае успеха, иначе false.
  */
-extern uint8_t settings_allowed_nominal_voltage_variation(void);
+extern bool settings_param_set_valuei(param_t* param, int32_t value);
 
 /**
- * Устанавливает разрешённое отклонение от номинального напряжения, %.
- * @param variation Разрешённое отклонение от номинального напряжения, %.
- * @return Флаг успешности установки.
+ * Получает беззнаковое целочисленное значение параметра.
+ * @param param Параметр.
+ * @return Беззнаковое целочисленное значение параметра.
  */
-extern bool settings_set_allowed_nominal_voltage_variation(uint8_t variation);
+extern uint32_t settings_param_valueu(param_t* param);
 
 /**
- * Получает разрешённое отклонение от номинального напряжения, %.
- * @return Разрешённое отклонение от номинального напряжения, %.
+ * Устанавливает беззнаковое целочисленное значение параметра.
+ * @param param Параметр.
+ * @param value Беззнаковое целочисленное значение параметра.
+ * @return true в случае успеха, иначе false.
  */
-extern uint8_t settings_critical_nominal_voltage_variation(void);
+extern bool settings_param_set_valueu(param_t* param, uint32_t value);
 
 /**
- * Устанавливает разрешённое отклонение от номинального напряжения, %.
- * @param variation Разрешённое отклонение от номинального напряжения, %.
- * @return Флаг успешности установки.
+ * Получает значение с фиксированной запятой параметра.
+ * @param param Параметр.
+ * @return Значение с фиксированной запятой параметра.
  */
-extern bool settings_set_critical_nominal_voltage_variation(uint8_t variation);
+extern fixed32_t settings_param_valuef(param_t* param);
 
 /**
- * Получает допустимый шум нуля по напряжению, В.
- * @return Допустимый шим нуля по напряжению, В.
+ * Получает значение с фиксированной запятой параметра.
+ * @param param Параметр.
+ * @param value Значение с фиксированной запятой параметра.
+ * @return true в случае успеха, иначе false.
  */
-extern uint8_t settings_zero_voltage_noise(void);
+extern bool settings_param_set_valuef(param_t* param, fixed32_t value);
 
 /**
- * Устанавливает допустимый шум нуля по напряжению, В.
- * @param noise Допустимый шум нуля по напряжению, В.
- * @return Флаг успешности установки.
+ * Получает знаковое целочисленное значение параметра по идентификатору.
+ * @param id Идентификатор параметра.
+ * @return Знаковое целочисленное значение параметра.
  */
-extern bool settings_set_zero_voltage_noise(uint8_t noise);
+extern int32_t settings_valuei(param_id_t id);
 
 /**
- * Получает допустимый шум нуля по току, мА.
- * @return Допустимый шим нуля по току, мА.
+ * Получает беззнаковое целочисленное значение параметра по идентификатору.
+ * @param id Идентификатор параметра.
+ * @return Беззнаковое целочисленное значение параметра.
  */
-extern uint16_t settings_zero_current_noise(void);
+extern uint32_t settings_valueu(param_id_t id);
 
 /**
- * Устанавливает допустимый шум нуля по току, мА.
- * @param noise Допустимый шум нуля по току, мА.
- * @return Флаг успешности установки.
+ * Получает значение с фиксированной запятой параметра по идентификатору.
+ * @param id Идентификатор параметра.
+ * @return Значение с фиксированной запятой параметра.
  */
-extern bool settings_set_zero_current_noise(uint16_t noise);
-
-/**
- * Получает фазу возбуждения.
- * @return Фаза возбуждения.
- */
-extern phase_t settings_excitation_phase(void);
-
-/**
- * Устанавливает фазу возбуждения.
- * @param phase Фаза возбуждения.
- */
-extern bool settings_set_excitation_phase(phase_t phase);
+extern fixed32_t settings_valuef(param_id_t id);
 
 #endif	/* SETTINGS_H */

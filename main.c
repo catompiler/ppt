@@ -37,6 +37,7 @@
 #include "Mylib/mylib.h"
 #include "I2Clib/I2Clib.h"
 #include "drive.h"
+#include "settings.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
@@ -1398,6 +1399,11 @@ int main(void)
     init_usart();
     
     printf("STM32 MCU\r\n");
+    
+    settings_init();
+    if(settings_read() != E_NO_ERROR){
+        settings_default();
+    }
     
     init_gpio();
     

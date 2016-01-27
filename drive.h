@@ -260,6 +260,12 @@ typedef uint32_t reference_t;
 extern err_t drive_init(void);
 
 /**
+ * Обновляет настройки привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_update_settings(void);
+
+/**
  * Получает состояние флага привода.
  * @param flag Флаг.
  * @return Состояние флага.

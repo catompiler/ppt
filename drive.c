@@ -69,6 +69,16 @@ typedef struct _Timer_Triacs {
     triac_pair_number_t triacs_b; //!< Пара тиристоров B.
 } timer_triacs_t;
 
+//! Тип структуры настроек привода.
+typedef struct _Drive_Settings {
+    fixed32_t U_nom; //!< Номинальное напряжение, В.
+    fixed32_t U_nom_delta_allow; //!< Допустимое отклонение номинального напряжения, В.
+    fixed32_t U_nom_delta_crit; //!< Критическое отклонение номинального напряжения, В.
+    fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
+    fixed32_t I_zero_noise; //!< Шум тока нуля, А.
+    phase_t exc_phase; //!< Фаза возбуждения.
+} drive_settings_t;
+
 //! Структура привода.
 typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
@@ -89,7 +99,6 @@ typedef struct _Drive {
     
     triac_pair_t triac_pairs[TRIAC_PAIRS_COUNT]; //!< Пары тиристоров.
     triac_t triac_exc; //!< Тиристор возбуждения.
-    phase_t exc_phase; //!< Фаза возбуждения.
     
     timer_triacs_t timers_triacs[TRIACS_TIMERS_COUNT]; //!< Тиристоры таймеров и таймеры.
     size_t current_timer_triacs; //!< Текущий индекс таймеров тиристоров.
@@ -98,6 +107,8 @@ typedef struct _Drive {
     
     power_value_t power_values[POWER_VALUES_COUNT]; //!< Значение каналов АЦП.
     power_t power; //!< Питание.
+    
+    drive_settings_t settings;
 } drive_t;
 
 //! Состояние привода.
@@ -383,7 +394,7 @@ static err_t drive_setup_triac_exc_timer(phase_t phase)
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
-    phase_t exc_ctl_phase = drive.exc_phase;
+    phase_t exc_ctl_phase = drive.settings.exc_phase;
     
     if(phase_state_drive_direction() == DRIVE_DIR_BACKW){
         exc_ctl_phase = phase_state_next_phase(phase, DRIVE_DIR_BACKW);
@@ -546,11 +557,9 @@ static int drive_compare_power_value(size_t channel, fixed32_t normal, fixed32_t
  * @param delta_percents Допуск в процентах.
  * @return Результат сравнения.
  */
-static int drive_compare_input_voltage(size_t channel, int32_t delta_percents)
+static int drive_compare_input_voltage(size_t channel, fixed32_t delta)
 {
-    int32_t nom_volt = (int32_t)settings_nominal_voltage();
-    fixed32_t delta_value = fixed32_make_from_fract((nom_volt * delta_percents), 100);
-    return drive_compare_power_value(channel, fixed32_make_from_int(nom_volt), delta_value);
+    return drive_compare_power_value(channel, drive.settings.U_nom, delta);
 }
 
 /**
@@ -560,8 +569,7 @@ static int drive_compare_input_voltage(size_t channel, int32_t delta_percents)
  */
 static int drive_compare_zero_current(size_t channel)
 {
-    fixed32_t delta_value = fixed32_make_from_fract((int32_t)settings_zero_current_noise(), 1000);
-    return drive_compare_power_value(channel, 0, delta_value);
+    return drive_compare_power_value(channel, 0, drive.settings.I_zero_noise);
 }
 
 /**
@@ -571,8 +579,7 @@ static int drive_compare_zero_current(size_t channel)
  */
 static int drive_compare_zero_voltage(size_t channel)
 {
-    fixed32_t delta_value = fixed32_make_from_int((int32_t)settings_zero_voltage_noise());
-    return drive_compare_power_value(channel, 0, delta_value);
+    return drive_compare_power_value(channel, 0, drive.settings.U_zero_noise);
 }
 
 /**
@@ -604,13 +611,13 @@ static void drive_check_power_idle(void)
 {
     // Напряжения - превышение критической разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
     // Rot.
     drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
@@ -633,13 +640,13 @@ static void drive_check_power_idle(void)
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
     // Напряжения - превышение допустимой разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
 }
 
@@ -702,13 +709,13 @@ static void drive_check_power_running(void)
 {
     // Напряжения - превышение критической разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, settings_critical_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
     // Rot.
     drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
@@ -731,13 +738,13 @@ static void drive_check_power_running(void)
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
     // Напряжения - превышение допустимой разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, settings_allowed_nominal_voltage_variation()),
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
 }
 
@@ -784,14 +791,14 @@ err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
     
+    drive_update_settings();
+    
     drive.flags = DRIVE_FLAG_NONE;
     drive.state = DRIVE_STATE_IDLE;
     drive.errors = DRIVE_ERROR_NONE;
     
     drive.triacs_pairs_open_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     drive.triac_exc_open_ticks = TRIAC_EXC_TIM_OPEN_TIME_DEFAULT;
-    
-    drive.exc_phase = settings_excitation_phase();
     
     power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ia
     power_value_init(&drive.power_values[1],POWER_CHANNEL_AC, 0x10000); // Ua
@@ -807,6 +814,18 @@ err_t drive_init(void)
     
     power_init(&drive.power, drive.power_values, POWER_CHANNELS);
     
+    return E_NO_ERROR;
+}
+
+err_t drive_update_settings(void)
+{
+    drive.settings.U_nom = settings_valuef(PARAM_ID_U_NOM);
+    drive.settings.U_nom_delta_allow = settings_valueu(PARAM_ID_U_NOM_ALLOW_VAR) * drive.settings.U_nom / 100;
+    drive.settings.U_nom_delta_crit = settings_valueu(PARAM_ID_U_NOM_CRIT_VAR) * drive.settings.U_nom / 100;
+    drive.settings.U_zero_noise = settings_valuef(PARAM_ID_U_ZERO_NOISE);
+    drive.settings.I_zero_noise = settings_valuef(PARAM_ID_I_ZERO_NOISE);
+    drive.settings.exc_phase = settings_valueu(PARAM_ID_EXC_PHASE);
+
     return E_NO_ERROR;
 }
 
@@ -927,7 +946,7 @@ err_t drive_set_exc_phase(phase_t phase)
 {
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     
-    drive.exc_phase = phase;
+    drive.settings.exc_phase = phase;
     
     return E_NO_ERROR;
 }
