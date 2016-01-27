@@ -1,6 +1,7 @@
 #include "drive.h"
 #include "settings.h"
 #include "ramp.h"
+#include "pid_controller/pid_controller.h"
 #include <string.h>
 
 
@@ -56,6 +57,20 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 #define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * TRIACS_TIM_PERIOD_US) / TRIACS_TIM_PERIOD)
 
 
+//! Максимальное значение PID-регулятора напряжения якоря.
+#define DRIVE_ROT_PID_VALUE_MAX TRIACS_TIM_ANGLE_TICKS_MAX
+//! Минимальное значение PID-регулятора напряжения якоря.
+#define DRIVE_ROT_PID_VALUE_MIN 0
+
+//! Максимальное значение PID-регулятора тока возбуждения.
+#define DRIVE_EXC_PID_VALUE_MAX TRIAC_EXC_ANGLE_TICKS_MAX
+//! Минимальное значение PID-регулятора тока возбуждения.
+#define DRIVE_EXC_PID_VALUE_MIN TRIAC_EXC_ANGLE_TICKS_MIN
+
+//! dt PID-регулятора.
+#define DRIVE_PID_DT 0x51f
+
+
 //! Число периодов калибровки питания.
 #define DRIVE_POWER_CALIBRATION_PERIODS 5
 
@@ -77,6 +92,9 @@ typedef struct _Drive_Settings {
     fixed32_t U_nom_delta_crit; //!< Критическое отклонение номинального напряжения, В.
     fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
     fixed32_t I_zero_noise; //!< Шум тока нуля, А.
+    fixed32_t U_rot_nom; //!< Номинальное возбуждение якоря.
+    fixed32_t I_rot_nom; //!< Номинальный ток якоря.
+    fixed32_t I_exc_nom; //!< Номинальный ток возбуждения.
     phase_t exc_phase; //!< Фаза возбуждения.
 } drive_settings_t;
 
@@ -109,6 +127,9 @@ typedef struct _Drive {
     power_t power; //!< Питание.
     
     ramp_t ramp; //!< Разгон.
+    
+    pid_controller_t rot_pid; //!< ПИД-регулятор напряжения якоря.
+    pid_controller_t exc_pid; //!< ПИД-регулятор тока возбуждения.
     
     drive_settings_t settings; //!< Настройки.
 } drive_t;
@@ -695,12 +716,18 @@ static err_t drive_state_process_idle(phase_t phase)
  */
 static void drive_regulate(void)
 {
-    if(drive_reference() < REFERENCE_MIN){
+    ramp_calc_step(&drive.ramp);
+    
+    if(ramp_current_reference(&drive.ramp) < REFERENCE_MIN){
         drive.triacs_pairs_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
         drive.triac_exc_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
     }else{
-        drive.triacs_pairs_angle_ticks = (uint32_t)drive_reference() * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
-        drive.triac_exc_angle_ticks = (uint32_t)drive_reference() * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
+        //drive.triacs_pairs_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
+        //drive.triac_exc_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
+        fixed32_t u_rot = power_channel_real_value_avg(&drive.power, POWER_VALUE_Urot);
+        fixed32_t u_rot_ref = drive.settings.U_rot_nom * ramp_current_reference(&drive.ramp) / 100;
+        pid_controller_calculate(&drive.rot_pid, u_rot_ref - u_rot, DRIVE_PID_DT);
+        drive.triacs_pairs_angle_ticks = pid_controller_value(&drive.rot_pid);
     }
 }
 
@@ -764,7 +791,6 @@ static void drive_process_power_running(phase_t phase)
             drive_check_power_running();
             
             if(drive_ready()){
-                ramp_calc_step(&drive.ramp);
                 drive_regulate();
             }
         }else{
@@ -831,6 +857,10 @@ err_t drive_init(void)
     memset(&drive, 0x0, sizeof(drive_t));
     
     ramp_init(&drive.ramp);
+    pid_controller_init(&drive.rot_pid, 0, 0, 0);
+    pid_controller_clamp(&drive.rot_pid, DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
+    pid_controller_init(&drive.exc_pid, 0, 0, 0);
+    pid_controller_clamp(&drive.exc_pid, DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
     drive_update_settings();
     
@@ -865,8 +895,17 @@ err_t drive_update_settings(void)
     drive.settings.U_nom_delta_crit = settings_valueu(PARAM_ID_U_NOM_CRIT_VAR) * drive.settings.U_nom / 100;
     drive.settings.U_zero_noise = settings_valuef(PARAM_ID_U_ZERO_NOISE);
     drive.settings.I_zero_noise = settings_valuef(PARAM_ID_I_ZERO_NOISE);
+    drive.settings.U_rot_nom = settings_valuef(PARAM_ID_U_ROT_NOM);
+    drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
+    drive.settings.I_exc_nom = settings_valuef(PARAM_ID_I_EXC_NOM);
     drive.settings.exc_phase = settings_valueu(PARAM_ID_EXC_PHASE);
     ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
+    pid_controller_set_kp(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_P));
+    pid_controller_set_ki(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_I));
+    pid_controller_set_kd(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_D));
+    pid_controller_set_kp(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_P));
+    pid_controller_set_ki(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_I));
+    pid_controller_set_kd(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_D));
 
     return E_NO_ERROR;
 }

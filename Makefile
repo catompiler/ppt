@@ -13,7 +13,7 @@ SRC_LIBS += circular_buffer usart newlib_stubs\
 			gui_number_label gui_checkbox gui_spinbox\
 			gui_button\
 			phase_state mylib power triac triac_pair\
-			drive settings ramp
+			drive settings ramp pid_controller
 
 
 # Стандартные драйвера периферии.
