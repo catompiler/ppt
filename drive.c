@@ -400,9 +400,9 @@ static err_t drive_setup_triac_exc_timer(phase_t phase)
         exc_ctl_phase = phase_state_next_phase(phase, DRIVE_DIR_BACKW);
     }
     
-    if(exc_ctl_phase != phase) return E_NO_ERROR;
-    
-    timer_triac_exc_setup();
+    if(exc_ctl_phase == phase){
+        timer_triac_exc_setup();
+    }
     
     return E_NO_ERROR;
 }
@@ -546,15 +546,15 @@ static int drive_compare_power_value(size_t channel, fixed32_t normal, fixed32_t
     fixed32_t value = power_channel_real_value_avg(&drive.power, channel);
     fixed32_t delta = value - normal;
     
-    if(delta < 0) return PWR_LESS;
-    if(delta > 0) return PWR_GREATER;
+    if(delta < -max_delta) return PWR_LESS;
+    if(delta >  max_delta) return PWR_GREATER;
     return PWR_EQUAL;
 }
 
 /**
  * Сравнивает канал входного напряжения с заданным отклонением.
  * @param channel Канал АЦП.
- * @param delta_percents Допуск в процентах.
+ * @param delta_percents Допуск в вольтах.
  * @return Результат сравнения.
  */
 static int drive_compare_input_voltage(size_t channel, fixed32_t delta)
@@ -718,24 +718,24 @@ static void drive_check_power_running(void)
     drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
     // Rot.
-    drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
+    //drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
     // Токи - отклонения от нуля.
     // A.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ia),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ia, DRIVE_POWER_ERROR_IDLE_Ia);
+    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ia),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ia, DRIVE_POWER_ERROR_IDLE_Ia);
     // B.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ib),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ib);
+    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ib),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ib);
     // C.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ic),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ic);
+    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ic),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ic);
     // Exc.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Iexc),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc);
+    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Iexc),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc);
     // Rot.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
+    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
+    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
     // Напряжения - превышение допустимой разности.
     // A.
     drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
@@ -779,8 +779,44 @@ static err_t drive_state_process_running(phase_t phase)
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
+    drive_setup_triacs_pairs_timer(phase);
+    drive_setup_triac_exc_timer(phase);
+    
+    drive_process_power_running(phase);
+    
+    if(drive_ready()){
+        drive_regulate();
+    }
+    
     return E_NO_ERROR;
 }
+
+
+/*
+ * Состояние ошибки.
+ */
+
+/**
+ * Обработка состояния ошибки привода.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_error(phase_t phase)
+{
+    // Нужна определённая фаза.
+    if(phase == PHASE_UNK) return E_INVALID_VALUE;
+    // Нужно какое-либо направление.
+    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    
+    if(drive.errors == DRIVE_ERROR_NONE){
+        drive.state = DRIVE_STATE_IDLE;
+    }
+    
+    return E_NO_ERROR;
+}
+
+
+
 
 /*
  * Интерфейсный функции.
@@ -901,17 +937,25 @@ bool drive_ready(void)
 
 bool drive_start(void)
 {
-    return false;
+    if(!drive_ready())
+        return false;
+    if(drive.state == DRIVE_STATE_IDLE){
+        drive.state = DRIVE_STATE_RUNNING;
+    }
+    return true;
 }
 
 bool drive_stop(void)
 {
-    return false;
+    if(drive.state == DRIVE_STATE_RUNNING){
+        drive.state = DRIVE_STATE_IDLE;
+    }
+    return true;
 }
 
 bool drive_running(void)
 {
-    return false;
+    return drive.state == DRIVE_STATE_RUNNING;
 }
 
 uint16_t drive_triacs_open_time_us(void)
@@ -1079,17 +1123,10 @@ err_t drive_process_null_sensor(phase_t phase)
         case DRIVE_STATE_IDLE:
             return drive_state_process_idle(phase);
         case DRIVE_STATE_RUNNING:
+            return drive_state_process_running(phase);
         case DRIVE_STATE_ERROR:
-            break;
+            return drive_state_process_error(phase);
     }
-    // Настроем открытие пар тиристоров.
-    //drive_setup_triacs_pairs_timer(phase);
-    
-    // Настроем открытие симистора возбуждения.
-    //drive_setup_triac_exc_timer(phase);
-    
-    // Обработка калибровки питания.
-    //drive_process_power(phase);
     
     return E_NO_ERROR;
 }

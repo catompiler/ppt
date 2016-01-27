@@ -26,6 +26,7 @@
 #include "gui/gui_number_label.h"
 #include "gui/gui_checkbox.h"
 #include "gui/gui_spinbox.h"
+#include "gui/gui_button.h"
 #include "input/key_input.h"
 #include "input/key_layout_ru.h"
 #include "input/key_layout_en.h"
@@ -1005,8 +1006,12 @@ static gui_t gui = MAKE_GUI(&graphics, &theme);
 static gui_widget_t root_widget;
 static gui_widget_t parent_widget;
 static gui_label_t label_val;
+static gui_label_t label_errs;
+static gui_label_t label_state;
 static gui_label_t label_ref;
 static gui_spinbox_t spinbox_ref;
+static gui_button_t button_start;
+static gui_button_t button_stop;
 static gui_label_t lbl_adc1_in1;
 static gui_label_t lbl_adc1_in2;
 static gui_label_t lbl_adc1_in3;
@@ -1019,6 +1024,8 @@ static gui_label_t lbl_adc3_in1;
 static gui_label_t lbl_adc3_in2;
 static gui_label_t lbl_adc3_in3;
 static gui_number_label_t label_num;
+static gui_number_label_t label_num_errs;
+static gui_number_label_t label_num_state;
 static gui_number_label_t lbl_num_adc1_in1;
 static gui_number_label_t lbl_num_adc1_in2;
 static gui_number_label_t lbl_num_adc1_in3;
@@ -1126,6 +1133,16 @@ static void key_input_process(void)
 static void spinbox_reference_on_value_changed(gui_spinbox_t* spinbox, int value)
 {
     drive_set_reference(CLAMP(value, 0, 100));
+}
+
+static void button_start_on_clicked(gui_button_t* button)
+{
+    drive_start();
+}
+
+static void button_stop_on_clicked(gui_button_t* button)
+{
+    drive_stop();
 }
 
 static void make_gui_adc(void)
@@ -1325,9 +1342,43 @@ static void make_gui(void)
     //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&label_num), true);
     
+    gui_label_init_parent(&label_errs, &gui, &parent_widget);
+    gui_label_set_text(&label_errs, "Ошибки:");
+    gui_widget_move(GUI_WIDGET(&label_errs), 5, GUI_LABEL_TOP(1));
+    gui_widget_resize(GUI_WIDGET(&label_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_errs), true);
+    
+    gui_number_label_init_parent(&label_num_errs, &gui, &parent_widget);
+    gui_number_label_set_number(&label_num_errs, 0);//0x1234
+    gui_number_label_set_format(&label_num_errs, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&label_num_errs), 60, GUI_LABEL_TOP(1));
+    gui_widget_resize(GUI_WIDGET(&label_num_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_num_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_num_errs), true);
+    
+    gui_label_init_parent(&label_state, &gui, &parent_widget);
+    gui_label_set_text(&label_state, "Сост.:");
+    gui_widget_move(GUI_WIDGET(&label_state), 5, GUI_LABEL_TOP(2));
+    gui_widget_resize(GUI_WIDGET(&label_state), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_state), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_state), true);
+    
+    gui_number_label_init_parent(&label_num_state, &gui, &parent_widget);
+    gui_number_label_set_number(&label_num_state, 0);//0x1234
+    gui_number_label_set_format(&label_num_state, GUI_NUMBER_LABEL_DEC);
+    gui_widget_move(GUI_WIDGET(&label_num_state), 60, GUI_LABEL_TOP(2));
+    gui_widget_resize(GUI_WIDGET(&label_num_state), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_num_state), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_num_state), true);
+    
     gui_label_init_parent(&label_ref, &gui, &parent_widget);
     gui_label_set_text(&label_ref, "Задание:");
-    gui_widget_move(GUI_WIDGET(&label_ref), 5, GUI_LABEL_TOP(1));
+    gui_widget_move(GUI_WIDGET(&label_ref), 5, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&label_ref), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&label_ref), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
@@ -1338,9 +1389,27 @@ static void make_gui(void)
     gui_spinbox_set_format(&spinbox_ref, GUI_NUMBER_LABEL_DEC);
     gui_spinbox_set_range(&spinbox_ref, 0, 100);
     gui_spinbox_set_on_value_changed(&spinbox_ref, spinbox_reference_on_value_changed);
-    gui_widget_move(GUI_WIDGET(&spinbox_ref), 60, GUI_LABEL_TOP(1));
+    gui_widget_move(GUI_WIDGET(&spinbox_ref), 60, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&spinbox_ref), 50, 20);
     gui_widget_set_visible(GUI_WIDGET(&spinbox_ref), true);
+    
+    gui_button_init_parent(&button_start, &gui, &parent_widget);
+    gui_button_set_text(&button_start, "Старт");
+    gui_button_set_on_clicked(&button_start, button_start_on_clicked);
+    gui_widget_move(GUI_WIDGET(&button_start), 5, GUI_LABEL_TOP(4));
+    gui_widget_resize(GUI_WIDGET(&button_start), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&button_start), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&button2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&button_start), true);
+    
+    gui_button_init_parent(&button_stop, &gui, &parent_widget);
+    gui_button_set_text(&button_stop, "Стоп");
+    gui_button_set_on_clicked(&button_stop, button_stop_on_clicked);
+    gui_widget_move(GUI_WIDGET(&button_stop), 60, GUI_LABEL_TOP(4));
+    gui_widget_resize(GUI_WIDGET(&button_stop), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&button_stop), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&button2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&button_stop), true);
     
     make_gui_adc();
     
@@ -1354,6 +1423,8 @@ static void gui_update_values(void)
 {
     //gui_number_label_set_number(&label_num, timer_cc_count);
     gui_number_label_set_number(&label_num, drive_flags());
+    gui_number_label_set_number(&label_num_state, drive_state());
+    gui_number_label_set_number(&label_num_errs, drive_errors());
 
     if(drive_power_data_avail(POWER_CHANNELS)){
         gui_number_label_set_number(&lbl_num_adc1_in1, drive_power_channel_raw_value_avg(0));
