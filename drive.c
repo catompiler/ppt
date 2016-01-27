@@ -1,5 +1,6 @@
 #include "drive.h"
 #include "settings.h"
+#include "ramp.h"
 #include <string.h>
 
 
@@ -90,7 +91,6 @@ typedef struct _Drive {
     phase_t power_phase; //!< Фаза начала калибровки питания.
     size_t power_calibration_periods; //!< Число периодов калибровки питания.
     
-    reference_t reference; //!< Задание.
     uint16_t triacs_pairs_angle_ticks; //!< Угол открытия тиристорных пар - значение регистра сравнения таймера.
     uint16_t triacs_pairs_open_ticks; //!< Время открытия тиристорных пар в тиках таймера.
     
@@ -108,7 +108,9 @@ typedef struct _Drive {
     power_value_t power_values[POWER_VALUES_COUNT]; //!< Значение каналов АЦП.
     power_t power; //!< Питание.
     
-    drive_settings_t settings;
+    ramp_t ramp; //!< Разгон.
+    
+    drive_settings_t settings; //!< Настройки.
 } drive_t;
 
 //! Состояние привода.
@@ -693,12 +695,12 @@ static err_t drive_state_process_idle(phase_t phase)
  */
 static void drive_regulate(void)
 {
-    if(drive.reference < REFERENCE_MIN){
+    if(drive_reference() < REFERENCE_MIN){
         drive.triacs_pairs_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
         drive.triac_exc_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
     }else{
-        drive.triacs_pairs_angle_ticks = (uint32_t)drive.reference * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
-        drive.triac_exc_angle_ticks = (uint32_t)drive.reference * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
+        drive.triacs_pairs_angle_ticks = (uint32_t)drive_reference() * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
+        drive.triac_exc_angle_ticks = (uint32_t)drive_reference() * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
     }
 }
 
@@ -760,6 +762,11 @@ static void drive_process_power_running(phase_t phase)
         if(power_data_avail(&drive.power, POWER_CHANNELS)){
             drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_check_power_running();
+            
+            if(drive_ready()){
+                ramp_calc_step(&drive.ramp);
+                drive_regulate();
+            }
         }else{
             drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
@@ -783,10 +790,6 @@ static err_t drive_state_process_running(phase_t phase)
     drive_setup_triac_exc_timer(phase);
     
     drive_process_power_running(phase);
-    
-    if(drive_ready()){
-        drive_regulate();
-    }
     
     return E_NO_ERROR;
 }
@@ -827,6 +830,8 @@ err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
     
+    ramp_init(&drive.ramp);
+    
     drive_update_settings();
     
     drive.flags = DRIVE_FLAG_NONE;
@@ -861,6 +866,7 @@ err_t drive_update_settings(void)
     drive.settings.U_zero_noise = settings_valuef(PARAM_ID_U_ZERO_NOISE);
     drive.settings.I_zero_noise = settings_valuef(PARAM_ID_I_ZERO_NOISE);
     drive.settings.exc_phase = settings_valueu(PARAM_ID_EXC_PHASE);
+    ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
 
     return E_NO_ERROR;
 }
@@ -917,7 +923,7 @@ drive_power_calibration_t drive_power_calibration(void)
 
 reference_t drive_reference(void)
 {
-    return drive.reference;
+    return ramp_target_reference(&drive.ramp);
 }
 
 err_t drive_set_reference(reference_t reference)
@@ -925,9 +931,7 @@ err_t drive_set_reference(reference_t reference)
     // 0 ... 100 == 12000 (TRIACS_TIM_ANGLE_TICKS_MAX) ... 0
     if(reference > REFERENCE_MAX) return E_OUT_OF_RANGE;
     
-    drive.reference = reference;
-    
-    return E_NO_ERROR;
+    return ramp_set_target_reference(&drive.ramp, reference);
 }
 
 bool drive_ready(void)

@@ -6,11 +6,13 @@
 #define	PARAMETERS_H
 
 #include "settings.h"
+#include "phase_state/phase_state.h"
+#include "ramp.h"
 
 
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 6
+#define PARAMETERS_REAL_COUNT 7
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 0
 // Общее число параметров.
@@ -28,7 +30,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_U_NOM_CRIT_VAR,  PARAM_TYPE_UINT, 0, 20,   10,  0), // %
     PARAM_DESCR(PARAM_ID_U_ZERO_NOISE,    PARAM_TYPE_FRACT_1000, F32I(0), F32I(10), F32I(1),      0), // 1.0 В.
     PARAM_DESCR(PARAM_ID_I_ZERO_NOISE,    PARAM_TYPE_FRACT_1000, F32I(0), F32I(1),  F32(1, 100),  0), // 0.01 А.
-    PARAM_DESCR(PARAM_ID_EXC_PHASE,       PARAM_TYPE_UINT, PHASE_A, PHASE_C, PHASE_A, 0)
+    PARAM_DESCR(PARAM_ID_EXC_PHASE,       PARAM_TYPE_UINT, PHASE_A, PHASE_C, PHASE_A, 0),
+    PARAM_DESCR(PARAM_ID_RAMP_TIME,       PARAM_TYPE_UINT, RAMP_TIME_MIN, RAMP_TIME_MAX, RAMP_TIME_DEFAULT, 0),
 };
 
 #undef F32I

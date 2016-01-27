@@ -30,6 +30,10 @@
  * Фаза возбуждения.
  */
 #define PARAM_ID_EXC_PHASE 6
+/**
+ * Время разгона.
+ */
+#define PARAM_ID_RAMP_TIME 7
 
 
 #endif	/* PARAMETERS_IDS_H */
