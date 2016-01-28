@@ -111,6 +111,23 @@ typedef enum _Drive_Power_Calibration {
     DRIVE_PWR_CALIBRATION_DONE //!< Калибровка выполнена.
 } drive_power_calibration_t;
 
+//! Перечисление состояний запуска привода.
+typedef enum _Drive_Starting {
+    DRIVE_STARTING_NONE = 0, //!< Не запускается.
+    DRIVE_STARTING_START = 1, //!< Нужно запустить.
+    DRIVE_STARTING_WAIT_EXC = 2, //!< Ожидание возбуждения.
+    DRIVE_STARTING_DONE = 3 //!< Запущен.
+} drive_starting_t;
+
+//! Перечисление состояний останова привода.
+typedef enum _Drive_Stopping {
+    DRIVE_STOPPING_NONE = 0, //!< Не останавливается.
+    DRIVE_STOPPING_STOP = 1, //!< Нужно остановить.
+    DRIVE_STOPPING_WAIT_ROT = 2, //!< Ожидане остановки якоря.
+    DRIVE_STOPPING_WAIT_EXC = 3, //!< Ожидане возвращения к нулю возбуждения.
+    DRIVE_STOPPING_DONE = 4 //!< Остановлен.
+} drive_stopping_t;
+
 // Тиристоры.
 //! Число пар тиристоров.
 #define TRIAC_PAIRS_COUNT 6
@@ -253,6 +270,9 @@ typedef uint32_t reference_t;
                         POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
                         POWER_CHANNEL_9 | POWER_CHANNEL_10)
 
+//! Частота сети.
+#define POWER_FREQ 50
+
 /**
  * Инициализирует привод.
  * @return Код ошибки.
@@ -328,6 +348,18 @@ extern drive_power_errors_t drive_power_errors(void);
  * @return Состояние калибровки питания привода.
  */
 extern drive_power_calibration_t drive_power_calibration(void);
+
+/**
+ * Получает состояние запуска привода.
+ * @return Состояние запуска привода.
+ */
+extern drive_starting_t drive_starting(void);
+
+/**
+ * Получает состояние останова привода.
+ * @return Состояние останова привода.
+ */
+extern drive_stopping_t drive_stopping(void);
 
 /**
  * Получает направление вращения.

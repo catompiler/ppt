@@ -12,7 +12,7 @@
 
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 16
+#define PARAMETERS_REAL_COUNT 17
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 0
 // Общее число параметров.
@@ -40,7 +40,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_EXC_PID_K_D,     PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32I(0),      0), // Kd.
     PARAM_DESCR(PARAM_ID_U_ROT_NOM,       PARAM_TYPE_UINT,      0,       600,       220,          0),
     PARAM_DESCR(PARAM_ID_I_ROT_NOM,       PARAM_TYPE_FRACT_10,  F32I(0), F32I(200), F32I(10),     0), // 10 А.
-    PARAM_DESCR(PARAM_ID_I_EXC_NOM,       PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32I(10),     0), // 10 А.
+    PARAM_DESCR(PARAM_ID_I_EXC,           PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32I(10),     0), // 10 А.
+    PARAM_DESCR(PARAM_ID_STOP_TIME,       PARAM_TYPE_UINT,      0,       100,       10,           0),
 };
 
 #undef F32I
