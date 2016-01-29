@@ -71,9 +71,17 @@
  */
 #define PARAM_ID_I_EXC 16
 /**
- * Время ожидания установления нуля на выходе при выключении, с.
+ * Время ожидания остановки ротора при выключении, с.
  */
-#define PARAM_ID_STOP_TIME 17
+#define PARAM_ID_ROT_STOP_TIME 17
+/**
+ * Время ожидания остановки возбуждения при выключении, с.
+ */
+#define PARAM_ID_EXC_STOP_TIME 18
+/**
+ * Время ожидания включения возбуждения при выключении, с.
+ */
+#define PARAM_ID_EXC_START_TIME 19
 
 
 #endif	/* PARAMETERS_IDS_H */
