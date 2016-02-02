@@ -37,13 +37,13 @@ typedef enum _Drive_Flag {
 //! Тип флагов привода.
 typedef uint32_t drive_flags_t;
 
-//! Тип состояния привода.
-typedef enum _Drive_State {
-    DRIVE_STATE_INIT       = 0,
-    DRIVE_STATE_IDLE       = 1,
-    DRIVE_STATE_RUNNING    = 2,
-    DRIVE_STATE_ERROR      = 3
-} drive_state_t;
+//! Тип статуса привода.
+typedef enum _Drive_Status {
+    DRIVE_STATUS_INIT       = 0,
+    DRIVE_STATUS_IDLE       = 1,
+    DRIVE_STATUS_RUN        = 2,
+    DRIVE_STATUS_ERROR      = 3
+} drive_status_t;
 
 //! Тип ошибки привода.
 typedef enum _Drive_Error {
@@ -116,16 +116,18 @@ typedef enum _Drive_Starting {
     DRIVE_STARTING_NONE = 0, //!< Не запускается.
     DRIVE_STARTING_START = 1, //!< Нужно запустить.
     DRIVE_STARTING_WAIT_EXC = 2, //!< Ожидание возбуждения.
-    DRIVE_STARTING_DONE = 3 //!< Запущен.
+    DRIVE_STARTING_RAMP = 3, //!< Разгон.
+    DRIVE_STARTING_DONE = 4 //!< Запущен.
 } drive_starting_t;
 
 //! Перечисление состояний останова привода.
 typedef enum _Drive_Stopping {
     DRIVE_STOPPING_NONE = 0, //!< Не останавливается.
     DRIVE_STOPPING_STOP = 1, //!< Нужно остановить.
-    DRIVE_STOPPING_WAIT_ROT = 2, //!< Ожидане остановки якоря.
-    DRIVE_STOPPING_WAIT_EXC = 3, //!< Ожидане возвращения к нулю возбуждения.
-    DRIVE_STOPPING_DONE = 4 //!< Остановлен.
+    DRIVE_STOPPING_RAMP = 2, //!< Торможение.
+    DRIVE_STOPPING_WAIT_ROT = 3, //!< Ожидане остановки якоря.
+    DRIVE_STOPPING_WAIT_EXC = 4, //!< Ожидане возвращения к нулю возбуждения.
+    DRIVE_STOPPING_DONE = 5 //!< Остановлен.
 } drive_stopping_t;
 
 // Тиристоры.
@@ -252,14 +254,14 @@ typedef uint32_t reference_t;
 #define POWER_VALUES_COUNT 11
 
 // Алиасы значений токов и напряжений.
-#define POWER_VALUE_Ia 0
-#define POWER_VALUE_Ua 1
-#define POWER_VALUE_Ib 2
-#define POWER_VALUE_Ub 3
-#define POWER_VALUE_Ic 4
-#define POWER_VALUE_Uc 5
-#define POWER_VALUE_Irot 6
-#define POWER_VALUE_Urot 7
+#define POWER_VALUE_Ua 0
+#define POWER_VALUE_Ia 1
+#define POWER_VALUE_Ub 2
+#define POWER_VALUE_Ib 3
+#define POWER_VALUE_Uc 4
+#define POWER_VALUE_Ic 5
+#define POWER_VALUE_Urot 6
+#define POWER_VALUE_Irot 7
 #define POWER_VALUE_Iexc 8
 #define POWER_VALUE_Iref 9
 #define POWER_VALUE_Ifan 10
@@ -299,10 +301,10 @@ extern bool drive_flag(drive_flag_t flag);
 extern drive_flags_t drive_flags(void);
 
 /**
- * Получает состояние привода.
- * @return Состояние привода.
+ * Получает статус привода.
+ * @return Статус привода.
  */
-extern drive_state_t drive_state(void);
+extern drive_status_t drive_status(void);
 
 /**
  * Получает наличие ошибки привода.

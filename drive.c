@@ -36,6 +36,8 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 
 //! Максимальный угол открытия тиристоров в тиках таймера.
 #define TRIACS_TIM_ANGLE_TICKS_MAX (TRIACS_TIM_TICKS / 3)
+//! Минимальный угол открытия тиристоров в тиках таймера.
+#define TRIACS_TIM_ANGLE_TICKS_MIN (TRIACS_TIM_TICKS * 5 / 300)
 //! Смещение между первой и второй парой тиристоров.
 #define TRIACS_TIM_OFFSET (TRIACS_TIM_ANGLE_TICKS_MAX / 2)
 //! Минимальный угол включения симистора возбуждения.
@@ -77,6 +79,17 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 //! Необходимые для готовности флаги.
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
 
+//! Тип состояния машины состояний привода.
+typedef enum _Drive_State {
+    DRIVE_STATE_INIT = 0,
+    DRIVE_STATE_CALIBRATION,
+    DRIVE_STATE_IDLE,
+    DRIVE_STATE_START,
+    DRIVE_STATE_RUN,
+    DRIVE_STATE_STOP,
+    DRIVE_STATE_STOP_ERROR,
+    DRIVE_STATE_ERROR
+} drive_state_t;
 
 //! Тип структуры таймера для открытия тиристорных пар.
 typedef struct _Timer_Triacs {
@@ -95,13 +108,16 @@ typedef struct _Drive_Settings {
     fixed32_t U_rot_nom; //!< Номинальное возбуждение якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
-    phase_t exc_phase; //!< Фаза возбуждения.
-    uint32_t stop_time; //!< Время остановки в периодах.
+    phase_t phase_exc; //!< Фаза возбуждения.
+    uint32_t stop_time_rot; //!< Время остановки ротора в периодах.
+    uint32_t stop_time_exc; //!< Время остановки возбуждения в периодах.
+    uint32_t start_time_exc; //!< Время остановки возбуждения в периодах.
 } drive_settings_t;
 
 //! Структура привода.
 typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
+    drive_status_t status; //!< Статус.
     drive_state_t state; //!< Состояние.
     drive_errors_t errors; //!< Ошибки.
     drive_warnings_t warnings; //!< Предупреждения.
@@ -153,18 +169,18 @@ static drive_t drive;
  * Получение состояния.
  * @return Состояние.
  */
-ALWAYS_INLINE static drive_state_t drive_get_state(void)
+ALWAYS_INLINE static drive_status_t drive_get_state(void)
 {
-    return drive.state;
+    return drive.status;
 }
 
 /**
  * Установка состояния.
  * @param state Состояние.
  */
-ALWAYS_INLINE static void drive_set_state(drive_state_t state)
+ALWAYS_INLINE static void drive_set_state(drive_status_t state)
 {
-    drive.state = state;
+    drive.status = state;
 }
 
 /**
@@ -278,7 +294,8 @@ static timer_triacs_t* timer_triacs_next(void)
 static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_number_t triacs_b)
 {
     // Если выходим за границу - возврат.
-    if(drive.triacs_pairs_angle_ticks > TRIACS_TIM_ANGLE_TICKS_MAX) return;
+    if(drive.triacs_pairs_angle_ticks > TRIACS_TIM_ANGLE_TICKS_MAX || 
+       drive.triacs_pairs_angle_ticks < TRIACS_TIM_ANGLE_TICKS_MIN) return;
     // Получим следующий свободный таймер тиристоров.
     timer_triacs_t* tim_trcs = timer_triacs_next();
     // Остановим таймер.
@@ -420,7 +437,7 @@ static err_t drive_setup_triac_exc_timer(phase_t phase)
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
-    phase_t exc_ctl_phase = drive.settings.exc_phase;
+    phase_t exc_ctl_phase = drive.settings.phase_exc;
     
     if(phase_state_drive_direction() == DRIVE_DIR_BACKW){
         exc_ctl_phase = phase_state_next_phase(phase, DRIVE_DIR_BACKW);
@@ -470,8 +487,8 @@ static void drive_error_occured(drive_errors_t error)
 {
     drive_set_error(error);
     
-    if(drive_get_state() != DRIVE_STATE_ERROR){
-        drive_set_state(DRIVE_STATE_ERROR);
+    if(drive_get_state() != DRIVE_STATUS_ERROR){
+        drive_set_state(DRIVE_STATUS_ERROR);
         drive_error_stop_timers();
         drive_error_close_triacs();
     }
@@ -527,7 +544,7 @@ static void drive_process_power_calibration(phase_t phase)
             }
             break;
         case DRIVE_PWR_CALIBRATION_DONE:
-            drive_set_state(DRIVE_STATE_IDLE);
+            drive_set_state(DRIVE_STATUS_IDLE);
         default:
             break;
     }
@@ -631,9 +648,9 @@ static void drive_compare_set_flag(int cmp, void (*set_proc)(uint32_t), uint32_t
 }
 
 /**
- * Проверяет значение входов питания в состоянии простоя (готовности).
+ * Проверка напряжений фаз.
  */
-static void drive_check_power_idle(void)
+static void drive_check_power_u_in(void)
 {
     // Напряжения - превышение критической разности.
     // A.
@@ -648,6 +665,24 @@ static void drive_check_power_idle(void)
     // Rot.
     drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
+    
+    // Напряжения - превышение допустимой разности.
+    // A.
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
+                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
+    // B.
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
+                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
+    // C.
+    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
+                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
+}
+
+/**
+ * Проверяет значение входов питания в состоянии простоя (готовности).
+ */
+static void drive_check_power_idle(void)
+{
     // Токи - отклонения от нуля.
     // A.
     drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ia),
@@ -664,16 +699,10 @@ static void drive_check_power_idle(void)
     // Rot.
     drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
-    // Напряжения - превышение допустимой разности.
-    // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
-    // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
-    // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
+    // Напряжения фаз.
+    
+#warning adc calibration - uncomment.
+    //drive_check_power_u_in();
 }
 
 /**
@@ -724,13 +753,19 @@ static void drive_regulate(void)
     if(ramp_current_reference(&drive.ramp) < REFERENCE_MIN){
         drive.triacs_pairs_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
         drive.triac_exc_angle_ticks = 0;//TRIACS_TIM_ANGLE_TICKS_MAX;
+    }else if(ramp_current_reference(&drive.ramp) > (REFERENCE_MAX * 3 / 4)){
+        return;
     }else{
         //drive.triacs_pairs_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
         //drive.triac_exc_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
+        /*
         fixed32_t u_rot = power_channel_real_value_avg(&drive.power, POWER_VALUE_Urot);
         fixed32_t u_rot_ref = (int64_t)drive.settings.U_rot_nom * ramp_current_reference(&drive.ramp) / 100;
         pid_controller_calculate(&drive.rot_pid, u_rot_ref - u_rot, DRIVE_PID_DT);
         drive.triacs_pairs_angle_ticks = pid_controller_value(&drive.rot_pid);
+        */
+        drive.triacs_pairs_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
+        drive.triac_exc_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
     }
 }
 
@@ -739,16 +774,6 @@ static void drive_regulate(void)
  */
 static void drive_check_power_running(void)
 {
-    // Напряжения - превышение критической разности.
-    // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua);
-    // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Ub);
-    // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
     // Rot.
     //drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
     //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
@@ -768,16 +793,10 @@ static void drive_check_power_running(void)
     // Rot.
     //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
     //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
-    // Напряжения - превышение допустимой разности.
-    // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
-    // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
-    // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
+    
+    // Напряжения фаз.
+#warning adc calibration - uncomment.
+    //drive_check_power_u_in();
 }
 
 /**
@@ -841,7 +860,7 @@ static err_t drive_state_process_error(phase_t phase)
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
     if(drive.errors == DRIVE_ERROR_NONE){
-        drive.state = DRIVE_STATE_IDLE;
+        drive.status = DRIVE_STATUS_IDLE;
     }
     
     return E_NO_ERROR;
@@ -868,7 +887,8 @@ err_t drive_init(void)
     drive_update_settings();
     
     drive.flags = DRIVE_FLAG_NONE;
-    drive.state = DRIVE_STATE_IDLE;
+    drive.status = DRIVE_STATUS_INIT;
+    drive.state = DRIVE_STATE_INIT;
     drive.errors = DRIVE_ERROR_NONE;
     drive.starting_state = DRIVE_STARTING_NONE;
     drive.stopping_state = DRIVE_STOPPING_NONE;
@@ -876,17 +896,17 @@ err_t drive_init(void)
     drive.triacs_pairs_open_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     drive.triac_exc_open_ticks = TRIAC_EXC_TIM_OPEN_TIME_DEFAULT;
     
-    power_value_init(&drive.power_values[0],POWER_CHANNEL_AC, 0x10000); // Ia
-    power_value_init(&drive.power_values[1],POWER_CHANNEL_AC, 0x10000); // Ua
-    power_value_init(&drive.power_values[2],POWER_CHANNEL_AC, 0x10000); // Ib
-    power_value_init(&drive.power_values[3],POWER_CHANNEL_AC, 0x10000); // Ub
-    power_value_init(&drive.power_values[4],POWER_CHANNEL_AC, 0x10000); // Ic
-    power_value_init(&drive.power_values[5],POWER_CHANNEL_AC, 0x10000); // Uc
-    power_value_init(&drive.power_values[6],POWER_CHANNEL_DC, 0x10000); // Irot
-    power_value_init(&drive.power_values[7],POWER_CHANNEL_DC, 0x10000); // Urot
-    power_value_init(&drive.power_values[8],POWER_CHANNEL_DC, 0x10000); // Iexc
-    power_value_init(&drive.power_values[9],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive.power_values[10],POWER_CHANNEL_DC, 0x10000); // Ifan
+    power_value_init(&drive.power_values[POWER_VALUE_Ua],POWER_CHANNEL_AC, 0x4c14); // Ua
+    power_value_init(&drive.power_values[POWER_VALUE_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
+    power_value_init(&drive.power_values[POWER_VALUE_Ub],POWER_CHANNEL_AC, 0x4c4d); // Ub
+    power_value_init(&drive.power_values[POWER_VALUE_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
+    power_value_init(&drive.power_values[POWER_VALUE_Uc],POWER_CHANNEL_AC, 0x4cb7); // Uc
+    power_value_init(&drive.power_values[POWER_VALUE_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
+    power_value_init(&drive.power_values[POWER_VALUE_Urot],POWER_CHANNEL_AC, 0x7276); // Urot
+    power_value_init(&drive.power_values[POWER_VALUE_Irot],POWER_CHANNEL_DC, 0x10000); // Irot
+    power_value_init(&drive.power_values[POWER_VALUE_Iexc],POWER_CHANNEL_DC, 0x10000); // Iexc
+    power_value_init(&drive.power_values[POWER_VALUE_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
+    power_value_init(&drive.power_values[POWER_VALUE_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
     
     power_init(&drive.power, drive.power_values, POWER_CHANNELS);
     
@@ -903,8 +923,10 @@ err_t drive_update_settings(void)
     drive.settings.U_rot_nom = settings_valuef(PARAM_ID_U_ROT_NOM);
     drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
-    drive.settings.exc_phase = settings_valueu(PARAM_ID_EXC_PHASE);
-    drive.settings.stop_time = settings_valueu(PARAM_ID_STOP_TIME) * POWER_FREQ;
+    drive.settings.phase_exc = settings_valueu(PARAM_ID_EXC_PHASE);
+    drive.settings.stop_time_rot = settings_valueu(PARAM_ID_ROT_STOP_TIME) * POWER_FREQ;
+    drive.settings.stop_time_exc = settings_valueu(PARAM_ID_EXC_STOP_TIME) * POWER_FREQ;
+    drive.settings.start_time_exc = settings_valueu(PARAM_ID_EXC_START_TIME) * POWER_FREQ;
     ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
     pid_controller_set_kp(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_P));
     pid_controller_set_ki(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_I));
@@ -926,9 +948,9 @@ drive_flags_t drive_flags(void)
     return drive.flags;
 }
 
-drive_state_t drive_state(void)
+drive_status_t drive_status(void)
 {
-    return drive.state;
+    return drive.status;
 }
 
 bool drive_error(drive_error_t error)
@@ -998,24 +1020,24 @@ bool drive_start(void)
 {
     if(!drive_ready())
         return false;
-    if(drive.state == DRIVE_STATE_IDLE){
+    if(drive.status == DRIVE_STATUS_IDLE){
         drive.starting_state = DRIVE_STARTING_NONE;
-        drive.state = DRIVE_STATE_RUNNING;
+        drive.status = DRIVE_STATUS_RUN;
     }
     return true;
 }
 
 bool drive_stop(void)
 {
-    if(drive.state == DRIVE_STATE_RUNNING){
-        drive.state = DRIVE_STATE_IDLE;
+    if(drive.status == DRIVE_STATUS_RUN){
+        drive.status = DRIVE_STATUS_IDLE;
     }
     return true;
 }
 
 bool drive_running(void)
 {
-    return drive.state == DRIVE_STATE_RUNNING;
+    return drive.status == DRIVE_STATUS_RUN;
 }
 
 uint16_t drive_triacs_open_time_us(void)
@@ -1050,7 +1072,7 @@ err_t drive_set_exc_phase(phase_t phase)
 {
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     
-    drive.settings.exc_phase = phase;
+    drive.settings.phase_exc = phase;
     
     return E_NO_ERROR;
 }
@@ -1088,6 +1110,8 @@ err_t drive_set_triac_exc_timer(TIM_TypeDef* TIM)
 void drive_triacs_timer0_irq_handler(void)
 {
 #warning do not open triacs if error.
+    if(drive.status != DRIVE_STATUS_RUN) return;
+    
     timer_triacs_t* tim_triacs = get_timer_triacs(TRIACS_TIMER_0);
     TIM_TypeDef* TIM = tim_triacs->timer;
     // Если нужно открыть тиристорную пару 1.
@@ -1120,6 +1144,8 @@ void drive_triacs_timer0_irq_handler(void)
 void drive_triacs_timer1_irq_handler(void)
 {
 #warning do not open triacs if error.
+    if(drive.status != DRIVE_STATUS_RUN) return;
+    
     timer_triacs_t* tim_triacs = get_timer_triacs(TRIACS_TIMER_1);
     TIM_TypeDef* TIM = tim_triacs->timer;
     // Если нужно открыть тиристорную пару 1.
@@ -1152,6 +1178,8 @@ void drive_triacs_timer1_irq_handler(void)
 void drive_triac_exc_timer_irq_handler(void)
 {
 #warning do not open triacs if error.
+    if(drive.status != DRIVE_STATUS_RUN) return;
+    
     TIM_TypeDef* TIM = drive.timer_exc;
     // Если нужно открыть симистор первого полупериода.
     if(TIM_GetITStatus(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT) != RESET){
@@ -1177,14 +1205,14 @@ err_t drive_process_null_sensor(phase_t phase)
     // Обработаем текущую фазу.
     phase_state_handle(phase);
     
-    switch(drive.state){
-        case DRIVE_STATE_INIT:
+    switch(drive.status){
+        case DRIVE_STATUS_INIT:
             return drive_state_process_init(phase);
-        case DRIVE_STATE_IDLE:
+        case DRIVE_STATUS_IDLE:
             return drive_state_process_idle(phase);
-        case DRIVE_STATE_RUNNING:
+        case DRIVE_STATUS_RUN:
             return drive_state_process_running(phase);
-        case DRIVE_STATE_ERROR:
+        case DRIVE_STATUS_ERROR:
             return drive_state_process_error(phase);
     }
     

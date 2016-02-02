@@ -1007,6 +1007,7 @@ static gui_widget_t root_widget;
 static gui_widget_t parent_widget;
 static gui_label_t label_val;
 static gui_label_t label_errs;
+static gui_label_t label_pwr_errs;
 static gui_label_t label_state;
 static gui_label_t label_ref;
 static gui_spinbox_t spinbox_ref;
@@ -1025,6 +1026,7 @@ static gui_label_t lbl_adc3_in2;
 static gui_label_t lbl_adc3_in3;
 static gui_number_label_t label_num;
 static gui_number_label_t label_num_errs;
+static gui_number_label_t label_num_pwr_errs;
 static gui_number_label_t label_num_state;
 static gui_number_label_t lbl_num_adc1_in1;
 static gui_number_label_t lbl_num_adc1_in2;
@@ -1037,6 +1039,8 @@ static gui_number_label_t lbl_num_adc2_in4;
 static gui_number_label_t lbl_num_adc3_in1;
 static gui_number_label_t lbl_num_adc3_in2;
 static gui_number_label_t lbl_num_adc3_in3;
+
+#define GUI_NUMBER_LABEL_DECIMALS 2
 
 #define GUI_LABEL_HEIGHT 15
 #define GUI_LABEL_TOP(N) (5 + GUI_LABEL_HEIGHT * N)
@@ -1226,7 +1230,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&lbl_num_adc1_in1, &gui, &parent_widget);
     gui_number_label_set_number(&lbl_num_adc1_in1, 1);//0x1234
-    gui_number_label_set_format(&lbl_num_adc1_in1, GUI_NUMBER_LABEL_DEC);
+    gui_number_label_set_format(&lbl_num_adc1_in1, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_decimals(&lbl_num_adc1_in1, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in1), 180, GUI_LABEL_TOP(0));
     gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in1), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in1), GUI_BORDER_SOLID);
@@ -1234,7 +1239,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&lbl_num_adc1_in2, &gui, &parent_widget);
     gui_number_label_set_number(&lbl_num_adc1_in2, 2);//0x1234
-    gui_number_label_set_format(&lbl_num_adc1_in2, GUI_NUMBER_LABEL_DEC);
+    gui_number_label_set_format(&lbl_num_adc1_in2, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_decimals(&lbl_num_adc1_in2, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in2), 180, GUI_LABEL_TOP(1));
     gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in2), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in2), GUI_BORDER_SOLID);
@@ -1242,7 +1248,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&lbl_num_adc1_in3, &gui, &parent_widget);
     gui_number_label_set_number(&lbl_num_adc1_in3, 3);//0x1234
-    gui_number_label_set_format(&lbl_num_adc1_in3, GUI_NUMBER_LABEL_DEC);
+    gui_number_label_set_format(&lbl_num_adc1_in3, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_decimals(&lbl_num_adc1_in3, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in3), 180, GUI_LABEL_TOP(2));
     gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in3), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in3), GUI_BORDER_SOLID);
@@ -1250,7 +1257,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&lbl_num_adc1_in4, &gui, &parent_widget);
     gui_number_label_set_number(&lbl_num_adc1_in4, 3);//0x1234
-    gui_number_label_set_format(&lbl_num_adc1_in4, GUI_NUMBER_LABEL_DEC);
+    gui_number_label_set_format(&lbl_num_adc1_in4, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_decimals(&lbl_num_adc1_in4, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&lbl_num_adc1_in4), 180, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&lbl_num_adc1_in4), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_num_adc1_in4), GUI_BORDER_SOLID);
@@ -1359,9 +1367,26 @@ static void make_gui(void)
     //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&label_num_errs), true);
     
+    gui_label_init_parent(&label_pwr_errs, &gui, &parent_widget);
+    gui_label_set_text(&label_pwr_errs, "Ош пит:");
+    gui_widget_move(GUI_WIDGET(&label_pwr_errs), 5, GUI_LABEL_TOP(2));
+    gui_widget_resize(GUI_WIDGET(&label_pwr_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_pwr_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_pwr_errs), true);
+    
+    gui_number_label_init_parent(&label_num_pwr_errs, &gui, &parent_widget);
+    gui_number_label_set_number(&label_num_pwr_errs, 0);//0x1234
+    gui_number_label_set_format(&label_num_pwr_errs, GUI_NUMBER_LABEL_HEX);
+    gui_widget_move(GUI_WIDGET(&label_num_pwr_errs), 60, GUI_LABEL_TOP(2));
+    gui_widget_resize(GUI_WIDGET(&label_num_pwr_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_num_pwr_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_num_pwr_errs), true);
+    
     gui_label_init_parent(&label_state, &gui, &parent_widget);
     gui_label_set_text(&label_state, "Сост.:");
-    gui_widget_move(GUI_WIDGET(&label_state), 5, GUI_LABEL_TOP(2));
+    gui_widget_move(GUI_WIDGET(&label_state), 5, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&label_state), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&label_state), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
@@ -1370,28 +1395,11 @@ static void make_gui(void)
     gui_number_label_init_parent(&label_num_state, &gui, &parent_widget);
     gui_number_label_set_number(&label_num_state, 0);//0x1234
     gui_number_label_set_format(&label_num_state, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&label_num_state), 60, GUI_LABEL_TOP(2));
+    gui_widget_move(GUI_WIDGET(&label_num_state), 60, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&label_num_state), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&label_num_state), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&label3), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&label_num_state), true);
-    
-    gui_label_init_parent(&label_ref, &gui, &parent_widget);
-    gui_label_set_text(&label_ref, "Задание:");
-    gui_widget_move(GUI_WIDGET(&label_ref), 5, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&label_ref), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&label_ref), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&label_ref), true);
-    
-    gui_spinbox_init_parent(&spinbox_ref, &gui, &parent_widget);
-    gui_spinbox_set_value(&spinbox_ref, drive_reference());
-    gui_spinbox_set_format(&spinbox_ref, GUI_NUMBER_LABEL_DEC);
-    gui_spinbox_set_range(&spinbox_ref, 0, 100);
-    gui_spinbox_set_on_value_changed(&spinbox_ref, spinbox_reference_on_value_changed);
-    gui_widget_move(GUI_WIDGET(&spinbox_ref), 60, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&spinbox_ref), 50, 20);
-    gui_widget_set_visible(GUI_WIDGET(&spinbox_ref), true);
     
     gui_button_init_parent(&button_start, &gui, &parent_widget);
     gui_button_set_text(&button_start, "Старт");
@@ -1411,6 +1419,23 @@ static void make_gui(void)
     //gui_widget_set_back_color(GUI_WIDGET(&button2), THEME_COLOR_WIDGET);
     gui_widget_set_visible(GUI_WIDGET(&button_stop), true);
     
+    gui_label_init_parent(&label_ref, &gui, &parent_widget);
+    gui_label_set_text(&label_ref, "Задание:");
+    gui_widget_move(GUI_WIDGET(&label_ref), 5, GUI_LABEL_TOP(5));
+    gui_widget_resize(GUI_WIDGET(&label_ref), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&label_ref), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&label_ref), true);
+    
+    gui_spinbox_init_parent(&spinbox_ref, &gui, &parent_widget);
+    gui_spinbox_set_value(&spinbox_ref, drive_reference());
+    gui_spinbox_set_format(&spinbox_ref, GUI_NUMBER_LABEL_DEC);
+    gui_spinbox_set_range(&spinbox_ref, 0, 100);
+    gui_spinbox_set_on_value_changed(&spinbox_ref, spinbox_reference_on_value_changed);
+    gui_widget_move(GUI_WIDGET(&spinbox_ref), 60, GUI_LABEL_TOP(5));
+    gui_widget_resize(GUI_WIDGET(&spinbox_ref), 50, 20);
+    gui_widget_set_visible(GUI_WIDGET(&spinbox_ref), true);
+    
     make_gui_adc();
     
     gui_set_root_widget(&gui, &root_widget);
@@ -1423,10 +1448,12 @@ static void gui_update_values(void)
 {
     //gui_number_label_set_number(&label_num, timer_cc_count);
     gui_number_label_set_number(&label_num, drive_flags());
-    gui_number_label_set_number(&label_num_state, drive_state());
+    gui_number_label_set_number(&label_num_state, drive_status());
     gui_number_label_set_number(&label_num_errs, drive_errors());
+    gui_number_label_set_number(&label_num_pwr_errs, drive_power_errors());
 
     if(drive_power_data_avail(POWER_CHANNELS)){
+/*
         gui_number_label_set_number(&lbl_num_adc1_in1, drive_power_channel_raw_value_avg(0));
         gui_number_label_set_number(&lbl_num_adc1_in2, drive_power_channel_raw_value_avg(2));
         gui_number_label_set_number(&lbl_num_adc1_in3, drive_power_channel_raw_value_avg(4));
@@ -1440,6 +1467,42 @@ static void gui_update_values(void)
         gui_number_label_set_number(&lbl_num_adc3_in1, drive_power_channel_raw_value_avg(8));
         gui_number_label_set_number(&lbl_num_adc3_in2, drive_power_channel_raw_value_avg(9));
         gui_number_label_set_number(&lbl_num_adc3_in3, drive_power_channel_raw_value_avg(10));
+*/
+        
+        gui_number_label_set_number(&lbl_num_adc1_in1, (drive_power_channel_real_value_avg(0)));
+        gui_number_label_set_number(&lbl_num_adc1_in2, (drive_power_channel_real_value_avg(2)));
+        gui_number_label_set_number(&lbl_num_adc1_in3, (drive_power_channel_real_value_avg(4)));
+        gui_number_label_set_number(&lbl_num_adc1_in4, (drive_power_channel_real_value_avg(6)));
+
+/*
+        gui_number_label_set_number(&lbl_num_adc2_in1, (drive_power_channel_raw_value_avg(0)));
+        gui_number_label_set_number(&lbl_num_adc2_in2, (drive_power_channel_raw_value_avg(2)));
+        gui_number_label_set_number(&lbl_num_adc2_in3, (drive_power_channel_raw_value_avg(4)));
+        gui_number_label_set_number(&lbl_num_adc2_in4, (drive_power_channel_raw_value_avg(6)));
+*/
+
+/*
+        gui_number_label_set_number(&lbl_num_adc2_in1, (drive_power_channel_real_value_avg(0)));
+        gui_number_label_set_number(&lbl_num_adc2_in2, (drive_power_channel_real_value_avg(2)));
+        gui_number_label_set_number(&lbl_num_adc2_in3, (drive_power_channel_real_value_avg(4)));
+        gui_number_label_set_number(&lbl_num_adc2_in4, (drive_power_channel_real_value_avg(6)));
+*/
+
+        gui_number_label_set_number(&lbl_num_adc2_in1, drive_power_channel_raw_value_avg(1));
+        gui_number_label_set_number(&lbl_num_adc2_in2, drive_power_channel_raw_value_avg(3));
+        gui_number_label_set_number(&lbl_num_adc2_in3, drive_power_channel_raw_value_avg(5));
+        gui_number_label_set_number(&lbl_num_adc2_in4, drive_power_channel_raw_value_avg(7));
+
+/*
+        gui_number_label_set_number(&lbl_num_adc2_in1, fixed32_get_int(drive_power_channel_real_value_avg(1)));
+        gui_number_label_set_number(&lbl_num_adc2_in2, fixed32_get_int(drive_power_channel_real_value_avg(3)));
+        gui_number_label_set_number(&lbl_num_adc2_in3, fixed32_get_int(drive_power_channel_real_value_avg(5)));
+        gui_number_label_set_number(&lbl_num_adc2_in4, fixed32_get_int(drive_power_channel_real_value_avg(7)));
+*/
+        
+        gui_number_label_set_number(&lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value_avg(8)));
+        gui_number_label_set_number(&lbl_num_adc3_in2, fixed32_get_int(drive_power_channel_real_value_avg(9)));
+        gui_number_label_set_number(&lbl_num_adc3_in3, fixed32_get_int(drive_power_channel_real_value_avg(10)));
     }
 }
 
