@@ -229,7 +229,7 @@ void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
-        drive_process_power_adc_values(POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
+        drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
         //timer_cc_count ++;
     }
@@ -1452,7 +1452,7 @@ static void gui_update_values(void)
     gui_number_label_set_number(&label_num_errs, drive_errors());
     gui_number_label_set_number(&label_num_pwr_errs, drive_power_errors());
 
-    if(drive_power_data_avail(POWER_CHANNELS)){
+    if(drive_power_data_avail(DRIVE_POWER_CHANNELS)){
 /*
         gui_number_label_set_number(&lbl_num_adc1_in1, drive_power_channel_raw_value_avg(0));
         gui_number_label_set_number(&lbl_num_adc1_in2, drive_power_channel_raw_value_avg(2));

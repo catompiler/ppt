@@ -67,7 +67,7 @@ typedef struct _Drive {
     phase_t power_phase; //!< Фаза начала калибровки питания.
     size_t power_calibration_periods; //!< Число периодов калибровки питания.
     
-    power_value_t power_values[POWER_VALUES_COUNT]; //!< Значение каналов АЦП.
+    power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
     power_t power; //!< Питание.
     
     ramp_t ramp; //!< Разгон.
@@ -337,111 +337,28 @@ static void drive_check_power_u_in(void)
 {
     // Напряжения - превышение критической разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_crit),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ua, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_crit),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ub, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_crit),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Uc, drive.settings.U_nom_delta_crit),
                            drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
     // Rot.
-    drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
+    drive_compare_set_flag(drive_compare_zero_voltage(DRIVE_POWER_Urot),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
     
     // Напряжения - превышение допустимой разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ua, drive.settings.U_nom_delta_allow),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ua, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Ub, drive.settings.U_nom_delta_allow),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ub, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(POWER_VALUE_Uc, drive.settings.U_nom_delta_allow),
+    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Uc, drive.settings.U_nom_delta_allow),
                            drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
-}
-
-/**
- * Обработка данных с АЦП.
- * @param phase Текущая фаза.
- * @return Флаг успешной обработки данных питания.
- */
-static bool drive_process_power(phase_t phase)
-{
-    if(phase == drive.power_phase){
-        power_calc_values(&drive.power, POWER_CHANNELS);
-
-        if(power_data_avail(&drive.power, POWER_CHANNELS)){
-            drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-            return true;
-        }
-        drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-        drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
-    }
-    return false;
-}
-
-/*
- * Обработка состояний привода
- * с необходимыми функциями.
- */
-
-/*
- * Состояние начальной инициализации.
- */
-
-/**
- * Обработка состояния начальной инициализации привода.
- * @param phase Фаза.
- * @return Код ошибки.
- */
-static err_t drive_state_process_init(phase_t phase)
-{
-    drive_set_power_phase(phase);
-    power_reset_channels(&drive.power, POWER_CHANNELS);
-    
-    return E_NO_ERROR;
-}
-
-/*
- * Состояние калибровки питания.
- */
-
-/**
- * Производит калибровку питания.
- * @param phase Текущая фаза.
- */
-static void drive_state_process_power_calibration(phase_t phase)
-{
-    switch(drive.power_calibration){
-        case DRIVE_PWR_CALIBRATION_NONE:
-            
-            power_calc_values(&drive.power, POWER_CHANNELS);
-            
-            if(power_data_avail(&drive.power, POWER_CHANNELS)){
-                drive.power_phase = phase;
-                drive.power_calibration = DRIVE_PWR_CALIBRATION_RUNNING;
-            }
-            break;
-        case DRIVE_PWR_CALIBRATION_RUNNING:
-            
-            if(phase == drive.power_phase){
-                
-                if(++ drive.power_calibration_periods >= DRIVE_POWER_CALIBRATION_PERIODS){
-                    power_calc_values(&drive.power, POWER_CHANNELS);
-                    
-                    power_calibrate(&drive.power, POWER_CHANNELS);
-                    
-                    drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
-                    drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
-                }
-            }
-            break;
-        case DRIVE_PWR_CALIBRATION_DONE:
-            drive_set_state(DRIVE_STATUS_IDLE);
-        default:
-            break;
-    }
 }
 
 /*
@@ -455,63 +372,25 @@ static void drive_check_power_idle(void)
 {
     // Токи - отклонения от нуля.
     // A.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ia),
+    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ia),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ia, DRIVE_POWER_ERROR_IDLE_Ia);
     // B.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ib),
+    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ib),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ib);
     // C.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ic),
+    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ic),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ic);
     // Exc.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Iexc),
+    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Iexc),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc);
     // Rot.
-    drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
+    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Irot),
                            drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
     // Напряжения фаз.
     
 #warning adc calibration - uncomment.
     //drive_check_power_u_in();
 }
-
-/**
- * Обрабатывает данные питания в состоянии простоя (готовности).
- * @param phase Текущая фаза.
- */
-static void drive_process_power_idle(phase_t phase)
-{
-    if(phase == drive.power_phase){
-        power_calc_values(&drive.power, POWER_CHANNELS);
-
-        if(power_data_avail(&drive.power, POWER_CHANNELS)){
-            drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-            drive_check_power_idle();
-        }else{
-            drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-            drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
-        }
-    }
-}
-
-/**
- * Обработка состояния простоя(готовности) привода.
- * @param phase Фаза.
- * @return Код ошибки.
- */
-static err_t drive_state_process_idle(phase_t phase)
-{
-    // Нужна определённая фаза.
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    
-    drive_process_power_idle(phase);
-    
-    return E_NO_ERROR;
-}
-
-/*
- * Состояние работы.
- */
 
 /**
  * Функция регулировки.
@@ -576,9 +455,9 @@ static void drive_check_power_running(void)
 static void drive_process_power_running(phase_t phase)
 {
     if(phase == drive.power_phase){
-        power_calc_values(&drive.power, POWER_CHANNELS);
+        power_calc_values(&drive.power, DRIVE_POWER_CHANNELS);
 
-        if(power_data_avail(&drive.power, POWER_CHANNELS)){
+        if(power_data_avail(&drive.power, DRIVE_POWER_CHANNELS)){
             drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_check_power_running();
             
@@ -590,6 +469,50 @@ static void drive_process_power_running(phase_t phase)
             drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
         }
     }
+}
+
+/*
+ * Обработка состояний привода.
+ */
+
+/**
+ * Обработка данных с АЦП.
+ * @param phase Текущая фаза.
+ * @return Флаг обработки данных питания.
+ */
+static bool drive_calculate_power(phase_t phase)
+{
+    if(phase == drive.power_phase){
+        power_calc_values(&drive.power, DRIVE_POWER_CHANNELS);
+
+        if(power_data_avail(&drive.power, DRIVE_POWER_CHANNELS)){
+            drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
+        }else{
+            drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
+            drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
+        }
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Обработка состояния ошибки привода.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_error(phase_t phase)
+{
+    // Нужна определённая фаза.
+    if(phase == PHASE_UNK) return E_INVALID_VALUE;
+    // Нужно какое-либо направление.
+    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    
+    if(drive.errors == DRIVE_ERROR_NONE){
+        drive.status = DRIVE_STATUS_IDLE;
+    }
+    
+    return E_NO_ERROR;
 }
 
 /**
@@ -612,31 +535,97 @@ static err_t drive_state_process_running(phase_t phase)
     return E_NO_ERROR;
 }
 
-
-/*
- * Состояние ошибки.
- */
-
 /**
- * Обработка состояния ошибки привода.
+ * Обработка состояния запуска привода.
  * @param phase Фаза.
  * @return Код ошибки.
  */
-static err_t drive_state_process_error(phase_t phase)
+static err_t drive_state_process_start(phase_t phase)
 {
-    // Нужна определённая фаза.
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    // Нужно какое-либо направление.
-    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
-    
-    if(drive.errors == DRIVE_ERROR_NONE){
-        drive.status = DRIVE_STATUS_IDLE;
+    if(drive_calculate_power(phase)){
+        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+            //
+        }
     }
     
     return E_NO_ERROR;
 }
 
-static err_t drive_process_states(phase_t phase)
+/**
+ * Обработка состояния простоя(готовности) привода.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_idle(phase_t phase)
+{
+    if(drive_calculate_power(phase)){
+        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+            drive_check_power_idle();
+        }
+    }
+    
+    return E_NO_ERROR;
+}
+
+/**
+ * Производит калибровку питания.
+ * @param phase Текущая фаза.
+ */
+static void drive_state_process_power_calibration(phase_t phase)
+{
+    switch(drive.power_calibration){
+        default:
+        case DRIVE_PWR_CALIBRATION_NONE:
+            break;
+        case DRIVE_PWR_CALIBRATION_START:
+            drive.power_calibration_periods = 0;
+            drive_clear_flag(DRIVE_FLAG_POWER_CALIBRATED);
+            drive.power_calibration = DRIVE_PWR_CALIBRATION_RUNNING;
+            break;
+        case DRIVE_PWR_CALIBRATION_RUNNING:
+            if(phase == drive.power_phase){
+                if(++ drive.power_calibration_periods >= DRIVE_POWER_CALIBRATION_PERIODS){
+                    if(drive_calculate_power(phase)){
+                        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+                            power_calibrate(&drive.power, DRIVE_POWER_CHANNELS);
+                            drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
+                            drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
+                        }
+                    }
+                }
+            }
+            break;
+        case DRIVE_PWR_CALIBRATION_DONE:
+            drive_set_state(DRIVE_STATUS_IDLE);
+            break;
+    }
+}
+
+/**
+ * Обработка состояния начальной инициализации привода.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_init(phase_t phase)
+{
+    if(drive_calculate_power(phase)){
+        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+            drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
+            drive_set_state(DRIVE_STATE_CALIBRATION);
+        }
+    }else if(drive_power_phase() == PHASE_UNK){
+        drive_set_power_phase(phase);
+        power_reset_channels(&drive.power, DRIVE_POWER_CHANNELS);
+    }
+    return E_NO_ERROR;
+}
+
+/**
+ * Обработка состояний привода.
+ * @param phase Фаза.
+ * @return Код ошибку.
+ */
+static err_t drive_states_process(phase_t phase)
 {
     if(phase == PHASE_UNK){
         return E_INVALID_VALUE;
@@ -645,12 +634,21 @@ static err_t drive_process_states(phase_t phase)
     // Обработаем текущую фазу.
     phase_state_handle(phase);
     
+    // Если ошибка фазы.
+    if(phase_state_error() != PHASE_NO_ERROR){
+        // Обработаем её.
+        drive_error_occured(DRIVE_ERROR_PHASE);
+    }
+    
     switch(drive.state){
         case DRIVE_STATE_INIT:
+            drive_state_process_init(phase);
             break;
         case DRIVE_STATE_CALIBRATION:
+            drive_state_process_power_calibration(phase);
             break;
         case DRIVE_STATE_IDLE:
+            drive_state_process_idle(phase);
             break;
         case DRIVE_STATE_START:
             break;
@@ -694,19 +692,19 @@ err_t drive_init(void)
     
     drive_triacs_init();
     
-    power_value_init(&drive.power_values[POWER_VALUE_Ua],POWER_CHANNEL_AC, 0x4c14); // Ua
-    power_value_init(&drive.power_values[POWER_VALUE_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
-    power_value_init(&drive.power_values[POWER_VALUE_Ub],POWER_CHANNEL_AC, 0x4c4d); // Ub
-    power_value_init(&drive.power_values[POWER_VALUE_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
-    power_value_init(&drive.power_values[POWER_VALUE_Uc],POWER_CHANNEL_AC, 0x4cb7); // Uc
-    power_value_init(&drive.power_values[POWER_VALUE_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
-    power_value_init(&drive.power_values[POWER_VALUE_Urot],POWER_CHANNEL_AC, 0x7276); // Urot
-    power_value_init(&drive.power_values[POWER_VALUE_Irot],POWER_CHANNEL_DC, 0x10000); // Irot
-    power_value_init(&drive.power_values[POWER_VALUE_Iexc],POWER_CHANNEL_DC, 0x10000); // Iexc
-    power_value_init(&drive.power_values[POWER_VALUE_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive.power_values[POWER_VALUE_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
+    power_value_init(&drive.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x4c14); // Ua
+    power_value_init(&drive.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
+    power_value_init(&drive.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x4c4d); // Ub
+    power_value_init(&drive.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
+    power_value_init(&drive.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x4cb7); // Uc
+    power_value_init(&drive.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
+    power_value_init(&drive.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_AC, 0x7276); // Urot
+    power_value_init(&drive.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x10000); // Irot
+    power_value_init(&drive.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_DC, 0x10000); // Iexc
+    power_value_init(&drive.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
+    power_value_init(&drive.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
     
-    power_init(&drive.power, drive.power_values, POWER_CHANNELS);
+    power_init(&drive.power, drive.power_values, DRIVE_POWER_CHANNELS);
     
     return E_NO_ERROR;
 }
@@ -722,9 +720,9 @@ err_t drive_update_settings(void)
     drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
     drive.settings.phase_exc = settings_valueu(PARAM_ID_EXC_PHASE);
-    drive.settings.stop_time_rot = settings_valueu(PARAM_ID_ROT_STOP_TIME) * POWER_FREQ;
-    drive.settings.stop_time_exc = settings_valueu(PARAM_ID_EXC_STOP_TIME) * POWER_FREQ;
-    drive.settings.start_time_exc = settings_valueu(PARAM_ID_EXC_START_TIME) * POWER_FREQ;
+    drive.settings.stop_time_rot = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.stop_time_exc = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.start_time_exc = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
     ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
     pid_controller_set_kp(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_P));
     pid_controller_set_ki(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_I));
@@ -873,7 +871,7 @@ void drive_triac_exc_timer_irq_handler(void)
 
 err_t drive_process_null_sensor(phase_t phase)
 {
-    return drive_process_states(phase);
+    return drive_states_process(phase);
 }
 
 err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)

@@ -118,7 +118,7 @@ typedef enum _Drive_Power_Calibration {
 typedef enum _Drive_Starting {
     DRIVE_STARTING_NONE = 0, //!< Не запускается.
     DRIVE_STARTING_START, //!< Нужно запустить.
-    DRIVE_STARTING_DIR, //!< Определение направления.
+    //DRIVE_STARTING_DIR, //!< Определение направления.
     DRIVE_STARTING_WAIT_EXC, //!< Ожидание возбуждения.
     DRIVE_STARTING_RAMP, //!< Разгон.
     DRIVE_STARTING_DONE //!< Запущен.
@@ -144,29 +144,29 @@ typedef uint32_t reference_t;
 
 //! Питание.
 //! Число значений каналов АЦП.
-#define POWER_VALUES_COUNT 11
+#define DRIVE_POWER_CHANNELS_COUNT 11
 
 // Алиасы значений токов и напряжений.
-#define POWER_VALUE_Ua 0
-#define POWER_VALUE_Ia 1
-#define POWER_VALUE_Ub 2
-#define POWER_VALUE_Ib 3
-#define POWER_VALUE_Uc 4
-#define POWER_VALUE_Ic 5
-#define POWER_VALUE_Urot 6
-#define POWER_VALUE_Irot 7
-#define POWER_VALUE_Iexc 8
-#define POWER_VALUE_Iref 9
-#define POWER_VALUE_Ifan 10
+#define DRIVE_POWER_Ua 0
+#define DRIVE_POWER_Ia 1
+#define DRIVE_POWER_Ub 2
+#define DRIVE_POWER_Ib 3
+#define DRIVE_POWER_Uc 4
+#define DRIVE_POWER_Ic 5
+#define DRIVE_POWER_Urot 6
+#define DRIVE_POWER_Irot 7
+#define DRIVE_POWER_Iexc 8
+#define DRIVE_POWER_Iref 9
+#define DRIVE_POWER_Ifan 10
 
 //! Каналы АЦП.
-#define POWER_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
-                        POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
-                        POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
-                        POWER_CHANNEL_9 | POWER_CHANNEL_10)
+#define DRIVE_POWER_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
+                              POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
+                              POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
+                              POWER_CHANNEL_9 | POWER_CHANNEL_10)
 
 //! Частота сети.
-#define POWER_FREQ 50
+#define DRIVE_POWER_FREQ 50
 
 /**
  * Инициализирует привод.
