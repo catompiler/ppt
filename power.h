@@ -143,6 +143,14 @@ extern err_t power_calibrate(power_t* power, power_channels_t channels);
 extern bool power_data_avail(const power_t* power, power_channels_t channels);
 
 /**
+ * Сбрасывает накопленные данные каналов.
+ * @param power Питание.
+ * @param channels Маска каналов АЦП.
+ * @return Код ошибки.
+ */
+extern err_t power_reset_channels(power_t* power, power_channels_t channels);
+
+/**
  * Получает флаг калибровки.
  * @param power Питание.
  * @return Флаг калибровки.

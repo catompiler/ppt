@@ -174,3 +174,20 @@ bool power_data_avail(const power_t* power, power_channels_t channels)
     
     return res;
 }
+
+err_t power_reset_channels(power_t* power, power_channels_t channels)
+{
+    if(channels == POWER_CHANNEL_NONE) return E_INVALID_VALUE;
+    
+    size_t i = 0;
+    
+    for(; channels != 0; channels >>= 1, i ++){
+        if(!(channels & 0x1)) continue;
+        
+        if(i >= power->channels_count) return E_OUT_OF_RANGE;
+        
+        power_channel_reset_sums(&power->channels[i]);
+    }
+    
+    return E_NO_ERROR;
+}

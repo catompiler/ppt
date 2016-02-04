@@ -339,13 +339,13 @@ void EXTI15_10_IRQHandler(void)
 
 void TIM2_IRQHandler(void)
 {
-    drive_triacs_timer0_irq_handler();
+    drive_triac_pairs_timer0_irq_handler();
 }
 
 // Timer3 подача импульсов на нижнее плечо
 void TIM3_IRQHandler(void)
 {
-    drive_triacs_timer1_irq_handler();
+    drive_triac_pairs_timer1_irq_handler();
 }
 
 /*
