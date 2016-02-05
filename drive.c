@@ -48,9 +48,9 @@ typedef struct _Drive_Settings {
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     phase_t phase_exc; //!< Фаза возбуждения.
-    uint32_t stop_time_rot; //!< Время остановки ротора в периодах.
-    uint32_t stop_time_exc; //!< Время остановки возбуждения в периодах.
-    uint32_t start_time_exc; //!< Время остановки возбуждения в периодах.
+    uint32_t stop_rot_periods; //!< Время остановки ротора в периодах.
+    uint32_t stop_exc_periods; //!< Время остановки возбуждения в периодах.
+    uint32_t start_exc_periods; //!< Время остановки возбуждения в периодах.
 } drive_settings_t;
 
 //! Структура привода.
@@ -543,9 +543,24 @@ static err_t drive_state_process_running(phase_t phase)
 static err_t drive_state_process_start(phase_t phase)
 {
     if(drive_calculate_power(phase)){
-        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-            //
-        }
+        return E_NO_ERROR;
+    }
+    if(!drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+        return E_NO_ERROR;
+    }
+    
+    switch(drive.starting_state){
+        default:
+        case DRIVE_STARTING_NONE:
+            break;
+        case DRIVE_STARTING_START:
+            break;
+        case DRIVE_STARTING_WAIT_EXC:
+            break;
+        case DRIVE_STARTING_RAMP:
+            break;
+        case DRIVE_STARTING_DONE:
+            break;
     }
     
     return E_NO_ERROR;
@@ -720,9 +735,9 @@ err_t drive_update_settings(void)
     drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
     drive.settings.phase_exc = settings_valueu(PARAM_ID_EXC_PHASE);
-    drive.settings.stop_time_rot = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
-    drive.settings.stop_time_exc = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
-    drive.settings.start_time_exc = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
     ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
     pid_controller_set_kp(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_P));
     pid_controller_set_ki(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_I));

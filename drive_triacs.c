@@ -20,6 +20,8 @@
 #define TRIAC_EXC_MAX_TICKS_ANGLE (360 / 2)
 //! Смещение между полупериодами.
 #define TRIAC_EXC_TIM_HALF_CYCLE_OFFSET (TRIAC_EXC_TIM_TICKS / 2)
+//! Смещение до начала периода.
+#define TRIAC_EXC_OFFSET (TRIAC_EXC_TIM_TICKS * 30 / 360)
 
 
 
@@ -428,15 +430,15 @@ static void timer_triac_exc_setup(void)
     TIM_SetCounter(drive_triacs.timer_exc, 0);
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
-    TIM_SetCompare1(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS) - drive_triacs.triac_exc_angle_ticks);
+    TIM_SetCompare1(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET) - drive_triacs.triac_exc_angle_ticks);
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + drive_triacs.triac_exc_open_ticks) -
+    TIM_SetCompare2(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + drive_triacs.triac_exc_open_ticks) -
                                             drive_triacs.triac_exc_angle_ticks);
     // Открытие второй пары тиристоров.
-    TIM_SetCompare3(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
+    TIM_SetCompare3(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
                                             drive_triacs.triac_exc_angle_ticks);
     // Закрытие второй пары тиристоров.
-    TIM_SetCompare4(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
+    TIM_SetCompare4(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
                                             drive_triacs.triac_exc_open_ticks) - drive_triacs.triac_exc_angle_ticks);
     //! Запустим таймер.
     TIM_Cmd(drive_triacs.timer_exc, ENABLE);
