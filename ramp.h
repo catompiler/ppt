@@ -65,6 +65,34 @@ extern err_t ramp_set_time(ramp_t* ramp, ramp_time_t time);
 extern err_t ramp_set_target_reference(ramp_t* ramp, ramp_reference_t reference);
 
 /**
+ * Сбрасывает текущее задание.
+ * @param ramp Разгон.
+ */
+ALWAYS_INLINE static void ramp_reset_current(ramp_t* ramp)
+{
+    ramp->current_ref = 0;
+}
+
+/**
+ * Сбрасывает текущее и целевое задание.
+ * @param ramp Разгон.
+ */
+ALWAYS_INLINE static void ramp_reset_reference(ramp_t* ramp)
+{
+    ramp->current_ref = 0;
+    ramp->target_ref = 0;
+}
+
+/**
+ * Заканчивает разгон.
+ * @param ramp Разгон.
+ */
+ALWAYS_INLINE static void ramp_flush(ramp_t* ramp)
+{
+    ramp->current_ref = ramp->target_ref;
+}
+
+/**
  * Получает целевое задание разгона.
  * @param ramp Разгон.
  * @return Целевое задание разгона.
@@ -82,6 +110,16 @@ ALWAYS_INLINE static ramp_reference_t ramp_target_reference(ramp_t* ramp)
 ALWAYS_INLINE static ramp_reference_t ramp_current_reference(ramp_t* ramp)
 {
     return fixed32_get_int(ramp->current_ref);
+}
+
+/**
+ * Получает флаг завершения разгона или торможения.
+ * @param ramp Разгон.
+ * @return Флаг завершения разгона или торможения.
+ */
+ALWAYS_INLINE static bool ramp_done(ramp_t* ramp)
+{
+    return ramp->current_ref == ramp->target_ref;
 }
 
 /**
