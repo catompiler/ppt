@@ -22,6 +22,9 @@
 //! Число периодов калибровки питания.
 #define DRIVE_POWER_CALIBRATION_PERIODS 5
 
+//! Число периодов вычисления питания.
+#define DRIVE_POWER_CALCULATION_PERIODS 1
+
 //! Необходимые для готовности флаги.
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
 
@@ -47,7 +50,6 @@ typedef struct _Drive_Settings {
     fixed32_t U_rot_nom; //!< Номинальное возбуждение якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
-    phase_t phase_exc; //!< Фаза возбуждения.
     uint32_t stop_rot_periods; //!< Время остановки ротора в периодах.
     uint32_t stop_exc_periods; //!< Время остановки возбуждения в периодах.
     uint32_t start_exc_periods; //!< Время остановки возбуждения в периодах.
@@ -64,11 +66,6 @@ typedef struct _Drive {
     drive_power_calibration_t power_calibration; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
-    phase_t power_phase; //!< Фаза начала калибровки питания.
-    size_t power_calibration_periods; //!< Число периодов калибровки питания.
-    
-    power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
-    power_t power; //!< Питание.
     
     ramp_t ramp; //!< Разгон.
     
@@ -208,17 +205,6 @@ ALWAYS_INLINE static void drive_clear_power_error(drive_power_errors_t error)
     drive.power_errors &= ~error;
 }
 
-ALWAYS_INLINE static phase_t drive_power_phase(void)
-{
-    return drive.power_phase;
-}
-
-ALWAYS_INLINE static void drive_set_power_phase(phase_t phase)
-{
-    drive.power_phase = phase;
-}
-
-
 /*
  * Обработка возникновения ошибки.
  */
@@ -269,7 +255,7 @@ static void drive_power_error_occured(drive_power_errors_t error)
  */
 static int drive_compare_power_value(size_t channel, fixed32_t normal, fixed32_t max_delta)
 {
-    fixed32_t value = power_channel_real_value_avg(&drive.power, channel);
+    fixed32_t value = drive_power_channel_real_value_avg(channel);
     fixed32_t delta = value - normal;
     
     if(delta < -max_delta) return PWR_LESS;
@@ -454,10 +440,10 @@ static void drive_check_power_running(void)
  */
 static void drive_process_power_running(phase_t phase)
 {
-    if(phase == drive.power_phase){
-        power_calc_values(&drive.power, DRIVE_POWER_CHANNELS);
+    err_t err = E_NO_ERROR;
+    if(drive_power_calc_values(DRIVE_POWER_CHANNELS, phase, &err)){
 
-        if(power_data_avail(&drive.power, DRIVE_POWER_CHANNELS)){
+        if(err == E_NO_ERROR && drive_power_data_avail(DRIVE_POWER_CHANNELS)){
             drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_check_power_running();
             
@@ -482,10 +468,10 @@ static void drive_process_power_running(phase_t phase)
  */
 static bool drive_calculate_power(phase_t phase)
 {
-    if(phase == drive.power_phase){
-        power_calc_values(&drive.power, DRIVE_POWER_CHANNELS);
+    err_t err = E_NO_ERROR;
+    if(drive_power_calc_values(DRIVE_POWER_CHANNELS, phase, &err)){
 
-        if(power_data_avail(&drive.power, DRIVE_POWER_CHANNELS)){
+        if(err == E_NO_ERROR && drive_power_data_avail(DRIVE_POWER_CHANNELS)){
             drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
         }else{
             drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
@@ -528,8 +514,10 @@ static err_t drive_state_process_running(phase_t phase)
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
     drive_triacs_setup_next_pairs(phase);
-    drive_triacs_setup_exc(phase, drive.settings.phase_exc);
-    
+    drive_triacs_setup_exc(phase);
+    if(drive_ready()){
+        drive_regulate();
+    }
     drive_process_power_running(phase);
     
     return E_NO_ERROR;
@@ -593,20 +581,17 @@ static void drive_state_process_power_calibration(phase_t phase)
         case DRIVE_PWR_CALIBRATION_NONE:
             break;
         case DRIVE_PWR_CALIBRATION_START:
-            drive.power_calibration_periods = 0;
             drive_clear_flag(DRIVE_FLAG_POWER_CALIBRATED);
             drive.power_calibration = DRIVE_PWR_CALIBRATION_RUNNING;
+            drive_power_set_processing_periods(DRIVE_POWER_CALIBRATION_PERIODS);
             break;
         case DRIVE_PWR_CALIBRATION_RUNNING:
-            if(phase == drive.power_phase){
-                if(++ drive.power_calibration_periods >= DRIVE_POWER_CALIBRATION_PERIODS){
-                    if(drive_calculate_power(phase)){
-                        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-                            power_calibrate(&drive.power, DRIVE_POWER_CHANNELS);
-                            drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
-                            drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
-                        }
-                    }
+            if(drive_calculate_power(phase)){
+                if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+                    drive_power_calibrate(DRIVE_POWER_CHANNELS);
+                    drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
+                    drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
+                    drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
                 }
             }
             break;
@@ -629,8 +614,9 @@ static err_t drive_state_process_init(phase_t phase)
             drive_set_state(DRIVE_STATE_CALIBRATION);
         }
     }else if(drive_power_phase() == PHASE_UNK){
-        drive_set_power_phase(phase);
-        power_reset_channels(&drive.power, DRIVE_POWER_CHANNELS);
+        drive_power_set_phase(phase);
+        drive_power_reset_channels(DRIVE_POWER_CHANNELS);
+        drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
     }
     return E_NO_ERROR;
 }
@@ -707,19 +693,7 @@ err_t drive_init(void)
     
     drive_triacs_init();
     
-    power_value_init(&drive.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x4c14); // Ua
-    power_value_init(&drive.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
-    power_value_init(&drive.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x4c4d); // Ub
-    power_value_init(&drive.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
-    power_value_init(&drive.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x4cb7); // Uc
-    power_value_init(&drive.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
-    power_value_init(&drive.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_AC, 0x7276); // Urot
-    power_value_init(&drive.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x10000); // Irot
-    power_value_init(&drive.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_DC, 0x10000); // Iexc
-    power_value_init(&drive.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
-    
-    power_init(&drive.power, drive.power_values, DRIVE_POWER_CHANNELS);
+    drive_power_init();
     
     return E_NO_ERROR;
 }
@@ -734,7 +708,7 @@ err_t drive_update_settings(void)
     drive.settings.U_rot_nom = settings_valuef(PARAM_ID_U_ROT_NOM);
     drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
-    drive.settings.phase_exc = settings_valueu(PARAM_ID_EXC_PHASE);
+    drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
@@ -851,15 +825,6 @@ bool drive_running(void)
     return drive.status == DRIVE_STATUS_RUN;
 }
 
-err_t drive_set_exc_phase(phase_t phase)
-{
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    
-    drive.settings.phase_exc = phase;
-    
-    return E_NO_ERROR;
-}
-
 void drive_triac_pairs_timer0_irq_handler(void)
 {
 #warning do not open triacs if error.
@@ -887,54 +852,4 @@ void drive_triac_exc_timer_irq_handler(void)
 err_t drive_process_null_sensor(phase_t phase)
 {
     return drive_states_process(phase);
-}
-
-err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)
-{
-    return power_process_adc_values(&drive.power, channels, adc_values);
-}
-
-err_t drive_calc_power_values(power_channels_t channels)
-{
-    return power_calc_values(&drive.power, channels);
-}
-
-err_t drive_calibrate_power(power_channels_t channels)
-{
-    return power_calibrate(&drive.power, channels);
-}
-
-bool drive_power_data_avail(power_channels_t channels)
-{
-    return drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL);
-}
-
-int16_t drive_power_channel_raw_value(size_t channel)
-{
-    return power_channel_raw_value(&drive.power, channel);
-}
-
-int16_t drive_power_channel_raw_value_avg(size_t channel)
-{
-    return power_channel_raw_value_avg(&drive.power, channel);
-}
-
-int16_t drive_power_channel_raw_value_rms(size_t channel)
-{
-    return power_channel_raw_value_rms(&drive.power, channel);
-}
-
-fixed32_t drive_power_channel_real_value(size_t channel)
-{
-    return power_channel_real_value(&drive.power, channel);
-}
-
-fixed32_t drive_power_channel_real_value_avg(size_t channel)
-{
-    return power_channel_real_value_avg(&drive.power, channel);
-}
-
-fixed32_t drive_power_channel_real_value_rms(size_t channel)
-{
-    return power_channel_real_value_rms(&drive.power, channel);
 }

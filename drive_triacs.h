@@ -189,6 +189,19 @@ extern uint16_t drive_triacs_exc_open_time_us(void);
 extern err_t drive_triacs_set_exc_open_time_us(uint16_t time);
 
 /**
+ * Получает фазу возбуждения.
+ * @return Фаза возбуждения.
+ */
+extern phase_t drive_triacs_exc_phase(void);
+
+/**
+ * Устанавливает фазу возбуждения.
+ * @param phase Фаза возбуждения.
+ * @return Код ошибки.
+ */
+extern err_t drive_triacs_set_exc_phase(phase_t phase);
+
+/**
  * Устанавливает порт вывода для заданной пары тиристоров.
  * @param triac_pair Номер пары тиристоров.
  * @param GPIO_a Порт тиристора А.
@@ -250,6 +263,6 @@ extern err_t drive_triacs_setup_next_pairs(phase_t phase);
  * @param exc_phase Фаза возбуждения.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_exc(phase_t phase, phase_t exc_phase);
+extern err_t drive_triacs_setup_exc(phase_t phase);
 
 #endif /* DRIVE_TRIACS_H */

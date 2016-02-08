@@ -229,7 +229,7 @@ void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
-        drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
+        drive_power_process_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
         //timer_cc_count ++;
     }

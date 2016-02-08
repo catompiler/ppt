@@ -2,7 +2,8 @@
 TARGET    = main
 
 # Объектные файлы.
-OBJECTS   = main.o
+OBJECTS   = main.o power.o triac.o triac_pair.o\
+	    drive_triacs.o drive_power.o drive.o settings.o ramp.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS += circular_buffer usart newlib_stubs\
@@ -12,9 +13,8 @@ SRC_LIBS += circular_buffer usart newlib_stubs\
 			gui gui_object gui_widget gui_label\
 			gui_number_label gui_checkbox gui_spinbox\
 			gui_button\
-			phase_state mylib power triac triac_pair\
-			drive settings ramp pid_controller drive_triacs
-
+			phase_state mylib pid_controller\
+			
 
 # Стандартные драйвера периферии.
 # STD_PERIPH_DRIVERS += misc

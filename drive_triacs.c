@@ -75,6 +75,8 @@ typedef struct _Drive_Triacs {
     size_t current_timer_triacs; //!< Текущий индекс таймеров тиристоров.
     
     TIM_TypeDef* timer_exc; //!< Таймер для открытия симистора возбуждения.
+    
+    phase_t phase_exc; //!< Фаза возбуждения.
 } drive_triacs_t;
 
 
@@ -187,6 +189,20 @@ err_t drive_triacs_set_exc_open_time_us(uint16_t time)
     if(time == 0) return E_INVALID_VALUE;
     
     drive_triacs.triac_exc_open_ticks = OPEN_TIME_TO_TICKS(time);
+    
+    return E_NO_ERROR;
+}
+
+phase_t drive_triacs_exc_phase(void)
+{
+    return drive_triacs.phase_exc;
+}
+
+err_t drive_triacs_set_exc_phase(phase_t phase)
+{
+    if(phase == PHASE_UNK) return E_INVALID_VALUE;
+    
+    drive_triacs.phase_exc = phase;
     
     return E_NO_ERROR;
 }
@@ -449,7 +465,7 @@ static void timer_triac_exc_setup(void)
  * @param phase Текущая фаза.
  * @return Код ошибки.
  */
-err_t drive_triacs_setup_exc(phase_t phase, phase_t exc_phase)
+err_t drive_triacs_setup_exc(phase_t phase)
 {
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
@@ -460,7 +476,7 @@ err_t drive_triacs_setup_exc(phase_t phase, phase_t exc_phase)
     // Нужен угол открытия.
     if(drive_triacs.triac_exc_angle_ticks == 0) return E_INVALID_VALUE;
     
-    phase_t exc_ctl_phase = exc_phase;
+    phase_t exc_ctl_phase = drive_triacs.phase_exc;
     
     if(dir == DRIVE_DIR_BACKW){
         exc_ctl_phase = phase_state_next_phase(phase, DRIVE_DIR_BACKW);
