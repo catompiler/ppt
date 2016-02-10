@@ -7,6 +7,8 @@
 
 #include <stm32f10x.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include "errors/errors.h"
 #include "phase_state/phase_state.h"
 
@@ -142,6 +144,30 @@ typedef size_t triac_pair_number_t;
  * @return Код ошибки.
  */
 extern err_t drive_triacs_init(void);
+
+/**
+ * Получает разрешение подачи импульсов на тиристорные пары.
+ * @return Разрешение подачи импульсов на тиристорные пары.
+ */
+extern bool drive_triacs_pairs_enabled(void);
+
+/**
+ * Устанавливает разрешение подачи импульсов на тиристорные пары.
+ * @param enabled Разрешение подачи импульсов на тиристорные пары.
+ */
+extern void drive_triacs_pairs_set_enabled(bool enabled);
+
+/**
+ * Получает разрешение подачи импульсов на симистор возбуждения.
+ * @return Разрешение подачи импульсов на симистор возбуждения.
+ */
+extern bool drive_triacs_exc_enabled(void);
+
+/**
+ * Устанавливает разрешение подачи импульсов на симистор возбуждения.
+ * @param enabled Разрешение подачи импульсов на симистор возбуждения.
+ */
+extern void drive_triacs_exc_set_enabled(bool enabled);
 
 /**
  * Останавливает открытие тиристоров.
