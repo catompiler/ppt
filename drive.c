@@ -2,21 +2,19 @@
 #include "settings.h"
 #include "ramp.h"
 #include "pid_controller/pid_controller.h"
+#include "drive_regulator.h"
 #include <string.h>
 
 
 //! Максимальное значение PID-регулятора напряжения якоря.
-#define DRIVE_ROT_PID_VALUE_MAX 10000
+#define DRIVE_ROT_PID_VALUE_MAX 0x780000 // 120.0
 //! Минимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MIN 0
 
 //! Максимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MAX 10000
+#define DRIVE_EXC_PID_VALUE_MAX 0xAA0000 // 170.0
 //! Минимальное значение PID-регулятора тока возбуждения.
 #define DRIVE_EXC_PID_VALUE_MIN 0
-
-//! dt PID-регулятора.
-#define DRIVE_PID_DT 0x51f
 
 
 //! Число периодов калибровки питания.
@@ -28,18 +26,6 @@
 //! Необходимые для готовности флаги.
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
 
-//! Тип состояния машины состояний привода.
-typedef enum _Drive_State {
-    DRIVE_STATE_INIT = 0,
-    DRIVE_STATE_CALIBRATION,
-    DRIVE_STATE_IDLE,
-    DRIVE_STATE_START,
-    DRIVE_STATE_RUN,
-    DRIVE_STATE_STOP,
-    DRIVE_STATE_STOP_ERROR,
-    DRIVE_STATE_ERROR
-} drive_state_t;
-
 //! Тип структуры настроек привода.
 typedef struct _Drive_Settings {
     fixed32_t U_nom; //!< Номинальное напряжение, В.
@@ -47,7 +33,7 @@ typedef struct _Drive_Settings {
     fixed32_t U_nom_delta_crit; //!< Критическое отклонение номинального напряжения, В.
     fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
     fixed32_t I_zero_noise; //!< Шум тока нуля, А.
-    fixed32_t U_rot_nom; //!< Номинальное возбуждение якоря.
+    fixed32_t U_rot_nom; //!< Номинальное напряжение возбуждения якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     uint32_t stop_rot_periods; //!< Время остановки ротора в периодах.
@@ -63,15 +49,9 @@ typedef struct _Drive {
     drive_errors_t errors; //!< Ошибки.
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
-    drive_power_calibration_t power_calibration; //!< Состояние калибровки питания.
+    drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
-    
-    ramp_t ramp; //!< Разгон.
-    
-    pid_controller_t rot_pid; //!< ПИД-регулятор напряжения якоря.
-    pid_controller_t exc_pid; //!< ПИД-регулятор тока возбуждения.
-    
     drive_settings_t settings; //!< Настройки.
 } drive_t;
 
@@ -93,16 +73,35 @@ static drive_t drive;
  */
 ALWAYS_INLINE static drive_status_t drive_get_state(void)
 {
-    return drive.status;
+    return drive.state;
 }
 
 /**
  * Установка состояния.
  * @param state Состояние.
  */
-ALWAYS_INLINE static void drive_set_state(drive_status_t state)
+static void drive_set_state(drive_status_t state)
 {
-    drive.status = state;
+    drive.state = state;
+    
+    switch(drive.state){
+        case DRIVE_STATE_INIT:
+        case DRIVE_STATE_CALIBRATION:
+            drive.status = DRIVE_STATUS_INIT;
+            break;
+        case DRIVE_STATE_IDLE:
+            drive.status = DRIVE_STATUS_IDLE;
+            break;
+        case DRIVE_STATE_START:
+        case DRIVE_STATE_RUN:
+        case DRIVE_STATE_STOP:
+            drive.status = DRIVE_STATUS_RUN;
+            break;
+        case DRIVE_STATE_STOP_ERROR:
+        case DRIVE_STATE_ERROR:
+            drive.status = DRIVE_STATUS_ERROR;
+            break;
+    }
 }
 
 /**
@@ -111,7 +110,7 @@ ALWAYS_INLINE static void drive_set_state(drive_status_t state)
  */
 ALWAYS_INLINE static drive_power_calibration_t drive_get_calibration_state(void)
 {
-    return drive.power_calibration;
+    return drive.power_calibration_state;
 }
 
 /**
@@ -120,7 +119,7 @@ ALWAYS_INLINE static drive_power_calibration_t drive_get_calibration_state(void)
  */
 ALWAYS_INLINE static void drive_set_calibration_state(drive_power_calibration_t state)
 {
-    drive.power_calibration = state;
+    drive.power_calibration_state = state;
 }
 
 /**
@@ -379,32 +378,6 @@ static void drive_check_power_idle(void)
 }
 
 /**
- * Функция регулировки.
- */
-static void drive_regulate(void)
-{
-    ramp_calc_step(&drive.ramp);
-    
-    if(ramp_current_reference(&drive.ramp) < REFERENCE_MIN){
-        drive_triacs_set_pairs_open_angle(0);
-        drive_triacs_set_exc_open_angle(0);
-    }else if(ramp_current_reference(&drive.ramp) > (REFERENCE_MAX * 3 / 4)){
-        return;
-    }else{
-        //drive.triacs_pairs_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIACS_TIM_ANGLE_TICKS_MAX / 100;
-        //drive.triac_exc_angle_ticks = (uint32_t)ramp_current_reference(&drive.ramp) * TRIAC_EXC_ANGLE_TICKS_MAX / 100;
-        /*
-        fixed32_t u_rot = power_channel_real_value_avg(&drive.power, POWER_VALUE_Urot);
-        fixed32_t u_rot_ref = (int64_t)drive.settings.U_rot_nom * ramp_current_reference(&drive.ramp) / 100;
-        pid_controller_calculate(&drive.rot_pid, u_rot_ref - u_rot, DRIVE_PID_DT);
-        drive.triacs_pairs_angle_ticks = pid_controller_value(&drive.rot_pid);
-        */
-        drive_triacs_set_pairs_open_angle((uint32_t)ramp_current_reference(&drive.ramp) * TRIACS_PAIRS_ANGLE_MAX / 100);
-        drive_triacs_set_exc_open_angle((uint32_t)ramp_current_reference(&drive.ramp) * TRIAC_EXC_ANGLE_MAX / 100);
-    }
-}
-
-/**
  * Проверяет значение входов питания в состоянии работы.
  */
 static void drive_check_power_running(void)
@@ -434,28 +407,6 @@ static void drive_check_power_running(void)
     //drive_check_power_u_in();
 }
 
-/**
- * Обрабатывает данные питания в состоянии работы.
- * @param phase Текущая фаза.
- */
-static void drive_process_power_running(phase_t phase)
-{
-    err_t err = E_NO_ERROR;
-    if(drive_power_calc_values(DRIVE_POWER_CHANNELS, phase, &err)){
-
-        if(err == E_NO_ERROR && drive_power_data_avail(DRIVE_POWER_CHANNELS)){
-            drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-            drive_check_power_running();
-            
-            if(drive_ready()){
-                drive_regulate();
-            }
-        }else{
-            drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
-            drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
-        }
-    }
-}
 
 /*
  * Обработка состояний привода.
@@ -483,6 +434,35 @@ static bool drive_calculate_power(phase_t phase)
 }
 
 /**
+ * Регулировка привода.
+ * @param phase Текущая фаза.
+ * @return Флаг регулировки привода.
+ */
+static bool drive_regulate(phase_t phase)
+{
+    if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+        if(drive_power_phase() == phase){
+            fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+            fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
+            
+            drive_regulator_regulate(U_rot, I_exc);
+            
+            fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
+            fixed32_t exc_pid_val = drive_regulator_exc_pid_value();
+            
+            drive_triacs_set_pairs_open_angle(fixed32_get_int(rot_pid_val));
+            drive_triacs_set_exc_open_angle(fixed32_get_int(exc_pid_val));
+        }
+        drive_triacs_setup_exc(phase);
+        drive_triacs_setup_next_pairs(phase);
+        
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * Обработка состояния ошибки привода.
  * @param phase Фаза.
  * @return Код ошибки.
@@ -493,10 +473,6 @@ static err_t drive_state_process_error(phase_t phase)
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
-    
-    if(drive.errors == DRIVE_ERROR_NONE){
-        drive.status = DRIVE_STATUS_IDLE;
-    }
     
     return E_NO_ERROR;
 }
@@ -513,12 +489,56 @@ static err_t drive_state_process_running(phase_t phase)
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
-    drive_triacs_setup_next_pairs(phase);
-    drive_triacs_setup_exc(phase);
-    if(drive_ready()){
-        drive_regulate();
+    if(drive_calculate_power(phase)){
+        if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+            drive_check_power_running();
+        }
     }
-    drive_process_power_running(phase);
+    
+    drive_regulate(phase);
+    
+    return E_NO_ERROR;
+}
+
+/**
+ * Обработка состояния останова привода.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_stop(phase_t phase)
+{
+    drive_calculate_power(phase);
+    
+    switch(drive.stopping_state){
+        default:
+        case DRIVE_STOPPING_NONE:
+            return E_NO_ERROR;
+        case DRIVE_STOPPING_STOP:
+            drive_regulator_stop();
+            drive.stopping_state = DRIVE_STOPPING_RAMP;
+            break;
+        case DRIVE_STOPPING_RAMP:
+            if(drive_regulator_state() == DRIVE_REGULATOR_STATE_IDLE){
+                drive.stopping_state = DRIVE_STOPPING_WAIT_ROT;
+            }
+            break;
+        case DRIVE_STOPPING_WAIT_ROT:
+            drive_triacs_pairs_set_enabled(false);
+            drive_regulator_set_rot_enabled(false);
+            drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
+            break;
+        case DRIVE_STOPPING_WAIT_EXC:
+            drive_triacs_exc_set_enabled(false);
+            drive_regulator_set_exc_enabled(false);
+            drive_set_state(DRIVE_STATE_IDLE);
+            drive.stopping_state = DRIVE_STOPPING_DONE;
+            break;
+        case DRIVE_STOPPING_DONE:
+            drive_set_state(DRIVE_STATE_IDLE);
+            break;
+    }
+    
+    drive_regulate(phase);
     
     return E_NO_ERROR;
 }
@@ -530,26 +550,35 @@ static err_t drive_state_process_running(phase_t phase)
  */
 static err_t drive_state_process_start(phase_t phase)
 {
-    if(drive_calculate_power(phase)){
-        return E_NO_ERROR;
-    }
-    if(!drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-        return E_NO_ERROR;
-    }
+    drive_calculate_power(phase);
     
     switch(drive.starting_state){
         default:
         case DRIVE_STARTING_NONE:
-            break;
+            return E_NO_ERROR;
         case DRIVE_STARTING_START:
+            drive_triacs_exc_set_enabled(true);
+            drive_regulator_set_exc_enabled(true);
+            drive_regulator_start();
+            drive.starting_state = DRIVE_STARTING_WAIT_EXC;
             break;
         case DRIVE_STARTING_WAIT_EXC:
+            drive_triacs_pairs_set_enabled(true);
+            drive_regulator_set_rot_enabled(true);
+            drive.starting_state = DRIVE_STARTING_RAMP;
             break;
         case DRIVE_STARTING_RAMP:
+            if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
+                drive.starting_state = DRIVE_STARTING_DONE;
+                drive_set_state(DRIVE_STATE_RUN);
+            }
             break;
         case DRIVE_STARTING_DONE:
+            drive_set_state(DRIVE_STATE_RUN);
             break;
     }
+    
+    drive_regulate(phase);
     
     return E_NO_ERROR;
 }
@@ -576,13 +605,13 @@ static err_t drive_state_process_idle(phase_t phase)
  */
 static void drive_state_process_power_calibration(phase_t phase)
 {
-    switch(drive.power_calibration){
+    switch(drive.power_calibration_state){
         default:
         case DRIVE_PWR_CALIBRATION_NONE:
             break;
         case DRIVE_PWR_CALIBRATION_START:
             drive_clear_flag(DRIVE_FLAG_POWER_CALIBRATED);
-            drive.power_calibration = DRIVE_PWR_CALIBRATION_RUNNING;
+            drive.power_calibration_state = DRIVE_PWR_CALIBRATION_RUNNING;
             drive_power_set_processing_periods(DRIVE_POWER_CALIBRATION_PERIODS);
             break;
         case DRIVE_PWR_CALIBRATION_RUNNING:
@@ -591,12 +620,12 @@ static void drive_state_process_power_calibration(phase_t phase)
                     drive_power_calibrate(DRIVE_POWER_CHANNELS);
                     drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
                     drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
-                    drive.power_calibration = DRIVE_PWR_CALIBRATION_DONE;
+                    drive.power_calibration_state = DRIVE_PWR_CALIBRATION_DONE;
                 }
             }
             break;
         case DRIVE_PWR_CALIBRATION_DONE:
-            drive_set_state(DRIVE_STATUS_IDLE);
+            drive_set_state(DRIVE_STATE_IDLE);
             break;
     }
 }
@@ -608,15 +637,15 @@ static void drive_state_process_power_calibration(phase_t phase)
  */
 static err_t drive_state_process_init(phase_t phase)
 {
-    if(drive_calculate_power(phase)){
+    if(drive_power_phase() == PHASE_UNK){
+        drive_power_set_phase(phase);
+        drive_power_reset_channels(DRIVE_POWER_CHANNELS);
+        drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
+    }else if(drive_calculate_power(phase)){
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
             drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
             drive_set_state(DRIVE_STATE_CALIBRATION);
         }
-    }else if(drive_power_phase() == PHASE_UNK){
-        drive_power_set_phase(phase);
-        drive_power_reset_channels(DRIVE_POWER_CHANNELS);
-        drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
     }
     return E_NO_ERROR;
 }
@@ -652,10 +681,13 @@ static err_t drive_states_process(phase_t phase)
             drive_state_process_idle(phase);
             break;
         case DRIVE_STATE_START:
+            drive_state_process_start(phase);
             break;
         case DRIVE_STATE_RUN:
+            drive_state_process_running(phase);
             break;
         case DRIVE_STATE_STOP:
+            drive_state_process_stop(phase);
             break;
         case DRIVE_STATE_STOP_ERROR:
             break;
@@ -676,11 +708,10 @@ err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
     
-    ramp_init(&drive.ramp);
-    pid_controller_init(&drive.rot_pid, 0, 0, 0);
-    pid_controller_clamp(&drive.rot_pid, DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
-    pid_controller_init(&drive.exc_pid, 0, 0, 0);
-    pid_controller_clamp(&drive.exc_pid, DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
+    drive_regulator_init();
+    
+    drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
+    drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
     drive_update_settings();
     
@@ -712,13 +743,13 @@ err_t drive_update_settings(void)
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
-    ramp_set_time(&drive.ramp, settings_valueu(PARAM_ID_RAMP_TIME));
-    pid_controller_set_kp(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_P));
-    pid_controller_set_ki(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_I));
-    pid_controller_set_kd(&drive.rot_pid, settings_valuef(PARAM_ID_ROT_PID_K_D));
-    pid_controller_set_kp(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_P));
-    pid_controller_set_ki(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_I));
-    pid_controller_set_kd(&drive.exc_pid, settings_valuef(PARAM_ID_EXC_PID_K_D));
+    drive_regulator_set_ramp_time(settings_valuei(PARAM_ID_RAMP_TIME));
+    drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
+                                settings_valuef(PARAM_ID_ROT_PID_K_I),
+                                settings_valuef(PARAM_ID_ROT_PID_K_D));
+    drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
+                                settings_valuef(PARAM_ID_EXC_PID_K_I),
+                                settings_valuef(PARAM_ID_EXC_PID_K_D));
 
     return E_NO_ERROR;
 }
@@ -736,6 +767,11 @@ drive_flags_t drive_flags(void)
 drive_status_t drive_status(void)
 {
     return drive.status;
+}
+
+drive_state_t drive_state(void)
+{
+    return drive.state;
 }
 
 bool drive_error(drive_error_t error)
@@ -770,7 +806,7 @@ drive_power_errors_t drive_power_errors(void)
 
 drive_power_calibration_t drive_power_calibration(void)
 {
-    return drive.power_calibration;
+    return drive.power_calibration_state;
 }
 
 drive_starting_t drive_starting(void)
@@ -783,19 +819,6 @@ drive_stopping_t drive_stopping(void)
     return drive.stopping_state;
 }
 
-reference_t drive_reference(void)
-{
-    return ramp_target_reference(&drive.ramp);
-}
-
-err_t drive_set_reference(reference_t reference)
-{
-    // 0 ... 100 == 12000 (TRIACS_TIM_ANGLE_TICKS_MAX) ... 0
-    if(reference > REFERENCE_MAX) return E_OUT_OF_RANGE;
-    
-    return ramp_set_target_reference(&drive.ramp, reference);
-}
-
 bool drive_ready(void)
 {
     return (drive.errors) == 0 && drive_flags_is_set(DRIVE_READY_FLAGS);
@@ -806,8 +829,8 @@ bool drive_start(void)
     if(!drive_ready())
         return false;
     if(drive.status == DRIVE_STATUS_IDLE){
-        drive.starting_state = DRIVE_STARTING_NONE;
-        drive.status = DRIVE_STATUS_RUN;
+        drive.starting_state = DRIVE_STARTING_START;
+        drive_set_state(DRIVE_STATE_START);
     }
     return true;
 }
@@ -815,7 +838,8 @@ bool drive_start(void)
 bool drive_stop(void)
 {
     if(drive.status == DRIVE_STATUS_RUN){
-        drive.status = DRIVE_STATUS_IDLE;
+        drive.stopping_state = DRIVE_STOPPING_STOP;
+        drive_set_state(DRIVE_STATE_STOP);
     }
     return true;
 }
@@ -827,25 +851,16 @@ bool drive_running(void)
 
 void drive_triac_pairs_timer0_irq_handler(void)
 {
-#warning do not open triacs if error.
-    if(drive.status != DRIVE_STATUS_RUN) return;
-    
     drive_triacs_timer0_irq_handler();
 }
 
 void drive_triac_pairs_timer1_irq_handler(void)
 {
-#warning do not open triacs if error.
-    if(drive.status != DRIVE_STATUS_RUN) return;
-    
     drive_triacs_timer0_irq_handler();
 }
 
 void drive_triac_exc_timer_irq_handler(void)
 {
-#warning do not open triacs if error.
-    if(drive.status != DRIVE_STATUS_RUN) return;
-    
     drive_triacs_exc_timer_irq_handler();
 }
 

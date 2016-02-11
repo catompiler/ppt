@@ -35,8 +35,8 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
         abs_value = ABS(abs_value);
     }
     
-    channel->raw_value = value;
-    channel->real_value = (fixed32_t)channel->raw_value * channel->k;
+    channel->raw_value_inst = value;
+    channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
     
     channel->sum_zero += value;
     channel->sum_avg += abs_value;

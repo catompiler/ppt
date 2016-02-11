@@ -113,9 +113,16 @@ extern bool drive_power_data_avail(power_channels_t channels);
 extern err_t drive_power_reset_channels(power_channels_t channels);
 
 /**
- * Получает сырое последнее значение канала АЦП.
+ * Получает сырое последнее мгновенное значение канала АЦП.
  * @param channel Номер канала.
- * @return Сырое последнее значение канала АЦП.
+ * @return Сырое последнее мгновенное значение канала АЦП.
+ */
+extern int16_t drive_power_channel_raw_value_inst(size_t channel);
+
+/**
+ * Получает сырое значение канала АЦП.
+ * @param channel Номер канала.
+ * @return Сырое значение канала АЦП.
  */
 extern int16_t drive_power_channel_raw_value(size_t channel);
 
@@ -134,9 +141,16 @@ extern int16_t drive_power_channel_raw_value_avg(size_t channel);
 extern int16_t drive_power_channel_raw_value_rms(size_t channel);
 
 /**
- * Получает реальное последнее значение канала АЦП.
+ * Получает реальное последнее мгновенное значение канала АЦП.
  * @param channel Номер канала.
- * @return Реальное последнее значение канала АЦП.
+ * @return Реальное последнее мгновенное значение канала АЦП.
+ */
+extern fixed32_t drive_power_channel_real_value_inst(size_t channel);
+
+/**
+ * Получает реальное значение канала АЦП.
+ * @param channel Номер канала.
+ * @return Реальное значение канала АЦП.
  */
 extern fixed32_t drive_power_channel_real_value(size_t channel);
 

@@ -3,7 +3,8 @@ TARGET    = main
 
 # Объектные файлы.
 OBJECTS   = main.o power.o triac.o triac_pair.o\
-	    drive_triacs.o drive_power.o drive.o settings.o ramp.o
+	    drive_triacs.o drive_power.o drive.o settings.o ramp.o\
+	    drive_regulator.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS += circular_buffer usart newlib_stubs\

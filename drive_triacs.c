@@ -181,10 +181,10 @@ err_t drive_triacs_set_exc_open_angle(uint32_t angle)
         err = E_OUT_OF_RANGE;
     }
     if(angle > TRIAC_EXC_ANGLE_MAX){
-        angle = TRIACS_PAIRS_ANGLE_MAX;
+        angle = TRIAC_EXC_ANGLE_MAX;
         err = E_OUT_OF_RANGE;
     }
-    drive_triacs.triacs_pairs_angle_ticks = TRIAC_EXC_MAX_TICKS * angle / TRIAC_EXC_MAX_TICKS_ANGLE;
+    drive_triacs.triac_exc_angle_ticks = TRIAC_EXC_MAX_TICKS * angle / TRIAC_EXC_MAX_TICKS_ANGLE;
     return err;
 }
 

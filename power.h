@@ -56,10 +56,10 @@ typedef struct _Power_Value {
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
-    int16_t raw_value; //!< Сырое значение с АЦП.
+    int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
     int16_t raw_value_avg; //!< Сырое значение с АЦП (среднее).
     int16_t raw_value_rms; //!< Сырое значение с АЦП (RMS).
-    fixed32_t real_value; //!< Значение в СИ.
+    fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
     fixed32_t real_value_avg; //!< Значение в СИ (среднее).
     fixed32_t real_value_rms; //!< Значение в СИ (RMS).
     int32_t sum_avg; //!< Сумма значений (среднее).
@@ -171,14 +171,14 @@ ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t 
 }
 
 /**
- * Получает сырое последнее значение канала АЦП.
+ * Получает сырое последнее мгновенное значение канала АЦП.
  * @param power Питание.
  * @param channel Номер канала.
- * @return Сырое последнее значение канала АЦП.
+ * @return Сырое последнее мгновенное значение канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_value(const power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_value_inst(const power_t* power, size_t channel)
 {
-    return power->channels[channel].raw_value;
+    return power->channels[channel].raw_value_inst;
 }
 
 /**
@@ -204,14 +204,14 @@ ALWAYS_INLINE static int16_t power_channel_raw_value_rms(const power_t* power, s
 }
 
 /**
- * Получает реальное последнее значение канала АЦП.
+ * Получает реальное последнее мгновенное значение канала АЦП.
  * @param power Питание.
  * @param channel Номер канала.
- * @return Реальное последнее значение канала АЦП.
+ * @return Реальное последнее мгновенное значение канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_channel_real_value(const power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_channel_real_value_inst(const power_t* power, size_t channel)
 {
-    return power->channels[channel].real_value;
+    return power->channels[channel].real_value_inst;
 }
 
 /**

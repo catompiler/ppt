@@ -14,6 +14,7 @@
 #include "phase_state/phase_state.h"
 #include "drive_power.h"
 #include "drive_triacs.h"
+#include "drive_regulator.h"
 
 
 
@@ -45,6 +46,18 @@ typedef enum _Drive_Status {
     DRIVE_STATUS_RUN        = 2,
     DRIVE_STATUS_ERROR      = 3
 } drive_status_t;
+
+//! Тип состояния машины состояний привода.
+typedef enum _Drive_State {
+    DRIVE_STATE_INIT = 0,
+    DRIVE_STATE_CALIBRATION,
+    DRIVE_STATE_IDLE,
+    DRIVE_STATE_START,
+    DRIVE_STATE_RUN,
+    DRIVE_STATE_STOP,
+    DRIVE_STATE_STOP_ERROR,
+    DRIVE_STATE_ERROR
+} drive_state_t;
 
 //! Тип ошибки привода.
 typedef enum _Drive_Error {
@@ -134,13 +147,6 @@ typedef enum _Drive_Stopping {
     DRIVE_STOPPING_DONE //!< Остановлен.
 } drive_stopping_t;
 
-//! Тип задания.
-typedef uint32_t reference_t;
-//! Минимальное задание.
-#define REFERENCE_MIN 5
-//! Максимальное задание.
-#define REFERENCE_MAX 95
-
 
 /**
  * Инициализирует привод.
@@ -172,6 +178,12 @@ extern drive_flags_t drive_flags(void);
  * @return Статус привода.
  */
 extern drive_status_t drive_status(void);
+
+/**
+ * Получает состояние привода.
+ * @return Состояние привода.
+ */
+extern drive_state_t drive_state(void);
 
 /**
  * Получает наличие ошибки привода.
@@ -251,14 +263,20 @@ ALWAYS_INLINE static phase_error_t drive_phase_error(void)
 /**
  * Получает значение задания.
  */
-extern reference_t drive_reference(void);
+ALWAYS_INLINE static reference_t drive_reference(void)
+{
+    return drive_regulator_reference();
+}
 
 /**
  * Устанавливает значение задания.
  * @param reference Задание.
  * @return Код ошибки.
  */
-extern err_t drive_set_reference(reference_t reference);
+ALWAYS_INLINE static err_t drive_set_reference(reference_t reference)
+{
+    return drive_regulator_set_reference(reference);
+}
 
 /**
  * Получает флаг готовности привода.

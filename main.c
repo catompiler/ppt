@@ -687,7 +687,7 @@ static void init_ioport(void)
     pca9555_set_pins_direction(&ioport, TFT_RST_IOPIN, PCA9555_PIN_OUTPUT);
     pca9555_write_pins_direction(&ioport);
     pca9555_set_pins_state(&ioport, PCA9555_PIN_ALL, PCA9555_PIN_ON);
-    pca9555_set_pins_state(&ioport, PCA9555_PIN_5, PCA9555_PIN_OFF);
+    //pca9555_set_pins_state(&ioport, PCA9555_PIN_5, PCA9555_PIN_OFF);
     pca9555_write_pins_state(&ioport);
 }
 
@@ -1448,7 +1448,7 @@ static void gui_update_values(void)
 {
     //gui_number_label_set_number(&label_num, timer_cc_count);
     gui_number_label_set_number(&label_num, drive_flags());
-    gui_number_label_set_number(&label_num_state, drive_status());
+    gui_number_label_set_number(&label_num_state, drive_state());
     gui_number_label_set_number(&label_num_errs, drive_errors());
     gui_number_label_set_number(&label_num_pwr_errs, drive_power_errors());
 
@@ -1579,7 +1579,7 @@ int main(void)
             
             screen_repaint();
             
-            ioport_next_leds();
+            //ioport_next_leds();
             
             counter = system_counter_ticks();
             

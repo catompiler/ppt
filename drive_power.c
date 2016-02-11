@@ -98,9 +98,14 @@ err_t drive_power_reset_channels(power_channels_t channels)
     return power_reset_channels(&drive_power.power, channels);
 }
 
+int16_t drive_power_channel_raw_value_inst(size_t channel)
+{
+    return power_channel_raw_value_inst(&drive_power.power, channel);
+}
+
 int16_t drive_power_channel_raw_value(size_t channel)
 {
-    return power_channel_raw_value(&drive_power.power, channel);
+    return power_channel_raw_value_avg(&drive_power.power, channel);
 }
 
 int16_t drive_power_channel_raw_value_avg(size_t channel)
@@ -113,9 +118,14 @@ int16_t drive_power_channel_raw_value_rms(size_t channel)
     return power_channel_raw_value_rms(&drive_power.power, channel);
 }
 
+fixed32_t drive_power_channel_real_value_inst(size_t channel)
+{
+    return power_channel_real_value_inst(&drive_power.power, channel);
+}
+
 fixed32_t drive_power_channel_real_value(size_t channel)
 {
-    return power_channel_real_value(&drive_power.power, channel);
+    return power_channel_real_value_avg(&drive_power.power, channel);
 }
 
 fixed32_t drive_power_channel_real_value_avg(size_t channel)
