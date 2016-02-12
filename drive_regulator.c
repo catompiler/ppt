@@ -28,7 +28,6 @@ typedef struct _Drive_Regulator {
 
 static drive_regulator_t regulator;
 
-
 err_t drive_regulator_init(void)
 {
     memset(&regulator, 0x0, sizeof(drive_regulator_t));
@@ -38,6 +37,16 @@ err_t drive_regulator_init(void)
     pid_controller_init(&regulator.exc_pid, 0, 0, 0);
     
     return E_NO_ERROR;
+}
+
+pid_controller_t* drive_regulator_rot_pid(void)
+{
+    return &regulator.rot_pid;
+}
+
+pid_controller_t* drive_regulator_exc_pid(void)
+{
+    return &regulator.exc_pid;
 }
 
 drive_regulator_state_t drive_regulator_state(void)
@@ -71,14 +80,20 @@ err_t drive_regulator_set_reference(reference_t reference)
 
 void drive_regulator_start(void)
 {
-    regulator.state = DRIVE_REGULATOR_STATE_START;
-    ramp_set_target_reference(&regulator.rot_ramp, regulator.reference);
+    if(regulator.state == DRIVE_REGULATOR_STATE_IDLE ||
+       regulator.state == DRIVE_REGULATOR_STATE_STOP){
+        regulator.state = DRIVE_REGULATOR_STATE_START;
+        ramp_set_target_reference(&regulator.rot_ramp, regulator.reference);
+    }
 }
 
 void drive_regulator_stop(void)
 {
-    regulator.state = DRIVE_REGULATOR_STATE_STOP;
-    ramp_set_target_reference(&regulator.rot_ramp, 0);
+    if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
+       regulator.state == DRIVE_REGULATOR_STATE_START){
+        regulator.state = DRIVE_REGULATOR_STATE_STOP;
+        ramp_set_target_reference(&regulator.rot_ramp, 0);
+    }
 }
 
 err_t drive_regulator_set_ramp_time(ramp_time_t time)
@@ -130,8 +145,9 @@ void drive_regulator_rot_pid_clamp(fixed32_t pid_min, fixed32_t pid_max)
 fixed32_t drive_regulator_rot_pid_value(void)
 {
     return pid_controller_value(&regulator.rot_pid);
+    //debug
     //#warning return pid controller value
-    //return regulator.rot_ramp.current_ref;
+    //return regulator.rot_ramp.current_ref * 120 / 100;
 }
 
 void drive_regulator_set_exc_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)

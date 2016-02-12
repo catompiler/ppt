@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "errors/errors.h"
 #include "fixed/fixed32.h"
+#include "pid_controller/pid_controller.h"
 #include "ramp.h"
 
 //! Тип состояния регулятора привода.
@@ -25,12 +26,25 @@ typedef ramp_reference_t reference_t;
 //! Максимальное задание.
 #define REFERENCE_MAX 95
 
-
 /**
  * Инициализирует регулятор привода.
  * @return Код ошибки.
  */
 extern err_t drive_regulator_init(void);
+
+/**
+ * Получает ПИД-регулятор напряжения ротора.
+ * Для отладки.
+ * @return ПИД-регулятор напряжения ротора.
+ */
+extern pid_controller_t* drive_regulator_rot_pid(void);
+
+/**
+ * Получает ПИД-регулятор тока возбуждения.
+ * Для отладки.
+ * @return ПИД-регулятор тока возбуждения.
+ */
+extern pid_controller_t* drive_regulator_exc_pid(void);
 
 /**
  * Получает состояние регулятора привода.

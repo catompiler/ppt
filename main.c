@@ -42,7 +42,7 @@
 /******************************************************************************/
 
 //! Буфер записи USART.
-#define USART_WRITE_BUFFER_SIZE 64
+#define USART_WRITE_BUFFER_SIZE 1024
 static uint8_t usart_write_buffer[USART_WRITE_BUFFER_SIZE];
 //! Буфер чтения USART.
 #define USART_READ_BUFFER_SIZE 32
@@ -176,7 +176,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  * Обработчики прерываний.
  */
 
-void USART1_IRQHandler(void)
+void USART3_IRQHandler(void)
 {
     usart_buf_irq_handler(&usart_buf);
 }
@@ -377,7 +377,8 @@ static void init_sys_counter(void)
 static void remap_config(void)
 {
     GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);           
+    GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);          
+    GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
 }
 
 static void init_periph_clock(void)
@@ -396,7 +397,7 @@ static void init_periph_clock(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
     // USART.
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
     // DMA.
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
@@ -419,26 +420,26 @@ static void init_periph_clock(void)
 static void init_usart(void)
 {
     GPIO_InitTypeDef gpio_tx =
-        {.GPIO_Pin = GPIO_Pin_9, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
     GPIO_InitTypeDef gpio_rx =
-        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
-    GPIO_Init(GPIOA, &gpio_tx);
-    GPIO_Init(GPIOA, &gpio_rx);
+        {.GPIO_Pin = GPIO_Pin_11, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+    GPIO_Init(GPIOC, &gpio_tx);
+    GPIO_Init(GPIOC, &gpio_rx);
     
     USART_InitTypeDef usart_is =
         {.USART_BaudRate = 115200, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
          .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
-    USART_Init(USART1, &usart_is);
-    USART_Cmd(USART1, ENABLE);
+    USART_Init(USART3, &usart_is);
+    USART_Cmd(USART3, ENABLE);
     
-    usart_buf_init_t usartb_is = {.usart = USART1,
+    usart_buf_init_t usartb_is = {.usart = USART3,
          .write_buffer = usart_write_buffer, .write_buffer_size = USART_WRITE_BUFFER_SIZE,
          .read_buffer = usart_read_buffer, .read_buffer_size = USART_READ_BUFFER_SIZE};
     usart_buf_init(&usart_buf, &usartb_is);
     usart_setup_stdio(&usart_buf);
     
-    NVIC_SetPriority(USART1_IRQn, 3);
-    NVIC_EnableIRQ(USART1_IRQn);
+    NVIC_SetPriority(USART3_IRQn, 3);
+    NVIC_EnableIRQ(USART3_IRQn);
 }
 
 static void init_spi(void)
@@ -1575,7 +1576,7 @@ int main(void)
         //if(need_update){
             //need_update = false;
             
-            printf("%d\r\n", ((int)counter));
+            //printf("%d\r\n", ((int)counter));
             
             screen_repaint();
             

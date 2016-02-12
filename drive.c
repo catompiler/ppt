@@ -4,6 +4,7 @@
 #include "pid_controller/pid_controller.h"
 #include "drive_regulator.h"
 #include <string.h>
+#include <stdio.h>
 
 
 //! Максимальное значение PID-регулятора напряжения якоря.
@@ -452,6 +453,10 @@ static bool drive_regulate(phase_t phase)
             
             drive_triacs_set_pairs_open_angle(fixed32_get_int(rot_pid_val));
             drive_triacs_set_exc_open_angle(fixed32_get_int(exc_pid_val));
+            
+            pid_controller_t* pid = drive_regulator_rot_pid();
+            
+            printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
         }
         drive_triacs_setup_exc(phase);
         drive_triacs_setup_next_pairs(phase);
@@ -621,6 +626,7 @@ static void drive_state_process_power_calibration(phase_t phase)
                     drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
                     drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
                     drive.power_calibration_state = DRIVE_PWR_CALIBRATION_DONE;
+                    drive_set_state(DRIVE_STATE_IDLE);
                 }
             }
             break;
@@ -710,6 +716,10 @@ err_t drive_init(void)
     
     drive_regulator_init();
     
+    drive_triacs_init();
+    
+    drive_power_init();
+    
     drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
     drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
@@ -721,10 +731,6 @@ err_t drive_init(void)
     drive.errors = DRIVE_ERROR_NONE;
     drive.starting_state = DRIVE_STARTING_NONE;
     drive.stopping_state = DRIVE_STOPPING_NONE;
-    
-    drive_triacs_init();
-    
-    drive_power_init();
     
     return E_NO_ERROR;
 }
@@ -744,13 +750,15 @@ err_t drive_update_settings(void)
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
     drive_regulator_set_ramp_time(settings_valuei(PARAM_ID_RAMP_TIME));
+    drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
+    drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
                                 settings_valuef(PARAM_ID_ROT_PID_K_I),
                                 settings_valuef(PARAM_ID_ROT_PID_K_D));
     drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
                                 settings_valuef(PARAM_ID_EXC_PID_K_I),
                                 settings_valuef(PARAM_ID_EXC_PID_K_D));
-
+    
     return E_NO_ERROR;
 }
 
@@ -856,7 +864,7 @@ void drive_triac_pairs_timer0_irq_handler(void)
 
 void drive_triac_pairs_timer1_irq_handler(void)
 {
-    drive_triacs_timer0_irq_handler();
+    drive_triacs_timer1_irq_handler();
 }
 
 void drive_triac_exc_timer_irq_handler(void)
