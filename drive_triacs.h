@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "fixed/fixed32.h"
 #include "errors/errors.h"
 #include "phase_state/phase_state.h"
 
@@ -126,12 +127,20 @@ typedef size_t triac_pair_number_t;
 
 //! Максимальный угол открытия тиристоров.
 #define TRIACS_PAIRS_ANGLE_MAX (120)
+//! Максимальный угол открытия тиристоров в fixed32.
+#define TRIACS_PAIRS_ANGLE_MAX_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MAX))
 //! Минимальный угол открытия тиристоров.
 #define TRIACS_PAIRS_ANGLE_MIN (6)
+//! Минимальный угол открытия тиристоров в fixed32.
+#define TRIACS_PAIRS_ANGLE_MIN_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MIN))
 //! Максимальный угол включения симистора возбуждения.
 #define TRIAC_EXC_ANGLE_MAX (170)
+//! Максимальный угол включения симистора возбуждения в fixed32.
+#define TRIAC_EXC_ANGLE_MAX_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MAX))
 //! Минимальный угол включения симистора возбуждения.
 #define TRIAC_EXC_ANGLE_MIN (30)
+//! Минимальный угол включения симистора возбуждения в fixed32.
+#define TRIAC_EXC_ANGLE_MIN_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MIN))
 
 //! Перевод времени открытия в тики таймера.
 #define OPEN_TIME_TO_TICKS(T) (((uint32_t)T * TRIACS_TIM_PERIOD) / TRIACS_TIM_PERIOD_US)
@@ -179,14 +188,14 @@ extern void drive_triacs_stop(void);
  * @param angle Угол открытия.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_set_pairs_open_angle(uint32_t angle);
+extern err_t drive_triacs_set_pairs_open_angle(fixed32_t angle);
 
 /**
  * Устанавливает угол открытия симистора возбуждения.
  * @param angle Угол открытия.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_set_exc_open_angle(uint32_t angle);
+extern err_t drive_triacs_set_exc_open_angle(fixed32_t angle);
 
 /**
  * Получает время открытия тиристоров.

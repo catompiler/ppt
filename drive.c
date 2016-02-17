@@ -451,8 +451,8 @@ static bool drive_regulate(phase_t phase)
             fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
             fixed32_t exc_pid_val = drive_regulator_exc_pid_value();
             
-            drive_triacs_set_pairs_open_angle(fixed32_get_int(rot_pid_val));
-            drive_triacs_set_exc_open_angle(fixed32_get_int(exc_pid_val));
+            drive_triacs_set_pairs_open_angle(rot_pid_val);
+            drive_triacs_set_exc_open_angle(exc_pid_val);
             
             pid_controller_t* pid = drive_regulator_rot_pid();
             

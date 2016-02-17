@@ -158,33 +158,35 @@ void drive_triacs_stop(void)
     drive_triacs_close_triacs();
 }
 
-err_t drive_triacs_set_pairs_open_angle(uint32_t angle)
+err_t drive_triacs_set_pairs_open_angle(fixed32_t angle)
 {
     err_t err = E_NO_ERROR;
-    if(angle < TRIACS_PAIRS_ANGLE_MIN){
+    if(angle < TRIACS_PAIRS_ANGLE_MIN_F){
         angle = 0;
         err = E_OUT_OF_RANGE;
     }
-    if(angle > TRIACS_PAIRS_ANGLE_MAX){
-        angle = TRIACS_PAIRS_ANGLE_MAX;
+    if(angle > TRIACS_PAIRS_ANGLE_MAX_F){
+        angle = TRIACS_PAIRS_ANGLE_MAX_F;
         err = E_OUT_OF_RANGE;
     }
-    drive_triacs.triacs_pairs_angle_ticks = TRIACS_TIM_MAX_TICKS * angle / TRIACS_TIM_MAX_TICKS_ANGLE;
+    angle /= TRIACS_TIM_MAX_TICKS_ANGLE;
+    drive_triacs.triacs_pairs_angle_ticks = fixed32_mul(angle, TRIACS_TIM_MAX_TICKS);
     return err;
 }
 
-err_t drive_triacs_set_exc_open_angle(uint32_t angle)
+err_t drive_triacs_set_exc_open_angle(fixed32_t angle)
 {
     err_t err = E_NO_ERROR;
-    if(angle < TRIAC_EXC_ANGLE_MIN){
+    if(angle < TRIAC_EXC_ANGLE_MIN_F){
         angle = 0;
         err = E_OUT_OF_RANGE;
     }
-    if(angle > TRIAC_EXC_ANGLE_MAX){
-        angle = TRIAC_EXC_ANGLE_MAX;
+    if(angle > TRIAC_EXC_ANGLE_MAX_F){
+        angle = TRIAC_EXC_ANGLE_MAX_F;
         err = E_OUT_OF_RANGE;
     }
-    drive_triacs.triac_exc_angle_ticks = TRIAC_EXC_MAX_TICKS * angle / TRIAC_EXC_MAX_TICKS_ANGLE;
+    angle /= TRIAC_EXC_MAX_TICKS_ANGLE;
+    drive_triacs.triac_exc_angle_ticks = fixed32_mul(angle, TRIAC_EXC_MAX_TICKS);
     return err;
 }
 
