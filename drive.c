@@ -458,13 +458,20 @@ static bool drive_regulate(phase_t phase)
             
             printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
         }
-        drive_triacs_setup_exc(phase);
-        drive_triacs_setup_next_pairs(phase);
         
         return true;
     }
     
     return false;
+}
+
+/**
+ * Запускает открытие тиристоров.
+ */
+static void drive_setup_triacs_open(phase_t phase)
+{
+    drive_triacs_setup_exc(phase);
+    drive_triacs_setup_next_pairs(phase);
 }
 
 /**
@@ -489,10 +496,10 @@ static err_t drive_state_process_error(phase_t phase)
  */
 static err_t drive_state_process_running(phase_t phase)
 {
-    // Нужна определённая фаза.
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    
+    drive_setup_triacs_open(phase);
     
     if(drive_calculate_power(phase)){
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
@@ -512,6 +519,8 @@ static err_t drive_state_process_running(phase_t phase)
  */
 static err_t drive_state_process_stop(phase_t phase)
 {
+    drive_setup_triacs_open(phase);
+    
     drive_calculate_power(phase);
     
     switch(drive.stopping_state){
@@ -555,6 +564,8 @@ static err_t drive_state_process_stop(phase_t phase)
  */
 static err_t drive_state_process_start(phase_t phase)
 {
+    drive_setup_triacs_open(phase);
+    
     drive_calculate_power(phase);
     
     switch(drive.starting_state){

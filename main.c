@@ -688,7 +688,7 @@ static void init_ioport(void)
     pca9555_set_pins_direction(&ioport, TFT_RST_IOPIN, PCA9555_PIN_OUTPUT);
     pca9555_write_pins_direction(&ioport);
     pca9555_set_pins_state(&ioport, PCA9555_PIN_ALL, PCA9555_PIN_ON);
-    //pca9555_set_pins_state(&ioport, PCA9555_PIN_5, PCA9555_PIN_OFF);
+    pca9555_set_pins_state(&ioport, PCA9555_PIN_5, PCA9555_PIN_OFF);
     pca9555_write_pins_state(&ioport);
 }
 
@@ -1580,7 +1580,7 @@ int main(void)
             
             screen_repaint();
             
-            //ioport_next_leds();
+            ioport_next_leds();
             
             counter = system_counter_ticks();
             
