@@ -453,10 +453,11 @@ static bool drive_regulate(phase_t phase)
             
             drive_triacs_set_pairs_open_angle(rot_pid_val);
             drive_triacs_set_exc_open_angle(exc_pid_val);
+            //drive_triacs_set_exc_open_angle(fixed32_make_from_int(120));
             
-            pid_controller_t* pid = drive_regulator_rot_pid();
+            //pid_controller_t* pid = drive_regulator_exc_pid();
             
-            printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
+            //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
         }
         
         return true;
@@ -537,12 +538,12 @@ static err_t drive_state_process_stop(phase_t phase)
             }
             break;
         case DRIVE_STOPPING_WAIT_ROT:
-            drive_triacs_pairs_set_enabled(false);
+            drive_triacs_set_pairs_enabled(false);
             drive_regulator_set_rot_enabled(false);
             drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            drive_triacs_exc_set_enabled(false);
+            drive_triacs_set_exc_enabled(false);
             drive_regulator_set_exc_enabled(false);
             drive_set_state(DRIVE_STATE_IDLE);
             drive.stopping_state = DRIVE_STOPPING_DONE;
@@ -573,13 +574,13 @@ static err_t drive_state_process_start(phase_t phase)
         case DRIVE_STARTING_NONE:
             return E_NO_ERROR;
         case DRIVE_STARTING_START:
-            drive_triacs_exc_set_enabled(true);
+            drive_triacs_set_exc_enabled(true);
             drive_regulator_set_exc_enabled(true);
             drive_regulator_start();
             drive.starting_state = DRIVE_STARTING_WAIT_EXC;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            drive_triacs_pairs_set_enabled(true);
+            drive_triacs_set_pairs_enabled(true);
             drive_regulator_set_rot_enabled(true);
             drive.starting_state = DRIVE_STARTING_RAMP;
             break;
@@ -756,10 +757,13 @@ err_t drive_update_settings(void)
     drive.settings.U_rot_nom = settings_valuef(PARAM_ID_U_ROT_NOM);
     drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
-    drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
+    drive_triacs_set_exc_mode(settings_valueu(PARAM_ID_EXC_MODE));
+    drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
+    drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
+    drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     drive_regulator_set_ramp_time(settings_valuei(PARAM_ID_RAMP_TIME));
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));

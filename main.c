@@ -342,10 +342,14 @@ void TIM2_IRQHandler(void)
     drive_triac_pairs_timer0_irq_handler();
 }
 
-// Timer3 подача импульсов на нижнее плечо
 void TIM3_IRQHandler(void)
 {
     drive_triac_pairs_timer1_irq_handler();
+}
+
+void TIM4_IRQHandler(void)
+{
+    drive_triac_exc_timer_irq_handler();
 }
 
 /*
@@ -379,6 +383,7 @@ static void remap_config(void)
     GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);          
     GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
+    GPIO_PinRemapConfig(GPIO_Remap_TIM4, ENABLE);
 }
 
 static void init_periph_clock(void)
@@ -411,6 +416,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);    // Включаем тактирование General-purpose TIM2
     // TIM3.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);    // Включаем тактирование General-purpose TIM3
+    // TIM4.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
     // TIM6.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
     // SPI2.
@@ -694,6 +701,7 @@ static void init_ioport(void)
 
 static void ioport_next_leds(void)
 {
+    //printf("ioport_next_leds\r\n");
     pca9555_pins_t on_pins = pca9555_pins_output_state(&ioport, PCA9555_PIN_OFF);
     
     if(on_pins & PCA9555_PIN_7){
@@ -788,7 +796,7 @@ static void init_adc_timer(void)
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 }
 
-static void triacs_timer_init(TIM_TypeDef* TIM)
+static void triacs_pairs_timer_init(TIM_TypeDef* TIM)
 {
     TIM_DeInit(TIM);
     TIM_TimeBaseInitTypeDef tim_is;
@@ -825,6 +833,45 @@ static void triacs_timer_init(TIM_TypeDef* TIM)
     TIM_ITConfig(TIM, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 2 от таймера
     TIM_ITConfig(TIM, TRIACS_B_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 3 от таймера
     TIM_ITConfig(TIM, TRIACS_B_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
+}
+
+static void triac_exc_timer_init(TIM_TypeDef* TIM)
+{
+    TIM_DeInit(TIM);
+    TIM_TimeBaseInitTypeDef tim_is;
+    TIM_TimeBaseStructInit(&tim_is);
+            tim_is.TIM_Prescaler = TRIAC_EXC_TIM_PRESCALER; // Делитель (0000...FFFF)
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim_is.TIM_Period = TRIAC_EXC_TIM_PERIOD;       // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
+    TIM_TimeBaseInit(TIM, &tim_is);
+    TIM_SetCounter(TIM, 0);
+    TIM_SelectOnePulseMode(TIM, TIM_OPMode_Single);        // Однопульсный режим таймера
+    
+    TIM_OCInitTypeDef tim_oc_is;
+    TIM_OCStructInit(&tim_oc_is);
+        tim_oc_is.TIM_OCMode = TIM_OCMode_Timing;
+        tim_oc_is.TIM_OutputState = TIM_OutputState_Disable;
+        tim_oc_is.TIM_OutputNState = TIM_OutputNState_Disable;
+        tim_oc_is.TIM_Pulse = 0;
+        tim_oc_is.TIM_OCPolarity = TIM_OCPolarity_Low;
+        tim_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+        tim_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+        tim_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
+    TIM_OC1Init(TIM, &tim_oc_is);
+    TIM_OC2Init(TIM, &tim_oc_is);
+    TIM_OC3Init(TIM, &tim_oc_is);
+    TIM_OC4Init(TIM, &tim_oc_is);
+    
+    TIM_CCxCmd (TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL,   TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL,  TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL,  TIM_CCx_Enable);
+    TIM_CCxCmd (TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL, TIM_CCx_Enable);
+    
+    TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT,   ENABLE); // Разрешаем прерывание OC 1 от таймера
+    TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 2 от таймера
+    TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 3 от таймера
+    TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
 }
 
 static void init_tim6(void)
@@ -869,16 +916,20 @@ static void init_triacs(void)
 
 static void init_triacs_timers(void)
 {
-    triacs_timer_init(TIM2);
-    triacs_timer_init(TIM3);
+    triacs_pairs_timer_init(TIM2);
+    triacs_pairs_timer_init(TIM3);
+    triac_exc_timer_init(TIM4);
     
     drive_set_triacs_pairs_timer(TRIACS_TIMER_0, TIM2);
     drive_set_triacs_pairs_timer(TRIACS_TIMER_1, TIM3);
+    drive_set_triac_exc_timer(TIM4);
     
     NVIC_SetPriority(TIM2_IRQn, 1);
     NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
     NVIC_SetPriority(TIM3_IRQn, 1);
     NVIC_EnableIRQ (TIM3_IRQn);         // Разрешаем прерывания по Таймеру3
+    NVIC_SetPriority(TIM4_IRQn, 1);
+    NVIC_EnableIRQ (TIM4_IRQn);         // Разрешаем прерывания по Таймеру4
 }
 
 static void init_exti(void)
@@ -1083,6 +1134,7 @@ static void init_key_input(void)
 
 static void ioport_update_inputs(void)
 {
+    //printf("ioport_update_inputs\r\n");
     pca9555_read_pins_state(&ioport);
     //pca9555_wait(&ioport);
 }
@@ -1121,11 +1173,13 @@ static void key_input_process(void)
     }
     switch(kbd_state){
         case KBD_NEED_UPDATE:
+            //printf("kdb need update == true\r\n");
             kbd_state = KBD_UPDATING;
             ioport_update_inputs();
             break;
         case KBD_UPDATING:
             if(pca9555_done(&ioport)){
+                //printf("pca9555_done == true\r\n");
                 kbd_state = KBD_UPDATED;
                 ioport_process_inputs();
             }
@@ -1299,7 +1353,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&lbl_num_adc3_in1, &gui, &parent_widget);
     gui_number_label_set_number(&lbl_num_adc3_in1, 1);//0x1234
-    gui_number_label_set_format(&lbl_num_adc3_in1, GUI_NUMBER_LABEL_DEC);
+    gui_number_label_set_format(&lbl_num_adc3_in1, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_decimals(&lbl_num_adc3_in1, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&lbl_num_adc3_in1), 180, GUI_LABEL_TOP(8));
     gui_widget_resize(GUI_WIDGET(&lbl_num_adc3_in1), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_num_adc3_in1), GUI_BORDER_SOLID);
@@ -1447,6 +1502,7 @@ static void make_gui(void)
 
 static void gui_update_values(void)
 {
+    //printf("gui_update_values\r\n");
     //gui_number_label_set_number(&label_num, timer_cc_count);
     gui_number_label_set_number(&label_num, drive_flags());
     gui_number_label_set_number(&label_num_state, drive_state());
@@ -1500,8 +1556,9 @@ static void gui_update_values(void)
         gui_number_label_set_number(&lbl_num_adc2_in3, fixed32_get_int(drive_power_channel_real_value_avg(5)));
         gui_number_label_set_number(&lbl_num_adc2_in4, fixed32_get_int(drive_power_channel_real_value_avg(7)));
 */
+        gui_number_label_set_number(&lbl_num_adc3_in1, drive_power_channel_real_value_avg(8));
         
-        gui_number_label_set_number(&lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value_avg(8)));
+        //gui_number_label_set_number(&lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value_avg(8)));
         gui_number_label_set_number(&lbl_num_adc3_in2, fixed32_get_int(drive_power_channel_real_value_avg(9)));
         gui_number_label_set_number(&lbl_num_adc3_in3, fixed32_get_int(drive_power_channel_real_value_avg(10)));
     }
@@ -1569,7 +1626,7 @@ int main(void)
     //drive_set_reference(REFERENCE_MAX);
     
     for(;;){
-        
+        //GPIO_ResetBits(GPIOC, GPIO_Pin_6);
         key_input_process();
         
         if(system_counter_diff(&counter) >= update_period){

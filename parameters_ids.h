@@ -82,7 +82,18 @@
  * Время ожидания включения возбуждения при выключении, с.
  */
 #define PARAM_ID_EXC_START_TIME 19
-
+/**
+ * Длительность импульса открытия тиристоров, мкс.
+ */
+#define PARAM_ID_TRIACS_PAIRS_OPEN_TIME 20
+/**
+ * Длительность импульса открытия симистора возбуждения, мкс.
+ */
+#define PARAM_ID_TRIAC_EXC_OPEN_TIME 21
+/**
+ * Режим возбуждения.
+ */
+#define PARAM_ID_EXC_MODE 22
 
 #endif	/* PARAMETERS_IDS_H */
 

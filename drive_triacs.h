@@ -148,6 +148,12 @@ typedef size_t triac_pair_number_t;
 #define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * TRIACS_TIM_PERIOD_US) / TRIACS_TIM_PERIOD)
 
 
+//! Режим возбуждения.
+typedef enum _Drive_Triacs_Exc_Mode {
+    DRIVE_TRIACS_EXC_FIXED = 0, //!< Фиксированная подача возбуждения.
+    DRIVE_TRIACS_EXC_REGULATED = 1 //!< Регулирование тока возбуждения.
+} drive_triacs_exc_mode_t;
+
 /**
  * Инициализирует тиристоры привода.
  * @return Код ошибки.
@@ -164,7 +170,7 @@ extern bool drive_triacs_pairs_enabled(void);
  * Устанавливает разрешение подачи импульсов на тиристорные пары.
  * @param enabled Разрешение подачи импульсов на тиристорные пары.
  */
-extern void drive_triacs_pairs_set_enabled(bool enabled);
+extern void drive_triacs_set_pairs_enabled(bool enabled);
 
 /**
  * Получает разрешение подачи импульсов на симистор возбуждения.
@@ -176,7 +182,19 @@ extern bool drive_triacs_exc_enabled(void);
  * Устанавливает разрешение подачи импульсов на симистор возбуждения.
  * @param enabled Разрешение подачи импульсов на симистор возбуждения.
  */
-extern void drive_triacs_exc_set_enabled(bool enabled);
+extern void drive_triacs_set_exc_enabled(bool enabled);
+
+/**
+ * Получает режим возбуждения.
+ * @return Режим возбуждения.
+ */
+extern drive_triacs_exc_mode_t drive_triacs_exc_mode(void);
+
+/**
+ * Устанавливает режим возбуждения.
+ * @param mode Режим возбуждения.
+ */
+extern void drive_triacs_set_exc_mode(drive_triacs_exc_mode_t mode);
 
 /**
  * Останавливает открытие тиристоров.
@@ -201,14 +219,14 @@ extern err_t drive_triacs_set_exc_open_angle(fixed32_t angle);
  * Получает время открытия тиристоров.
  * @return Время открытия тиристоров в мкс.
  */
-extern uint16_t drive_triacs_open_time_us(void);
+extern uint16_t drive_triacs_pairs_open_time_us(void);
 
 /**
  * Устанавливает время открытия тиристоров.
  * @param time Время открытия тиристоров в мкс.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_set_open_time_us(uint16_t time);
+extern err_t drive_triacs_set_pairs_open_time_us(uint16_t time);
 
 /**
  * Получает время открытия симистора возбуждения.
