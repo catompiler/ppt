@@ -3,6 +3,7 @@
 #include "ramp.h"
 #include "pid_controller/pid_controller.h"
 #include "drive_regulator.h"
+#include "drive_protection.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -732,6 +733,8 @@ err_t drive_init(void)
     
     drive_power_init();
     
+    drive_protection_init();
+    
     drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
     drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
@@ -749,14 +752,18 @@ err_t drive_init(void)
 
 err_t drive_update_settings(void)
 {
-    drive.settings.U_nom = settings_valuef(PARAM_ID_U_NOM);
-    drive.settings.U_nom_delta_allow = settings_valueu(PARAM_ID_U_NOM_ALLOW_VAR) * drive.settings.U_nom / 100;
-    drive.settings.U_nom_delta_crit = settings_valueu(PARAM_ID_U_NOM_CRIT_VAR) * drive.settings.U_nom / 100;
-    drive.settings.U_zero_noise = settings_valuef(PARAM_ID_U_ZERO_NOISE);
-    drive.settings.I_zero_noise = settings_valuef(PARAM_ID_I_ZERO_NOISE);
-    drive.settings.U_rot_nom = settings_valuef(PARAM_ID_U_ROT_NOM);
-    drive.settings.I_rot_nom = settings_valuef(PARAM_ID_I_ROT_NOM);
-    drive.settings.I_exc = settings_valuef(PARAM_ID_I_EXC);
+    drive_protection_set_input_voltage(settings_valuef(PARAM_ID_U_NOM),
+                                       settings_valueu(PARAM_ID_U_NOM_ALLOW_VAR),
+                                       settings_valueu(PARAM_ID_U_NOM_CRIT_VAR));
+    drive_protection_set_zero_voltage_noise(settings_valuef(PARAM_ID_U_ZERO_NOISE));
+    drive_protection_set_zero_current_noise(settings_valuef(PARAM_ID_I_ZERO_NOISE));
+    drive_protection_set_rot_voltage(settings_valuef(PARAM_ID_U_ROT_NOM),
+                                     settings_valueu(PARAM_ID_U_ROT_ALLOW_VAR),
+                                     settings_valueu(PARAM_ID_U_ROT_CRIT_VAR));
+    drive_protection_set_exc_current(settings_valuef(PARAM_ID_I_EXC),
+                                     settings_valuef(PARAM_ID_I_EXC_ALLOW_VAR),
+                                     settings_valuef(PARAM_ID_I_EXC_CRIT_VAR));
+
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
