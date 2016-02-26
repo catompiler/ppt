@@ -47,6 +47,12 @@ extern void drive_protection_set_zero_voltage_noise(fixed32_t u_noize);
 extern void drive_protection_set_zero_current_noise(fixed32_t i_noize);
 
 /**
+ * Устанавливает шум нулевого тока ротора.
+ * @param u_noize Шум нулевого тока ротора.
+ */
+extern void drive_protection_set_rot_zero_current_noise(fixed32_t i_noize);
+
+/**
  * Устанавливает ток возбуждения.
  * @param i_exc Ток возбуждения.
  * @param allow_delta Допустимое отклонение.
@@ -56,11 +62,19 @@ extern void drive_protection_set_exc_current(fixed32_t i_exc, uint32_t allow_del
 
 /**
  * Устанавливает напряжение якоря.
- * @param i_exc Напряжение якоря.
+ * @param u_rot Напряжение якоря.
  * @param allow_delta Допустимое отклонение.
  * @param crit_delta Критическое отклонение.
  */
 extern void drive_protection_set_rot_voltage(fixed32_t u_rot, uint32_t allow_delta, uint32_t crit_delta);
+
+/**
+ * Устанавливает ток якоря.
+ * @param i_rot Ток якоря.
+ * @param allow_delta Допустимое отклонение.
+ * @param crit_delta Критическое отклонение.
+ */
+extern void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uint32_t crit_delta);
 
 /**
  * Выполняет проверку входного напряжения.
@@ -84,6 +98,13 @@ extern drive_pwr_check_res_t drive_protection_check_zero_voltage(fixed32_t volta
 extern drive_pwr_check_res_t drive_protection_check_zero_current(fixed32_t current);
 
 /**
+ * Выполняет проверку отсутствия тока ротора.
+ * @param current Ток ротора.
+ * @return Результат проверки.
+ */
+extern drive_pwr_check_res_t drive_protection_check_rot_zero_current(fixed32_t current);
+
+/**
  * Выполняет проверку тока возбуждения.
  * @param current Ток.
  * @return Результат проверки.
@@ -96,5 +117,12 @@ extern drive_pwr_check_res_t drive_protection_check_exc_current(fixed32_t curren
  * @return Результат проверки.
  */
 extern drive_pwr_check_res_t drive_protection_check_rot_voltage(fixed32_t voltage);
+
+/**
+ * Выполняет проверку тока ротора.
+ * @param current Ток.
+ * @return Результат проверки.
+ */
+extern drive_pwr_check_res_t drive_protection_check_rot_current(fixed32_t current);
 
 #endif /* DRIVE_PROTECTION_H */

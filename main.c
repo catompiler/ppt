@@ -1207,77 +1207,77 @@ static void button_stop_on_clicked(gui_button_t* button)
 static void make_gui_adc(void)
 {
     gui_label_init_parent(&lbl_adc1_in1, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc1_in1, "adc1_in1:");
+    gui_label_set_text(&lbl_adc1_in1, "Ua:");
     gui_widget_move(GUI_WIDGET(&lbl_adc1_in1), 120, GUI_LABEL_TOP(0));
     gui_widget_resize(GUI_WIDGET(&lbl_adc1_in1), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in1), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in1), true);
     
     gui_label_init_parent(&lbl_adc1_in2, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc1_in2, "adc1_in2:");
+    gui_label_set_text(&lbl_adc1_in2, "Ub:");
     gui_widget_move(GUI_WIDGET(&lbl_adc1_in2), 120, GUI_LABEL_TOP(1));
     gui_widget_resize(GUI_WIDGET(&lbl_adc1_in2), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in2), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in2), true); 
     
     gui_label_init_parent(&lbl_adc1_in3, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc1_in3, "adc1_in3:");
+    gui_label_set_text(&lbl_adc1_in3, "Uc:");
     gui_widget_move(GUI_WIDGET(&lbl_adc1_in3), 120, GUI_LABEL_TOP(2));
     gui_widget_resize(GUI_WIDGET(&lbl_adc1_in3), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in3), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in3), true);
 
     gui_label_init_parent(&lbl_adc1_in4, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc1_in4, "adc1_in4:");
+    gui_label_set_text(&lbl_adc1_in4, "Urot:");
     gui_widget_move(GUI_WIDGET(&lbl_adc1_in4), 120, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&lbl_adc1_in4), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc1_in4), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc1_in4), true);
     
     gui_label_init_parent(&lbl_adc2_in1, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc2_in1, "adc2_in1:");
+    gui_label_set_text(&lbl_adc2_in1, "Ia:");
     gui_widget_move(GUI_WIDGET(&lbl_adc2_in1), 120, GUI_LABEL_TOP(4));
     gui_widget_resize(GUI_WIDGET(&lbl_adc2_in1), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in1), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in1), true);
     
     gui_label_init_parent(&lbl_adc2_in2, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc2_in2, "adc2_in2:");
+    gui_label_set_text(&lbl_adc2_in2, "Ib:");
     gui_widget_move(GUI_WIDGET(&lbl_adc2_in2), 120, GUI_LABEL_TOP(5));
     gui_widget_resize(GUI_WIDGET(&lbl_adc2_in2), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in2), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in2), true);
     
     gui_label_init_parent(&lbl_adc2_in3, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc2_in3, "adc2_in3:");
+    gui_label_set_text(&lbl_adc2_in3, "Ic:");
     gui_widget_move(GUI_WIDGET(&lbl_adc2_in3), 120, GUI_LABEL_TOP(6));
     gui_widget_resize(GUI_WIDGET(&lbl_adc2_in3), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in3), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in3), true);
 
     gui_label_init_parent(&lbl_adc2_in4, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc2_in4, "adc2_in4:");
+    gui_label_set_text(&lbl_adc2_in4, "Irot:");
     gui_widget_move(GUI_WIDGET(&lbl_adc2_in4), 120, GUI_LABEL_TOP(7));
     gui_widget_resize(GUI_WIDGET(&lbl_adc2_in4), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc2_in4), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc2_in4), true);
     
     gui_label_init_parent(&lbl_adc3_in1, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc3_in1, "adc3_in1:");
+    gui_label_set_text(&lbl_adc3_in1, "Iexc:");
     gui_widget_move(GUI_WIDGET(&lbl_adc3_in1), 120, GUI_LABEL_TOP(8));
     gui_widget_resize(GUI_WIDGET(&lbl_adc3_in1), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc3_in1), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc3_in1), true);
     
     gui_label_init_parent(&lbl_adc3_in2, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc3_in2, "adc3_in2:");
+    gui_label_set_text(&lbl_adc3_in2, "Iref:");
     gui_widget_move(GUI_WIDGET(&lbl_adc3_in2), 120, GUI_LABEL_TOP(9));
     gui_widget_resize(GUI_WIDGET(&lbl_adc3_in2), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc3_in2), GUI_BORDER_SOLID);
     gui_widget_set_visible(GUI_WIDGET(&lbl_adc3_in2), true); 
     
     gui_label_init_parent(&lbl_adc3_in3, &gui, &parent_widget);
-    gui_label_set_text(&lbl_adc3_in3, "adc3_in3:");
+    gui_label_set_text(&lbl_adc3_in3, "Ifan:");
     gui_widget_move(GUI_WIDGET(&lbl_adc3_in3), 120, GUI_LABEL_TOP(10));
     gui_widget_resize(GUI_WIDGET(&lbl_adc3_in3), 60, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&lbl_adc3_in3), GUI_BORDER_SOLID);

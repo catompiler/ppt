@@ -51,6 +51,7 @@ typedef struct _Drive {
     drive_errors_t errors; //!< Ошибки.
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
+    drive_power_warnings_t power_warnings; //!< Предупреждения питания.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
@@ -73,7 +74,7 @@ static drive_t drive;
  * Получение состояния.
  * @return Состояние.
  */
-ALWAYS_INLINE static drive_status_t drive_get_state(void)
+ALWAYS_INLINE static drive_state_t drive_get_state(void)
 {
     return drive.state;
 }
@@ -82,7 +83,7 @@ ALWAYS_INLINE static drive_status_t drive_get_state(void)
  * Установка состояния.
  * @param state Состояние.
  */
-static void drive_set_state(drive_status_t state)
+static void drive_set_state(drive_state_t state)
 {
     drive.state = state;
     
@@ -206,6 +207,24 @@ ALWAYS_INLINE static void drive_clear_power_error(drive_power_errors_t error)
     drive.power_errors &= ~error;
 }
 
+/**
+ * Установка предупреждения питания.
+ * @param error Предупреждение.
+ */
+ALWAYS_INLINE static void drive_set_power_warning(drive_power_warnings_t warning)
+{
+    drive.power_warnings |= warning;
+}
+
+/**
+ * Снятие предупреждения питания.
+ * @param warning Предупреждение.
+ */
+ALWAYS_INLINE static void drive_clear_power_warning(drive_power_warnings_t warning)
+{
+    drive.power_warnings &= ~warning;
+}
+
 /*
  * Обработка возникновения ошибки.
  */
@@ -218,8 +237,8 @@ static void drive_error_occured(drive_errors_t error)
 {
     drive_set_error(error);
     
-    if(drive_get_state() != DRIVE_STATUS_ERROR){
-        drive_set_state(DRIVE_STATUS_ERROR);
+    if(drive_get_state() != DRIVE_STATE_ERROR){
+        drive_set_state(DRIVE_STATE_ERROR);
         drive_triacs_stop();
     }
 }
@@ -234,85 +253,39 @@ static void drive_power_error_occured(drive_power_errors_t error)
     drive_error_occured(DRIVE_ERROR_POWER_INVALID);
 }
 
+/**
+ * Обработчик возникновения предупреждения питания.
+ * @param warning Предупреждение питания.
+ */
+static void drive_power_warning_occured(drive_power_warnings_t warning)
+{
+    drive_set_power_warning(warning);
+    drive_set_warning(DRIVE_WARNING_POWER);
+}
+
 
 /*
  * Общие функции обработки питания.
  */
 
-// Результаты сравнения.
-// Больше.
-#define PWR_GREATER 1
-// Меньше.
-#define PWR_LESS -1
-// Равен.
-#define PWR_EQUAL 0
-
-/**
- * Сравнение значения канала с заданным.
- * @param channel Канал АЦП.
- * @param normal Нормальное значение.
- * @param max_delta Допуск.
- * @return Результат сравнения.
- */
-static int drive_compare_power_value(size_t channel, fixed32_t normal, fixed32_t max_delta)
+static void drive_handle_power_check(drive_pwr_check_res_t res, uint32_t under_warning, uint32_t over_warning,
+                                                                   uint32_t under_error,   uint32_t over_error)
 {
-    fixed32_t value = drive_power_channel_real_value_avg(channel);
-    fixed32_t delta = value - normal;
-    
-    if(delta < -max_delta) return PWR_LESS;
-    if(delta >  max_delta) return PWR_GREATER;
-    return PWR_EQUAL;
-}
-
-/**
- * Сравнивает канал входного напряжения с заданным отклонением.
- * @param channel Канал АЦП.
- * @param delta_percents Допуск в вольтах.
- * @return Результат сравнения.
- */
-static int drive_compare_input_voltage(size_t channel, fixed32_t delta)
-{
-    return drive_compare_power_value(channel, drive.settings.U_nom, delta);
-}
-
-/**
- * Сравнение канала тока с нулём.
- * @param channel Канала АЦП.
- * @return Результат сравнения.
- */
-static int drive_compare_zero_current(size_t channel)
-{
-    return drive_compare_power_value(channel, 0, drive.settings.I_zero_noise);
-}
-
-/**
- * Сравнение канала напряжения с нулём.
- * @param channel Канала АЦП.
- * @return Результат сравнения.
- */
-static int drive_compare_zero_voltage(size_t channel)
-{
-    return drive_compare_power_value(channel, 0, drive.settings.U_zero_noise);
-}
-
-/**
- * Устанавливает флаг в зависимости от результата сравнения.
- * @param cmp Результат сравнения.
- * @param set_proc Функция установки флага.
- * @param less Флаг при значении "меньше".
- * @param greater Флаг при значении "больше".
- */
-static void drive_compare_set_flag(int cmp, void (*set_proc)(uint32_t), uint32_t less, uint32_t greater)
-{
-    switch(cmp){
-        case PWR_LESS:
-            set_proc(less);
-            break;
-        case PWR_GREATER:
-            set_proc(greater);
-            break;
-        case PWR_EQUAL:
+    switch(res){
         default:
+        case DRIVE_PWR_CHECK_NORMAL:
+            break;
+        case DRIVE_PWR_CHECK_ALLOW_UNDERFLOW:
+            drive_power_warning_occured(under_warning);
+            break;
+        case DRIVE_PWR_CHECK_ALLOW_OVERFLOW:
+            drive_power_warning_occured(over_warning);
+            break;
+        case DRIVE_PWR_CHECK_CRIT_UNDERFLOW:
+            drive_power_error_occured(under_error);
+            break;
+        case DRIVE_PWR_CHECK_CRIT_OVERFLOW:
+            drive_power_error_occured(over_error);
             break;
     }
 }
@@ -324,28 +297,23 @@ static void drive_check_power_u_in(void)
 {
     // Напряжения - превышение критической разности.
     // A.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ua, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua);
+    drive_handle_power_check(
+            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Ua)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Ua, DRIVE_POWER_WARNING_OVERFLOW_Ua,
+            DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua
+            );
     // B.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ub, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Ub);
+    drive_handle_power_check(
+            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Ub)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Ub, DRIVE_POWER_WARNING_OVERFLOW_Ub,
+            DRIVE_POWER_ERROR_UNDERFLOW_Ub, DRIVE_POWER_ERROR_OVERFLOW_Ub
+            );
     // C.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Uc, drive.settings.U_nom_delta_crit),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc);
-    // Rot.
-    drive_compare_set_flag(drive_compare_zero_voltage(DRIVE_POWER_Urot),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
-    
-    // Напряжения - превышение допустимой разности.
-    // A.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ua, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Ua, DRIVE_WARNING_POWER_OVERFLOW_Ua);
-    // B.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Ub, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Ub);
-    // C.
-    drive_compare_set_flag(drive_compare_input_voltage(DRIVE_POWER_Uc, drive.settings.U_nom_delta_allow),
-                           drive_set_warning, DRIVE_WARNING_POWER_UNDERFLOW_Uc, DRIVE_WARNING_POWER_OVERFLOW_Uc);
+    drive_handle_power_check(
+            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Uc)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Uc, DRIVE_POWER_WARNING_OVERFLOW_Uc,
+            DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc
+            );
 }
 
 /*
@@ -357,26 +325,26 @@ static void drive_check_power_u_in(void)
  */
 static void drive_check_power_idle(void)
 {
-    // Токи - отклонения от нуля.
-    // A.
-    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ia),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ia, DRIVE_POWER_ERROR_IDLE_Ia);
-    // B.
-    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ib),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ib);
-    // C.
-    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Ic),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ic);
-    // Exc.
-    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Iexc),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc);
+    // Напряжения.
+    // Фазы.
+    drive_check_power_u_in();
+    // Напряжения - отклонения от нуля.
     // Rot.
-    drive_compare_set_flag(drive_compare_zero_current(DRIVE_POWER_Irot),
-                           drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
-    // Напряжения фаз.
-    
-#warning adc calibration - uncomment.
-    //drive_check_power_u_in();
+    drive_handle_power_check(
+            drive_protection_check_zero_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot)), 0, 0,
+            DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot
+            );
+    // Токи - отклонения от нуля.
+    // Exc.
+    drive_handle_power_check(
+            drive_protection_check_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)), 0, 0,
+            DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc
+            );
+    // Rot.
+    drive_handle_power_check(
+            drive_protection_check_rot_zero_current(drive_power_channel_real_value(DRIVE_POWER_Irot)), 0, 0,
+            DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot
+            );
 }
 
 /**
@@ -384,29 +352,28 @@ static void drive_check_power_idle(void)
  */
 static void drive_check_power_running(void)
 {
+    // Напряжения.
+    // Фазы.
+    drive_check_power_u_in();
     // Rot.
-    //drive_compare_set_flag(drive_compare_zero_voltage(POWER_VALUE_Urot),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot);
-    // Токи - отклонения от нуля.
-    // A.
-    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ia),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ia, DRIVE_POWER_ERROR_IDLE_Ia);
-    // B.
-    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ib),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ib);
-    // C.
-    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Ic),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Ic, DRIVE_POWER_ERROR_IDLE_Ic);
+    drive_handle_power_check(
+            drive_protection_check_rot_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Urot, DRIVE_POWER_WARNING_OVERFLOW_Urot,
+            DRIVE_POWER_ERROR_UNDERFLOW_Urot, DRIVE_POWER_ERROR_OVERFLOW_Urot
+            );
+    // Токи.
+    // Rot.
+    drive_handle_power_check(
+            drive_protection_check_rot_current(drive_power_channel_real_value(DRIVE_POWER_Irot)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Irot, DRIVE_POWER_WARNING_OVERFLOW_Irot,
+            DRIVE_POWER_ERROR_UNDERFLOW_Irot, DRIVE_POWER_ERROR_OVERFLOW_Irot
+            );
     // Exc.
-    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Iexc),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc);
-    // Rot.
-    //drive_compare_set_flag(drive_compare_zero_current(POWER_VALUE_Irot),
-    //                       drive_power_error_occured, DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot);
-    
-    // Напряжения фаз.
-#warning adc calibration - uncomment.
-    //drive_check_power_u_in();
+    drive_handle_power_check(
+            drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)),
+            DRIVE_POWER_WARNING_UNDERFLOW_Iexc, DRIVE_POWER_WARNING_OVERFLOW_Iexc,
+            DRIVE_POWER_ERROR_UNDERFLOW_Iexc, DRIVE_POWER_ERROR_OVERFLOW_Iexc
+            );
 }
 
 
@@ -757,12 +724,16 @@ err_t drive_update_settings(void)
                                        settings_valueu(PARAM_ID_U_NOM_CRIT_VAR));
     drive_protection_set_zero_voltage_noise(settings_valuef(PARAM_ID_U_ZERO_NOISE));
     drive_protection_set_zero_current_noise(settings_valuef(PARAM_ID_I_ZERO_NOISE));
+    drive_protection_set_rot_zero_current_noise(settings_valuef(PARAM_ID_I_ROT_ZERO_NOISE));
     drive_protection_set_rot_voltage(settings_valuef(PARAM_ID_U_ROT_NOM),
                                      settings_valueu(PARAM_ID_U_ROT_ALLOW_VAR),
                                      settings_valueu(PARAM_ID_U_ROT_CRIT_VAR));
+    drive_protection_set_rot_current(settings_valuef(PARAM_ID_I_ROT_NOM),
+                                     settings_valueu(PARAM_ID_I_ROT_ALLOW_VAR),
+                                     settings_valueu(PARAM_ID_I_ROT_CRIT_VAR));
     drive_protection_set_exc_current(settings_valuef(PARAM_ID_I_EXC),
-                                     settings_valuef(PARAM_ID_I_EXC_ALLOW_VAR),
-                                     settings_valuef(PARAM_ID_I_EXC_CRIT_VAR));
+                                     settings_valueu(PARAM_ID_I_EXC_ALLOW_VAR),
+                                     settings_valueu(PARAM_ID_I_EXC_CRIT_VAR));
 
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
@@ -832,6 +803,16 @@ bool drive_power_error(drive_power_error_t error)
 drive_power_errors_t drive_power_errors(void)
 {
     return drive.power_errors;
+}
+
+bool drive_power_warning(drive_power_warning_t warning)
+{
+    return (drive.power_warnings & warning) != 0;
+}
+
+drive_power_warnings_t drive_power_warnings(void)
+{
+    return drive.power_warnings;
 }
 
 drive_power_calibration_t drive_power_calibration(void)

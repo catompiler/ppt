@@ -108,16 +108,39 @@ typedef enum _Drive_Power_Error {
 typedef uint32_t drive_power_errors_t;
 
 typedef enum _Drive_Warning {
-    DRIVE_WARNING_NONE               = 0x0,
-    DRIVE_WARNING_POWER_OVERFLOW_Ua  = 0x1,
-    DRIVE_WARNING_POWER_UNDERFLOW_Ua = 0x2,
-    DRIVE_WARNING_POWER_OVERFLOW_Ub  = 0x4,
-    DRIVE_WARNING_POWER_UNDERFLOW_Ub = 0x8,
-    DRIVE_WARNING_POWER_OVERFLOW_Uc  = 0x10,
-    DRIVE_WARNING_POWER_UNDERFLOW_Uc = 0x20
+    DRIVE_WARNING_NONE  = 0x0,
+    DRIVE_WARNING_POWER = 0x1
 } drive_warning_t;
 
 typedef uint32_t drive_warnings_t;
+
+typedef enum _Drive_Power_Warning {
+    DRIVE_POWER_WARNING_NONE           = 0x0,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ua   = 0x1,
+    DRIVE_POWER_WARNING_OVERFLOW_Ua    = 0x2,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ub   = 0x4,
+    DRIVE_POWER_WARNING_OVERFLOW_Ub    = 0x8,
+    DRIVE_POWER_WARNING_UNDERFLOW_Uc   = 0x10,
+    DRIVE_POWER_WARNING_OVERFLOW_Uc    = 0x20,
+    DRIVE_POWER_WARNING_UNDERFLOW_Urot = 0x40,
+    DRIVE_POWER_WARNING_OVERFLOW_Urot  = 0x80,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ia   = 0x100,
+    DRIVE_POWER_WARNING_OVERFLOW_Ia    = 0x200,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ib   = 0x400,
+    DRIVE_POWER_WARNING_OVERFLOW_Ib    = 0x800,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ic   = 0x1000,
+    DRIVE_POWER_WARNING_OVERFLOW_Ic    = 0x2000,
+    DRIVE_POWER_WARNING_UNDERFLOW_Irot = 0x4000,
+    DRIVE_POWER_WARNING_OVERFLOW_Irot  = 0x8000,
+    DRIVE_POWER_WARNING_UNDERFLOW_Iexc = 0x10000,
+    DRIVE_POWER_WARNING_OVERFLOW_Iexc  = 0x20000,
+    DRIVE_POWER_WARNING_UNDERFLOW_Ifan = 0x40000,
+    DRIVE_POWER_WARNING_OVERFLOW_Ifan  = 0x80000,
+    DRIVE_POWER_WARNING_UNDERFLOW_Iref = 0x100000,
+    DRIVE_POWER_WARNING_OVERFLOW_Iref  = 0x200000
+} drive_power_warning_t;
+
+typedef uint32_t drive_power_warnings_t;
 
 //! Перечисление состояний калибровки питания.
 typedef enum _Drive_Power_Calibration {
@@ -223,6 +246,19 @@ extern bool drive_power_error(drive_power_error_t error);
  * @return Ошибки питания привода.
  */
 extern drive_power_errors_t drive_power_errors(void);
+
+/**
+ * Получает наличие предупреждения питания привода.
+ * @param warning Предупреждение питания привода.
+ * @return Наличие предупреждения питания привода.
+ */
+extern bool drive_power_warning(drive_power_warning_t warning);
+
+/**
+ * Получает предупреждения питания привода.
+ * @return Предупреждения питания привода.
+ */
+extern drive_power_warnings_t drive_power_warnings(void);
 
 /**
  * Получает состояние калибровки питания привода.

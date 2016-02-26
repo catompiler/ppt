@@ -28,7 +28,7 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x4cb7); // Uc
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
     power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0x7276); // Urot
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x10000); // Irot
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x3333); // Irot
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x37A); // Iexc //0x1bd
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan

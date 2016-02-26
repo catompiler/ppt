@@ -13,7 +13,7 @@
 
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 26
+#define PARAMETERS_REAL_COUNT 29
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 0
 // Общее число параметров.
@@ -31,13 +31,16 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_U_NOM_CRIT_VAR,  PARAM_TYPE_UINT,      0,       20,        10,         0), // %
     PARAM_DESCR(PARAM_ID_U_ZERO_NOISE,    PARAM_TYPE_FRACT_100, F32I(0), F32I(10),  F32I(10),   0),
     PARAM_DESCR(PARAM_ID_I_ZERO_NOISE,    PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32(1, 10), 0),
+    PARAM_DESCR(PARAM_ID_I_ROT_ZERO_NOISE,PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32I(2),    0),
     PARAM_DESCR(PARAM_ID_U_ROT_NOM,       PARAM_TYPE_UINT,      0,       600,       400,        0),
     PARAM_DESCR(PARAM_ID_U_ROT_ALLOW_VAR, PARAM_TYPE_UINT,      0,       10,        2,          0), // %
     PARAM_DESCR(PARAM_ID_U_ROT_CRIT_VAR,  PARAM_TYPE_UINT,      0,       20,        5,          0), // %
     PARAM_DESCR(PARAM_ID_I_ROT_NOM,       PARAM_TYPE_FRACT_10,  F32I(0), F32I(200), F32I(10),   0),
-    PARAM_DESCR(PARAM_ID_I_EXC,           PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32(5,10),  0),
-    PARAM_DESCR(PARAM_ID_I_EXC_ALLOW_VAR, PARAM_TYPE_UINT,      0,       10,        2,          0), // %
-    PARAM_DESCR(PARAM_ID_I_EXC_CRIT_VAR,  PARAM_TYPE_UINT,      0,       20,        5,          0), // %
+    PARAM_DESCR(PARAM_ID_I_ROT_ALLOW_VAR, PARAM_TYPE_UINT,      0,       100,       5,          0), // %
+    PARAM_DESCR(PARAM_ID_I_ROT_CRIT_VAR,  PARAM_TYPE_UINT,      0,       100,       10,         0), // %
+    PARAM_DESCR(PARAM_ID_I_EXC,           PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32(65,100),0),
+    PARAM_DESCR(PARAM_ID_I_EXC_ALLOW_VAR, PARAM_TYPE_UINT,      0,       100,       10,         0), // %
+    PARAM_DESCR(PARAM_ID_I_EXC_CRIT_VAR,  PARAM_TYPE_UINT,      0,       100,       20,         0), // %
     
     PARAM_DESCR(PARAM_ID_EXC_PHASE,       PARAM_TYPE_UINT,      PHASE_A, PHASE_C,   PHASE_B,      0),
     PARAM_DESCR(PARAM_ID_EXC_MODE,        PARAM_TYPE_UINT, DRIVE_TRIACS_EXC_FIXED, DRIVE_TRIACS_EXC_REGULATED, DRIVE_TRIACS_EXC_FIXED, 0),
