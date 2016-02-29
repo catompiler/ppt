@@ -6,19 +6,19 @@
 
 //! Тип структуры защиты привода.
 typedef struct _Drive_Protection {
-    fixed32_t U_in;
-    fixed32_t U_in_allow_delta;
-    fixed32_t U_in_crit_delta;
-    fixed32_t U_zero_noise;
-    fixed32_t I_zero_noise;
-    fixed32_t I_rot_zero_noise;
-    fixed32_t I_exc;
+    fixed32_t U_in; //!< Номинальное напряжение, В.
+    fixed32_t U_in_allow_delta; //!< Допустимое отклонение номинального напряжения, В.
+    fixed32_t U_in_crit_delta; //!< Критическое отклонение номинального напряжения, В.
+    fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
+    fixed32_t I_zero_noise; //!< Шум тока нуля, А.
+    fixed32_t I_rot_zero_noise; //!< Шум тока нуля ротора, А.
+    fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t I_exc_allow_delta;
     fixed32_t I_exc_crit_delta;
-    fixed32_t U_rot;
+    fixed32_t U_rot; //!< Номинальное напряжение возбуждения якоря.
     fixed32_t U_rot_allow_delta;
     fixed32_t U_rot_crit_delta;
-    fixed32_t I_rot;
+    fixed32_t I_rot; //!< Номинальный ток якоря.
     fixed32_t I_rot_allow_delta;
     fixed32_t I_rot_crit_delta;
 } drive_protection_t;

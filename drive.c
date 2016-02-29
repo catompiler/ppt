@@ -30,14 +30,6 @@
 
 //! Тип структуры настроек привода.
 typedef struct _Drive_Settings {
-    fixed32_t U_nom; //!< Номинальное напряжение, В.
-    fixed32_t U_nom_delta_allow; //!< Допустимое отклонение номинального напряжения, В.
-    fixed32_t U_nom_delta_crit; //!< Критическое отклонение номинального напряжения, В.
-    fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
-    fixed32_t I_zero_noise; //!< Шум тока нуля, А.
-    fixed32_t U_rot_nom; //!< Номинальное напряжение возбуждения якоря.
-    fixed32_t I_rot_nom; //!< Номинальный ток якоря.
-    fixed32_t I_exc; //!< Номинальный ток возбуждения.
     uint32_t stop_rot_periods; //!< Время остановки ротора в периодах.
     uint32_t stop_exc_periods; //!< Время остановки возбуждения в периодах.
     uint32_t start_exc_periods; //!< Время остановки возбуждения в периодах.
@@ -56,6 +48,7 @@ typedef struct _Drive {
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
     drive_settings_t settings; //!< Настройки.
+    uint32_t start_stop_counter; //!< Счётчик периодов при запуске / останове.
 } drive_t;
 
 //! Состояние привода.
@@ -502,19 +495,26 @@ static err_t drive_state_process_stop(phase_t phase)
             break;
         case DRIVE_STOPPING_RAMP:
             if(drive_regulator_state() == DRIVE_REGULATOR_STATE_IDLE){
+                drive_triacs_set_pairs_enabled(false);
+                drive_regulator_set_rot_enabled(false);
                 drive.stopping_state = DRIVE_STOPPING_WAIT_ROT;
+                drive.start_stop_counter = 0;
             }
             break;
         case DRIVE_STOPPING_WAIT_ROT:
-            drive_triacs_set_pairs_enabled(false);
-            drive_regulator_set_rot_enabled(false);
-            drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
+            if(++ drive.start_stop_counter >= drive.settings.stop_rot_periods){
+                drive_triacs_set_exc_enabled(false);
+                drive_regulator_set_exc_enabled(false);
+                drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
+                drive.start_stop_counter = 0;
+            }
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            drive_triacs_set_exc_enabled(false);
-            drive_regulator_set_exc_enabled(false);
-            drive_set_state(DRIVE_STATE_IDLE);
-            drive.stopping_state = DRIVE_STOPPING_DONE;
+            if(++ drive.start_stop_counter >= drive.settings.stop_exc_periods){
+                drive_set_state(DRIVE_STATE_IDLE);
+                drive.stopping_state = DRIVE_STOPPING_DONE;
+                drive.start_stop_counter = 0;
+            }
             break;
         case DRIVE_STOPPING_DONE:
             drive_set_state(DRIVE_STATE_IDLE);
@@ -543,14 +543,20 @@ static err_t drive_state_process_start(phase_t phase)
             return E_NO_ERROR;
         case DRIVE_STARTING_START:
             drive_triacs_set_exc_enabled(true);
-            drive_regulator_set_exc_enabled(true);
+            if(drive_triacs_exc_mode() == DRIVE_TRIACS_EXC_REGULATED){
+                drive_regulator_set_exc_enabled(true);
+            }
             drive_regulator_start();
             drive.starting_state = DRIVE_STARTING_WAIT_EXC;
+            drive.start_stop_counter = 0;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            drive_triacs_set_pairs_enabled(true);
-            drive_regulator_set_rot_enabled(true);
-            drive.starting_state = DRIVE_STARTING_RAMP;
+            if(++ drive.start_stop_counter >= drive.settings.start_exc_periods){
+                drive_triacs_set_pairs_enabled(true);
+                drive_regulator_set_rot_enabled(true);
+                drive.starting_state = DRIVE_STARTING_RAMP;
+                drive.start_stop_counter = 0;
+            }
             break;
         case DRIVE_STARTING_RAMP:
             if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
