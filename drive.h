@@ -41,22 +41,22 @@ typedef uint32_t drive_flags_t;
 
 //! Тип статуса привода.
 typedef enum _Drive_Status {
-    DRIVE_STATUS_INIT       = 0,
-    DRIVE_STATUS_IDLE       = 1,
-    DRIVE_STATUS_RUN        = 2,
-    DRIVE_STATUS_ERROR      = 3
+    DRIVE_STATUS_INIT       = 0, //!< Инициализация.
+    DRIVE_STATUS_IDLE       = 1, //!< Простой (готовность).
+    DRIVE_STATUS_RUN        = 2, //!< Работа.
+    DRIVE_STATUS_ERROR      = 3  //!< Ошибка.
 } drive_status_t;
 
 //! Тип состояния машины состояний привода.
 typedef enum _Drive_State {
-    DRIVE_STATE_INIT = 0,
-    DRIVE_STATE_CALIBRATION,
-    DRIVE_STATE_IDLE,
-    DRIVE_STATE_START,
-    DRIVE_STATE_RUN,
-    DRIVE_STATE_STOP,
-    DRIVE_STATE_STOP_ERROR,
-    DRIVE_STATE_ERROR
+    DRIVE_STATE_INIT        = 0, //!< Инициализация.
+    DRIVE_STATE_CALIBRATION = 1, //!< Калибровка питания.
+    DRIVE_STATE_IDLE        = 2, //!< Простой (готовность).
+    DRIVE_STATE_START       = 3, //!< Запуск.
+    DRIVE_STATE_RUN         = 4, //!< Работа.
+    DRIVE_STATE_STOP        = 5, //!< Останов.
+    DRIVE_STATE_STOP_ERROR  = 6, //!< Останов при ошибке.
+    DRIVE_STATE_ERROR       = 7  //!< Ошибка.
 } drive_state_t;
 
 //! Тип ошибки привода.
@@ -108,10 +108,11 @@ typedef enum _Drive_Power_Error {
 typedef uint32_t drive_power_errors_t;
 
 typedef enum _Drive_Warning {
-    DRIVE_WARNING_NONE  = 0x0,
-    DRIVE_WARNING_POWER = 0x1
+    DRIVE_WARNING_NONE  = 0x0, //!< Нет предупреждений.
+    DRIVE_WARNING_POWER = 0x1  //!< Предупреждение по питанию.
 } drive_warning_t;
 
+//! Тип предупреждений привода.
 typedef uint32_t drive_warnings_t;
 
 typedef enum _Drive_Power_Warning {
@@ -140,35 +141,45 @@ typedef enum _Drive_Power_Warning {
     DRIVE_POWER_WARNING_OVERFLOW_Iref  = 0x200000
 } drive_power_warning_t;
 
+//! Тип предупреждений питания привода.
 typedef uint32_t drive_power_warnings_t;
 
 //! Перечисление состояний калибровки питания.
 typedef enum _Drive_Power_Calibration {
-    DRIVE_PWR_CALIBRATION_NONE = 0, //!< Нет калибровки.
-    DRIVE_PWR_CALIBRATION_START, //!< Нужно выполнить калибровку.
-    DRIVE_PWR_CALIBRATION_RUNNING, //!< Калибровка выполняется.
-    DRIVE_PWR_CALIBRATION_DONE //!< Калибровка выполнена.
+    DRIVE_PWR_CALIBRATION_NONE    = 0, //!< Нет калибровки.
+    DRIVE_PWR_CALIBRATION_START   = 1, //!< Нужно выполнить калибровку.
+    DRIVE_PWR_CALIBRATION_RUNNING = 2, //!< Калибровка выполняется.
+    DRIVE_PWR_CALIBRATION_DONE    = 3  //!< Калибровка выполнена.
 } drive_power_calibration_t;
 
 //! Перечисление состояний запуска привода.
 typedef enum _Drive_Starting {
-    DRIVE_STARTING_NONE = 0, //!< Не запускается.
-    DRIVE_STARTING_START, //!< Нужно запустить.
-    //DRIVE_STARTING_DIR, //!< Определение направления.
-    DRIVE_STARTING_WAIT_EXC, //!< Ожидание возбуждения.
-    DRIVE_STARTING_RAMP, //!< Разгон.
-    DRIVE_STARTING_DONE //!< Запущен.
+    DRIVE_STARTING_NONE     = 0, //!< Не запускается.
+    DRIVE_STARTING_START    = 1, //!< Нужно запустить.
+    DRIVE_STARTING_WAIT_EXC = 2, //!< Ожидание возбуждения.
+    DRIVE_STARTING_RAMP     = 3, //!< Разгон.
+    DRIVE_STARTING_DONE     = 4  //!< Запущен.
 } drive_starting_t;
 
 //! Перечисление состояний останова привода.
 typedef enum _Drive_Stopping {
-    DRIVE_STOPPING_NONE = 0, //!< Не останавливается.
-    DRIVE_STOPPING_STOP, //!< Нужно остановить.
-    DRIVE_STOPPING_RAMP, //!< Торможение.
-    DRIVE_STOPPING_WAIT_ROT, //!< Ожидане остановки якоря.
-    DRIVE_STOPPING_WAIT_EXC, //!< Ожидане возвращения к нулю возбуждения.
-    DRIVE_STOPPING_DONE //!< Остановлен.
+    DRIVE_STOPPING_NONE     = 0, //!< Не останавливается.
+    DRIVE_STOPPING_STOP     = 1, //!< Нужно остановить.
+    DRIVE_STOPPING_RAMP     = 2, //!< Торможение.
+    DRIVE_STOPPING_WAIT_ROT = 3, //!< Ожидане остановки якоря.
+    DRIVE_STOPPING_WAIT_EXC = 4, //!< Ожидане возвращения к нулю возбуждения.
+    DRIVE_STOPPING_DONE     = 5  //!< Остановлен.
 } drive_stopping_t;
+
+//! Перечисление состояний останова привода при ошибке.
+typedef enum _Drive_Err_Stopping {
+    DRIVE_ERR_STOPPING_NONE = 0, //!< Не останавливается.
+    DRIVE_ERR_STOPPING_STOP, //!< Нужно остановить.
+    DRIVE_ERR_STOPPING_WAIT_ROT, //!< Ожидане остановки якоря.
+    DRIVE_ERR_STOPPING_WAIT_EXC, //!< Ожидане возвращения к нулю возбуждения.
+    DRIVE_ERR_STOPPING_DONE //!< Остановлен.
+} drive_err_stopping_t;
+
 
 
 /**

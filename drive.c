@@ -47,6 +47,7 @@ typedef struct _Drive {
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
+    drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
     uint32_t start_stop_counter; //!< Счётчик периодов при запуске / останове.
 } drive_t;
@@ -230,9 +231,24 @@ static void drive_error_occured(drive_errors_t error)
 {
     drive_set_error(error);
     
-    if(drive_get_state() != DRIVE_STATE_ERROR){
-        drive_set_state(DRIVE_STATE_ERROR);
-        drive_triacs_stop();
+    switch(drive_get_state()){
+        case DRIVE_STATE_INIT:
+        case DRIVE_STATE_CALIBRATION:
+        case DRIVE_STATE_IDLE:
+            drive_set_state(DRIVE_STATE_ERROR);
+            break;
+        case DRIVE_STATE_START:
+        case DRIVE_STATE_RUN:
+        case DRIVE_STATE_STOP:
+            drive.err_stopping_state = DRIVE_ERR_STOPPING_STOP;
+            drive_set_state(DRIVE_STATE_STOP_ERROR);
+            drive_triacs_stop();
+            break;
+        case DRIVE_STATE_STOP_ERROR:
+        case DRIVE_STATE_ERROR:
+            break;
+        default:
+            break;
     }
 }
 
@@ -437,6 +453,44 @@ static void drive_setup_triacs_open(phase_t phase)
 }
 
 /**
+ * Обработка состояния останова привода при ошибке.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_stop_error(phase_t phase)
+{
+    switch(drive.err_stopping_state){
+        default:
+        case DRIVE_ERR_STOPPING_NONE:
+            return E_NO_ERROR;
+        case DRIVE_ERR_STOPPING_STOP:
+            drive_triacs_set_pairs_enabled(false);
+            drive_regulator_set_rot_enabled(false);
+            
+            drive_setup_triacs_open(phase);
+            
+            drive_calculate_power(phase);
+            
+            drive_regulate(phase);
+            
+            drive.err_stopping_state = DRIVE_ERR_STOPPING_WAIT_ROT;
+            break;
+        case DRIVE_ERR_STOPPING_WAIT_ROT:
+            drive_regulator_stop();
+            drive_triacs_set_exc_enabled(false);
+            drive_regulator_set_exc_enabled(false);
+        case DRIVE_ERR_STOPPING_WAIT_EXC:
+            drive.err_stopping_state = DRIVE_ERR_STOPPING_DONE;
+        case DRIVE_ERR_STOPPING_DONE:
+            drive_calculate_power(phase);
+            drive_set_state(DRIVE_STATE_ERROR);
+            break;
+    }
+    
+    return E_NO_ERROR;
+}
+
+/**
  * Обработка состояния ошибки привода.
  * @param phase Фаза.
  * @return Код ошибки.
@@ -447,6 +501,8 @@ static err_t drive_state_process_error(phase_t phase)
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Нужно какое-либо направление.
     if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    
+    drive_calculate_power(phase);
     
     return E_NO_ERROR;
 }
@@ -682,8 +738,10 @@ static err_t drive_states_process(phase_t phase)
             drive_state_process_stop(phase);
             break;
         case DRIVE_STATE_STOP_ERROR:
+            drive_state_process_stop_error(phase);
             break;
         case DRIVE_STATE_ERROR:
+            drive_state_process_error(phase);
             break;
     }
     
@@ -719,6 +777,7 @@ err_t drive_init(void)
     drive.errors = DRIVE_ERROR_NONE;
     drive.starting_state = DRIVE_STARTING_NONE;
     drive.stopping_state = DRIVE_STOPPING_NONE;
+    drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
     
     return E_NO_ERROR;
 }
