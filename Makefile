@@ -8,13 +8,12 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS += circular_buffer usart newlib_stubs\
-			counter spi dma future mutex delay\
-			tft9341 tft9341_cache graphics painter font\
-			i2c pca9555 list key_input\
-			gui gui_object gui_widget gui_label\
-			gui_number_label gui_checkbox gui_spinbox\
-			gui_button\
-			phase_state mylib pid_controller\
+	    counter spi dma future mutex delay\
+	    tft9341 tft9341_cache graphics painter font\
+	    i2c pca9555 list key_input\
+	    gui gui_object gui_widget gui_label\
+	    gui_number_label gui_checkbox gui_spinbox\
+	    gui_button phase_state mylib pid_controller
 			
 
 # Стандартные драйвера периферии.

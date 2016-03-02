@@ -1,8 +1,63 @@
 #include "power.h"
 #include "utils/utils.h"
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 
+//! Число отбрасываемых минимальных значений.
+#define POWER_FILTER_SKIP_MIN 1
+//! Число отбрасываемых максимальных значений.
+#define POWER_FILTER_SKIP_MAX 1
+
+
+static void power_filter_reset(power_filter_t* filter)
+{
+    memset(filter, 0x0, sizeof(power_filter_t));
+}
+
+static void power_filter_put(power_filter_t* filter, int16_t value)
+{
+    filter->buffer[filter->index] = value;
+    if(filter->count < POWER_FILTER_SIZE) filter->count ++;
+    if(++ filter->index >= POWER_FILTER_SIZE) filter->index = 0;
+}
+
+static int power_filter_cmp(const void* a, const void* b)
+{
+    return (*(const int16_t*)a - *(const int16_t*)b);
+}
+
+static int16_t power_filter_calculate(power_filter_t* filter)
+{
+    if(filter->count == 0) return 0;
+    
+    int16_t buffer[filter->count];
+    
+    memcpy(buffer, filter->buffer, sizeof(int16_t) * filter->count);
+    
+    qsort(buffer, filter->count, sizeof(int16_t), power_filter_cmp);
+    
+    int32_t val = 0;
+    size_t from = 0;
+    size_t to = filter->count;
+    size_t avg_count = filter->count;
+    
+    if(filter->count > (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX)){
+        from += POWER_FILTER_SKIP_MIN;
+        to -= POWER_FILTER_SKIP_MAX;
+        avg_count -= (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX);
+    }
+    
+    while(from < to){
+        val += buffer[from];
+        from ++;
+    }
+    
+    val /= (int32_t)avg_count;
+    
+    return val;
+}
 
 err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k)
 {
@@ -27,9 +82,8 @@ err_t power_init(power_t* power, power_value_t* channels, size_t channels_count)
 
 ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
-    int32_t value = (int32_t)adc_value;
-    
-    int32_t abs_value = value - channel->raw_zero_cal;
+    int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
+    int32_t abs_value = value;
     
     if(channel->type == POWER_CHANNEL_AC){
         abs_value = ABS(abs_value);
@@ -38,7 +92,7 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
     channel->raw_value_inst = value;
     channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
     
-    channel->sum_zero += value;
+    channel->sum_zero += adc_value;
     channel->sum_avg += abs_value;
     channel->sum_rms += abs_value * abs_value;
     channel->count ++;
@@ -54,6 +108,10 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
 ALWAYS_INLINE err_t power_process_adc_value(power_t* power, size_t channel, uint16_t adc_value)
 {
     if(power->channels_count <= channel) return E_OUT_OF_RANGE;
+    
+    /*if(channel == 6 && adc_value > 1024){
+        printf("ADC[%d] == %u\n", (int)channel, (unsigned int)adc_value);
+    }*/
     
     power_channel_process_adc_value(&power->channels[channel], adc_value);
     
@@ -98,10 +156,15 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
         return;
     }
     
-    channel->raw_zero_cur = channel->sum_zero / channel->count;
-    channel->raw_value_avg = channel->sum_avg / channel->count;
+    int16_t value = 0;
+    
+    value = channel->sum_avg / channel->count;
+    power_filter_put(&channel->filter_avg, value);
+    channel->raw_value_avg = power_filter_calculate(&channel->filter_avg);//value;//
     //! @todo Вычислени квадратного корня для RMS.
     channel->raw_value_rms = channel->raw_value_avg;
+    
+    channel->raw_zero_cur = channel->sum_zero / channel->count;
     
     channel->real_value_avg = (fixed32_t)channel->raw_value_avg * channel->k;
     channel->real_value_rms = (fixed32_t)channel->raw_value_rms * channel->k;
@@ -152,6 +215,8 @@ err_t power_calibrate(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_calibrate(&power->channels[i]);
+        power_filter_reset(&power->channels[i].filter_avg);
+        power_filter_reset(&power->channels[i].filter_rms);
     }
     
     return E_NO_ERROR;
@@ -187,6 +252,8 @@ err_t power_reset_channels(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_reset_sums(&power->channels[i]);
+        power_filter_reset(&power->channels[i].filter_avg);
+        power_filter_reset(&power->channels[i].filter_rms);
     }
     
     return E_NO_ERROR;

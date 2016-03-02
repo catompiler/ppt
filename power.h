@@ -12,7 +12,8 @@
 #include "errors/errors.h"
 #include "defs/defs.h"
 
-
+//! Число элементов в буфере фильтра.
+#define POWER_FILTER_SIZE 5
 
 /**
  * Перечисление каналов АЦП.
@@ -48,6 +49,15 @@ typedef enum _Power_Channel_Type {
 } power_channel_type_t;
 
 /**
+ * Структура фильтра значений.
+ */
+typedef struct _Power_Filter {
+    int16_t buffer[POWER_FILTER_SIZE]; //! Буфер значений.
+    size_t index; //! Текущий индекс.
+    size_t count; //! Число элементов в буфере.
+} power_filter_t;
+
+/**
  * Структура значения, полученного с канала АЦП.
  */
 typedef struct _Power_Value {
@@ -65,6 +75,8 @@ typedef struct _Power_Value {
     int32_t sum_avg; //!< Сумма значений (среднее).
     int32_t sum_rms; //!< Сумма значений (RMS).
     int32_t count; //!< Число значений.
+    power_filter_t filter_avg; //!< Фильтр значенией (среднее).
+    power_filter_t filter_rms; //!< Фильтр значенией (RMS).
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
 } power_value_t;
@@ -77,6 +89,7 @@ typedef struct _Power_Value {
                                     .real_value = 0,\
                                     .real_value_avg = 0, .real_value_rms = 0,\
                                     .sum_avg = 0, .sum_rms = 0, .count = 0,\
+                                    .filter_avg = {0}, .filter_rms = {0},\
                                     .calibrated = false, .data_avail = false }
 
 /**
