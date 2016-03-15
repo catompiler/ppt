@@ -23,7 +23,7 @@
 #define DRIVE_POWER_CALIBRATION_PERIODS 5
 
 //! Число периодов вычисления питания.
-#define DRIVE_POWER_CALCULATION_PERIODS 1
+#define DRIVE_POWER_CALCULATION_PERIODS 0
 
 //! Необходимые для готовности флаги.
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
@@ -413,13 +413,12 @@ static bool drive_calculate_power(phase_t phase)
 
 /**
  * Регулировка привода.
- * @param phase Текущая фаза.
  * @return Флаг регулировки привода.
  */
-static bool drive_regulate(phase_t phase)
+static bool drive_regulate(void)
 {
     if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-        if(drive_power_phase() == phase){
+        //if(drive_power_phase() == phase){
             fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
             fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
             
@@ -435,7 +434,7 @@ static bool drive_regulate(phase_t phase)
             //pid_controller_t* pid = drive_regulator_exc_pid();
             
             //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
-        }
+        //}
         
         return true;
     }
@@ -469,9 +468,9 @@ static err_t drive_state_process_stop_error(phase_t phase)
             
             drive_setup_triacs_open(phase);
             
-            drive_calculate_power(phase);
-            
-            drive_regulate(phase);
+            if(drive_calculate_power(phase)){
+                drive_regulate();
+            }
             
             drive.err_stopping_state = DRIVE_ERR_STOPPING_WAIT_ROT;
             break;
@@ -500,7 +499,7 @@ static err_t drive_state_process_error(phase_t phase)
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Нужно какое-либо направление.
-    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    if(drive_phase_state_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
     drive_calculate_power(phase);
     
@@ -515,7 +514,7 @@ static err_t drive_state_process_error(phase_t phase)
 static err_t drive_state_process_running(phase_t phase)
 {
     // Нужно какое-либо направление.
-    if(phase_state_drive_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    if(drive_phase_state_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
     drive_setup_triacs_open(phase);
     
@@ -523,9 +522,8 @@ static err_t drive_state_process_running(phase_t phase)
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
             drive_check_power_running();
         }
+        drive_regulate();
     }
-    
-    drive_regulate(phase);
     
     return E_NO_ERROR;
 }
@@ -539,7 +537,9 @@ static err_t drive_state_process_stop(phase_t phase)
 {
     drive_setup_triacs_open(phase);
     
-    drive_calculate_power(phase);
+    if(drive_calculate_power(phase)){
+        drive_regulate();
+    }
     
     switch(drive.stopping_state){
         default:
@@ -577,8 +577,6 @@ static err_t drive_state_process_stop(phase_t phase)
             break;
     }
     
-    drive_regulate(phase);
-    
     return E_NO_ERROR;
 }
 
@@ -593,7 +591,9 @@ static err_t drive_state_process_start(phase_t phase)
     
     drive_setup_triacs_open(phase);
     
-    drive_calculate_power(phase);
+    if(drive_calculate_power(phase)){
+        drive_regulate();
+    }
     
     switch(drive.starting_state){
         default:
@@ -634,8 +634,6 @@ static err_t drive_state_process_start(phase_t phase)
             drive_set_state(DRIVE_STATE_RUN);
             break;
     }
-    
-    drive_regulate(phase);
     
     return E_NO_ERROR;
 }
@@ -720,10 +718,10 @@ static err_t drive_states_process(phase_t phase)
     }
     
     // Обработаем текущую фазу.
-    phase_state_handle(phase);
+    drive_phase_state_handle(phase);
     
     // Если ошибка фазы.
-    if(phase_state_error() != PHASE_NO_ERROR){
+    if(drive_phase_state_error() != PHASE_NO_ERROR){
         // Обработаем её.
         drive_error_occured(DRIVE_ERROR_PHASE);
     }
@@ -767,6 +765,8 @@ static err_t drive_states_process(phase_t phase)
 err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
+    
+    drive_phase_state_init();
     
     drive_regulator_init();
     

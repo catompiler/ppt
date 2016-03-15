@@ -4,7 +4,7 @@
 
 
 //! dt PID-регулятора.
-#define DRIVE_PID_DT 0x51f
+#define DRIVE_PID_DT 0x1b5//0x51f
 
 
 //! Тип структуры регулятора привода.

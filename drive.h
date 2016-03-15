@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include "errors/errors.h"
 #include "defs/defs.h"
-#include "phase_state/phase_state.h"
+#include "drive_phase_state.h"
 #include "drive_power.h"
 #include "drive_triacs.h"
 #include "drive_regulator.h"
@@ -295,16 +295,16 @@ extern drive_stopping_t drive_stopping(void);
  */
 ALWAYS_INLINE static drive_dir_t drive_direction(void)
 {
-    return phase_state_drive_direction();
+    return drive_phase_state_direction();
 }
 
 /**
  * Получает ошибку фаз.
  * @return Ошибка фаз.
  */
-ALWAYS_INLINE static phase_error_t drive_phase_error(void)
+ALWAYS_INLINE static drive_phase_error_t drive_phase_error(void)
 {
-    return phase_state_error();
+    return drive_phase_state_error();
 }
 
 /**
@@ -393,6 +393,16 @@ ALWAYS_INLINE static  err_t drive_set_triacs_pairs_timer(size_t index, TIM_TypeD
 ALWAYS_INLINE static err_t drive_set_triac_exc_timer(TIM_TypeDef* TIM)
 {
     return drive_triacs_set_exc_timer(TIM);
+}
+
+/**
+ * Устанавливает таймер для отсчёта интервалов между датчиками нуля.
+ * @param TIM Таймер.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_set_phase_state_timer(TIM_TypeDef* TIM)
+{
+    return drive_phase_state_set_timer(TIM);
 }
 
 /**

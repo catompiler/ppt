@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include "power.h"
 #include "errors/errors.h"
-#include "phase_state/phase_state.h"
+#include "drive_phase_state.h"
 
 //! Питание.
 //! Число значений каналов АЦП.

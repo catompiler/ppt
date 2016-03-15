@@ -448,7 +448,7 @@ err_t drive_triacs_setup_next_pairs(phase_t phase)
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Направление вращения.
-    drive_dir_t dir = phase_state_drive_direction();
+    drive_dir_t dir = drive_phase_state_direction();
     // Нужно какое-либо направление.
     if(dir == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
@@ -539,7 +539,7 @@ err_t drive_triacs_setup_exc(phase_t phase)
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Направление вращения.
-    drive_dir_t dir = phase_state_drive_direction();
+    drive_dir_t dir = drive_phase_state_direction();
     // Нужно какое-либо направление.
     if(dir == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
@@ -551,7 +551,7 @@ err_t drive_triacs_setup_exc(phase_t phase)
     phase_t exc_ctl_phase = drive_triacs.phase_exc;
     
     if(dir == DRIVE_DIR_BACKW){
-        exc_ctl_phase = phase_state_next_phase(exc_ctl_phase, DRIVE_DIR_BACKW);
+        exc_ctl_phase = drive_phase_state_next_phase(exc_ctl_phase, DRIVE_DIR_BACKW);
     }
     
     if(exc_ctl_phase == phase){

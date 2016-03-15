@@ -874,18 +874,20 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
     TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
 }
 
-static void init_tim6(void)
+static void init_phases_timer(void)
 {
     TIM_TimeBaseInitTypeDef TIM6_InitStructure;
-            TIM6_InitStructure.TIM_Prescaler = 72-1;                    // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            TIM6_InitStructure.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            TIM6_InitStructure.TIM_Period = 60000;                      // Значение периода (0000...FFFF)
+            TIM6_InitStructure.TIM_Period = DRIVE_PHASE_STATE_TIMER_PERIOD; // Значение периода (0000...FFFF)
             TIM6_InitStructure.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
     TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
     //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
     //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!    
+    
+    drive_set_phase_state_timer(TIM6);
 }
 
 static void init_triacs(void)
@@ -1604,7 +1606,9 @@ int main(void)
     init_triacs();
     init_triacs_timers();
     
-    init_tim6();
+    init_phases_timer();
+    
+    //
     
     init_adc();
     init_adc_timer();

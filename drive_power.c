@@ -71,8 +71,30 @@ err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_va
     return power_process_adc_values(&drive_power.power, channels, adc_values);
 }
 
+/*bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
+{
+    if(phase != drive_power.power_phase) return false;
+    if(++ drive_power.periods_processed >= drive_power.processing_periods){
+        drive_power.periods_processed = 0;
+        err_t e = power_calc_values(&drive_power.power, channels);
+        if(err) *err = e;
+        return true;
+    }
+    return false;
+}*/
+
+static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
+{
+    err_t e = power_calc_values(&drive_power.power, channels);
+    if(err) *err = e;
+}
+
 bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
 {
+    if(drive_power.processing_periods == 0){
+        drive_power_calc_values_impl(channels, err);
+        return true;
+    }
     if(phase != drive_power.power_phase) return false;
     if(++ drive_power.periods_processed >= drive_power.processing_periods){
         drive_power.periods_processed = 0;

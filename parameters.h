@@ -6,7 +6,7 @@
 #define	PARAMETERS_H
 
 #include "settings.h"
-#include "phase_state/phase_state.h"
+#include "drive_phase_state.h"
 #include "drive_triacs.h"
 #include "ramp.h"
 
