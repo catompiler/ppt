@@ -589,6 +589,8 @@ static err_t drive_state_process_stop(phase_t phase)
  */
 static err_t drive_state_process_start(phase_t phase)
 {
+    drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
+    
     drive_setup_triacs_open(phase);
     
     drive_calculate_power(phase);
@@ -607,12 +609,20 @@ static err_t drive_state_process_start(phase_t phase)
             drive.start_stop_counter = 0;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            if(++ drive.start_stop_counter >= drive.settings.start_exc_periods){
+            check_res = drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
+            
+            if(drive_protection_is_allow(check_res)){
                 drive_triacs_set_pairs_enabled(true);
                 drive_regulator_set_rot_enabled(true);
                 drive.starting_state = DRIVE_STARTING_RAMP;
                 drive.start_stop_counter = 0;
+            }else if(++ drive.start_stop_counter >= drive.settings.start_exc_periods){
+                drive_handle_power_check(check_res,
+                    DRIVE_POWER_WARNING_UNDERFLOW_Iexc, DRIVE_POWER_WARNING_OVERFLOW_Iexc,
+                    DRIVE_POWER_ERROR_UNDERFLOW_Iexc, DRIVE_POWER_ERROR_OVERFLOW_Iexc
+                    );
             }
+            
             break;
         case DRIVE_STARTING_RAMP:
             if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){

@@ -34,6 +34,13 @@ bool drive_protection_init(void)
     return true;
 }
 
+bool drive_protection_is_allow(drive_pwr_check_res_t check_res)
+{
+    if(check_res == DRIVE_PWR_CHECK_CRIT_UNDERFLOW) return false;
+    if(check_res == DRIVE_PWR_CHECK_CRIT_OVERFLOW) return false;
+    return true;
+}
+
 void drive_protection_set_input_voltage(fixed32_t u_in, uint32_t allow_delta, uint32_t crit_delta)
 {
     drive_prot.U_in = u_in;

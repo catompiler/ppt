@@ -27,6 +27,13 @@ typedef enum _Drive_Pwr_Check_Res {
 extern bool drive_protection_init(void);
 
 /**
+ * Получает флаг допустимости результата проверки.
+ * @param check_res Результат проверки,
+ * @return Флаг допустимости результата провераки.
+ */
+extern bool drive_protection_is_allow(drive_pwr_check_res_t check_res);
+
+/**
  * Устанавливает входное напряжение.
  * @param u_in Входное напряжения, В.
  * @param allow_delta Допустимое отклонение, %.
