@@ -39,6 +39,9 @@
 //! Частота сети.
 #define DRIVE_POWER_FREQ 50
 
+//! Частота срабатывания датчиков нуля.
+#define DRIVE_POWER_NULL_SENSORS_FREQ (DRIVE_POWER_FREQ * 3)
+
 //! Число периодов накопления и обработки данных по-умолчанию.
 #define DRIVE_POWER_PROCESSING_PERIODS_DEFAULT 1
 
