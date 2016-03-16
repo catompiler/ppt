@@ -729,7 +729,7 @@ static err_t drive_states_process(phase_t phase)
     drive_phase_state_handle(phase);
     
     // Если ошибка фазы.
-    if(drive_phase_state_error() != PHASE_NO_ERROR){
+    if(drive_phase_state_errors() != PHASE_NO_ERROR){
         // Обработаем её.
         drive_error_occured(DRIVE_ERROR_PHASE);
     }

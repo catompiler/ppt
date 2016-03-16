@@ -299,12 +299,12 @@ ALWAYS_INLINE static drive_dir_t drive_direction(void)
 }
 
 /**
- * Получает ошибку фаз.
+ * Получает ошибки фаз.
  * @return Ошибка фаз.
  */
-ALWAYS_INLINE static drive_phase_error_t drive_phase_error(void)
+ALWAYS_INLINE static drive_phase_errors_t drive_phase_errors(void)
 {
-    return drive_phase_state_error();
+    return drive_phase_state_errors();
 }
 
 /**
