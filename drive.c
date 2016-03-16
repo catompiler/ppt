@@ -535,6 +535,8 @@ static err_t drive_state_process_running(phase_t phase)
  */
 static err_t drive_state_process_stop(phase_t phase)
 {
+    drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
+    
     drive_setup_triacs_open(phase);
     
     if(drive_calculate_power(phase)){
@@ -566,10 +568,16 @@ static err_t drive_state_process_stop(phase_t phase)
             }
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            if(++ drive.start_stop_counter >= drive.settings.stop_exc_periods){
+            check_res = drive_protection_check_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
+
+            if(drive_protection_is_allow(check_res)){
                 drive_set_state(DRIVE_STATE_IDLE);
                 drive.stopping_state = DRIVE_STOPPING_DONE;
                 drive.start_stop_counter = 0;
+            }else if(++ drive.start_stop_counter >= drive.settings.stop_exc_periods){
+                drive_handle_power_check(check_res, 0, 0,
+                        DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc
+                        );
             }
             break;
         case DRIVE_STOPPING_DONE:
@@ -810,9 +818,9 @@ err_t drive_update_settings(void)
                                      settings_valueu(PARAM_ID_I_EXC_ALLOW_VAR),
                                      settings_valueu(PARAM_ID_I_EXC_CRIT_VAR));
 
-    drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_FREQ;
-    drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_FREQ;
-    drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_FREQ;
+    drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
+    drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
+    drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
     drive_triacs_set_exc_mode(settings_valueu(PARAM_ID_EXC_MODE));
     drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
     drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
