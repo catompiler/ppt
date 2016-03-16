@@ -38,7 +38,7 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_I_ROT_NOM,       PARAM_TYPE_FRACT_10,  F32I(0), F32I(200), F32I(10),   0),
     PARAM_DESCR(PARAM_ID_I_ROT_ALLOW_VAR, PARAM_TYPE_UINT,      0,       100,       5,          0), // %
     PARAM_DESCR(PARAM_ID_I_ROT_CRIT_VAR,  PARAM_TYPE_UINT,      0,       100,       10,         0), // %
-    PARAM_DESCR(PARAM_ID_I_EXC,           PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32(65,100),0),
+    PARAM_DESCR(PARAM_ID_I_EXC,           PARAM_TYPE_FRACT_10,  F32I(0), F32I(20),  F32I(8),    0), //F32(65,100)
     PARAM_DESCR(PARAM_ID_I_EXC_ALLOW_VAR, PARAM_TYPE_UINT,      0,       100,       10,         0), // %
     PARAM_DESCR(PARAM_ID_I_EXC_CRIT_VAR,  PARAM_TYPE_UINT,      0,       100,       20,         0), // %
     
@@ -55,8 +55,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_EXC_PID_K_D,     PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32I(0),      0), // Kd.
     
     PARAM_DESCR(PARAM_ID_ROT_STOP_TIME,   PARAM_TYPE_UINT,      0,       100,       10,           0),
-    PARAM_DESCR(PARAM_ID_EXC_STOP_TIME,   PARAM_TYPE_UINT,      0,       100,       2,            0),
-    PARAM_DESCR(PARAM_ID_EXC_START_TIME,  PARAM_TYPE_UINT,      0,       100,       2,            0),
+    PARAM_DESCR(PARAM_ID_EXC_STOP_TIME,   PARAM_TYPE_UINT,      0,       100,       5,            0),
+    PARAM_DESCR(PARAM_ID_EXC_START_TIME,  PARAM_TYPE_UINT,      0,       100,       5,            0),
     
     PARAM_DESCR(PARAM_ID_TRIACS_PAIRS_OPEN_TIME,   PARAM_TYPE_UINT,      0,         1000,         100,     0),
     PARAM_DESCR(PARAM_ID_TRIAC_EXC_OPEN_TIME,      PARAM_TYPE_UINT,      0,         1000,         200,     0),
