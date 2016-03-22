@@ -19,6 +19,7 @@
 #include "graphics/font_10x16_utf8.h"
 #include "fixed/fixed32.h"
 #include "pca9555/pca9555.h"
+#include "scheduler/scheduler.h"
 #include "gui/gui.h"
 #include "gui/gui_object.h"
 #include "gui/gui_widget.h"
@@ -51,6 +52,12 @@ static uint8_t usart_read_buffer[USART_READ_BUFFER_SIZE];
 static usart_buf_t usart_buf;
 //! Счётчик.
 static counter_t counter;
+
+//! Планеровщик задач.
+//! Максимум задач.
+#define SCHEDULER_TASKS_MAX 5
+//! Буфер задач.
+static TASKS_BUFFER(tasks_buffer, SCHEDULER_TASKS_MAX);
 
 //! Шина spi.
 static spi_bus_t spi;
@@ -1580,6 +1587,35 @@ static void screen_repaint(void)
     gui_update_values();
 }
 
+void* main_task(void* arg)
+{
+    static counter_t update_period = 0;
+    
+    if(update_period == 0){
+        update_period = system_counter_ticks_per_sec() / 10;
+    }
+    //GPIO_ResetBits(GPIOC, GPIO_Pin_6);
+    key_input_process();
+
+    if(system_counter_diff(&counter) >= update_period){
+    //if(need_update){
+        //need_update = false;
+
+        //printf("%d\r\n", ((int)counter));
+
+        screen_repaint();
+
+        ioport_next_leds();
+
+        counter = system_counter_ticks();
+
+        //timer_cc_count = 0;
+
+    }
+    
+    return NULL;
+}
+
 int main(void)
 {
     NVIC_SetPriorityGrouping(0x3);
@@ -1598,6 +1634,8 @@ int main(void)
     if(settings_read() != E_NO_ERROR){
         settings_default();
     }
+    
+    scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
     
     init_gpio();
     
@@ -1625,40 +1663,12 @@ int main(void)
     
     screen_repaint();
     
-    counter_t update_period = system_counter_ticks_per_sec() / 10;
-    
     //drive_set_reference(REFERENCE_MAX);
     
+    scheduler_add_task(main_task, 0, NULL, 0, NULL);
+    
     for(;;){
-        //GPIO_ResetBits(GPIOC, GPIO_Pin_6);
-        key_input_process();
-        
-        if(system_counter_diff(&counter) >= update_period){
-        //if(need_update){
-            //need_update = false;
-            
-            //printf("%d\r\n", ((int)counter));
-            
-            screen_repaint();
-            
-            ioport_next_leds();
-            
-            counter = system_counter_ticks();
-            
-            //timer_cc_count = 0;
-            
-        }
-        /*
-        gui_number_label_set_number(&lbl_num_adc1_in1, adc_raw_buffer[0]);
-        gui_number_label_set_number(&lbl_num_adc1_in2, adc_raw_buffer[2]);
-        gui_number_label_set_number(&lbl_num_adc1_in3, adc_raw_buffer[4]);
-        gui_number_label_set_number(&lbl_num_adc1_in4, adc_raw_buffer[6]);
-
-        gui_number_label_set_number(&lbl_num_adc2_in1, adc_raw_buffer[1]);
-        gui_number_label_set_number(&lbl_num_adc2_in2, adc_raw_buffer[3]);
-        gui_number_label_set_number(&lbl_num_adc2_in3, adc_raw_buffer[5]);
-        gui_number_label_set_number(&lbl_num_adc2_in4, adc_raw_buffer[7]);
-         */
+        if(!scheduler_process()) __WFI();
     }
     return 0;
 }
