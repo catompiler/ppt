@@ -13,7 +13,7 @@ SRC_LIBS += circular_buffer usart newlib_stubs\
 	    i2c pca9555 list key_input scheduler\
 	    gui gui_object gui_widget gui_label\
 	    gui_number_label gui_checkbox gui_spinbox\
-	    gui_button mylib pid_controller
+	    gui_button mylib pid_controller m95x
 
 
 # Стандартные драйвера периферии.

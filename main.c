@@ -20,6 +20,7 @@
 #include "fixed/fixed32.h"
 #include "pca9555/pca9555.h"
 #include "scheduler/scheduler.h"
+#include "m95x/m95x.h"
 #include "gui/gui.h"
 #include "gui/gui_object.h"
 #include "gui/gui_widget.h"
@@ -61,6 +62,18 @@ static TASKS_BUFFER(tasks_buffer, SCHEDULER_TASKS_MAX);
 
 //! Шина spi.
 static spi_bus_t spi;
+
+//! Шина spi2.
+static spi_bus_t spi2;
+
+//! Микросхема EEPROM.
+static m95x_t eeprom;
+
+//! Порт EEPROM.
+#define M95X_CE_GPIO GPIOD
+//! Пин EEPROM.
+#define M95X_CE_PIN GPIO_Pin_8
+
 
 //! Шина i2c.
 static i2c_bus_t i2c;
@@ -206,6 +219,16 @@ void DMA1_Channel2_IRQHandler(void)
 void DMA1_Channel3_IRQHandler(void)
 {
     spi_bus_dma_tx_channel_irq_handler(&spi);
+}
+
+void DMA1_Channel4_IRQHandler(void)
+{
+    spi_bus_dma_rx_channel_irq_handler(&spi2);
+}
+
+void DMA1_Channel5_IRQHandler(void)
+{
+    spi_bus_dma_tx_channel_irq_handler(&spi2);
 }
 
 void DMA1_Channel6_IRQHandler(void)
@@ -374,6 +397,11 @@ static bool spi_callback(void)
     return tft9341_spi_callback(&tft);
 }
 
+static bool spi2_callback(void)
+{
+    return m95x_spi_callback(&eeprom);
+}
+
 /*
  * Инициализация.
  */
@@ -415,6 +443,8 @@ static void init_periph_clock(void)
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
     // SPI.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+    // SPI2.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
     // I2C1.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
     // TIM1.
@@ -474,7 +504,7 @@ static void init_spi(void)
     spi_is.SPI_CPOL = SPI_CPOL_Low;
     spi_is.SPI_CRCPolynomial = 0;
     spi_is.SPI_DataSize = SPI_DataSize_8b;
-    spi_is.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+    spi_is.SPI_Direction = SPI_Direction_1Line_Tx;
     spi_is.SPI_FirstBit = SPI_FirstBit_MSB;
     spi_is.SPI_Mode = SPI_Mode_Master;
     spi_is.SPI_NSS = SPI_NSS_Soft;
@@ -497,6 +527,66 @@ static void init_spi(void)
     NVIC_SetPriority(DMA1_Channel3_IRQn, 2);
     NVIC_EnableIRQ(DMA1_Channel2_IRQn);
     NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+}
+
+static void init_spi2(void)
+{
+    GPIO_InitTypeDef gpio_sck_mosi =
+        {.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_13, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+    GPIO_InitTypeDef gpio_miso =
+        {.GPIO_Pin = GPIO_Pin_14, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+    
+    GPIO_Init(GPIOB, &gpio_sck_mosi);
+    GPIO_Init(GPIOB, &gpio_miso);
+    
+    SPI_InitTypeDef spi_is;
+    SPI_StructInit(&spi_is);
+    
+    spi_is.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+    spi_is.SPI_CPHA = SPI_CPHA_1Edge;
+    spi_is.SPI_CPOL = SPI_CPOL_Low;
+    spi_is.SPI_CRCPolynomial = 0;
+    spi_is.SPI_DataSize = SPI_DataSize_8b;
+    spi_is.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+    spi_is.SPI_FirstBit = SPI_FirstBit_MSB;
+    spi_is.SPI_Mode = SPI_Mode_Master;
+    spi_is.SPI_NSS = SPI_NSS_Soft;
+    
+    SPI_Init(SPI2, &spi_is);
+    SPI_Cmd(SPI2, ENABLE);
+    
+    spi_bus_init_t spi_bus_is;
+    spi_bus_is.spi_device = SPI2;
+    spi_bus_is.dma_rx_channel = DMA1_Channel4;
+    spi_bus_is.dma_tx_channel = DMA1_Channel5;
+    spi_bus_init(&spi2, &spi_bus_is);
+    
+    spi_bus_set_callback(&spi2, spi2_callback);
+    
+    NVIC_SetPriority(SPI2_IRQn, 2);
+    NVIC_EnableIRQ(SPI2_IRQn);
+    
+    NVIC_SetPriority(DMA1_Channel4_IRQn, 2);
+    NVIC_SetPriority(DMA1_Channel5_IRQn, 2);
+    NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+    NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+}
+
+static void init_eeprom(void)
+{
+    GPIO_InitTypeDef gpio_ce = 
+    {.GPIO_Pin = M95X_CE_PIN, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_Out_PP};
+    
+    GPIO_Init(M95X_CE_GPIO, &gpio_ce);
+    
+    m95x_init_t m95x_is;
+    m95x_is.page = M95X_PAGE_DEFAULT;
+    m95x_is.spi = &spi2;
+    m95x_is.transfer_id = M95X_DEFAULT_TRANSFER_ID;
+    m95x_is.ce_gpio = M95X_CE_GPIO;
+    m95x_is.ce_pin = M95X_CE_PIN;
+    
+    m95x_init(&eeprom, &m95x_is);
 }
 
 static void init_i2c_periph(void)
@@ -1629,6 +1719,9 @@ int main(void)
     init_usart();
     
     printf("STM32 MCU\r\n");
+    
+    init_spi2();
+    init_eeprom();
     
     settings_init();
     if(settings_read() != E_NO_ERROR){
