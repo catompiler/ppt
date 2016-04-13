@@ -1,5 +1,7 @@
 #include "settings.h"
 #include "defs/defs.h"
+#include "utils/utils.h"
+#include "crc/crc16_ccitt.h"
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -18,7 +20,10 @@
 
 //! Объявляет массив данных параметров.
 #define PARAMETERS_DATA(arg_name, arg_count)\
-        static param_data_t arg_name[arg_count]
+        static struct _Parameters_Data {\
+            param_data_t data[arg_count];\
+            uint16_t crc;\
+        } arg_name;
 
 //! Объявляет массив параметров.
 #define PARAMETERS(arg_array_name, arg_count)\
@@ -26,9 +31,12 @@
 
 
 #include "parameters.h"
+#include "storage.h"
 
 // Данные параметров.
+#pragma pack(push, 1)
 PARAMETERS_DATA(parameters_data, PARAMETERS_REAL_COUNT);
+#pragma pack(pop)
 
 // Массив параметров.
 PARAMETERS(parameters, PARAMETERS_COUNT);
@@ -70,7 +78,7 @@ ALWAYS_INLINE static const param_descr_t* settings_param_descr_by_index(size_t i
  */
 ALWAYS_INLINE static param_data_t* settings_param_data_by_index(size_t index)
 {
-    return &parameters_data[index];
+    return &parameters_data.data[index];
 }
 
 /**
@@ -90,8 +98,9 @@ ALWAYS_INLINE static bool settings_param_is_virtual(param_t* param)
  */
 static int32_t settings_param_get_int32(param_t* param)
 {
-    param_data_t data = *settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (param->virt_data):
+                        (*settings_param_data_by_index(param->data_index));
     
     switch(descr->type){
         default:
@@ -116,8 +125,9 @@ static int32_t settings_param_get_int32(param_t* param)
  */
 static void settings_param_set_int32(param_t* param, int32_t value)
 {
-    param_data_t* data = settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t* data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (&param->virt_data):
+                         (settings_param_data_by_index(param->data_index));
     
     switch(descr->type){
         default:
@@ -144,8 +154,9 @@ static void settings_param_set_int32(param_t* param, int32_t value)
  */
 static uint32_t settings_param_get_uint32(param_t* param)
 {
-    param_data_t data = *settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (param->virt_data):
+                        (*settings_param_data_by_index(param->data_index));
     
     switch(descr->type){
         default:
@@ -170,8 +181,9 @@ static uint32_t settings_param_get_uint32(param_t* param)
  */
 static void settings_param_set_uint32(param_t* param, uint32_t value)
 {
-    param_data_t* data = settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t* data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (&param->virt_data):
+                         (settings_param_data_by_index(param->data_index));
     
     switch(descr->type){
         default:
@@ -198,8 +210,9 @@ static void settings_param_set_uint32(param_t* param, uint32_t value)
  */
 static fixed32_t settings_param_get_fixed32(param_t* param)
 {
-    param_data_t data = *settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (param->virt_data):
+                        (*settings_param_data_by_index(param->data_index));
     
     switch(descr->type){
         default:
@@ -223,8 +236,9 @@ static fixed32_t settings_param_get_fixed32(param_t* param)
  */
 static void settings_param_set_fixed32(param_t* param, fixed32_t value)
 {
-    param_data_t* data = settings_param_data_by_index(param->data_index);
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t* data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (&param->virt_data):
+                         (settings_param_data_by_index(param->data_index));
     
     int32_t int_part = 0;
     int32_t fract_part = 0;
@@ -269,13 +283,16 @@ err_t settings_init(void)
         param = settings_parameter_by_index(i);
         
         if(!(descr->flags & PARAM_FLAG_VIRTUAL)){
+            parameters_data.data[index] = 0;
             param->data_index = index ++;
         }else{
-            param->value.int_value = 0;
+            param->virt_data = 0;
         }
         
         param->descr_index = i;
     }
+    
+    parameters_data.crc = 0;
     
     return E_NO_ERROR;
 }
@@ -315,12 +332,24 @@ err_t settings_default(void)
 
 err_t settings_read(void)
 {
-    return E_NOT_IMPLEMENTED;
+    if(ro()) return E_STATE;
+    
+    RETURN_ERR_IF_FAIL(
+            storage_read(STORAGE_RGN_SETTINGS_ADDRESS, &parameters_data, sizeof(parameters_data))
+        );
+    
+    uint16_t crc = crc16_ccitt(parameters_data.data, sizeof(parameters_data) - sizeof(uint16_t));
+    
+    if(crc != parameters_data.crc) return E_CRC;
+    
+    return E_NO_ERROR;
 }
 
 err_t settings_write(void)
 {
-    return E_NOT_IMPLEMENTED;
+    parameters_data.crc = crc16_ccitt(parameters_data.data, sizeof(parameters_data) - sizeof(uint16_t));
+    
+    return storage_write(STORAGE_RGN_SETTINGS_ADDRESS, &parameters_data, sizeof(parameters_data));
 }
 
 bool settings_readonly(void)
@@ -357,9 +386,25 @@ param_t* settings_param_by_id(param_id_t id)
     return param;
 }
 
+ param_data_t settings_param_value_raw(param_t* param)
+ {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    return (descr->flags & PARAM_FLAG_VIRTUAL) ? (param->virt_data):
+           (*settings_param_data_by_index(param->data_index));
+ }
+ 
+ bool settings_param_set_value_raw(param_t* param, param_data_t value)
+ {
+    if(ro()) return false;
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t* data = (descr->flags & PARAM_FLAG_VIRTUAL) ? (&param->virt_data):
+                         (settings_param_data_by_index(param->data_index));
+    *data = value;
+    return true;
+ }
+
 int32_t settings_param_valuei(param_t* param)
 {
-    if(settings_param_is_virtual(param)) return param->value.int_value;
     return settings_param_get_int32(param);
 }
 
@@ -367,15 +412,13 @@ bool settings_param_set_valuei(param_t* param, int32_t value)
 {
     if(ro()) return false;
     
-    if(settings_param_is_virtual(param)) param->value.int_value = value;
-    else settings_param_set_int32(param, value);
+    settings_param_set_int32(param, value);
     
     return true;
 }
 
 uint32_t settings_param_valueu(param_t* param)
 {
-    if(settings_param_is_virtual(param)) return param->value.uint_value;
     return settings_param_get_uint32(param);
 }
 
@@ -383,15 +426,13 @@ bool settings_param_set_valueu(param_t* param, uint32_t value)
 {
     if(ro()) return false;
     
-    if(settings_param_is_virtual(param)) param->value.uint_value = value;
-    else settings_param_set_uint32(param, value);
+    settings_param_set_uint32(param, value);
     
     return true;
 }
 
 fixed32_t settings_param_valuef(param_t* param)
 {
-    if(settings_param_is_virtual(param)) return param->value.fixed_value;
     return settings_param_get_fixed32(param);
 }
 
@@ -399,8 +440,7 @@ bool settings_param_set_valuef(param_t* param, fixed32_t value)
 {
     if(ro()) return false;
     
-    if(settings_param_is_virtual(param)) param->value.fixed_value = value;
-    else settings_param_set_fixed32(param, value);
+    settings_param_set_fixed32(param, value);
     
     return true;
 }

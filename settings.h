@@ -70,7 +70,7 @@ typedef struct _Param_Descr {
 typedef struct _Param {
     param_index_t descr_index;
     union {
-        param_value_t value;
+        param_data_t virt_data;
         param_index_t data_index;
     };
 } param_t;
@@ -118,6 +118,21 @@ extern void settings_set_readonly(bool readonly);
  * @return Параметр с заданным идентификатором.
  */
 extern param_t* settings_param_by_id(param_id_t id);
+
+/**
+ * Получает сырое значение параметра.
+ * @param param Параметр.
+ * @return Сырое значение параметра.
+ */
+extern param_data_t settings_param_value_raw(param_t* param);
+
+/**
+ * Устанавливает сырое значение параметра.
+ * @param param Параметр.
+ * @param value Сырое значение параметра.
+ * @return true в случае успеха, иначе false.
+ */
+extern bool settings_param_set_value_raw(param_t* param, param_data_t value);
 
 /**
  * Получает знаковое целочисленное значение параметра.
