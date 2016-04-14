@@ -3,7 +3,7 @@
  */
 #include "stm32f10x.h"
 #define USART_STDIO
-#include "usart/usart.h"
+#include "usart/usart_buf.h"
 #include <stdio.h>
 #include "counter/counter.h"
 #include "spi/spi.h"
@@ -21,6 +21,7 @@
 #include "pca9555/pca9555.h"
 #include "scheduler/scheduler.h"
 #include "m95x/m95x.h"
+#include "storage.h"
 #include "gui/gui.h"
 #include "gui/gui_object.h"
 #include "gui/gui_widget.h"
@@ -41,6 +42,7 @@
 #include "I2Clib/I2Clib.h"
 #include "drive.h"
 #include "settings.h"
+#include "drive_events.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
@@ -393,7 +395,6 @@ static bool i2c_callback(void)
 
 static bool spi_callback(void)
 {
-    //printf("[SPI] callback\r\n");
     return tft9341_spi_callback(&tft);
 }
 
@@ -587,6 +588,11 @@ static void init_eeprom(void)
     m95x_is.ce_pin = M95X_CE_PIN;
     
     m95x_init(&eeprom, &m95x_is);
+}
+
+static void init_storage(void)
+{
+    storage_init(&eeprom);
 }
 
 static void init_i2c_periph(void)
@@ -1722,6 +1728,12 @@ int main(void)
     
     init_spi2();
     init_eeprom();
+    init_storage();
+    
+    drive_events_init();
+    if(drive_events_read() != E_NO_ERROR){
+        drive_events_reset();
+    }
     
     settings_init();
     if(settings_read() != E_NO_ERROR){

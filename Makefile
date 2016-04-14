@@ -7,13 +7,14 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    drive_regulator.o drive_protection.o drive_phase_state.o
 
 # Собственные библиотеки в исходниках.
-SRC_LIBS += circular_buffer usart newlib_stubs\
+SRC_LIBS += circular_buffer usart_buf newlib_stubs\
 	    counter spi dma future mutex delay\
 	    tft9341 tft9341_cache graphics painter font\
 	    i2c pca9555 list key_input scheduler\
 	    gui gui_object gui_widget gui_label\
 	    gui_number_label gui_checkbox gui_spinbox\
-	    gui_button mylib pid_controller m95x
+	    gui_button mylib pid_controller m95x storage\
+	    crc16_ccitt drive_events
 
 
 # Стандартные драйвера периферии.
