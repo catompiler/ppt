@@ -290,6 +290,12 @@ extern drive_starting_t drive_starting(void);
 extern drive_stopping_t drive_stopping(void);
 
 /**
+ * Получает состояние останова привода при ошибке.
+ * @return Состояние останова привода при ошибке.
+ */
+extern drive_err_stopping_t drive_err_stopping(void);
+
+/**
  * Получает направление вращения.
  * @return Направление вращения.
  */

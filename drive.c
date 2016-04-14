@@ -913,6 +913,11 @@ drive_stopping_t drive_stopping(void)
     return drive.stopping_state;
 }
 
+drive_err_stopping_t drive_err_stopping(void)
+{
+    return drive.err_stopping_state;
+}
+
 bool drive_ready(void)
 {
     return (drive.errors) == 0 && drive_flags_is_set(DRIVE_READY_FLAGS);
