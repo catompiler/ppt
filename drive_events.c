@@ -141,14 +141,19 @@ err_t drive_events_write_event(drive_event_t* event)
     
     drive_event_id_t old_id = events.events_map.event_id;
     drive_event_index_t old_index = events.events_map.event_index;
+    drive_event_index_t old_count = events.events_map.events_count;
     
     events.events_map.event_id ++;
     events.events_map.event_index = event_index;
+    if(events.events_map.events_count < DRIVE_EVENTS_COUNT_MAX){
+        events.events_map.events_count ++;
+    }
     
     err = drive_events_write();
     if(err != E_NO_ERROR){
         events.events_map.event_id = old_id;
         events.events_map.event_index = old_index;
+        events.events_map.events_count = old_count;
         
         return err;
     }
