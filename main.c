@@ -1631,10 +1631,10 @@ static void gui_update_values(void)
         gui_number_label_set_number(&lbl_num_adc3_in3, drive_power_channel_raw_value_avg(10));
 */
         
-        gui_number_label_set_number(&lbl_num_adc1_in1, (drive_power_channel_real_value_avg(0)));
-        gui_number_label_set_number(&lbl_num_adc1_in2, (drive_power_channel_real_value_avg(2)));
-        gui_number_label_set_number(&lbl_num_adc1_in3, (drive_power_channel_real_value_avg(4)));
-        gui_number_label_set_number(&lbl_num_adc1_in4, (drive_power_channel_real_value_avg(6)));
+        gui_number_label_set_number(&lbl_num_adc1_in1, (drive_power_channel_real_value(0)));
+        gui_number_label_set_number(&lbl_num_adc1_in2, (drive_power_channel_real_value(2)));
+        gui_number_label_set_number(&lbl_num_adc1_in3, (drive_power_channel_real_value(4)));
+        gui_number_label_set_number(&lbl_num_adc1_in4, (drive_power_channel_real_value(6)));
 
 /*
         gui_number_label_set_number(&lbl_num_adc2_in1, (drive_power_channel_raw_value_avg(0)));
@@ -1650,10 +1650,10 @@ static void gui_update_values(void)
         gui_number_label_set_number(&lbl_num_adc2_in4, (drive_power_channel_real_value_avg(6)));
 */
 
-        gui_number_label_set_number(&lbl_num_adc2_in1, drive_power_channel_raw_value_avg(1));
-        gui_number_label_set_number(&lbl_num_adc2_in2, drive_power_channel_raw_value_avg(3));
-        gui_number_label_set_number(&lbl_num_adc2_in3, drive_power_channel_raw_value_avg(5));
-        gui_number_label_set_number(&lbl_num_adc2_in4, drive_power_channel_raw_value_avg(7));
+        gui_number_label_set_number(&lbl_num_adc2_in1, drive_power_channel_raw_value(1));
+        gui_number_label_set_number(&lbl_num_adc2_in2, drive_power_channel_raw_value(3));
+        gui_number_label_set_number(&lbl_num_adc2_in3, drive_power_channel_raw_value(5));
+        gui_number_label_set_number(&lbl_num_adc2_in4, drive_power_channel_raw_value(7));
 
 /*
         gui_number_label_set_number(&lbl_num_adc2_in1, fixed32_get_int(drive_power_channel_real_value_avg(1)));

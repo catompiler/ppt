@@ -14,7 +14,7 @@ SRC_LIBS += circular_buffer usart_buf newlib_stubs\
 	    gui gui_object gui_widget gui_label\
 	    gui_number_label gui_checkbox gui_spinbox\
 	    gui_button mylib pid_controller m95x storage\
-	    crc16_ccitt drive_events
+	    crc16_ccitt drive_events bsqrt
 
 
 # Стандартные драйвера периферии.

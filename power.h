@@ -52,9 +52,9 @@ typedef enum _Power_Channel_Type {
  * Структура фильтра значений.
  */
 typedef struct _Power_Filter {
-    int16_t buffer[POWER_FILTER_SIZE]; //! Буфер значений.
-    size_t index; //! Текущий индекс.
-    size_t count; //! Число элементов в буфере.
+    int16_t buffer[POWER_FILTER_SIZE]; //!< Буфер значений.
+    size_t index; //!< Текущий индекс.
+    size_t count; //!< Число элементов в буфере.
 } power_filter_t;
 
 /**

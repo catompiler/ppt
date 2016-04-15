@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "bsqrt.h"
 
 
 //! Число отбрасываемых минимальных значений.
@@ -85,6 +86,8 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
     int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
     int32_t abs_value = value;
     
+    int32_t sq_value = value * value;
+    
     if(channel->type == POWER_CHANNEL_AC){
         abs_value = ABS(abs_value);
     }
@@ -94,7 +97,7 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
     
     channel->sum_zero += adc_value;
     channel->sum_avg += abs_value;
-    channel->sum_rms += abs_value * abs_value;
+    channel->sum_rms += sq_value;
     channel->count ++;
 }
 
@@ -158,11 +161,14 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
     
     int16_t value = 0;
     
+    // AVG.
     value = channel->sum_avg / channel->count;
     power_filter_put(&channel->filter_avg, value);
-    channel->raw_value_avg = power_filter_calculate(&channel->filter_avg);//value;//
-    //! @todo Вычислени квадратного корня для RMS.
-    channel->raw_value_rms = channel->raw_value_avg;
+    channel->raw_value_avg = power_filter_calculate(&channel->filter_avg);
+    // RMS.
+    value = bsqrti(channel->sum_rms / channel->count);
+    power_filter_put(&channel->filter_rms, value);
+    channel->raw_value_rms = power_filter_calculate(&channel->filter_rms);
     
     channel->raw_zero_cur = channel->sum_zero / channel->count;
     
