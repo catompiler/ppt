@@ -275,6 +275,8 @@ err_t settings_init(void)
     const param_descr_t* descr;
     param_t* param;
     
+    _settings_readonly = false;
+    
     for(; i < PARAMETERS_COUNT; i ++){
         
         if(index >= PARAMETERS_REAL_COUNT) return E_OUT_OF_RANGE;
@@ -299,7 +301,7 @@ err_t settings_init(void)
 
 err_t settings_default(void)
 {
-    if(ro()) return false;
+    if(ro()) return E_STATE;
     
     size_t i = 0;
     
@@ -327,7 +329,7 @@ err_t settings_default(void)
     }
     }
     
-    return true;
+    return E_NO_ERROR;
 }
 
 err_t settings_read(void)
