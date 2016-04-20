@@ -144,6 +144,19 @@ err_t drive_keypad_wait(void)
     return drive_keypad_wait_safe();
 }
 
+drive_kpd_leds_t drive_keypad_leds(void)
+{
+    return pca9555_pins_state(keypad.ioport, PCA9555_PIN_OFF) & DRIVE_KPD_LED_ALL;
+}
+
+err_t drive_keypad_set_leds(drive_kpd_leds_t leds)
+{
+    pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_LED_ALL, PCA9555_PIN_ON);
+    pca9555_set_pins_state(keypad.ioport, leds, PCA9555_PIN_OFF);
+    
+    return drive_keypad_try_safe(pca9555_write_pins_state);
+}
+
 err_t drive_keypad_leds_on(drive_kpd_leds_t leds)
 {
     pca9555_set_pins_state(keypad.ioport, leds, PCA9555_PIN_OFF);

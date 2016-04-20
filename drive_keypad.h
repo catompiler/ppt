@@ -80,6 +80,19 @@ extern err_t drive_keypad_init(drive_keypad_init_t* keypad_is);
 extern err_t drive_keypad_wait(void);
 
 /**
+ * Получает состояние светодиодов.
+ * @return Состояние светодиодов.
+ */
+extern drive_kpd_leds_t drive_keypad_leds(void);
+
+/**
+ * Устанавливает состояние светодиодов.
+ * @param leds Состояние светодиодов.
+ * @return Код ошибки.
+ */
+extern err_t drive_keypad_set_leds(drive_kpd_leds_t leds);
+
+/**
  * Зажигает заданные светодиоды.
  * @param leds Заданные светодиоды.
  * @return Код ошибки.
