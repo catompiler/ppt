@@ -1,0 +1,101 @@
+#include "drive_ui.h"
+#include "drive.h"
+#include "utils/utils.h"
+#include "counter/counter.h"
+
+
+//! Тип структуры интерфейса привода.
+typedef struct _Drive_Ui {
+    counter_t update_period;
+    counter_t last_update_time;
+    bool need_update;
+} drive_ui_t;
+
+//! Интерфейс привода.
+static drive_ui_t ui;
+
+
+static err_t drive_ui_init_keypad(drive_ui_init_t* ui_is)
+{
+    drive_keypad_init_t keypad_is;
+    
+    keypad_is.ioport = ui_is->ioport;
+    
+    return drive_keypad_init(&keypad_is);
+}
+
+static err_t drive_ui_init_gui(drive_ui_init_t* ui_is)
+{
+    drive_gui_init_t gui_is;
+    
+    gui_is.tft = ui_is->tft;
+    
+    return drive_gui_init(&gui_is);
+}
+
+
+static void drive_ui_on_key_pressed(keycode_t key)
+{
+    switch(key){
+        case KEY_START:
+            drive_start();
+            ui.need_update = true;
+            break;
+        case KEY_STOP:
+            drive_stop();
+            ui.need_update = true;
+            break;
+        default:
+            drive_gui_on_key_pressed(key);
+            break;
+    }
+}
+
+static void drive_ui_on_key_released(keycode_t key)
+{
+    drive_gui_on_key_released(key);
+}
+
+
+err_t drive_ui_init(drive_ui_init_t* ui_is)
+{
+    if(ui_is == NULL) return E_NULL_POINTER;
+    
+    RETURN_ERR_IF_FAIL(drive_ui_init_keypad(ui_is));
+    RETURN_ERR_IF_FAIL(drive_ui_init_gui(ui_is));
+    
+    key_input_set_on_pressed_callback(drive_ui_on_key_pressed);
+    key_input_set_on_released_callback(drive_ui_on_key_released);
+    
+    ui.need_update = true;
+    ui.last_update_time = 0;
+    ui.update_period = system_counter_ticks_per_sec() / 10;
+    
+    return E_NO_ERROR;
+}
+
+
+ALWAYS_INLINE static void drive_ui_update_update_time(void)
+{
+    ui.last_update_time = system_counter_ticks();
+}
+
+ALWAYS_INLINE static bool drive_ui_update_timeout(void)
+{
+    return system_counter_diff(&ui.last_update_time) >= ui.update_period;
+}
+
+void drive_ui_process(void)
+{
+    if(drive_keypad_update()) drive_keypad_process();
+    else drive_keypad_repeat();
+    
+    if(drive_ui_update_timeout()) ui.need_update = true;
+    
+    if(ui.need_update){
+        drive_gui_update();
+        
+        ui.need_update = false;
+        drive_ui_update_update_time();
+    }
+}
