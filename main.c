@@ -1067,8 +1067,6 @@ int main(void)
     
     scheduler_add_task(main_task, 0, NULL, 0, NULL);
     
-    drive_keypad_leds_on(DRIVE_KPD_LED_4);
-    
     for(;;){
         if(!scheduler_process()) __WFI();
     }

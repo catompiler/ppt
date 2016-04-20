@@ -33,9 +33,9 @@ static err_t drive_ui_init_gui(drive_ui_init_t* ui_is)
     return drive_gui_init(&gui_is);
 }
 
-
 static void drive_ui_on_key_pressed(keycode_t key)
 {
+    reference_t reference;
     switch(key){
         case KEY_START:
             drive_start();
@@ -43,6 +43,18 @@ static void drive_ui_on_key_pressed(keycode_t key)
             break;
         case KEY_STOP:
             drive_stop();
+            ui.need_update = true;
+            break;
+        case KEY_PLUS:
+            reference = drive_reference();
+            if(reference < REFERENCE_MAX) reference ++;
+            drive_set_reference(reference);
+            ui.need_update = true;
+            break;
+        case KEY_MINUS:
+            reference = drive_reference();
+            if(reference > 0) reference --;
+            drive_set_reference(reference);
             ui.need_update = true;
             break;
         default:
@@ -85,6 +97,29 @@ ALWAYS_INLINE static bool drive_ui_update_timeout(void)
     return system_counter_diff(&ui.last_update_time) >= ui.update_period;
 }
 
+static void drive_ui_update_leds(void)
+{
+    drive_kpd_leds_t leds = 0, leds_cur = drive_keypad_leds();
+    drive_kpd_leds_t leds_to_on = DRIVE_KPD_LED_4;
+    drive_kpd_leds_t leds_to_off = 0;
+
+    if(drive_ready()) leds_to_on |= DRIVE_KPD_LED_2;
+    else leds_to_off |= DRIVE_KPD_LED_2;
+
+    if(drive_running()) leds_to_on |= DRIVE_KPD_LED_3;
+    else leds_to_off |= DRIVE_KPD_LED_3;
+
+    if(drive_errors() != DRIVE_ERROR_NONE) leds_to_on |= DRIVE_KPD_LED_0;
+    else leds_to_off |= DRIVE_KPD_LED_0;
+
+    if(drive_warnings() != DRIVE_WARNING_NONE) leds_to_on |= DRIVE_KPD_LED_1;
+    else leds_to_off |= DRIVE_KPD_LED_1;
+
+    leds = (leds_cur | leds_to_on) & ~leds_to_off;
+    
+    if(leds != leds_cur) drive_keypad_set_leds(leds);
+}
+
 void drive_ui_process(void)
 {
     if(drive_keypad_update()) drive_keypad_process();
@@ -94,6 +129,8 @@ void drive_ui_process(void)
     
     if(ui.need_update){
         drive_gui_update();
+        
+        drive_ui_update_leds();
         
         ui.need_update = false;
         drive_ui_update_update_time();
