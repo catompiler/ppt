@@ -18,6 +18,8 @@
 #include "gui/gui_checkbox.h"
 #include "gui/gui_spinbox.h"
 #include "gui/gui_button.h"
+#include "drive_events.h"
+#include <string.h>
 //#include "input/key_layout_ru.h"
 //#include "input/key_layout_en.h"
 
@@ -109,6 +111,7 @@ typedef struct _Drive_Gui {
     gui_label_t label_pwr_errs;
     gui_label_t label_state;
     gui_label_t label_ref;
+    gui_label_t label_last_pwr_errs;
     gui_spinbox_t spinbox_ref;
     gui_button_t button_start;
     gui_button_t button_stop;
@@ -127,6 +130,7 @@ typedef struct _Drive_Gui {
     gui_number_label_t label_num_errs;
     gui_number_label_t label_num_pwr_errs;
     gui_number_label_t label_num_state;
+    gui_number_label_t label_num_last_pwr_errs;
     gui_number_label_t lbl_num_adc1_in1;
     gui_number_label_t lbl_num_adc1_in2;
     gui_number_label_t lbl_num_adc1_in3;
@@ -138,6 +142,8 @@ typedef struct _Drive_Gui {
     gui_number_label_t lbl_num_adc3_in1;
     gui_number_label_t lbl_num_adc3_in2;
     gui_number_label_t lbl_num_adc3_in3;
+    //
+    drive_event_t last_event;
 } drive_gui_t;
 
 //! Графический интерфейс привода.
@@ -376,6 +382,26 @@ static void make_gui_adc(void)
     gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc3_in3), true);
 }
 
+static void make_err_gui(void)
+{
+    gui_label_init_parent(&gui.label_last_pwr_errs, &gui.gui, &gui.parent_widget);
+    gui_label_set_text(&gui.label_last_pwr_errs, "Псл ошп:");
+    gui_widget_move(GUI_WIDGET(&gui.label_last_pwr_errs), 5, GUI_LABEL_TOP(7));
+    gui_widget_resize(GUI_WIDGET(&gui.label_last_pwr_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&gui.label_last_pwr_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&gui.label_last_pwr_errs), true);
+    
+    gui_number_label_init_parent(&gui.label_num_last_pwr_errs, &gui.gui, &gui.parent_widget);
+    gui_number_label_set_number(&gui.label_num_last_pwr_errs, 0);//0x1234
+    gui_number_label_set_format(&gui.label_num_last_pwr_errs, GUI_NUMBER_LABEL_HEX);
+    gui_widget_move(GUI_WIDGET(&gui.label_num_last_pwr_errs), 60, GUI_LABEL_TOP(7));
+    gui_widget_resize(GUI_WIDGET(&gui.label_num_last_pwr_errs), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&gui.label_num_last_pwr_errs), GUI_BORDER_SOLID);
+    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
+    gui_widget_set_visible(GUI_WIDGET(&gui.label_num_last_pwr_errs), true);
+}
+
 static void make_gui(void)
 {
     gui_widget_init(&gui.root_widget, &gui.gui);
@@ -492,6 +518,7 @@ static void make_gui(void)
     gui_widget_set_visible(GUI_WIDGET(&gui.spinbox_ref), true);
     
     make_gui_adc();
+    make_err_gui();
     
     gui_set_root_widget(&gui.gui, &gui.root_widget);
     gui_set_focus_widget(&gui.gui, GUI_WIDGET(&gui.spinbox_ref));
@@ -504,6 +531,21 @@ void drive_gui_repaint(void)
     gui_repaint(&gui.gui, NULL);
 }
 
+static bool drive_gui_read_last_err(void)
+{
+    static drive_event_index_t last_index = 0;
+    static bool readed = false;
+    
+    if(drive_events_count() == 0) return false;
+    
+    if(last_index == drive_events_last_index() && readed) return false;
+    
+    last_index = drive_events_last_index();
+    readed = (drive_events_read_event(&gui.last_event, last_index) == E_NO_ERROR);
+    
+    return readed;
+}
+
 void drive_gui_update(void)
 {
     //gui_number_label_set_number(&gui.label_num, drive_keypad_state());
@@ -512,6 +554,10 @@ void drive_gui_update(void)
     gui_number_label_set_number(&gui.label_num_errs, drive_errors());
     gui_number_label_set_number(&gui.label_num_pwr_errs, drive_power_errors());
     gui_spinbox_set_value(&gui.spinbox_ref, drive_reference());
+    
+    if(drive_gui_read_last_err()){
+        gui_number_label_set_number(&gui.label_num_last_pwr_errs, gui.last_event.power_errors);
+    }
 
     if(drive_power_data_avail(DRIVE_POWER_CHANNELS)){
 
@@ -545,6 +591,8 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
     RETURN_ERR_IF_FAIL(gui_init(&gui.gui, &graphics, &theme));
     
     make_gui();
+    
+    memset(&gui.last_event, 0x0, sizeof(drive_event_t));
     
     return E_NO_ERROR;
 }
