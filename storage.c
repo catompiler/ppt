@@ -67,7 +67,9 @@ err_t storage_write(storage_address_t address, const void* data, size_t size)
         avail_size = m95x_avail_data_size(storage.eeprom, address);
         avail_size = MIN(avail_size, size);
         
+        RETURN_ERR_IF_FAIL(m95x_write_enable(storage.eeprom));
         RETURN_ERR_IF_FAIL(m95x_write(storage.eeprom, address, data, avail_size));
+        RETURN_ERR_IF_FAIL(m95x_wait(storage.eeprom));
         RETURN_ERR_IF_FAIL(storage_wait_eeprom_wip());
         
         address += avail_size;
