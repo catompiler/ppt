@@ -181,6 +181,9 @@ typedef enum _Drive_Err_Stopping {
 } drive_err_stopping_t;
 
 
+//! Каллбэк возникновения ошибки привода.
+typedef void (*drive_error_callback_t)(void);
+
 
 /**
  * Инициализирует привод.
@@ -354,6 +357,18 @@ extern bool drive_stop(void);
  * @return Флаг работы привода.
  */
 extern bool drive_running(void);
+
+/**
+ * Получает каллбэк при возникновении ошибки.
+ * @return Каллбэк при возникновении ошибки.
+ */
+extern drive_error_callback_t drive_error_callback(void);
+
+/**
+ * Устанавливает каллбэк при возникновении ошибки.
+ * @param callback Каллбэк при возникновении ошибки.
+ */
+extern void drive_set_error_callback(drive_error_callback_t callback);
 
 /**
  * Устанавливает порт вывода для заданной пары тиристоров.

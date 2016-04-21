@@ -50,6 +50,7 @@ typedef struct _Drive {
     drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
     uint32_t start_stop_counter; //!< Счётчик периодов при запуске / останове.
+    drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
 } drive_t;
 
 //! Состояние привода.
@@ -230,6 +231,10 @@ ALWAYS_INLINE static void drive_clear_power_warning(drive_power_warnings_t warni
 static void drive_error_occured(drive_errors_t error)
 {
     drive_set_error(error);
+
+    if(drive.status != DRIVE_STATUS_ERROR){
+        if(drive.on_error_occured) drive.on_error_occured();
+    }
     
     switch(drive_get_state()){
         case DRIVE_STATE_INIT:
@@ -797,6 +802,8 @@ err_t drive_init(void)
     drive.stopping_state = DRIVE_STOPPING_NONE;
     drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
     
+    drive.on_error_occured = NULL;
+    
     return E_NO_ERROR;
 }
 
@@ -946,6 +953,16 @@ bool drive_stop(void)
 bool drive_running(void)
 {
     return drive.status == DRIVE_STATUS_RUN;
+}
+
+drive_error_callback_t drive_error_callback(void)
+{
+    return drive.on_error_occured;
+}
+
+void drive_set_error_callback(drive_error_callback_t callback)
+{
+    drive.on_error_occured = callback;
 }
 
 void drive_triac_pairs_timer0_irq_handler(void)
