@@ -127,7 +127,10 @@ static storage_address_t drive_events_get_address(drive_event_index_t event_inde
 
 err_t drive_events_write_event(drive_event_t* event)
 {
-    drive_event_index_t event_index = drive_events_next_index(events.events_map.event_index);
+    drive_event_index_t event_index = 0;
+    if(events.events_map.events_count != 0){
+        event_index = drive_events_next_index(events.events_map.event_index);
+    }
     
     event->id = events.events_map.event_id + 1;
     event->crc = crc16_ccitt(event, sizeof(drive_event_t) - sizeof(uint16_t));
