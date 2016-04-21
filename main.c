@@ -1005,7 +1005,22 @@ static void init_gpio (void)
 }
 /******************************************************************************/
 
-void* main_task(void* arg)
+static void* write_error_event_task(void* event)
+{
+    err_t err = drive_events_write_event((drive_event_t*)event);
+    
+    return int_to_pvoid(err);
+}
+
+static void on_drive_error(void)
+{
+    static drive_event_t event;
+    drive_events_make_event(&event, DRIVE_EVENT_TYPE_ERROR);
+    
+    scheduler_add_task(write_error_event_task, 10, &event, TASK_RUN_ONCE, NULL);
+}
+
+static void* main_task(void* arg)
 {
     drive_ui_process();
     
@@ -1045,6 +1060,7 @@ int main(void)
     init_gpio();
     
     drive_init();
+    drive_set_error_callback(on_drive_error);
     
     init_triacs();
     init_triacs_timers();
