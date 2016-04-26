@@ -106,7 +106,10 @@ static void drive_ui_update_leds(void)
     if(drive_ready()) leds_to_on |= DRIVE_KPD_LED_2;
     else leds_to_off |= DRIVE_KPD_LED_2;
 
-    if(drive_running()) leds_to_on |= DRIVE_KPD_LED_3;
+    if(drive_running()) {
+        leds_to_on |= DRIVE_KPD_LED_3;
+        leds_to_off |= DRIVE_KPD_LED_2;
+    }
     else leds_to_off |= DRIVE_KPD_LED_3;
 
     if(drive_errors() != DRIVE_ERROR_NONE) leds_to_on |= DRIVE_KPD_LED_0;
