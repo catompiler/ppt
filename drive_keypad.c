@@ -51,6 +51,7 @@ ALWAYS_INLINE static bool drive_keypad_async_io_timeout(void)
 
 ALWAYS_INLINE static void drive_keypad_async_io_reset(void)
 {
+    pca9555_reset(keypad.ioport);
     i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
 }
 
