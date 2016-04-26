@@ -130,7 +130,7 @@ typedef size_t triac_pair_number_t;
 //! Максимальный угол открытия тиристоров в fixed32.
 #define TRIACS_PAIRS_ANGLE_MAX_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MAX))
 //! Минимальный угол открытия тиристоров.
-#define TRIACS_PAIRS_ANGLE_MIN (6)
+#define TRIACS_PAIRS_ANGLE_MIN (0)
 //! Минимальный угол открытия тиристоров в fixed32.
 #define TRIACS_PAIRS_ANGLE_MIN_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MIN))
 //! Максимальный угол включения симистора возбуждения.
