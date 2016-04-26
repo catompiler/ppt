@@ -191,7 +191,11 @@ static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_exc_
 {
     if(regulator.rot_enabled){
         ramp_calc_step(&regulator.rot_ramp);
-        fixed32_t u_rot_ref = regulator.U_rot_nom * ramp_current_reference(&regulator.rot_ramp) / 100;
+        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.rot_ramp);
+        
+        fixed32_t u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
+        u_rot_ref = u_rot_ref / 100;
+        
         fixed32_t u_rot_e = u_rot_ref - u_rot_back;
         pid_controller_calculate(&regulator.rot_pid, u_rot_e, DRIVE_PID_DT);
     }
@@ -210,7 +214,7 @@ bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_exc_back)
             return false;
         case DRIVE_REGULATOR_STATE_START:
             drive_regulator_regulate_impl(u_rot_back, i_exc_back);
-            if(ramp_current_reference(&regulator.rot_ramp) >= regulator.reference){
+            if(ramp_current_reference(&regulator.rot_ramp) >= fixed32_make_from_int(regulator.reference)){
                 regulator.state = DRIVE_REGULATOR_STATE_RUN;
             }
             break;

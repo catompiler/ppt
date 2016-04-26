@@ -107,9 +107,9 @@ ALWAYS_INLINE static ramp_reference_t ramp_target_reference(ramp_t* ramp)
  * @param ramp Разгон.
  * @return Текущее задание разгона.
  */
-ALWAYS_INLINE static ramp_reference_t ramp_current_reference(ramp_t* ramp)
+ALWAYS_INLINE static fixed32_t ramp_current_reference(ramp_t* ramp)
 {
-    return fixed32_get_int(ramp->current_ref);
+    return ramp->current_ref;
 }
 
 /**
