@@ -1,9 +1,20 @@
 #include "drive_phase_state.h"
 #include "defs/defs.h"
+#include <stdbool.h>
 #include <stddef.h>
 
 
+//! Число фаз.
 #define PHASES_COUNT 3
+
+//! Идеальное время между фазами.
+#define PHASE_TIME_US 6667
+//! Максимальная разница во времени между фазами.
+#define PHASE_DELTA_US_MAX 100 // 0.1 мс
+//! Минимальный допустимый интервал времени между фазами.
+#define PHASE_TIME_US_MIN (PHASE_TIME_US - PHASE_DELTA_US_MAX)
+//! Максимальный допустимый интервал времени между фазами.
+#define PHASE_TIME_US_MAX (PHASE_TIME_US + PHASE_DELTA_US_MAX)
 
 
 //! Тип состояния фазы.
@@ -11,7 +22,7 @@ typedef struct _DrivePhaseState {
     phase_t cur_phase; //!< Текущая фаза.
     drive_dir_t drive_dir; //!< Направление.
     drive_phase_errors_t phase_errs; //!< Ошибки.
-    TIM_TypeDef* timer; //!< Таймер.
+    TIM_TypeDef* timer_cnt; //!< Таймер - счётчик времени между фазами.
     phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
 } phase_state_t;
 
@@ -33,31 +44,43 @@ ALWAYS_INLINE static void drive_phase_state_set_time(phase_t phase, phase_time_t
 
 ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
 {
-    if(state.timer){
-        return TIM_GetCounter(state.timer);
+    if(state.timer_cnt){
+        return TIM_GetCounter(state.timer_cnt);
     }
     return 0;
 }
 
+ALWAYS_INLINE static phase_time_t drive_phase_state_delta(phase_time_t time)
+{
+    if(time < PHASE_TIME_US) return PHASE_TIME_US - time;
+    return time - PHASE_TIME_US;
+}
+
+ALWAYS_INLINE static bool drive_phase_state_time_check(phase_time_t time)
+{
+    if(drive_phase_state_delta(time) > PHASE_DELTA_US_MAX) return false;
+    return true;
+}
+
 ALWAYS_INLINE static void drive_phase_state_reset_timer(void)
 {
-    if(state.timer){
-        TIM_SetCounter(state.timer, 0);
+    if(state.timer_cnt){
+        TIM_SetCounter(state.timer_cnt, 0);
     }
 }
 
 ALWAYS_INLINE static void drive_phase_state_stop_timer(void)
 {
-    if(state.timer){
-        TIM_Cmd(state.timer, DISABLE);
+    if(state.timer_cnt){
+        TIM_Cmd(state.timer_cnt, DISABLE);
     }
 }
 
 ALWAYS_INLINE static void drive_phase_state_start_timer(void)
 {
-    if(state.timer){
-        TIM_SetCounter(state.timer, 0);
-        TIM_Cmd(state.timer, ENABLE);
+    if(state.timer_cnt){
+        TIM_SetCounter(state.timer_cnt, 0);
+        TIM_Cmd(state.timer_cnt, ENABLE);
     }
 }
 
@@ -170,7 +193,7 @@ err_t drive_phase_state_set_timer(TIM_TypeDef* TIM)
 {
     if(TIM == NULL) return E_NULL_POINTER;
     
-    state.timer = TIM;
+    state.timer_cnt = TIM;
     
     return E_NO_ERROR;
 }
@@ -196,6 +219,22 @@ void drive_phase_state_handle(phase_t phase)
     }
     
     drive_phase_state_set_time(phase, time);
+    
+    if(!drive_phase_state_time_check(time)){
+        switch(phase){
+            default:
+                break;
+            case PHASE_A:
+                drive_phase_state_set_error(PHASE_A_TIME_ERROR);
+                break;
+            case PHASE_B:
+                drive_phase_state_set_error(PHASE_B_TIME_ERROR);
+                break;
+            case PHASE_C:
+                drive_phase_state_set_error(PHASE_C_TIME_ERROR);
+                break;
+        }
+    }
 }
 
 drive_phase_errors_t drive_phase_state_errors(void)

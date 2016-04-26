@@ -14,13 +14,13 @@
  * Конфигурация таймера для отсчёта времени между датчиками нуля.
  */
 //! Число тиков.
-#define DRIVE_PHASE_STATE_TIMER_TICKS (30000)
+#define DRIVE_PHASE_STATE_TIMER_CNT_TICKS (30000)
 //! Период в микросекундах.
-#define DRIVE_PHASE_STATE_TIMER_PERIOD_US (30000)
+#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD_US (30000)
 //! Период.
-#define DRIVE_PHASE_STATE_TIMER_PERIOD (DRIVE_PHASE_STATE_TIMER_TICKS - 1)
+#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD (DRIVE_PHASE_STATE_TIMER_CNT_TICKS - 1)
 //! Предделитель.
-#define DRIVE_PHASE_STATE_TIMER_PRESCALER (72 - 1)
+#define DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER (72 - 1)
 
 
 /*
