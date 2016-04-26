@@ -4,6 +4,8 @@
 #include "stm32f10x.h"
 #define USART_STDIO
 #include "usart/usart_buf.h"
+#include "usart/usart_bus.h"
+#include "modbus/modbus_rtu.h"
 #include <stdio.h>
 #include "counter/counter.h"
 #include "spi/spi.h"
@@ -22,6 +24,7 @@
 #include "drive_ui.h"
 #include "drive_keypad.h"
 #include "drive_gui.h"
+#include "drive_modbus.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -39,6 +42,14 @@ static uint8_t usart_write_buffer[USART_WRITE_BUFFER_SIZE];
 static uint8_t usart_read_buffer[USART_READ_BUFFER_SIZE];
 //! Буферизированый USART.
 static usart_buf_t usart_buf;
+
+//! Шина USART для Modbus.
+static usart_bus_t usart_bus;
+
+//! Modbus.
+static modbus_rtu_t modbus;
+//! Сообщения Modbus.
+static modbus_rtu_message_t modbus_rx_msg, modbus_tx_msg;
 
 //! Счётчик.
 static counter_t counter;
@@ -108,6 +119,11 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  * Обработчики прерываний.
  */
 
+void USART2_IRQHandler(void)
+{
+    usart_bus_irq_handler(&usart_bus);
+}
+
 void USART3_IRQHandler(void)
 {
     usart_buf_irq_handler(&usart_buf);
@@ -145,11 +161,13 @@ void DMA1_Channel5_IRQHandler(void)
 
 void DMA1_Channel6_IRQHandler(void)
 {
+    usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     i2c_bus_dma_tx_channel_irq_handler(&i2c);
 }
 
 void DMA1_Channel7_IRQHandler(void)
 {
+    usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
     i2c_bus_dma_rx_channel_irq_handler(&i2c);
 }
 
@@ -332,6 +350,26 @@ static bool spi2_callback(void)
     return m95x_spi_callback(&eeprom);
 }
 
+static bool usart_rx_byte_callback(uint8_t byte)
+{
+    return modbus_rtu_usart_rx_byte_callback(&modbus, byte);
+}
+
+static bool usart_rx_callback(void)
+{
+    return modbus_rtu_usart_rx_callback(&modbus);
+}
+
+static bool usart_tx_callback(void)
+{
+    return modbus_rtu_usart_tx_callback(&modbus);
+}
+
+static void modbus_on_msg_recv(void)
+{
+    modbus_rtu_dispatch(&modbus);
+}
+
 /*
  * Инициализация.
  */
@@ -349,6 +387,7 @@ static void remap_config(void)
     GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);          
     GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_TIM4, ENABLE);
+    GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
 }
 
 static void init_periph_clock(void)
@@ -367,6 +406,7 @@ static void init_periph_clock(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
     // USART.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
     // DMA.
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
@@ -414,6 +454,57 @@ static void init_usart(void)
     
     NVIC_SetPriority(USART3_IRQn, 3);
     NVIC_EnableIRQ(USART3_IRQn);
+}
+
+static void init_modbus_usart(void)
+{
+    GPIO_InitTypeDef gpio_tx =
+        {.GPIO_Pin = GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+    GPIO_InitTypeDef gpio_rx =
+        {.GPIO_Pin = GPIO_Pin_6, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+    GPIO_Init(GPIOD, &gpio_tx);
+    GPIO_Init(GPIOD, &gpio_rx);
+    
+    USART_InitTypeDef usart_is =
+        {.USART_BaudRate = 115200, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
+         .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
+    USART_Init(USART2, &usart_is);
+    USART_Cmd(USART2, ENABLE);
+    
+    usart_bus_init_t usartb_is = {
+        .usart_device = USART2,
+        .dma_tx_channel = DMA1_Channel7,
+        .dma_rx_channel = DMA1_Channel6
+    };
+    usart_bus_init(&usart_bus, &usartb_is);
+    
+    usart_bus_set_rx_callback(&usart_bus, usart_rx_callback);
+    usart_bus_set_tx_callback(&usart_bus, usart_tx_callback);
+    usart_bus_set_rx_byte_callback(&usart_bus, usart_rx_byte_callback);
+    
+    usart_bus_set_idle_mode(&usart_bus, USART_IDLE_MODE_END_RX);
+    
+    NVIC_SetPriority(USART2_IRQn, 3);
+    NVIC_EnableIRQ(USART2_IRQn);
+    
+    /*NVIC_SetPriority(DMA1_Channel6_IRQn, 5);
+    NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+    NVIC_SetPriority(DMA1_Channel7_IRQn, 5);
+    NVIC_EnableIRQ(DMA1_Channel7_IRQn);*/
+}
+
+static void init_modbus(void)
+{
+    modbus_rtu_init_t modbus_is;
+    
+    modbus_is.usart = &usart_bus;
+    modbus_is.mode = MODBUS_RTU_MODE_SLAVE;
+    modbus_is.address = 0xaa;//0x10;
+    modbus_is.rx_message = &modbus_rx_msg;
+    modbus_is.tx_message = &modbus_tx_msg;
+    
+    modbus_rtu_init(&modbus, &modbus_is);
+    modbus_rtu_set_msg_recv_callback(&modbus, modbus_on_msg_recv);
 }
 
 static void init_spi(void)
@@ -1065,6 +1156,10 @@ int main(void)
     
     init_usart();
     
+    init_modbus_usart();
+    
+    init_modbus();
+    
     printf("STM32 MCU\r\n");
     
     init_spi2();
@@ -1104,6 +1199,8 @@ int main(void)
     init_spi();
     
     init_drive_ui();
+    
+    drive_modbus_init(&modbus);
     
     //drive_set_reference(REFERENCE_MAX);
     
