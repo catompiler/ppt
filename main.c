@@ -207,6 +207,7 @@ ALWAYS_INLINE static void exti_disable_lines(uint16_t lines_mask)
     EXTI->IMR &= ~lines_mask;
 }
 
+#ifdef DISABLE_LAST_NULL_SENSOR
 /**
  * Включает и отключает прерывания от EXTI
  * согласно текущей фазе и направлению движения.
@@ -238,37 +239,62 @@ static void update_exti_inputs(phase_t phase)
             return;
     }
 }
+#endif
+
+/**
+ * Получает состояние флага прерывания линии EXTI.
+ * @param exti_line Линия EXTI.
+ * @param imr Регистр IMR EXTI.
+ * @retrun Состояние флага прерывания линии EXTI.
+ */
+ALWAYS_INLINE static bool exti_it_status(uint16_t exti_line, uint32_t imr)
+{
+    return EXTI->PR & imr & exti_line;
+}
+
+/**
+ * Очищает флаг прерывания линии EXTI.
+ * @param exti_line Линия EXTI.
+ */
+ALWAYS_INLINE static void exti_clear_it(uint16_t exti_line)
+{
+    EXTI->PR |= exti_line;
+}
 
 /**
  * Прерывание по датчикам нуля.
  */
 void EXTI15_10_IRQHandler(void)
 {
+    uint32_t imr = EXTI->IMR;
     // Датчик нуля фазы A.
-    if (EXTI_GetITStatus(EXTI_PHASE_A_LINE) != RESET)
+    if (exti_it_status(EXTI_PHASE_A_LINE, imr) != RESET)
     {
         drive_process_null_sensor(PHASE_A); // Обрабатывает событие.
+#ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_A);        // Обновим разрешения внешних прерываний.
-        
-        EXTI_ClearFlag(EXTI_PHASE_A_LINE);  // очищаем флаг прерывания 13
+#endif
+        exti_clear_it(EXTI_PHASE_A_LINE);  // очищаем флаг прерывания 13
     }
 
     // Датчик нуля фазы B.
-    if (EXTI_GetITStatus(EXTI_PHASE_B_LINE) != RESET)
+    if (exti_it_status(EXTI_PHASE_B_LINE, imr) != RESET)
     {
         drive_process_null_sensor(PHASE_B); // Обрабатывает событие.
+#ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_B);        // Обновим разрешения внешних прерываний.
-        
-        EXTI_ClearFlag(EXTI_PHASE_B_LINE);  // очищаем флаг прерывания 14
+#endif
+        exti_clear_it(EXTI_PHASE_B_LINE);  // очищаем флаг прерывания 14
     }
 
     // Датчик нуля фазы C.
-    if (EXTI_GetITStatus(EXTI_PHASE_C_LINE) != RESET)
+    if (exti_it_status(EXTI_PHASE_C_LINE, imr) != RESET)
     {
         drive_process_null_sensor(PHASE_C); // Обрабатывает событие.
+#ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_C);        // Обновим разрешения внешних прерываний.
-        
-        EXTI_ClearFlag(EXTI_PHASE_C_LINE);  // очищаем флаг прерывания 15
+#endif
+        exti_clear_it(EXTI_PHASE_C_LINE);  // очищаем флаг прерывания 15
     }
 }
 
@@ -739,9 +765,9 @@ static void init_adc_timer(void)
     
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = 1125-1;                  // Делитель (0000...FFFF)
+            tim1_is.TIM_Prescaler = 10-1;                    // Делитель (0000...FFFF)
             tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim1_is.TIM_Period = 9;                          // Значение периода (0000...FFFF)
+            tim1_is.TIM_Period = 1125-1;                     // Значение периода (0000...FFFF)
             tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
     TIM_TimeBaseInit(TIM1, &tim1_is);
 
@@ -843,9 +869,9 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
 static void init_phases_timer(void)
 {
     TIM_TimeBaseInitTypeDef TIM6_InitStructure;
-            TIM6_InitStructure.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            TIM6_InitStructure.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            TIM6_InitStructure.TIM_Period = DRIVE_PHASE_STATE_TIMER_PERIOD; // Значение периода (0000...FFFF)
+            TIM6_InitStructure.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
             TIM6_InitStructure.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
     TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
