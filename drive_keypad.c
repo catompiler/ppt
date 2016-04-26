@@ -264,7 +264,11 @@ void drive_keypad_process(void)
 void drive_keypad_repeat(void)
 {
     // Если неактуальные данные - возврат.
-    if(keypad.kbd_upd_state != DRIVE_KPD_KBD_UPD_UPDATED) return;
+    if(keypad.kbd_upd_state != DRIVE_KPD_KBD_UPD_UPDATED){
+        drive_keypad_update_pressed_time();
+        drive_keypad_update_repeat_time();
+        return;
+    }
     
     if(!drive_keypad_pressed_is_timeout()) return;
     if(!drive_keypad_repeat_is_timeout()) return;
