@@ -269,12 +269,11 @@ err_t settings_init(void)
     
     for(; i < PARAMETERS_COUNT; i ++){
         
-        if(index >= PARAMETERS_REAL_COUNT) return E_OUT_OF_RANGE;
-        
         descr = settings_param_descr_by_index(i);
         param = settings_parameter_by_index(i);
         
         if(!(descr->flags & PARAM_FLAG_VIRTUAL)){
+            if(index >= PARAMETERS_REAL_COUNT) return E_OUT_OF_RANGE;
             parameters_data.data[index] = 0;
             param->data_index = index ++;
         }else{
