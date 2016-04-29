@@ -122,6 +122,27 @@
  * Длительность импульса открытия симистора возбуждения, мкс.
  */
 #define PARAM_ID_TRIAC_EXC_OPEN_TIME 91
+/**
+ * Напряжение фазы A.
+ */
+#define PARAM_ID_POWER_U_A 1020
+/**
+ * Напряжение фазы B.
+ */
+#define PARAM_ID_POWER_U_B 1021
+/**
+ * Напряжение фазы C.
+ */
+#define PARAM_ID_POWER_U_C 1022
+/**
+ * Напряжение якоря.
+ */
+#define PARAM_ID_POWER_U_ROT 1023
+/**
+ * Ток возбуждения.
+ */
+#define PARAM_ID_POWER_I_EXC 1024
+
 
 #endif	/* PARAMETERS_IDS_H */
 
