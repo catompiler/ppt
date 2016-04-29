@@ -82,16 +82,6 @@ ALWAYS_INLINE static param_data_t* settings_param_data_by_index(size_t index)
 }
 
 /**
- * Получает флаг виртуального параметра.
- * @param param Параметр.
- * @return Флаг виртуального параметра.
- */
-ALWAYS_INLINE static bool settings_param_is_virtual(param_t* param)
-{
-    return (settings_param_descr_by_index(param->descr_index)->flags & PARAM_FLAG_VIRTUAL) != 0;
-}
-
-/**
  * Получает значение параметра как знаковое целое.
  * @param param Параметр.
  * @return Значение параметра.
@@ -386,6 +376,16 @@ param_t* settings_param_by_id(param_id_t id)
 {
     param_t* param = bsearch((void*)(unsigned long)id, parameters, PARAMETERS_COUNT, sizeof(param_t), settings_compare_params_ids);
     return param;
+}
+
+bool settings_param_is_virtual(param_t* param)
+{
+    return (settings_param_descr_by_index(param->descr_index)->flags & PARAM_FLAG_VIRTUAL) != 0;
+}
+
+bool settings_param_flags(param_t* param)
+{
+    return settings_param_descr_by_index(param->descr_index)->flags;
 }
 
  param_data_t settings_param_value_raw(param_t* param)

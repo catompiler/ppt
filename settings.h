@@ -120,6 +120,20 @@ extern void settings_set_readonly(bool readonly);
 extern param_t* settings_param_by_id(param_id_t id);
 
 /**
+ * Получает флаг виртуального параметра.
+ * @param param Параметр.
+ * @return Флаг виртуального параметра.
+ */
+extern bool settings_param_is_virtual(param_t* param);
+
+/**
+ * Получает флаги параметра.
+ * @param param Параметр.
+ * @return Флаги параметра.
+ */
+extern bool settings_param_flags(param_t* param);
+
+/**
  * Получает сырое значение параметра.
  * @param param Параметр.
  * @return Сырое значение параметра.
