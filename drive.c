@@ -35,6 +35,15 @@ typedef struct _Drive_Settings {
     uint32_t start_exc_periods; //!< Время остановки возбуждения в периодах.
 } drive_settings_t;
 
+//! Тип структуры обновляемых параметров.
+typedef struct _Drive_Parameters {
+    param_t* param_u_a;
+    param_t* param_u_b;
+    param_t* param_u_c;
+    param_t* param_u_rot;
+    param_t* param_i_exc;
+} drive_parameters_t;
+
 //! Структура привода.
 typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
@@ -49,6 +58,7 @@ typedef struct _Drive {
     drive_stopping_t stopping_state; //!< Состояние останова привода.
     drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
+    drive_parameters_t params; //!< Обновляемые параметры.
     uint32_t start_stop_counter; //!< Счётчик периодов при запуске / останове.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
 } drive_t;
@@ -394,6 +404,24 @@ static void drive_check_power_running(void)
 /*
  * Обработка состояний привода.
  */
+
+//! Макрос для обновления параметра.
+#define DRIVE_UPDATE_POWER_PARAM(PARAM, CHANNEL)\
+    do {\
+        if(PARAM) settings_param_set_valuef(PARAM, drive_power_channel_real_value(CHANNEL));\
+    }while(0)
+/**
+ * Обновляет значения питания в параметрах.
+ */
+static void drive_update_power_parameters(void)
+{
+    if(!drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)) return;
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_a, DRIVE_POWER_Ua);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_b, DRIVE_POWER_Ub);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_c, DRIVE_POWER_Uc);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_rot, DRIVE_POWER_Urot);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
+}
 
 /**
  * Обработка данных с АЦП.
@@ -766,6 +794,8 @@ static err_t drive_states_process(phase_t phase)
             break;
     }
     
+    drive_update_power_parameters();
+    
     return E_NO_ERROR;
 }
 
@@ -803,6 +833,12 @@ err_t drive_init(void)
     drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
     
     drive.on_error_occured = NULL;
+    
+    drive.params.param_u_a = settings_param_by_id(PARAM_ID_POWER_U_A);
+    drive.params.param_u_b = settings_param_by_id(PARAM_ID_POWER_U_B);
+    drive.params.param_u_c = settings_param_by_id(PARAM_ID_POWER_U_C);
+    drive.params.param_u_rot = settings_param_by_id(PARAM_ID_POWER_U_ROT);
+    drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     
     return E_NO_ERROR;
 }
