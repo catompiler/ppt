@@ -152,38 +152,82 @@ drive_kpd_leds_t drive_keypad_leds(void)
 
 err_t drive_keypad_set_leds(drive_kpd_leds_t leds)
 {
+    drive_kpd_leds_t old_leds = pca9555_pins_state(keypad.ioport, PCA9555_PIN_OFF);
+    
     pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_LED_ALL, PCA9555_PIN_ON);
     pca9555_set_pins_state(keypad.ioport, leds, PCA9555_PIN_OFF);
     
-    return drive_keypad_try_safe(pca9555_write_pins_state);
+    err_t err = drive_keypad_try_safe(pca9555_write_pins_state);
+    
+    if(err != E_NO_ERROR){
+        pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_LED_ALL, PCA9555_PIN_ON);
+        pca9555_set_pins_state(keypad.ioport, old_leds, PCA9555_PIN_OFF);
+    }
+    
+    return err;
 }
 
 err_t drive_keypad_leds_on(drive_kpd_leds_t leds)
 {
+    drive_kpd_leds_t old_leds = pca9555_pins_state(keypad.ioport, PCA9555_PIN_OFF);
+    
     pca9555_set_pins_state(keypad.ioport, leds, PCA9555_PIN_OFF);
     
-    return drive_keypad_try_safe(pca9555_write_pins_state);
+    err_t err = drive_keypad_try_safe(pca9555_write_pins_state);
+    
+    if(err != E_NO_ERROR){
+        pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_LED_ALL, PCA9555_PIN_ON);
+        pca9555_set_pins_state(keypad.ioport, old_leds, PCA9555_PIN_OFF);
+    }
+    
+    return err;
 }
 
 err_t drive_keypad_leds_off(drive_kpd_leds_t leds)
 {
+    drive_kpd_leds_t old_leds = pca9555_pins_state(keypad.ioport, PCA9555_PIN_OFF);
+    
     pca9555_set_pins_state(keypad.ioport, leds, PCA9555_PIN_ON);
     
-    return drive_keypad_try_safe(pca9555_write_pins_state);
+    err_t err = drive_keypad_try_safe(pca9555_write_pins_state);
+    
+    if(err != E_NO_ERROR){
+        pca9555_set_pins_state(keypad.ioport, old_leds, PCA9555_PIN_OFF);
+    }
+    
+    return err;
 }
 
 err_t drive_keypad_pins_on(drive_kpd_pins_t pins)
 {
+    drive_kpd_pins_t old_pins = pca9555_pins_state(keypad.ioport, PCA9555_PIN_ON);
+    
     pca9555_set_pins_state(keypad.ioport, pins, PCA9555_PIN_ON);
     
-    return drive_keypad_try_safe(pca9555_write_pins_state);
+    err_t err = drive_keypad_try_safe(pca9555_write_pins_state);
+    
+    if(err != E_NO_ERROR){
+        pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_ALL, PCA9555_PIN_OFF);
+        pca9555_set_pins_state(keypad.ioport, old_pins, PCA9555_PIN_ON);
+    }
+    
+    return err;
 }
 
 err_t drive_keypad_pins_off(drive_kpd_pins_t pins)
 {
+    drive_kpd_pins_t old_pins = pca9555_pins_state(keypad.ioport, PCA9555_PIN_ON);
+    
     pca9555_set_pins_state(keypad.ioport, pins, PCA9555_PIN_OFF);
     
-    return drive_keypad_try_safe(pca9555_write_pins_state);
+    err_t err = drive_keypad_try_safe(pca9555_write_pins_state);
+    
+    if(err != E_NO_ERROR){
+        pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_ALL, PCA9555_PIN_OFF);
+        pca9555_set_pins_state(keypad.ioport, old_pins, PCA9555_PIN_ON);
+    }
+    
+    return err;
 }
 
 drive_kpd_keys_t drive_keypad_state(void)
