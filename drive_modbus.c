@@ -1,5 +1,6 @@
 #include "drive_modbus.h"
 #include "drive.h"
+#include "settings.h"
 #include <string.h>
 
 
@@ -70,18 +71,30 @@ static modbus_rtu_error_t drive_modbus_on_read_din(uint16_t address, modbus_rtu_
 
 static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_t* value)
 {
+    param_t* param = NULL;
     switch(address){
         default:
-            return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            param = settings_param_by_id((param_id_t)address);
+            if(param == NULL){
+                return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            }
+            *value = settings_param_value_raw(param);
+            break;
     }
     return MODBUS_RTU_ERROR_NONE;
 }
 
 static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16_t* value)
 {
+    param_t* param = NULL;
     switch(address){
         default:
-            return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            param = settings_param_by_id((param_id_t)address);
+            if(param == NULL){
+                return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            }
+            *value = settings_param_value_raw(param);
+            break;
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
             *value = drive_reference();
             break;
@@ -91,9 +104,15 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
 
 static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t value)
 {
+    param_t* param = NULL;
     switch(address){
         default:
-            return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            param = settings_param_by_id((param_id_t)address);
+            if(param == NULL || settings_param_is_virtual(param)){
+                return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+            }
+            settings_param_set_value_raw(param, (param_data_t)value);
+            break;
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
             if(drive_set_reference(value) != E_NO_ERROR)
                 return MODBUS_RTU_ERROR_INVALID_DATA;
