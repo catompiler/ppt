@@ -7,17 +7,6 @@
 
 
 
-//! Создаёт имя переменной дескриптора.
-#define MAKE_DESCR_NAME(arg_id) CONCAT(descr_, arg_id)
-
-//! Начинает список дескрипторов параметров.
-#define PARAM_DESCRS(arg_name, arg_count)\
-        static const param_descr_t arg_name[arg_count] = 
-
-//! Описывает дескриптор параметра.
-#define PARAM_DESCR(arg_id, arg_type, arg_min, arg_max, arg_def, arg_flags)\
-        { .id = arg_id, .type = arg_type, .min.int_value = arg_min, .max.int_value = arg_max, .def.int_value = arg_def, .flags = arg_flags }
-
 //! Объявляет массив данных параметров.
 #define PARAMETERS_DATA(arg_name, arg_count)\
         static struct _Parameters_Data {\
@@ -30,7 +19,7 @@
         static param_t arg_array_name[arg_count]
 
 
-#include "parameters.h"
+#include "parameters_list.h"
 #include "storage.h"
 
 // Данные параметров.

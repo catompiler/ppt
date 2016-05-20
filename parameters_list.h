@@ -9,7 +9,13 @@
 #include "drive_phase_state.h"
 #include "drive_triacs.h"
 #include "ramp.h"
+#include "fixed/fixed32.h"
 
+
+//! Макрос для сокращения декларации дробного значения fixed32.
+#define F32(A, B) fixed32_make_from_fract(A, B)
+//! Макрос для сокращения декларации целого значения fixed32.
+#define F32I(I) fixed32_make_from_int(I)
 
 
 // Число реальных параметров.
@@ -18,11 +24,6 @@
 #define PARAMETERS_VIRT_COUNT 5
 // Общее число параметров.
 #define PARAMETERS_COUNT (PARAMETERS_REAL_COUNT + PARAMETERS_VIRT_COUNT)
-
-//! Макрос для сокращения декларации дробного значения fixed32.
-#define F32(A, B) fixed32_make_from_fract(A, B)
-//! Макрос для сокращения декларации целого значения fixed32.
-#define F32I(I) fixed32_make_from_int(I)
 
 // Дескрипторы параметров.
 PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {

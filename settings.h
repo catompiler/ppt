@@ -66,6 +66,16 @@ typedef struct _Param_Descr {
     param_flags_t flags;
 } param_descr_t;
 
+
+//! Начинает список дескрипторов параметров.
+#define PARAM_DESCRS(arg_name, arg_count)\
+        static const param_descr_t arg_name[arg_count] = 
+
+//! Описывает дескриптор параметра.
+#define PARAM_DESCR(arg_id, arg_type, arg_min, arg_max, arg_def, arg_flags)\
+        { .id = arg_id, .type = arg_type, .min.int_value = arg_min, .max.int_value = arg_max, .def.int_value = arg_def, .flags = arg_flags }
+
+
 //! Тип параметра.
 typedef struct _Param {
     param_index_t descr_index;
