@@ -130,20 +130,6 @@ extern int16_t drive_power_channel_raw_value_inst(size_t channel);
 extern int16_t drive_power_channel_raw_value(size_t channel);
 
 /**
- * Получает сырое среднее значение канала АЦП.
- * @param channel Номер канала.
- * @return Сырое среднее значение канала АЦП.
- */
-extern int16_t drive_power_channel_raw_value_avg(size_t channel);
-
-/**
- * Получает сырое RMS значение канала АЦП.
- * @param channel Номер канала.
- * @return Сырое RMS значение канала АЦП.
- */
-extern int16_t drive_power_channel_raw_value_rms(size_t channel);
-
-/**
  * Получает реальное последнее мгновенное значение канала АЦП.
  * @param channel Номер канала.
  * @return Реальное последнее мгновенное значение канала АЦП.
@@ -156,20 +142,6 @@ extern fixed32_t drive_power_channel_real_value_inst(size_t channel);
  * @return Реальное значение канала АЦП.
  */
 extern fixed32_t drive_power_channel_real_value(size_t channel);
-
-/**
- * Получает реальное среднее значение канала АЦП.
- * @param channel Номер канала.
- * @return Реальное среднее значение канала АЦП.
- */
-extern fixed32_t drive_power_channel_real_value_avg(size_t channel);
-
-/**
- * Получает реальное RMS значение канала АЦП.
- * @param channel Номер канала.
- * @return Реальное RMS значение канала АЦП.
- */
-extern fixed32_t drive_power_channel_real_value_rms(size_t channel);
 
 #endif /* DRIVE_POWER_H */
 

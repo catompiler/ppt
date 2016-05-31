@@ -856,7 +856,7 @@ static void init_adc_timer(void)
     
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = 10-1;                    // Делитель (0000...FFFF)
+            tim1_is.TIM_Prescaler = 5-1;                    // Делитель (0000...FFFF)
             tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
             tim1_is.TIM_Period = 1125-1;                     // Значение периода (0000...FFFF)
             tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
@@ -1172,9 +1172,9 @@ int main(void)
     }
     
     settings_init();
-    if(settings_read() != E_NO_ERROR){
+    //if(settings_read() != E_NO_ERROR){
         settings_default();
-    }
+    //}
     
     scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
     

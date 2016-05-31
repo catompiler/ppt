@@ -317,7 +317,8 @@ static void make_gui_adc(void)
     
     gui_number_label_init_parent(&gui.lbl_num_adc1_in4, &gui.gui, &gui.parent_widget);
     gui_number_label_set_number(&gui.lbl_num_adc1_in4, 3);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_FIX);
+    //gui_number_label_set_format(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_FIX);
+    gui_number_label_set_format(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_DEC);
     gui_number_label_set_decimals(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_DECIMALS);
     gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc1_in4), 180, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc1_in4), 50, GUI_LABEL_HEIGHT);
@@ -564,18 +565,19 @@ void drive_gui_update(void)
         gui_number_label_set_number(&gui.lbl_num_adc1_in1, (drive_power_channel_real_value(0)));
         gui_number_label_set_number(&gui.lbl_num_adc1_in2, (drive_power_channel_real_value(2)));
         gui_number_label_set_number(&gui.lbl_num_adc1_in3, (drive_power_channel_real_value(4)));
-        gui_number_label_set_number(&gui.lbl_num_adc1_in4, (drive_power_channel_real_value(6)));
+        //gui_number_label_set_number(&gui.lbl_num_adc1_in4, (drive_power_channel_real_value(6)));
+        gui_number_label_set_number(&gui.lbl_num_adc1_in4, (drive_power_channel_raw_value(6)));
 
         gui_number_label_set_number(&gui.lbl_num_adc2_in1, drive_power_channel_raw_value(1));
         gui_number_label_set_number(&gui.lbl_num_adc2_in2, drive_power_channel_raw_value(3));
         gui_number_label_set_number(&gui.lbl_num_adc2_in3, drive_power_channel_raw_value(5));
         gui_number_label_set_number(&gui.lbl_num_adc2_in4, drive_power_channel_raw_value(7));
 
-        gui_number_label_set_number(&gui.lbl_num_adc3_in1, drive_power_channel_real_value_avg(8));
+        gui_number_label_set_number(&gui.lbl_num_adc3_in1, drive_power_channel_real_value(8));
         
-        //gui_number_label_set_number(&gui.lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value_avg(8)));
-        gui_number_label_set_number(&gui.lbl_num_adc3_in2, fixed32_get_int(drive_power_channel_real_value_avg(9)));
-        gui_number_label_set_number(&gui.lbl_num_adc3_in3, fixed32_get_int(drive_power_channel_real_value_avg(10)));
+        //gui_number_label_set_number(&gui.lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value(8)));
+        gui_number_label_set_number(&gui.lbl_num_adc3_in2, fixed32_get_int(drive_power_channel_real_value(9)));
+        gui_number_label_set_number(&gui.lbl_num_adc3_in3, fixed32_get_int(drive_power_channel_real_value(10)));
     }
 }
 

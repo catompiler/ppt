@@ -67,16 +67,14 @@ typedef struct _Power_Value {
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
-    int16_t raw_value_avg; //!< Сырое значение с АЦП (среднее).
-    int16_t raw_value_rms; //!< Сырое значение с АЦП (RMS).
+    int16_t raw_value; //!< Сырое значение с АЦП (RMS).
     fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
-    fixed32_t real_value_avg; //!< Значение в СИ (среднее).
-    fixed32_t real_value_rms; //!< Значение в СИ (RMS).
-    int32_t sum_avg; //!< Сумма значений (среднее).
-    int32_t sum_rms; //!< Сумма значений (RMS).
+    fixed32_t real_value; //!< Значение в СИ (RMS).
+    int32_t sum; //!< Сумма значений для DC, исходящей энергии для DC (RMS).
+    int32_t sum_neg; //!< Сумма значений входящей энергии для DC (RMS).
     int32_t count; //!< Число значений.
-    power_filter_t filter_avg; //!< Фильтр значенией (среднее).
-    power_filter_t filter_rms; //!< Фильтр значенией (RMS).
+    int32_t count_neg; //!< Число отрицательных значений.
+    power_filter_t filter; //!< Фильтр значенией (RMS).
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
 } power_value_t;
@@ -84,12 +82,11 @@ typedef struct _Power_Value {
 //! Инициализирует структуру значения канала АЦП по месту объявления.
 #define MAKE_POWER_CHANNEL(arg_type, arg_k) { .type = arg_type, .k = arg_k,\
                                     .raw_zero_cal = 0, .raw_zero_cur = 0,\
-                                    .raw_value = 0, .sum_zero = 0,\
-                                    .raw_value_avg = 0, .raw_value_rms = 0,\
-                                    .real_value = 0,\
-                                    .real_value_avg = 0, .real_value_rms = 0,\
-                                    .sum_avg = 0, .sum_rms = 0, .count = 0,\
-                                    .filter_avg = {0}, .filter_rms = {0},\
+                                    .sum_zero = 0, .raw_value_inst = 0,\
+                                    .raw_value = 0, .real_value_inst = 0,\
+                                    .real_value = 0, .sum = 0,\
+                                    .sum_neg = 0, .count = 0,\
+                                    .count_neg = 0, .filter = {0},\
                                     .calibrated = false, .data_avail = false }
 
 /**
@@ -195,25 +192,14 @@ ALWAYS_INLINE static int16_t power_channel_raw_value_inst(const power_t* power, 
 }
 
 /**
- * Получает сырое среднее значение канала АЦП.
+ * Получает сырое значение канала АЦП.
  * @param power Питание.
  * @param channel Номер канала.
- * @return Сырое среднее значение канала АЦП.
+ * @return Сырое значение канала АЦП.
  */
-ALWAYS_INLINE static int16_t power_channel_raw_value_avg(const power_t* power, size_t channel)
+ALWAYS_INLINE static int16_t power_channel_raw_value(const power_t* power, size_t channel)
 {
-    return power->channels[channel].raw_value_avg;
-}
-
-/**
- * Получает сырое RMS значение канала АЦП.
- * @param power Питание.
- * @param channel Номер канала.
- * @return Сырое RMS значение канала АЦП.
- */
-ALWAYS_INLINE static int16_t power_channel_raw_value_rms(const power_t* power, size_t channel)
-{
-    return power->channels[channel].raw_value_rms;
+    return power->channels[channel].raw_value;
 }
 
 /**
@@ -228,25 +214,14 @@ ALWAYS_INLINE static fixed32_t power_channel_real_value_inst(const power_t* powe
 }
 
 /**
- * Получает реальное среднее значение канала АЦП.
+ * Получает реальное значение канала АЦП.
  * @param power Питание.
  * @param channel Номер канала.
- * @return Реальное среднее значение канала АЦП.
+ * @return Реальное значение канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_channel_real_value_avg(const power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_channel_real_value(const power_t* power, size_t channel)
 {
-    return power->channels[channel].real_value_avg;
-}
-
-/**
- * Получает реальное RMS значение канала АЦП.
- * @param power Питание.
- * @param channel Номер канала.
- * @return Реальное RMS значение канала АЦП.
- */
-ALWAYS_INLINE static fixed32_t power_channel_real_value_rms(const power_t* power, size_t channel)
-{
-    return power->channels[channel].real_value_rms;
+    return power->channels[channel].real_value;
 }
 
 /**

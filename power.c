@@ -83,22 +83,35 @@ err_t power_init(power_t* power, power_value_t* channels, size_t channels_count)
 
 ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
+    // Вычтем значение АЦП при нуле.
     int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
-    int32_t abs_value = value;
     
+    // Мгновенное сырое значение канала АЦП.
+    channel->raw_value_inst = value;
+    // Мгновенное реальное значение канала АЦП.
+    channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
+    // Значение нуля АЦП.
+    channel->sum_zero += adc_value;
+    // Увеличим число измерений.
+    channel->count ++;
+    
+    // Значение квадрата значения.
     int32_t sq_value = value * value;
     
+    // Если канал питания - AC.
     if(channel->type == POWER_CHANNEL_AC){
-        abs_value = ABS(abs_value);
+        // Отрицательного напряжения быть не может - учтём в положительную сумму.
+        channel->sum += sq_value;
+    }else{
+        // Иначе учтём согласно знака мгновенного значения.
+        if(value > 0){
+            channel->sum += sq_value;
+        }else{
+            channel->sum_neg += sq_value;
+            // Увеличим число измерений отрицательной суммы.
+            channel->count_neg ++;
+        }
     }
-    
-    channel->raw_value_inst = value;
-    channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
-    
-    channel->sum_zero += adc_value;
-    channel->sum_avg += abs_value;
-    channel->sum_rms += sq_value;
-    channel->count ++;
 }
 
 /**
@@ -143,9 +156,10 @@ err_t power_process_adc_values(power_t* power, power_channels_t channels, uint16
 ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
 {
     channel->count = 0;
+    channel->count_neg = 0;
     channel->sum_zero = 0;
-    channel->sum_avg = 0;
-    channel->sum_rms = 0;
+    channel->sum = 0;
+    channel->sum_neg = 0;
 }
 
 /**
@@ -160,20 +174,20 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
     }
     
     int16_t value = 0;
+    int32_t count_pos = channel->count - channel->count_neg;
     
-    // AVG.
-    value = channel->sum_avg / channel->count;
-    power_filter_put(&channel->filter_avg, value);
-    channel->raw_value_avg = power_filter_calculate(&channel->filter_avg);
     // RMS.
-    value = bsqrti(channel->sum_rms / channel->count);
-    power_filter_put(&channel->filter_rms, value);
-    channel->raw_value_rms = power_filter_calculate(&channel->filter_rms);
+    if(count_pos)
+        value = bsqrti(channel->sum / count_pos);
+    if(channel->type == POWER_CHANNEL_DC && channel->count_neg){
+            value -= bsqrti(channel->sum_neg / channel->count_neg);
+    }
+    power_filter_put(&channel->filter, value);
+    channel->raw_value = power_filter_calculate(&channel->filter);
     
     channel->raw_zero_cur = channel->sum_zero / channel->count;
     
-    channel->real_value_avg = (fixed32_t)channel->raw_value_avg * channel->k;
-    channel->real_value_rms = (fixed32_t)channel->raw_value_rms * channel->k;
+    channel->real_value = (fixed32_t)channel->raw_value * channel->k;
     
     power_channel_reset_sums(channel);
     
@@ -221,8 +235,7 @@ err_t power_calibrate(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_calibrate(&power->channels[i]);
-        power_filter_reset(&power->channels[i].filter_avg);
-        power_filter_reset(&power->channels[i].filter_rms);
+        power_filter_reset(&power->channels[i].filter);
     }
     
     return E_NO_ERROR;
@@ -258,8 +271,7 @@ err_t power_reset_channels(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_reset_sums(&power->channels[i]);
-        power_filter_reset(&power->channels[i].filter_avg);
-        power_filter_reset(&power->channels[i].filter_rms);
+        power_filter_reset(&power->channels[i].filter);
     }
     
     return E_NO_ERROR;
