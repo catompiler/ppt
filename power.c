@@ -95,22 +95,13 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
     // Увеличим число измерений.
     channel->count ++;
     
-    // Значение квадрата значения.
-    int32_t sq_value = value * value;
-    
     // Если канал питания - AC.
     if(channel->type == POWER_CHANNEL_AC){
-        // Отрицательного напряжения быть не может - учтём в положительную сумму.
-        channel->sum += sq_value;
+        // Квадрат значения для RMS.
+        channel->sum += value * value;
     }else{
-        // Иначе учтём согласно знака мгновенного значения.
-        if(value > 0){
-            channel->sum += sq_value;
-        }else{
-            channel->sum_neg += sq_value;
-            // Увеличим число измерений отрицательной суммы.
-            channel->count_neg ++;
-        }
+        // Значение для среднего.
+        channel->sum += value;
     }
 }
 
@@ -156,10 +147,8 @@ err_t power_process_adc_values(power_t* power, power_channels_t channels, uint16
 ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
 {
     channel->count = 0;
-    channel->count_neg = 0;
     channel->sum_zero = 0;
     channel->sum = 0;
-    channel->sum_neg = 0;
 }
 
 /**
@@ -174,14 +163,13 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
     }
     
     int16_t value = 0;
-    int32_t count_pos = channel->count - channel->count_neg;
     
-    // RMS.
-    if(count_pos)
-        value = bsqrti(channel->sum / count_pos);
-    if(channel->type == POWER_CHANNEL_DC && channel->count_neg){
-            value -= bsqrti(channel->sum_neg / channel->count_neg);
+    if(channel->type == POWER_CHANNEL_AC){
+        value = bsqrti(channel->sum / channel->count);
+    }else{
+        value = channel->sum / channel->count;
     }
+    
     power_filter_put(&channel->filter, value);
     channel->raw_value = power_filter_calculate(&channel->filter);
     

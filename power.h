@@ -67,14 +67,12 @@ typedef struct _Power_Value {
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
-    int16_t raw_value; //!< Сырое значение с АЦП (RMS).
+    int16_t raw_value; //!< Сырое значение с АЦП.
     fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
-    fixed32_t real_value; //!< Значение в СИ (RMS).
-    int32_t sum; //!< Сумма значений для DC, исходящей энергии для DC (RMS).
-    int32_t sum_neg; //!< Сумма значений входящей энергии для DC (RMS).
+    fixed32_t real_value; //!< Значение в СИ.
+    int32_t sum; //!< Сумма значений.
     int32_t count; //!< Число значений.
-    int32_t count_neg; //!< Число отрицательных значений.
-    power_filter_t filter; //!< Фильтр значенией (RMS).
+    power_filter_t filter; //!< Фильтр значенией.
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
 } power_value_t;
@@ -85,8 +83,7 @@ typedef struct _Power_Value {
                                     .sum_zero = 0, .raw_value_inst = 0,\
                                     .raw_value = 0, .real_value_inst = 0,\
                                     .real_value = 0, .sum = 0,\
-                                    .sum_neg = 0, .count = 0,\
-                                    .count_neg = 0, .filter = {0},\
+                                    .count = 0, .filter = {0},\
                                     .calibrated = false, .data_avail = false }
 
 /**
