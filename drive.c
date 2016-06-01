@@ -451,7 +451,6 @@ static bool drive_calculate_power(phase_t phase)
 static bool drive_regulate(void)
 {
     if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-        //if(drive_power_phase() == phase){
             fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
             fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
             
@@ -464,10 +463,12 @@ static bool drive_regulate(void)
             drive_triacs_set_exc_open_angle(exc_pid_val);
             //drive_triacs_set_exc_open_angle(fixed32_make_from_int(120));
             
-            //pid_controller_t* pid = drive_regulator_exc_pid();
+            //pid_controller_t* pid = drive_regulator_rot_pid();
             
             //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
-        //}
+            
+            //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), rot_pid_val);
+            //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
     }

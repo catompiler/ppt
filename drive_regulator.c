@@ -191,10 +191,9 @@ static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_exc_
 {
     if(regulator.rot_enabled){
         ramp_calc_step(&regulator.rot_ramp);
-        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.rot_ramp);
+        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.rot_ramp) / 100;
         
         fixed32_t u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
-        u_rot_ref = u_rot_ref / 100;
         
         fixed32_t u_rot_e = u_rot_ref - u_rot_back;
         pid_controller_calculate(&regulator.rot_pid, u_rot_e, DRIVE_PID_DT);
