@@ -22,13 +22,13 @@ err_t drive_power_init(void)
     drive_power.power_phase = PHASE_UNK;
     
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x4478); // Ua
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_DC, 0x10000); // Ia
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x44ac); // Ub
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_DC, 0x10000); // Ib
     power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x450b); // Uc
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_DC, 0x10000); // Ic
     power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0x6861); // Urot
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x2e14); // Irot
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x5f11); // Irot //0x2e14
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x321); // Iexc //0x1bd
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
