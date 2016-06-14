@@ -49,10 +49,14 @@ static drive_modbus_t drive;
 // Константы адресов.
 // Регистры ввода.
 // Регистры хранения.
+//! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
 // Цифровые входа.
 // Регистры флагов.
+//! Запуск/останов.
 #define DRIVE_MODBUS_COIL_RUN (DRIVE_MODBUS_COIS_START + 0)
+//! Сброс ошибок.
+#define DRIVE_MODBUS_COIL_CLEAR_ERRORS (DRIVE_MODBUS_COIS_START + 1)
 
 
 ALWAYS_INLINE static int16_t pack_f32_f10_6(fixed32_t value)
@@ -129,6 +133,9 @@ static modbus_rtu_error_t drive_modbus_on_read_coil(uint16_t address, modbus_rtu
         case DRIVE_MODBUS_COIL_RUN:
             *value = drive_running();
             break;
+        case DRIVE_MODBUS_COIL_CLEAR_ERRORS:
+            *value = drive_errors() != DRIVE_ERROR_NONE;
+            break;
     }
     return MODBUS_RTU_ERROR_NONE;
 }
@@ -140,6 +147,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             return MODBUS_RTU_ERROR_INVALID_ADDRESS;
         case DRIVE_MODBUS_COIL_RUN:
             value ? drive_start() : drive_stop();
+            break;
+        case DRIVE_MODBUS_COIL_CLEAR_ERRORS:
+            if(value) drive_clear_errors();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

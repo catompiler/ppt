@@ -359,6 +359,11 @@ extern bool drive_stop(void);
 extern bool drive_running(void);
 
 /**
+ * Очищает ошибки привода.
+ */
+extern void drive_clear_errors(void);
+
+/**
  * Получает каллбэк при возникновении ошибки.
  * @return Каллбэк при возникновении ошибки.
  */

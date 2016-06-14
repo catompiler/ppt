@@ -41,6 +41,10 @@ typedef struct _Drive_Parameters {
     param_t* param_u_b;
     param_t* param_u_c;
     param_t* param_u_rot;
+    param_t* param_i_a;
+    param_t* param_i_b;
+    param_t* param_i_c;
+    param_t* param_i_rot;
     param_t* param_i_exc;
 } drive_parameters_t;
 
@@ -420,6 +424,10 @@ static void drive_update_power_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_b, DRIVE_POWER_Ub);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_c, DRIVE_POWER_Uc);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_rot, DRIVE_POWER_Urot);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_a, DRIVE_POWER_Ia);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_b, DRIVE_POWER_Ib);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_c, DRIVE_POWER_Ic);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_rot, DRIVE_POWER_Irot);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
 }
 
@@ -839,6 +847,10 @@ err_t drive_init(void)
     drive.params.param_u_b = settings_param_by_id(PARAM_ID_POWER_U_B);
     drive.params.param_u_c = settings_param_by_id(PARAM_ID_POWER_U_C);
     drive.params.param_u_rot = settings_param_by_id(PARAM_ID_POWER_U_ROT);
+    drive.params.param_i_a = settings_param_by_id(PARAM_ID_POWER_I_A);
+    drive.params.param_i_b = settings_param_by_id(PARAM_ID_POWER_I_B);
+    drive.params.param_i_c = settings_param_by_id(PARAM_ID_POWER_I_C);
+    drive.params.param_i_rot = settings_param_by_id(PARAM_ID_POWER_I_ROT);
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     
     return E_NO_ERROR;
@@ -990,6 +1002,17 @@ bool drive_stop(void)
 bool drive_running(void)
 {
     return drive.status == DRIVE_STATUS_RUN;
+}
+
+void drive_clear_errors(void)
+{
+    if(drive.state == DRIVE_STATE_ERROR){
+        drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
+        drive.errors = DRIVE_ERROR_NONE;
+        drive.power_errors = DRIVE_POWER_ERROR_NONE;
+        drive_phase_state_clear_errors();
+        drive_set_state(DRIVE_STATE_IDLE);
+    }
 }
 
 drive_error_callback_t drive_error_callback(void)

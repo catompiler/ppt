@@ -179,9 +179,25 @@
  */
 #define PARAM_ID_POWER_U_ROT 1023
 /**
+ * Ток фазы A.
+ */
+#define PARAM_ID_POWER_I_A 1024
+/**
+ * Ток фазы B.
+ */
+#define PARAM_ID_POWER_I_B 1025
+/**
+ * Ток фазы C.
+ */
+#define PARAM_ID_POWER_I_C 1026
+/**
+ * Ток якоря.
+ */
+#define PARAM_ID_POWER_I_ROT 1027
+/**
  * Ток возбуждения.
  */
-#define PARAM_ID_POWER_I_EXC 1024
+#define PARAM_ID_POWER_I_EXC 1028
 
 
 #endif	/* PARAMETERS_IDS_H */
