@@ -11,12 +11,12 @@ err_t ramp_init(ramp_t* ramp)
     return E_NO_ERROR;
 }
 
-err_t ramp_set_time(ramp_t* ramp, ramp_time_t time)
+err_t ramp_set_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt)
 {
     if(time < 0) return E_INVALID_VALUE;
     if(time > RAMP_TIME_MAX) return E_OUT_OF_RANGE;
     
-    ramp->step_ref = RAMP_TIME_MAX / time;
+    ramp->step_ref = step_dt * 100 / time;
     
     return E_NO_ERROR;
 }

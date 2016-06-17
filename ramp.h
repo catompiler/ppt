@@ -52,9 +52,10 @@ extern err_t ramp_init(ramp_t* ramp);
  * Устанавливает время разгона.
  * @param ramp Разгон.
  * @param time Время разгона.
+ * @param step_dt Время шага разгона.
  * @return Код ошибки.
  */
-extern err_t ramp_set_time(ramp_t* ramp, ramp_time_t time);
+extern err_t ramp_set_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
 
 /**
  * Устанавливает целевое задание разгона.
