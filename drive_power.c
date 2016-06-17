@@ -59,7 +59,7 @@ size_t drive_power_processing_periods(void)
 
 err_t drive_power_set_processing_periods(size_t periods)
 {
-    if(periods == 0) return E_INVALID_VALUE;
+    //if(periods == 0) return E_INVALID_VALUE;
     
     drive_power.processing_periods = periods;
     
@@ -93,13 +93,13 @@ bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* er
 {
     if(drive_power.processing_periods == 0){
         drive_power_calc_values_impl(channels, err);
-        return true;
+        return power_data_filter_filled(&drive_power.power, channels);
     }
     if(phase != drive_power.power_phase) return false;
     if(++ drive_power.periods_processed >= drive_power.processing_periods){
         drive_power.periods_processed = 0;
         drive_power_calc_values_impl(channels, err);
-        return true;
+        return power_data_filter_filled(&drive_power.power, channels);
     }
     return false;
 }
