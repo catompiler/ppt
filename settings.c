@@ -222,6 +222,10 @@ static void settings_param_set_fixed32(param_t* param, fixed32_t value)
     int32_t int_part = 0;
     int32_t fract_part = 0;
     
+    /*
+     * Магия.
+     * Лучше не трогать.
+     */
     switch(descr->type){
         default:
         case PARAM_TYPE_INT:
@@ -229,19 +233,31 @@ static void settings_param_set_fixed32(param_t* param, fixed32_t value)
             *data = fixed32_get_int(value);
             break;
         case PARAM_TYPE_FRACT_10:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 100);
+            else
+                value -= fixed32_make_from_fract(5, 100);
             int_part = fixed32_get_int(value);
-            fract_part = fixed32_get_fract_by_denom(value, 100);
-            *data = int_part * 10 + (fract_part + 5) / 10;
+            fract_part = fixed32_get_fract_by_denom(value, 10);
+            *data = int_part * 10 + fract_part;
             break;
         case PARAM_TYPE_FRACT_100:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 1000);
+            else
+                value -= fixed32_make_from_fract(5, 1000);
             int_part = fixed32_get_int(value);
-            fract_part = fixed32_get_fract_by_denom(value, 1000);
-            *data = int_part * 100 + (fract_part + 5) / 10;
+            fract_part = fixed32_get_fract_by_denom(value, 100);
+            *data = int_part * 100 + fract_part;
             break;
         case PARAM_TYPE_FRACT_1000:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 10000);
+            else
+                value -= fixed32_make_from_fract(5, 10000);
             int_part = fixed32_get_int(value);
-            fract_part = fixed32_get_fract_by_denom(value, 10000);
-            *data = int_part * 1000 + (fract_part + 5) / 10;
+            fract_part = fixed32_get_fract_by_denom(value, 1000);
+            *data = int_part * 1000 + fract_part;
             break;
     }
 }
