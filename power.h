@@ -13,7 +13,7 @@
 #include "defs/defs.h"
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE 6
+#define POWER_FILTER_SIZE 9
 
 /**
  * Перечисление каналов АЦП.
@@ -150,6 +150,14 @@ extern err_t power_calibrate(power_t* power, power_channels_t channels);
 extern bool power_data_avail(const power_t* power, power_channels_t channels);
 
 /**
+ * Получает флаг заполнения фильтра данных на всех заданных каналах АЦП.
+ * @param power Питание.
+ * @param channels Маска каналов АЦП.
+ * @return Флаг заполнения фильтра данных.
+ */
+extern bool power_data_filter_filled(const power_t* power, power_channels_t channels);
+
+/**
  * Сбрасывает накопленные данные каналов.
  * @param power Питание.
  * @param channels Маска каналов АЦП.
@@ -175,6 +183,16 @@ ALWAYS_INLINE static bool power_channel_calibrated(const power_t* power, size_t 
 ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t channel)
 {
     return power->channels[channel].data_avail;
+}
+
+/**
+ * Получает флаг заполнения фильтра данных.
+ * @param power Питание.
+ * @return Флаг заполнения фильтра данных данных.
+ */
+ALWAYS_INLINE static bool power_channel_data_filter_filled(const power_t* power, size_t channel)
+{
+    return power->channels[channel].filter.count == POWER_FILTER_SIZE;
 }
 
 /**

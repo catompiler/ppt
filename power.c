@@ -60,6 +60,11 @@ static int16_t power_filter_calculate(power_filter_t* filter)
     return val;
 }
 
+/*static bool power_filter_filled(power_filter_t* filter)
+{
+    return filter->count == POWER_FILTER_SIZE;
+}*/
+
 err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k)
 {
     memset(value, 0x0, sizeof(power_value_t));
@@ -242,6 +247,28 @@ bool power_data_avail(const power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return false;
         
         res &= power_channel_data_avail(power, i);
+        
+        if(!res) break;
+    }
+    
+    return res;
+}
+
+bool power_data_filter_filled(const power_t* power, power_channels_t channels)
+{
+    if(channels == POWER_CHANNEL_NONE) return false;
+    
+    size_t i = 0;
+    bool res = true;
+    
+    for(; channels != 0; channels >>= 1, i ++){
+        if(!(channels & 0x1)) continue;
+        
+        if(i >= power->channels_count) return false;
+        
+        res &= power_channel_data_filter_filled(power, i);
+        
+        if(!res) break;
     }
     
     return res;
