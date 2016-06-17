@@ -6,6 +6,9 @@
 //! dt PID-регулятора.
 #define DRIVE_PID_DT 0x1b5//0x51f
 
+//! dt PID-регулятора.
+#define DRIVE_RAMP_DT 0x1b5//0x51f
+
 
 //! Тип структуры регулятора привода.
 typedef struct _Drive_Regulator {
@@ -98,7 +101,7 @@ void drive_regulator_stop(void)
 
 err_t drive_regulator_set_ramp_time(ramp_time_t time)
 {
-    return ramp_set_time(&regulator.rot_ramp, time);
+    return ramp_set_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
 }
 
 bool drive_regulator_rot_enabled(void)
