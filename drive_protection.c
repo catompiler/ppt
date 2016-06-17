@@ -1,8 +1,18 @@
 #include "drive_protection.h"
 #include <string.h>
 #include "utils/utils.h"
+#include "settings.h"
 //#include "defs/defs.h"
 
+//! Перегруз по току, при котором задано время срабатывания.
+#define DRIVE_TOP_NOMINAL_OVERCURRENT 6
+
+//! Структура тепловой защиты.
+typedef struct _Drive_TOP {
+    fixed32_t k_pie_max; //!< Коэффициентв зависимости времени срабатывания от перегрузки по току.
+    fixed32_t cur_pie; //!< Текущее тепло двигателя.
+    bool overheat; //!< Флаг перегрева.
+} drive_top_t;
 
 //! Тип структуры защиты привода.
 typedef struct _Drive_Protection {
@@ -11,7 +21,8 @@ typedef struct _Drive_Protection {
     fixed32_t U_in_crit_delta; //!< Критическое отклонение номинального напряжения, В.
     fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
     fixed32_t I_zero_noise; //!< Шум тока нуля, А.
-    fixed32_t I_rot_zero_noise; //!< Шум тока нуля ротора, А.
+    fixed32_t I_rot_zero_noise; //!< Шум нуля тока ротора, А.
+    fixed32_t I_exc_zero_noise; //!< Шум нуля тока возбуждения, А.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t I_exc_allow_delta;
     fixed32_t I_exc_crit_delta;
@@ -19,8 +30,10 @@ typedef struct _Drive_Protection {
     fixed32_t U_rot_allow_delta;
     fixed32_t U_rot_crit_delta;
     fixed32_t I_rot; //!< Номинальный ток якоря.
+    fixed32_t I_rot_cutorff;
     fixed32_t I_rot_allow_delta;
     fixed32_t I_rot_crit_delta;
+    drive_top_t top; //!< Тепловая защита.
 } drive_protection_t;
 
 //! Структура защиты привода.
@@ -32,6 +45,58 @@ bool drive_protection_init(void)
     memset(&drive_prot, 0x0, sizeof(drive_protection_t));
     
     return true;
+}
+
+bool drive_protection_init_top(fixed32_t t6)
+{
+    drive_prot.top.k_pie_max = (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1) * t6;
+    drive_prot.top.cur_pie = 0;
+    
+    return true;
+}
+
+void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt)
+{
+    if(I_rot > drive_prot.I_rot){
+        // Q_heat = (i^2 - 1) * dt
+        fixed32_t i = fixed32_div((int64_t)I_rot, drive_prot.I_rot);
+        fixed32_t q = fixed32_mul((int64_t)i, i);
+                  q = q - fixed32_make_from_int(1);
+                  q = fixed32_mul((int64_t)q, dt);
+        // Интегрируем нагрев.
+        drive_prot.top.cur_pie += q;
+        // Клампим.
+        if(drive_prot.top.cur_pie >= drive_prot.top.k_pie_max){
+            drive_prot.top.cur_pie = drive_prot.top.k_pie_max;
+            drive_prot.top.overheat = true;
+        }
+    }else if(drive_prot.top.cur_pie > 0){
+        // Q_cool = (pie / max_pie + 0.58) * dt
+        fixed32_t q = drive_prot.top.cur_pie;
+                  q = fixed32_div((int64_t)q, drive_prot.top.k_pie_max);
+                  q += fixed32_make_from_fract(58, 100);
+                  q = fixed32_mul((int64_t)q, dt);
+        // Интегрируем охлаждение.
+        drive_prot.top.cur_pie -= q;
+        // Клампим.
+        if(drive_prot.top.cur_pie <= 0){
+            drive_prot.top.cur_pie = 0;
+            drive_prot.top.overheat = false;
+        }
+    }
+}
+
+drive_top_check_res_t drive_protection_top_check(void)
+{
+    if(drive_prot.top.cur_pie == 0) return DRIVE_TOP_CHECK_NORMAL;
+    if(drive_prot.top.cur_pie == drive_prot.top.k_pie_max) return DRIVE_TOP_CHECK_OVERHEAT;
+    if(drive_prot.top.overheat) return DRIVE_TOP_CHECK_COOLING;
+    return DRIVE_TOP_CHECK_HEATING;
+}
+
+bool drive_protection_top_ready(void)
+{
+    return !drive_prot.top.overheat;
 }
 
 bool drive_protection_is_allow(drive_pwr_check_res_t check_res)
@@ -63,6 +128,11 @@ void drive_protection_set_rot_zero_current_noise(fixed32_t i_noize)
     drive_prot.I_rot_zero_noise = i_noize;
 }
 
+void drive_protection_set_exc_zero_current_noise(fixed32_t i_noize)
+{
+    drive_prot.I_exc_zero_noise = i_noize;
+}
+
 void drive_protection_set_exc_current(fixed32_t i_exc, uint32_t allow_delta, uint32_t crit_delta)
 {
     drive_prot.I_exc = i_exc;
@@ -77,11 +147,12 @@ void drive_protection_set_rot_voltage(fixed32_t u_rot, uint32_t allow_delta, uin
     drive_prot.U_rot_crit_delta = u_rot * crit_delta / 100;
 }
 
-void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uint32_t crit_delta)
+void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uint32_t crit_delta, uint32_t cutoff_mult)
 {
     drive_prot.I_rot = i_rot;
     drive_prot.I_rot_allow_delta = i_rot * allow_delta / 100;
     drive_prot.I_rot_crit_delta = i_rot * crit_delta / 100;
+    drive_prot.I_rot_cutorff = i_rot * cutoff_mult;
 }
 
 static bool drive_protection_check_delta(fixed32_t ref_value, fixed32_t cur_value, fixed32_t delta)
@@ -139,6 +210,14 @@ drive_pwr_check_res_t drive_protection_check_rot_zero_current(fixed32_t current)
     return (current < drive_prot.I_rot_zero_noise) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;
 }
 
+drive_pwr_check_res_t drive_protection_check_exc_zero_current(fixed32_t current)
+{
+    if(drive_protection_check_zero(current, drive_prot.I_exc_zero_noise)){
+        return DRIVE_PWR_CHECK_NORMAL;
+    }
+    return (current < drive_prot.I_exc_zero_noise) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;
+}
+
 drive_pwr_check_res_t drive_protection_check_exc_current(fixed32_t current)
 {
     if(drive_protection_check_delta(drive_prot.I_exc, current, drive_prot.I_exc_allow_delta)){
@@ -163,10 +242,10 @@ drive_pwr_check_res_t drive_protection_check_rot_voltage(fixed32_t voltage)
 
 drive_pwr_check_res_t drive_protection_check_rot_current(fixed32_t current)
 {
-    if(drive_protection_check_range(current, -drive_prot.I_rot_allow_delta, drive_prot.I_rot + drive_prot.I_rot_allow_delta)){
+    if(drive_protection_check_range(current, -drive_prot.I_rot_allow_delta, drive_prot.I_rot_cutorff)){
         return DRIVE_PWR_CHECK_NORMAL;
     }
-    if(drive_protection_check_range(current, -drive_prot.I_rot_crit_delta, drive_prot.I_rot + drive_prot.I_rot_crit_delta)){
+    if(drive_protection_check_range(current, -drive_prot.I_rot_crit_delta, drive_prot.I_rot_cutorff)){
         return (current < drive_prot.I_rot) ? DRIVE_PWR_CHECK_ALLOW_UNDERFLOW : DRIVE_PWR_CHECK_ALLOW_OVERFLOW;
     }
     return (current < drive_prot.I_rot) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;

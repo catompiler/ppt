@@ -28,6 +28,10 @@
 //! Необходимые для готовности флаги.
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
 
+//! dt Тепловой защиты.
+#define DRIVE_TOP_DT 0x1b5
+
+
 //! Тип структуры настроек привода.
 typedef struct _Drive_Settings {
     uint32_t stop_rot_periods; //!< Время остановки ротора в периодах.
@@ -220,18 +224,20 @@ ALWAYS_INLINE static void drive_clear_power_error(drive_power_errors_t error)
  * Установка предупреждения питания.
  * @param error Предупреждение.
  */
-ALWAYS_INLINE static void drive_set_power_warning(drive_power_warnings_t warning)
+static void drive_set_power_warning(drive_power_warnings_t warning)
 {
     drive.power_warnings |= warning;
+    drive_set_warning(DRIVE_WARNING_POWER);
 }
 
 /**
  * Снятие предупреждения питания.
  * @param warning Предупреждение.
  */
-ALWAYS_INLINE static void drive_clear_power_warning(drive_power_warnings_t warning)
+static void drive_clear_power_warning(drive_power_warnings_t warning)
 {
     drive.power_warnings &= ~warning;
+    if(drive.power_warnings == DRIVE_POWER_WARNING_NONE) drive_clear_warning(DRIVE_WARNING_POWER);
 }
 
 /*
@@ -288,7 +294,7 @@ static void drive_power_error_occured(drive_power_errors_t error)
 static void drive_power_warning_occured(drive_power_warnings_t warning)
 {
     drive_set_power_warning(warning);
-    drive_set_warning(DRIVE_WARNING_POWER);
+    //drive_set_warning(DRIVE_WARNING_POWER);
 }
 
 
@@ -365,7 +371,7 @@ static void drive_check_power_idle(void)
     // Токи - отклонения от нуля.
     // Exc.
     drive_handle_power_check(
-            drive_protection_check_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)), 0, 0,
+            drive_protection_check_exc_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)), 0, 0,
             DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc
             );
     // Rot.
@@ -402,6 +408,20 @@ static void drive_check_power_running(void)
             DRIVE_POWER_WARNING_UNDERFLOW_Iexc, DRIVE_POWER_WARNING_OVERFLOW_Iexc,
             DRIVE_POWER_ERROR_UNDERFLOW_Iexc, DRIVE_POWER_ERROR_OVERFLOW_Iexc
             );
+    // TOP.
+    drive_top_check_res_t top_check = drive_protection_top_check();
+    switch(top_check){
+        case DRIVE_TOP_CHECK_NORMAL:
+            drive_clear_power_warning(DRIVE_POWER_WARNING_THERMAL_OVERLOAD);
+            break;
+        case DRIVE_TOP_CHECK_HEATING:
+            drive_set_power_warning(DRIVE_POWER_WARNING_THERMAL_OVERLOAD);
+            break;
+        case DRIVE_TOP_CHECK_OVERHEAT:
+        case DRIVE_TOP_CHECK_COOLING:
+            drive_power_error_occured(DRIVE_POWER_ERROR_THERMAL_OVERLOAD);
+            break;
+    }
 }
 
 
@@ -453,30 +473,40 @@ static bool drive_calculate_power(phase_t phase)
 }
 
 /**
+ * Обрабатывает тепловую защиту. 
+ */
+static void drive_states_process_top(void)
+{
+    if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+        drive_protection_top_process(drive_power_channel_real_value(DRIVE_POWER_Irot), DRIVE_TOP_DT);
+    }
+}
+
+/**
  * Регулировка привода.
  * @return Флаг регулировки привода.
  */
 static bool drive_regulate(void)
 {
     if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-            fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
-            fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
-            
-            drive_regulator_regulate(U_rot, I_exc);
-            
-            fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
-            fixed32_t exc_pid_val = drive_regulator_exc_pid_value();
-            
-            drive_triacs_set_pairs_open_angle(rot_pid_val);
-            drive_triacs_set_exc_open_angle(exc_pid_val);
-            //drive_triacs_set_exc_open_angle(fixed32_make_from_int(120));
-            
-            //pid_controller_t* pid = drive_regulator_rot_pid();
-            
-            //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
-            
-            //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), rot_pid_val);
-            //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
+        fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
+
+        drive_regulator_regulate(U_rot, I_exc);
+
+        fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
+        fixed32_t exc_pid_val = drive_regulator_exc_pid_value();
+
+        drive_triacs_set_pairs_open_angle(rot_pid_val);
+        drive_triacs_set_exc_open_angle(exc_pid_val);
+        //drive_triacs_set_exc_open_angle(fixed32_make_from_int(120));
+
+        //pid_controller_t* pid = drive_regulator_rot_pid();
+
+        //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
+
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), rot_pid_val);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
     }
@@ -512,6 +542,7 @@ static err_t drive_state_process_stop_error(phase_t phase)
             
             if(drive_calculate_power(phase)){
                 drive_regulate();
+                drive_states_process_top();
             }
             
             drive.err_stopping_state = DRIVE_ERR_STOPPING_WAIT_ROT;
@@ -523,7 +554,9 @@ static err_t drive_state_process_stop_error(phase_t phase)
         case DRIVE_ERR_STOPPING_WAIT_EXC:
             drive.err_stopping_state = DRIVE_ERR_STOPPING_DONE;
         case DRIVE_ERR_STOPPING_DONE:
-            drive_calculate_power(phase);
+            if(drive_calculate_power(phase)){
+                drive_states_process_top();
+            }
             drive_set_state(DRIVE_STATE_ERROR);
             break;
     }
@@ -543,7 +576,9 @@ static err_t drive_state_process_error(phase_t phase)
     // Нужно какое-либо направление.
     if(drive_phase_state_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
     
-    drive_calculate_power(phase);
+    if(drive_calculate_power(phase)){
+        drive_states_process_top();
+    }
     
     return E_NO_ERROR;
 }
@@ -561,6 +596,7 @@ static err_t drive_state_process_running(phase_t phase)
     drive_setup_triacs_open(phase);
     
     if(drive_calculate_power(phase)){
+        drive_states_process_top();
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
             drive_check_power_running();
         }
@@ -583,6 +619,7 @@ static err_t drive_state_process_stop(phase_t phase)
     
     if(drive_calculate_power(phase)){
         drive_regulate();
+        drive_states_process_top();
     }
     
     switch(drive.stopping_state){
@@ -602,11 +639,17 @@ static err_t drive_state_process_stop(phase_t phase)
             }
             break;
         case DRIVE_STOPPING_WAIT_ROT:
-            if(++ drive.start_stop_counter >= drive.settings.stop_rot_periods){
+            check_res = drive_protection_check_zero_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot));
+            
+            if(drive_protection_is_allow(check_res)){
                 drive_triacs_set_exc_enabled(false);
                 drive_regulator_set_exc_enabled(false);
                 drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
                 drive.start_stop_counter = 0;
+            }else if(++ drive.start_stop_counter >= drive.settings.stop_rot_periods){
+                drive_handle_power_check(check_res, 0, 0,
+                        DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot
+                        );
             }
             break;
         case DRIVE_STOPPING_WAIT_EXC:
@@ -643,6 +686,7 @@ static err_t drive_state_process_start(phase_t phase)
     
     if(drive_calculate_power(phase)){
         drive_regulate();
+        drive_states_process_top();
     }
     
     switch(drive.starting_state){
@@ -696,6 +740,7 @@ static err_t drive_state_process_start(phase_t phase)
 static err_t drive_state_process_idle(phase_t phase)
 {
     if(drive_calculate_power(phase)){
+        drive_states_process_top();
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
             drive_check_power_idle();
         }
@@ -858,18 +903,21 @@ err_t drive_init(void)
 
 err_t drive_update_settings(void)
 {
+    drive_protection_init_top(settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I));
     drive_protection_set_input_voltage(settings_valuef(PARAM_ID_U_NOM),
                                        settings_valueu(PARAM_ID_U_NOM_ALLOW_VAR),
                                        settings_valueu(PARAM_ID_U_NOM_CRIT_VAR));
     drive_protection_set_zero_voltage_noise(settings_valuef(PARAM_ID_U_ZERO_NOISE));
     drive_protection_set_zero_current_noise(settings_valuef(PARAM_ID_I_ZERO_NOISE));
     drive_protection_set_rot_zero_current_noise(settings_valuef(PARAM_ID_I_ROT_ZERO_NOISE));
+    drive_protection_set_exc_zero_current_noise(settings_valuef(PARAM_ID_I_EXC_ZERO_NOISE));
     drive_protection_set_rot_voltage(settings_valuef(PARAM_ID_U_ROT_NOM),
                                      settings_valueu(PARAM_ID_U_ROT_ALLOW_VAR),
                                      settings_valueu(PARAM_ID_U_ROT_CRIT_VAR));
     drive_protection_set_rot_current(settings_valuef(PARAM_ID_I_ROT_NOM),
                                      settings_valueu(PARAM_ID_I_ROT_ALLOW_VAR),
-                                     settings_valueu(PARAM_ID_I_ROT_CRIT_VAR));
+                                     settings_valueu(PARAM_ID_I_ROT_CRIT_VAR),
+                                     settings_valueu(PARAM_ID_I_ROT_CUTOFF_MULT));
     drive_protection_set_exc_current(settings_valuef(PARAM_ID_I_EXC),
                                      settings_valueu(PARAM_ID_I_EXC_ALLOW_VAR),
                                      settings_valueu(PARAM_ID_I_EXC_CRIT_VAR));
@@ -976,7 +1024,9 @@ drive_err_stopping_t drive_err_stopping(void)
 
 bool drive_ready(void)
 {
-    return (drive.errors) == 0 && drive_flags_is_set(DRIVE_READY_FLAGS);
+    return (drive.errors) == 0 &&
+            drive_flags_is_set(DRIVE_READY_FLAGS) &&
+            drive_protection_top_ready();
 }
 
 bool drive_start(void)

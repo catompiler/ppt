@@ -19,12 +19,46 @@ typedef enum _Drive_Pwr_Check_Res {
     DRIVE_PWR_CHECK_CRIT_OVERFLOW,
 } drive_pwr_check_res_t;
 
+typedef enum _Drive_Top_Check_Res {
+    DRIVE_TOP_CHECK_NORMAL = 0,
+    DRIVE_TOP_CHECK_HEATING,
+    DRIVE_TOP_CHECK_COOLING,
+    DRIVE_TOP_CHECK_OVERHEAT
+} drive_top_check_res_t;
+
 
 /**
  * Инициализирует защиту привода.
  * @return Флаг успешной инициализации.
  */
 extern bool drive_protection_init(void);
+
+/**
+ * Инициализирует тепловую защиту.
+ * (Thermal Overload Protection).
+ * @param t6 Время срабатывания защиты при шестикратной перегрузке по току.
+ * @return Флаг успешной инициализации.
+ */
+extern bool drive_protection_init_top(fixed32_t t6);
+
+/**
+ * Обрабатывает нагрев/охлаждение под действием тока за заданный интервал времени.
+ * @param I_rot Текущий ток ротора.
+ * @param dt Интервал времени действия тока.
+ */
+extern void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt);
+
+/**
+ * Производит проверку текущего состояния тепловой защиты.
+ * @return Результат проверки тепловой защиты.
+ */
+extern drive_top_check_res_t drive_protection_top_check(void);
+
+/**
+ * Получает флаг готовности привода по тепловой защите.
+ * @return Флаг готовности привода по тепловой защите.
+ */
+extern bool drive_protection_top_ready(void);
 
 /**
  * Получает флаг допустимости результата проверки.
@@ -49,15 +83,21 @@ extern void drive_protection_set_zero_voltage_noise(fixed32_t u_noize);
 
 /**
  * Устанавливает шум нулевого тока.
- * @param u_noize Шум нулевого тока.
+ * @param i_noize Шум нулевого тока.
  */
 extern void drive_protection_set_zero_current_noise(fixed32_t i_noize);
 
 /**
  * Устанавливает шум нулевого тока ротора.
- * @param u_noize Шум нулевого тока ротора.
+ * @param i_noize Шум нулевого тока ротора.
  */
 extern void drive_protection_set_rot_zero_current_noise(fixed32_t i_noize);
+
+/**
+ * Устанавливает шум нулевого тока возбуждения.
+ * @param i_noize Шум нулевого тока возбуждения.
+ */
+extern void drive_protection_set_exc_zero_current_noise(fixed32_t i_noize);
 
 /**
  * Устанавливает ток возбуждения.
@@ -80,8 +120,9 @@ extern void drive_protection_set_rot_voltage(fixed32_t u_rot, uint32_t allow_del
  * @param i_rot Ток якоря.
  * @param allow_delta Допустимое отклонение.
  * @param crit_delta Критическое отклонение.
+ * @param cutoff_mult Множитель токовой отсечки.
  */
-extern void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uint32_t crit_delta);
+extern void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uint32_t crit_delta, uint32_t cutoff_mult);
 
 /**
  * Выполняет проверку входного напряжения.
@@ -110,6 +151,13 @@ extern drive_pwr_check_res_t drive_protection_check_zero_current(fixed32_t curre
  * @return Результат проверки.
  */
 extern drive_pwr_check_res_t drive_protection_check_rot_zero_current(fixed32_t current);
+
+/**
+ * Выполняет проверку отсутствия тока возбуждения.
+ * @param current Ток возбуждения.
+ * @return Результат проверки.
+ */
+extern drive_pwr_check_res_t drive_protection_check_exc_zero_current(fixed32_t current);
 
 /**
  * Выполняет проверку тока возбуждения.

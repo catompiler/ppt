@@ -101,7 +101,8 @@ typedef enum _Drive_Power_Error {
     DRIVE_POWER_ERROR_UNDERFLOW_Ifan = 0x1000000,
     DRIVE_POWER_ERROR_OVERFLOW_Ifan  = 0x2000000,
     DRIVE_POWER_ERROR_UNDERFLOW_Iref = 0x4000000,
-    DRIVE_POWER_ERROR_OVERFLOW_Iref  = 0x8000000
+    DRIVE_POWER_ERROR_OVERFLOW_Iref  = 0x8000000,
+    DRIVE_POWER_ERROR_THERMAL_OVERLOAD = 0x10000000 //!< Тепловая защита.
 } drive_power_error_t;
 
 //! Тип ошибок питания привода.
@@ -138,7 +139,8 @@ typedef enum _Drive_Power_Warning {
     DRIVE_POWER_WARNING_UNDERFLOW_Ifan = 0x40000,
     DRIVE_POWER_WARNING_OVERFLOW_Ifan  = 0x80000,
     DRIVE_POWER_WARNING_UNDERFLOW_Iref = 0x100000,
-    DRIVE_POWER_WARNING_OVERFLOW_Iref  = 0x200000
+    DRIVE_POWER_WARNING_OVERFLOW_Iref  = 0x200000,
+    DRIVE_POWER_WARNING_THERMAL_OVERLOAD = 0x400000 //!< Перегрев.
 } drive_power_warning_t;
 
 //! Тип предупреждений питания привода.
