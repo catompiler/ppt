@@ -24,7 +24,7 @@ typedef ramp_reference_t reference_t;
 //! Минимальное задание.
 #define REFERENCE_MIN 0
 //! Максимальное задание.
-#define REFERENCE_MAX 95
+#define REFERENCE_MAX 100
 
 /**
  * Инициализирует регулятор привода.
