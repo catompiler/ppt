@@ -507,6 +507,19 @@ static void init_modbus(void)
     modbus_rtu_set_msg_recv_callback(&modbus, modbus_on_msg_recv);
 }
 
+static void apply_settings_callback(void);
+static void save_settings_callback(void);
+
+static void init_drive_modbus(void)
+{
+    drive_modbus_init_t drive_modbus_is;
+    
+    drive_modbus_is.apply_settings_callback = apply_settings_callback;
+    drive_modbus_is.save_settings_callback = save_settings_callback;
+    
+    drive_modbus_init(&modbus, &drive_modbus_is);
+}
+
 static void init_spi(void)
 {
     GPIO_InitTypeDef gpio_sck_mosi =
@@ -849,38 +862,6 @@ static void init_drive_ui(void)
     drive_ui_init(&ui_is);
 }
 
-static void* apply_settings_task(void* arg)
-{
-    drive_update_settings();
-    
-    return NULL;
-}
-
-static void apply_settings(void)
-{
-    scheduler_add_task(apply_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
-}
-
-static void* save_settings_task(void* arg)
-{
-    return int_to_pvoid(settings_write());
-}
-
-static void save_settings(void)
-{
-    scheduler_add_task(save_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
-}
-
-static void init_drive_modbus(void)
-{
-    drive_modbus_init_t drive_modbus_is;
-    
-    drive_modbus_is.apply_settings_callback = apply_settings;
-    drive_modbus_is.save_settings_callback = save_settings;
-    
-    drive_modbus_init(&modbus, &drive_modbus_is);
-}
-
 /******************************************************************************/
 static void init_adc_timer(void)
 {
@@ -1154,6 +1135,28 @@ static void init_gpio (void)
 }
 /******************************************************************************/
 
+static void* apply_settings_task(void* arg)
+{
+    drive_update_settings();
+    
+    return NULL;
+}
+
+static void apply_settings_callback(void)
+{
+    scheduler_add_task(apply_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
+}
+
+static void* save_settings_task(void* arg)
+{
+    return int_to_pvoid(settings_write());
+}
+
+static void save_settings_callback(void)
+{
+    scheduler_add_task(save_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
+}
+
 static void* write_error_event_task(void* event)
 {
     err_t err = drive_events_write_event((drive_event_t*)event);
@@ -1188,11 +1191,10 @@ int main(void)
     
     init_usart();
     
-    init_modbus_usart();
-    
-    init_modbus();
-    
     printf("STM32 MCU\r\n");
+    
+    init_i2c();
+    init_spi();
     
     init_spi2();
     init_eeprom();
@@ -1209,6 +1211,10 @@ int main(void)
     }
     
     scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
+    
+    init_modbus_usart();
+    init_modbus();
+    init_drive_modbus();
     
     init_gpio();
     
@@ -1227,12 +1233,7 @@ int main(void)
     
     init_exti();
     
-    init_i2c();
-    init_spi();
-    
     init_drive_ui();
-    
-    init_drive_modbus();
     
     //drive_set_reference(REFERENCE_MAX);
     
