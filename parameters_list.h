@@ -1,15 +1,9 @@
 /**
- * @file parameters.h Список параметров.
+ * @file parameters_list.h Список параметров.
  */
 
-#ifndef PARAMETERS_H
-#define	PARAMETERS_H
-
-#include "settings.h"
-#include "drive_phase_state.h"
-#include "drive_triacs.h"
-#include "ramp.h"
-#include "fixed/fixed32.h"
+#ifndef PARAMETERS_LIST_H
+#define	PARAMETERS_LIST_H
 
 
 //! Макрос для сокращения декларации дробного значения fixed32.
@@ -93,4 +87,4 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
 #undef F32I
 #undef F32
 
-#endif	/* PARAMETERS_H */
+#endif	/* PARAMETERS_LIST_H */

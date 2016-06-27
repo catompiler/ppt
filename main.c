@@ -849,6 +849,38 @@ static void init_drive_ui(void)
     drive_ui_init(&ui_is);
 }
 
+static void* apply_settings_task(void* arg)
+{
+    drive_update_settings();
+    
+    return NULL;
+}
+
+static void apply_settings(void)
+{
+    scheduler_add_task(apply_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
+}
+
+static void* save_settings_task(void* arg)
+{
+    return int_to_pvoid(settings_write());
+}
+
+static void save_settings(void)
+{
+    scheduler_add_task(save_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
+}
+
+static void init_drive_modbus(void)
+{
+    drive_modbus_init_t drive_modbus_is;
+    
+    drive_modbus_is.apply_settings_callback = apply_settings;
+    drive_modbus_is.save_settings_callback = save_settings;
+    
+    drive_modbus_init(&modbus, &drive_modbus_is);
+}
+
 /******************************************************************************/
 static void init_adc_timer(void)
 {
@@ -1172,9 +1204,9 @@ int main(void)
     }
     
     settings_init();
-    //if(settings_read() != E_NO_ERROR){
+    if(settings_read() != E_NO_ERROR){
         settings_default();
-    //}
+    }
     
     scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
     
@@ -1200,7 +1232,7 @@ int main(void)
     
     init_drive_ui();
     
-    drive_modbus_init(&modbus);
+    init_drive_modbus();
     
     //drive_set_reference(REFERENCE_MAX);
     

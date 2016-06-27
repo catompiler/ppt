@@ -2,6 +2,7 @@
 #include "defs/defs.h"
 #include "utils/utils.h"
 #include "crc/crc16_ccitt.h"
+#include "storage.h"
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -19,8 +20,11 @@
         static param_t arg_array_name[arg_count]
 
 
+#include "drive_phase_state.h"
+#include "drive_triacs.h"
+#include "ramp.h"
+#include "fixed/fixed32.h"
 #include "parameters_list.h"
-#include "storage.h"
 
 // Данные параметров.
 #pragma pack(push, 1)

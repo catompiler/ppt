@@ -50,7 +50,7 @@ bool drive_protection_init(void)
 bool drive_protection_init_top(fixed32_t t6)
 {
     drive_prot.top.k_pie_max = (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1) * t6;
-    drive_prot.top.cur_pie = 0;
+    //drive_prot.top.cur_pie = 0;
     
     return true;
 }
