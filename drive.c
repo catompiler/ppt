@@ -1063,6 +1063,8 @@ void drive_clear_errors(void)
         drive_phase_state_clear_errors();
         drive_set_state(DRIVE_STATE_IDLE);
     }
+    drive.warnings = DRIVE_WARNING_NONE;
+    drive.power_warnings = DRIVE_POWER_WARNING_NONE;
 }
 
 drive_error_callback_t drive_error_callback(void)
