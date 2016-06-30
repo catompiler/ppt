@@ -7,9 +7,9 @@
 
 
 //! Число отбрасываемых минимальных значений.
-#define POWER_FILTER_SKIP_MIN 1
+#define POWER_FILTER_SKIP_MIN 2
 //! Число отбрасываемых максимальных значений.
-#define POWER_FILTER_SKIP_MAX 1
+#define POWER_FILTER_SKIP_MAX 2
 
 
 static void power_filter_reset(power_filter_t* filter)

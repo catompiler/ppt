@@ -46,6 +46,40 @@
 #define DRIVE_POWER_PROCESSING_PERIODS_DEFAULT 1
 
 
+//! Тип значения в осциллограмме (fixed11_5_t).
+typedef int16_t osc_value_t;
+
+//! Число осциллограмм.
+#define DRIVE_POWER_OSC_COUNT 9
+
+//! Осциллограмма Ua.
+#define DRIVE_POWER_OSC_Ua 0
+//! Осциллограмма Ub.
+#define DRIVE_POWER_OSC_Ub 1
+//! Осциллограмма Uc.
+#define DRIVE_POWER_OSC_Uc 2
+//! Осциллограмма Ia.
+#define DRIVE_POWER_OSC_Ia 3
+//! Осциллограмма Ib.
+#define DRIVE_POWER_OSC_Ib 4
+//! Осциллограмма Ic.
+#define DRIVE_POWER_OSC_Ic 5
+//! Осциллограмма Urot.
+#define DRIVE_POWER_OSC_Urot 6
+//! Осциллограмма Irot.
+#define DRIVE_POWER_OSC_Irot 7
+//! Осциллограмма Iexc.
+#define DRIVE_POWER_OSC_Iexc 8
+
+//! Длина осциллограммы (1.75 периода до и после аварии).
+#define DRIVE_POWER_OSCILLOGRAM_SIZE (224) // (128 / 2) * (1.75 * 2) * 9 * 2 == 4032
+
+//! Структура осциллограммы.
+typedef struct _Drive_Power_Oscillogram {
+    osc_value_t data[DRIVE_POWER_OSCILLOGRAM_SIZE]; //!< Данные осцилограммы.
+} drive_power_oscillogram_t;
+
+
 /**
  * Инициализирует питание привода.
  * @return Код ошибки.
@@ -77,6 +111,102 @@ extern size_t drive_power_processing_periods(void);
  * @return Код ошибки.
  */
 extern err_t drive_power_set_processing_periods(size_t periods);
+
+/**
+ * Получает количество осциллограмм.
+ * @return Количество осциллограмм.
+ */
+extern size_t drive_power_oscillograms_count(void);
+
+/**
+ * Получает длину осциллограмм.
+ * @return Длина осциллограмм.
+ */
+extern size_t drive_power_oscillograms_length(void);
+
+/**
+ * Получает заполненность осциллограмм данными.
+ * @return Заполненность осциллограмм данными.
+ */
+extern bool drive_power_oscillograms_full(void);
+
+/**
+ * Прекращает запись осциллограмм при заполнении
+ * следующей половины буфера.
+ */
+extern void drive_power_oscillograms_half_pause(void);
+
+/**
+ * Получает флаг останова записи осциллограмм.
+ * @return Флаг останова записи осциллограмм.
+ */
+extern bool drive_power_oscillograms_paused(void);
+
+/**
+ * Возобнавляет запись осциллограмм.
+ */
+extern void drive_power_oscillograms_resume(void);
+
+/*
+ * Получает индекс начала буфера осциллограмм.
+ * @return Индекс начала буфера осциллограмм.
+ */
+extern size_t drive_power_oscillograms_start_index(void);
+
+/*
+ * Получает индекс половины буфера осциллограмм.
+ * @return Индекс половины буфера осциллограмм.
+ */
+extern size_t drive_power_oscillograms_half_index(void);
+
+/*
+ * Получает индекс конца буфера осциллограмм.
+ * @return Индекс конца буфера осциллограмм.
+ */
+extern size_t drive_power_oscillograms_end_index(void);
+
+/**
+ * Получает следующий после заданного индекс.
+ * @param index Индекс.
+ * @return Следующий индекс после заданного.
+ */
+extern size_t drive_power_oscillograms_next_index(size_t index);
+
+/**
+ * Получает данные осциллограммы.
+ * @param osc_index Индекс осциллограммы.
+ * @param index Индекс данных.
+ * @return Данные осциллограммы.
+ */
+extern osc_value_t drive_power_oscillogram_data(size_t osc_index, size_t index);
+
+/**
+ * Получает осциллограмму с заданным индексом.
+ * @param osc_index Индекс осциллограммы.
+ * @param osc Осциллограмма.
+ * @return Код ошибки.
+ */
+extern err_t drive_power_oscillogram_get(size_t osc_index, drive_power_oscillogram_t* osc);
+
+/**
+ * Преобразует значение fixed32_t в значение осциллограммы.
+ * @param value Значение fixed32_t.
+ * @return Значение осциллограммы в fixed32_t.
+ */
+ALWAYS_INLINE static osc_value_t drive_power_osc_value_from_fixed32(fixed32_t value)
+{
+    return (osc_value_t)(value >> 11);
+}
+
+/**
+ * Преобразует значение осциллограммы в fixed32_t.
+ * @param value Значение осциллограммы.
+ * @return Значение осциллограммы в fixed32_t.
+ */
+ALWAYS_INLINE static fixed32_t drive_power_osc_value_to_fixed32(osc_value_t value)
+{
+    return (((fixed32_t)value) << 11);
+}
 
 /**
  * Обрабатывает очередные значения АЦП.

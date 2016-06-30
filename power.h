@@ -13,7 +13,7 @@
 #include "defs/defs.h"
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE 9
+#define POWER_FILTER_SIZE 15
 
 /**
  * Перечисление каналов АЦП.

@@ -25,6 +25,7 @@
 #include "drive_keypad.h"
 #include "drive_gui.h"
 #include "drive_modbus.h"
+#include "drive_tasks.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -32,6 +33,7 @@
 #include "Mylib/defines.h"
 #include "Mylib/mylib.h"
 #include "I2Clib/I2Clib.h"
+#include "drive_tasks.h"
 /******************************************************************************/
 
 //! Буфер записи USART.
@@ -507,15 +509,12 @@ static void init_modbus(void)
     modbus_rtu_set_msg_recv_callback(&modbus, modbus_on_msg_recv);
 }
 
-static void apply_settings_callback(void);
-static void save_settings_callback(void);
-
 static void init_drive_modbus(void)
 {
     drive_modbus_init_t drive_modbus_is;
     
-    drive_modbus_is.apply_settings_callback = apply_settings_callback;
-    drive_modbus_is.save_settings_callback = save_settings_callback;
+    drive_modbus_is.apply_settings_callback = (apply_settings_callback_t)drive_tasks_apply_settings;
+    drive_modbus_is.save_settings_callback = (save_settings_callback_t)drive_tasks_save_settings;
     
     drive_modbus_init(&modbus, &drive_modbus_is);
 }
@@ -849,6 +848,12 @@ static void init_tft_simple(void)
     tft9341_init(&tft, &tft_init);
 }
 
+static void init_drive(void)
+{
+    drive_init();
+    drive_set_error_callback((drive_error_callback_t)drive_tasks_write_error_event);
+}
+
 static void init_drive_ui(void)
 {
     init_ioport_simple();
@@ -1135,42 +1140,6 @@ static void init_gpio (void)
 }
 /******************************************************************************/
 
-static void* apply_settings_task(void* arg)
-{
-    drive_update_settings();
-    
-    return NULL;
-}
-
-static void apply_settings_callback(void)
-{
-    scheduler_add_task(apply_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
-}
-
-static void* save_settings_task(void* arg)
-{
-    return int_to_pvoid(settings_write());
-}
-
-static void save_settings_callback(void)
-{
-    scheduler_add_task(save_settings_task, 5, NULL, TASK_RUN_ONCE, NULL);
-}
-
-static void* write_error_event_task(void* event)
-{
-    err_t err = drive_events_write_event((drive_event_t*)event);
-    
-    return int_to_pvoid(err);
-}
-
-static void on_drive_error(void)
-{
-    static drive_event_t event;
-    drive_events_make_event(&event, DRIVE_EVENT_TYPE_ERROR);
-    
-    scheduler_add_task(write_error_event_task, 10, &event, TASK_RUN_ONCE, NULL);
-}
 
 static void* main_task(void* arg)
 {
@@ -1218,8 +1187,7 @@ int main(void)
     
     init_gpio();
     
-    drive_init();
-    drive_set_error_callback(on_drive_error);
+    init_drive();
     
     init_triacs();
     init_triacs_timers();

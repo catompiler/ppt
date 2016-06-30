@@ -69,7 +69,7 @@ extern err_t drive_events_read(void);
 
 /**
  * Записывает информацию о событиях в хранилищие.
- * @return 
+ * @return Код ошибки.
  */
 extern err_t drive_events_write(void);
 
@@ -120,5 +120,37 @@ extern err_t drive_events_write_event(drive_event_t* event);
  * @return Код ошибки.
  */
 extern err_t drive_events_read_event(drive_event_t* event, drive_event_index_t index);
+
+/**
+ * Получает число осциллограмм.
+ * @return Число осциллограмм.
+ */
+extern size_t drive_events_oscillograms_count(void);
+
+/**
+ * Получает следующий индекс осциллограммы.
+ * @param index Индекс осциллограммы.
+ * @return Следующий индекс осциллограммы.
+ */
+extern drive_event_index_t drive_events_oscillograms_next_index(drive_event_index_t index);
+
+/**
+ * Получает индекс первой осциллограммы.
+ * @return Индекс первой осциллограммы.
+ */
+extern drive_event_index_t drive_events_oscillograms_first_index(void);
+
+/**
+ * Получает индекс последней осциллограммы.
+ * @return Индекс последней осциллограммы.
+ */
+extern drive_event_index_t drive_events_oscillograms_last_index(void);
+
+/**
+ * Записывает текущую осциллограмму питания привода.
+ * @param event_id Идентификатор события.
+ * @return Код ошибки.
+ */
+extern err_t drive_events_write_current_oscillograms(drive_event_id_t event_id);
 
 #endif /* DRIVE_EVENTS_H */
