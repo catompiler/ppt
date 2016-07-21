@@ -135,6 +135,10 @@
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 100
 /**
+ * Скорость соединения Modbus RTU.
+ */
+#define PARAM_ID_MODBUS_BAUD 500
+/**
  * Отладочный параметр 0
  */
 #define PARAM_ID_DEBUG_0 1000

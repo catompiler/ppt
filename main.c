@@ -464,20 +464,27 @@ static void init_modbus_usart(void)
         {.GPIO_Pin = GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
     GPIO_InitTypeDef gpio_rx =
         {.GPIO_Pin = GPIO_Pin_6, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
-    GPIO_Init(GPIOD, &gpio_tx);
-    GPIO_Init(GPIOD, &gpio_rx);
     
     USART_InitTypeDef usart_is =
-        {.USART_BaudRate = 115200, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
+        {.USART_BaudRate = 9600, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
          .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
-    USART_Init(USART2, &usart_is);
-    USART_Cmd(USART2, ENABLE);
     
     usart_bus_init_t usartb_is = {
         .usart_device = USART2,
         .dma_tx_channel = DMA1_Channel7,
         .dma_rx_channel = DMA1_Channel6
     };
+    
+    param_t* baud_param = settings_param_by_id(PARAM_ID_MODBUS_BAUD);
+    if(baud_param){
+        usart_is.USART_BaudRate = settings_param_valueu(baud_param);
+    }
+    
+    GPIO_Init(GPIOD, &gpio_tx);
+    GPIO_Init(GPIOD, &gpio_rx);
+    
+    USART_Init(USART2, &usart_is);
+    USART_Cmd(USART2, ENABLE);
     usart_bus_init(&usart_bus, &usartb_is);
     
     usart_bus_set_rx_callback(&usart_bus, usart_rx_callback);

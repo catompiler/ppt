@@ -13,7 +13,7 @@
 
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 32
+#define PARAMETERS_REAL_COUNT 33
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 19
 // Общее число параметров.
@@ -59,6 +59,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_TRIAC_EXC_OPEN_TIME,      PARAM_TYPE_UINT,      0,         1000,         200,     0),
     
     PARAM_DESCR(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I, PARAM_TYPE_FRACT_100, 0, F32I(100), F32I(5), 0),
+    
+    PARAM_DESCR(PARAM_ID_MODBUS_BAUD,     PARAM_TYPE_UINT,      1200,    57600,     9600,         0),
     
     // Отладка.
     PARAM_DESCR(PARAM_ID_DEBUG_0,         PARAM_TYPE_INT, 0, 0, 0, PARAM_FLAG_VIRTUAL),
