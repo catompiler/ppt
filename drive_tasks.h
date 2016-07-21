@@ -7,6 +7,7 @@
 
 #include "errors/errors.h"
 #include "future/future.h"
+#include "drive_events.h"
 
 /**
  * Обновляет настройки.
@@ -26,6 +27,24 @@ extern err_t drive_tasks_save_settings(void);
  * @return Код ошибки.
  */
 extern err_t drive_tasks_write_error_event(void);
+
+/**
+ * Читает событие из eeprom.
+ * @param future Будущее.
+ * @param event_index Индекс события.
+ * @param event Событие.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_read_event(future_t* future, drive_event_index_t event_index, drive_event_t* event);
+
+/**
+ * Читает канал осциллограммы из eeprom.
+ * @param future Будущее.
+ * @param osc_index Индекс осциллограммы.
+ * @param osc_channel Канал осциллограммы.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_read_osc_channel(future_t* future, drive_osc_index_t osc_index, size_t osc_channel);
 
 #endif /* DRIVE_TASKS_H */
 

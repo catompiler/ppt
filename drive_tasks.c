@@ -15,6 +15,10 @@
 #define DRIVE_TASKS_SAVE_SETTINGS_TASK_PRIOR 10
 //! Приоритет задачи записи события ошибки.
 #define DRIVE_TASKS_WRITE_ERROR_EVENT_TASK_PRIOR 100
+//! Приоритет задачи чтения события ошибки.
+#define DRIVE_TASKS_READ_ERROR_EVENT_TASK_PRIOR 10
+//! Приоритет задачи чтения канала осциллограммы.
+#define DRIVE_TASKS_READ_OSC_CHANNEL_TASK_PRIOR 10
 
 
 #define TID_TO_ERR(T) ((T == INVALID_TASK_ID) ? E_INVALID_VALUE : E_NO_ERROR)
@@ -47,19 +51,19 @@ static void* drive_tasks_write_error_event_task(void* event)
 {
     err_t err = drive_events_write_event((drive_event_t*)event);
     if(err != E_NO_ERROR){
-        drive_power_oscillograms_resume();
+        drive_power_oscillogram_resume();
         return int_to_pvoid(err);
     }
     
-    while(!drive_power_oscillograms_paused());
+    while(!drive_power_oscillogram_paused());
     
-    err = drive_events_write_current_oscillograms(((drive_event_t*)event)->id);
+    err = drive_events_write_current_oscillogram(((drive_event_t*)event)->id);
+    
+    drive_power_oscillogram_resume();
+    
     if(err != E_NO_ERROR){
-        drive_power_oscillograms_resume();
         return int_to_pvoid(err);
     }
-    
-    drive_power_oscillograms_resume();
     
     err = drive_events_write();
     if(err != E_NO_ERROR) return int_to_pvoid(err);
@@ -71,9 +75,39 @@ err_t drive_tasks_write_error_event(void)
 {
     static drive_event_t event;
     drive_events_make_event(&event, DRIVE_EVENT_TYPE_ERROR);
-    drive_power_oscillograms_half_pause();
+    drive_power_oscillogram_half_pause();
     
     return TID_TO_ERR(scheduler_add_task(drive_tasks_write_error_event_task,
                 DRIVE_TASKS_WRITE_ERROR_EVENT_TASK_PRIOR, &event, TASK_RUN_ONCE, NULL));
 }
 
+void* drive_tasks_read_event_task(void* event)
+{
+    err_t err = drive_events_read_event((drive_event_t*)event, ((drive_event_t*)event)->id);
+    
+    return int_to_pvoid(err);
+}
+
+err_t drive_tasks_read_event(future_t* future, drive_event_index_t event_index, drive_event_t* event)
+{
+    event->id = event_index;
+    
+    return TID_TO_ERR(scheduler_add_task(drive_tasks_read_event_task,
+                DRIVE_TASKS_READ_ERROR_EVENT_TASK_PRIOR, event, TASK_RUN_ONCE, future));
+}
+
+void* drive_tasks_read_osc_task(void* data)
+{
+    size_t osc_channel = (size_t)((uint32_t)data & 0xffff);
+    drive_osc_index_t osc_index = (drive_osc_index_t)(((uint32_t)data >> 16) & 0xffff);
+    err_t err = drive_events_read_osc_channel(osc_index, osc_channel);
+    
+    return int_to_pvoid(err);
+}
+
+err_t drive_tasks_read_osc_channel(future_t* future, drive_osc_index_t osc_index, size_t osc_channel)
+{
+    uint32_t packed_arg = ((uint32_t)osc_index << 16) | ((uint32_t)osc_channel & 0xffff);
+    return TID_TO_ERR(scheduler_add_task(drive_tasks_read_osc_task,
+                DRIVE_TASKS_READ_OSC_CHANNEL_TASK_PRIOR, (void*)packed_arg, TASK_RUN_ONCE, future));
+}
