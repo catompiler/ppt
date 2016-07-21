@@ -102,7 +102,8 @@ typedef enum _Drive_Power_Error {
     DRIVE_POWER_ERROR_OVERFLOW_Ifan  = 0x2000000,
     DRIVE_POWER_ERROR_UNDERFLOW_Iref = 0x4000000,
     DRIVE_POWER_ERROR_OVERFLOW_Iref  = 0x8000000,
-    DRIVE_POWER_ERROR_THERMAL_OVERLOAD = 0x10000000 //!< Тепловая защита.
+    DRIVE_POWER_ERROR_THERMAL_OVERLOAD = 0x10000000, //!< Тепловая защита.
+    DRIVE_POWER_ERROR_ROT_BREAK      = 0x20000000 //!< Обрыв якоря.
 } drive_power_error_t;
 
 //! Тип ошибок питания привода.

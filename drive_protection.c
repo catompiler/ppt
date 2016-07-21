@@ -250,3 +250,22 @@ drive_pwr_check_res_t drive_protection_check_rot_current(fixed32_t current)
     }
     return (current < drive_prot.I_rot) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;
 }
+
+drive_break_check_res_t drive_protection_check_rot_break(fixed32_t voltage, fixed32_t current, fixed32_t u_ref)
+{
+    if(u_ref <= drive_prot.U_rot_crit_delta) return DRIVE_BREAK_CHECK_NORMAL;
+    
+    drive_pwr_check_res_t chk_res = DRIVE_PWR_CHECK_NORMAL;
+    
+    chk_res = drive_protection_check_zero_voltage(voltage);
+    if(chk_res == DRIVE_PWR_CHECK_CRIT_UNDERFLOW || chk_res == DRIVE_PWR_CHECK_CRIT_OVERFLOW){
+        return DRIVE_BREAK_CHECK_NORMAL;
+    }
+    
+    chk_res = drive_protection_check_rot_zero_current(current);
+    if(chk_res == DRIVE_PWR_CHECK_CRIT_UNDERFLOW || chk_res == DRIVE_PWR_CHECK_CRIT_OVERFLOW){
+        return DRIVE_BREAK_CHECK_NORMAL;
+    }
+    
+    return DRIVE_BREAK_CHECK_FAIL;
+}

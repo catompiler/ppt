@@ -390,18 +390,25 @@ static void drive_check_power_running(void)
     // Фазы.
     drive_check_power_u_in();
     // Rot.
+    fixed32_t u_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+    fixed32_t i_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+    // Допустимые пределы.
     drive_handle_power_check(
-            drive_protection_check_rot_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot)),
+            drive_protection_check_rot_voltage(u_rot),
             DRIVE_POWER_WARNING_UNDERFLOW_Urot, DRIVE_POWER_WARNING_OVERFLOW_Urot,
             DRIVE_POWER_ERROR_UNDERFLOW_Urot, DRIVE_POWER_ERROR_OVERFLOW_Urot
             );
     // Токи.
     // Rot.
     drive_handle_power_check(
-            drive_protection_check_rot_current(drive_power_channel_real_value(DRIVE_POWER_Irot)),
+            drive_protection_check_rot_current(i_rot),
             DRIVE_POWER_WARNING_UNDERFLOW_Irot, DRIVE_POWER_WARNING_OVERFLOW_Irot,
             DRIVE_POWER_ERROR_UNDERFLOW_Irot, DRIVE_POWER_ERROR_OVERFLOW_Irot
             );
+    // Обрыв якоря.
+    if(drive_protection_check_rot_break(u_rot, i_rot, drive_regulator_current_u_ref()) != DRIVE_BREAK_CHECK_NORMAL){
+        drive_power_error_occured(DRIVE_POWER_ERROR_ROT_BREAK);
+    }
     // Exc.
     drive_handle_power_check(
             drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)),

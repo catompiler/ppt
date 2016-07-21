@@ -26,6 +26,10 @@ typedef enum _Drive_Top_Check_Res {
     DRIVE_TOP_CHECK_OVERHEAT
 } drive_top_check_res_t;
 
+typedef enum _Drive_Break_Check_Res {
+    DRIVE_BREAK_CHECK_NORMAL = 0,
+    DRIVE_BREAK_CHECK_FAIL
+} drive_break_check_res_t;
 
 /**
  * Инициализирует защиту привода.
@@ -179,5 +183,14 @@ extern drive_pwr_check_res_t drive_protection_check_rot_voltage(fixed32_t voltag
  * @return Результат проверки.
  */
 extern drive_pwr_check_res_t drive_protection_check_rot_current(fixed32_t current);
+
+/**
+ * Выполняет проверку обрыва ротора.
+ * @param voltage Напряжение.
+ * @param current Ток.
+ * @param u_ref Текущее напряжение задания.
+ * @return Результат проверки.
+ */
+extern drive_break_check_res_t drive_protection_check_rot_break(fixed32_t voltage, fixed32_t current, fixed32_t u_ref);
 
 #endif /* DRIVE_PROTECTION_H */
