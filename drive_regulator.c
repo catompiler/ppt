@@ -23,6 +23,7 @@ typedef struct _Drive_Regulator {
     
     fixed32_t U_rot_nom; //!< Номинальное напряжение возбуждения якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
+    fixed32_t u_rot_ref; //!< Текущее напряжение задания.
     
     pid_controller_t rot_pid; //!< ПИД-регулятор напряжения якоря.
     pid_controller_t exc_pid; //!< ПИД-регулятор тока возбуждения.
@@ -60,6 +61,11 @@ drive_regulator_state_t drive_regulator_state(void)
 reference_t drive_regulator_reference(void)
 {
     return regulator.reference;
+}
+
+fixed32_t drive_regulator_current_reference(void)
+{
+    return ramp_current_reference(&regulator.rot_ramp);
 }
 
 err_t drive_regulator_set_reference(reference_t reference)
@@ -190,15 +196,20 @@ void drive_regulator_set_exc_current(fixed32_t current)
     regulator.I_exc = current;
 }
 
+fixed32_t drive_regulator_current_u_ref(void)
+{
+    return regulator.u_rot_ref;
+}
+
 static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_exc_back)
 {
     if(regulator.rot_enabled){
         ramp_calc_step(&regulator.rot_ramp);
         fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.rot_ramp) / 100;
         
-        fixed32_t u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
+        regulator.u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
         
-        fixed32_t u_rot_e = u_rot_ref - u_rot_back;
+        fixed32_t u_rot_e = regulator.u_rot_ref - u_rot_back;
         pid_controller_calculate(&regulator.rot_pid, u_rot_e, DRIVE_PID_DT);
     }
     

@@ -54,8 +54,15 @@ extern drive_regulator_state_t drive_regulator_state(void);
 
 /**
  * Получает значение задания.
+ * @return Задание.
  */
 extern reference_t drive_regulator_reference(void);
+
+/**
+ * Получает значение текущего задания (с учётом разгона).
+ * @return Текущее задание.
+ */
+extern fixed32_t drive_regulator_current_reference(void);
 
 /**
  * Устанавливает значение задания.
@@ -170,6 +177,12 @@ extern fixed32_t drive_regulator_exc_current(void);
  * @param voltage Ток возбуждения.
  */
 extern void drive_regulator_set_exc_current(fixed32_t current);
+
+/**
+ * Получает значение текущего напряжения задания (с учётом разгона).
+ * @return Текущее напряжение задание.
+ */
+extern fixed32_t drive_regulator_current_u_ref(void);
 
 /**
  * Выполняет ПИД-регулирование.
