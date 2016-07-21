@@ -39,7 +39,7 @@ typedef struct _Drive_Events_Map {
 //! Тип событий привода.
 typedef struct _Drive_Events {
     drive_events_map_t events_map; //!< Карта событий.
-    drive_power_oscillogram_t osc; //!< Буфер для чтения/записи осциллограмм.
+    drive_power_osc_channel_t osc_buf; //!< Буфер для чтения/записи осциллограмм.
 } drive_events_t;
 
 static drive_events_t events;
@@ -104,6 +104,19 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
 size_t drive_events_count(void)
 {
     return (size_t)events.events_map.events_count;
+}
+
+drive_event_index_t drive_events_index_by_number(size_t number)
+{
+    size_t count = drive_events_count();
+    
+    if(number >= count) return drive_events_last_index();
+    
+    number += drive_events_first_index();
+    
+    if(number >= count) number -= count;
+    
+    return (drive_event_index_t)number;
 }
 
 drive_event_index_t drive_events_next_index(drive_event_index_t index)
@@ -174,13 +187,26 @@ size_t drive_events_oscillograms_count(void)
     return (size_t)events.events_map.osc_count;
 }
 
-drive_event_index_t drive_events_oscillograms_next_index(drive_event_index_t index)
+drive_osc_index_t drive_events_osc_index_by_number(size_t number)
+{
+    size_t count = drive_events_oscillograms_count();
+    
+    if(number >= count) return drive_events_oscillograms_last_index();
+    
+    number += drive_events_oscillograms_first_index();
+    
+    if(number >= count) number -= count;
+    
+    return (drive_osc_index_t)number;
+}
+
+drive_osc_index_t drive_events_oscillograms_next_index(drive_osc_index_t index)
 {
     if(++ index >= DRIVE_OSCILLOGRAMS_COUNT_MAX) return 0;
     return index;
 }
 
-drive_event_index_t drive_events_oscillograms_first_index(void)
+drive_osc_index_t drive_events_oscillograms_first_index(void)
 {
     if(events.events_map.osc_count < DRIVE_EVENTS_COUNT_MAX)
         return 0;
@@ -188,38 +214,60 @@ drive_event_index_t drive_events_oscillograms_first_index(void)
     return drive_events_oscillograms_next_index(events.events_map.osc_index);
 }
 
-drive_event_index_t drive_events_oscillograms_last_index(void)
+drive_osc_index_t drive_events_oscillograms_last_index(void)
 {
     return events.events_map.osc_index;
 }
 
-static storage_address_t drive_events_get_osc_address(drive_event_index_t osc_index, size_t osc_ch_index)
+drive_event_id_t drive_events_osc_event_id(drive_osc_index_t index)
 {
-    return STORAGE_RGN_OSC_ADDRESS + osc_index * DRIVE_OSC_SIZE  + (uint32_t)osc_ch_index * sizeof(drive_power_oscillogram_t);
+    if(index >= DRIVE_OSCS_COUNT_MAX) index = drive_events_oscillograms_last_index();
+    return events.events_map.osc_event_ids[index];
 }
 
-err_t drive_events_write_osc_impl(size_t osc_ch_index, drive_power_oscillogram_t* osc)
+static storage_address_t drive_events_get_osc_channel_address(drive_osc_index_t osc_index, size_t osc_ch_index)
 {
-    storage_address_t address = drive_events_get_osc_address(events.events_map.osc_index, osc_ch_index);
-    return storage_write(address, osc, sizeof(drive_power_oscillogram_t));
+    return STORAGE_RGN_OSC_ADDRESS + osc_index * DRIVE_OSC_SIZE  + (uint32_t)osc_ch_index * sizeof(drive_power_osc_channel_t);
 }
 
-err_t drive_events_write_current_oscillograms(drive_event_id_t event_id)
+static err_t drive_events_write_osc_channel_impl(drive_osc_index_t osc_index, size_t osc_ch_index, drive_power_osc_channel_t* osc)
+{
+    storage_address_t address = drive_events_get_osc_channel_address(osc_index, osc_ch_index);
+    return storage_write(address, osc, sizeof(drive_power_osc_channel_t));
+}
+
+err_t drive_events_write_current_oscillogram(drive_event_id_t event_id)
 {
     size_t osc_ch_index = 0;
     
-    for(; osc_ch_index < DRIVE_POWER_OSC_COUNT; osc_ch_index ++){
-        RETURN_ERR_IF_FAIL(drive_power_oscillogram_get(osc_ch_index, &events.osc));
-        RETURN_ERR_IF_FAIL(drive_events_write_osc_impl(osc_ch_index, &events.osc));
-    }
-    
-    drive_event_index_t osc_index = 0;
+    drive_osc_index_t osc_index = 0;
     if(events.events_map.osc_count != 0){
         osc_index = drive_events_oscillograms_next_index(events.events_map.osc_index);
+    }
+    
+    for(; osc_ch_index < DRIVE_POWER_OSC_CHANNELS_COUNT; osc_ch_index ++){
+        RETURN_ERR_IF_FAIL(drive_power_osc_channel_get(osc_ch_index, &events.osc_buf));
+        RETURN_ERR_IF_FAIL(drive_events_write_osc_channel_impl(osc_index, osc_ch_index, &events.osc_buf));
+    }
+    
+    if(events.events_map.osc_count < DRIVE_OSCS_COUNT_MAX){
+        events.events_map.osc_count ++;
     }
     
     events.events_map.osc_event_ids[osc_index] = event_id;
     events.events_map.osc_index = osc_index;
     
     return E_NO_ERROR;
+}
+
+err_t drive_events_read_osc_channel(drive_osc_index_t index, size_t osc_channel)
+{
+    if(index >= events.events_map.osc_count) return E_OUT_OF_RANGE;
+    storage_address_t address = drive_events_get_osc_channel_address(index, osc_channel);
+    return storage_read(address, &events.osc_buf, sizeof(drive_power_osc_channel_t));
+}
+
+const osc_value_t* drive_events_readed_osc_data(void)
+{
+    return events.osc_buf.data;
 }

@@ -6,7 +6,7 @@
 
 
 //! Каналы питания для осциллограмм.
-static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_COUNT] = {
+static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_CHANNELS_COUNT] = {
     DRIVE_POWER_Ua, DRIVE_POWER_Ub, DRIVE_POWER_Uc,
     DRIVE_POWER_Ia, DRIVE_POWER_Ib, DRIVE_POWER_Ic,
     DRIVE_POWER_Urot, DRIVE_POWER_Irot, DRIVE_POWER_Iexc
@@ -19,13 +19,13 @@ static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_COUNT] = {
 #define DRIVE_POWER_OSC_ADC_DIVIDER 1
 
 //! Тип буфера для хранения осцилограмм.
-typedef struct _Oscillograms_Buf {
-    drive_power_oscillogram_t oscillograms[DRIVE_POWER_OSC_COUNT];
+typedef struct _Oscillogram_Buf {
+    drive_power_osc_channel_t osc_channels[DRIVE_POWER_OSC_CHANNELS_COUNT];
     size_t index; //!< Текущий индекс в осциллограммах.
     size_t count; //!< Количество значений в осциллограммах.
     size_t pause_mark; //!< Метка возникновения ошибки.
     size_t skip_counter; //!< Счётчик числа пропущенных точек АЦП.
-} oscillograms_buf_t;
+} oscillogram_buf_t;
 
 //! Тип питания привода.
 typedef struct _Drive_Power {
@@ -34,7 +34,7 @@ typedef struct _Drive_Power {
     power_t power; //!< Питание.
     size_t processing_periods; //!< Число периодов для накопления и обработки данных.
     size_t periods_processed; //!< Число периодов данных.
-    oscillograms_buf_t osc_buf; //!< Буфер осциллограмм.
+    oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
 } drive_power_t;
 
 //! Питание привода.
@@ -45,7 +45,7 @@ err_t drive_power_init(void)
 {
     memset(&drive_power, 0x0, sizeof(drive_power_t));
     
-    drive_power.osc_buf.pause_mark = DRIVE_POWER_OSCILLOGRAM_SIZE;
+    drive_power.osc_buf.pause_mark = DRIVE_POWER_OSC_CHANNEL_LEN;
     
     drive_power.processing_periods = DRIVE_POWER_PROCESSING_PERIODS_DEFAULT;
     
@@ -96,45 +96,45 @@ err_t drive_power_set_processing_periods(size_t periods)
     return E_NO_ERROR;
 }
 
-size_t drive_power_oscillograms_count(void)
+size_t drive_power_osc_channels_count(void)
 {
-    return DRIVE_POWER_OSC_COUNT;
+    return DRIVE_POWER_OSC_CHANNELS_COUNT;
 }
 
-size_t drive_power_oscillograms_length(void)
+size_t drive_power_oscillogram_length(void)
 {
     return drive_power.osc_buf.count;
 }
 
-bool drive_power_oscillograms_full(void)
+bool drive_power_oscillogram_full(void)
 {
-    return drive_power.osc_buf.count == DRIVE_POWER_OSCILLOGRAM_SIZE;
+    return drive_power.osc_buf.count == DRIVE_POWER_OSC_CHANNEL_LEN;
 }
 
-void drive_power_oscillograms_half_pause(void)
+void drive_power_oscillogram_half_pause(void)
 {
-    drive_power.osc_buf.pause_mark = drive_power.osc_buf.index + (DRIVE_POWER_OSCILLOGRAM_SIZE / 2);
-    if(drive_power.osc_buf.pause_mark >= DRIVE_POWER_OSCILLOGRAM_SIZE){
-        drive_power.osc_buf.pause_mark -= DRIVE_POWER_OSCILLOGRAM_SIZE;
+    drive_power.osc_buf.pause_mark = drive_power.osc_buf.index + (DRIVE_POWER_OSC_CHANNEL_LEN / 2);
+    if(drive_power.osc_buf.pause_mark >= DRIVE_POWER_OSC_CHANNEL_LEN){
+        drive_power.osc_buf.pause_mark -= DRIVE_POWER_OSC_CHANNEL_LEN;
     }
 }
 
-bool drive_power_oscillograms_paused(void)
+bool drive_power_oscillogram_paused(void)
 {
     return drive_power.osc_buf.index == drive_power.osc_buf.pause_mark;
 }
 
-void drive_power_oscillograms_resume(void)
+void drive_power_oscillogram_resume(void)
 {
-    drive_power.osc_buf.pause_mark = DRIVE_POWER_OSCILLOGRAM_SIZE;
+    drive_power.osc_buf.pause_mark = DRIVE_POWER_OSC_CHANNEL_LEN;
 }
 
 ALWAYS_INLINE static bool drive_power_osc_pause_mark_is_valid(void)
 {
-    return drive_power.osc_buf.pause_mark < DRIVE_POWER_OSCILLOGRAM_SIZE;
+    return drive_power.osc_buf.pause_mark < DRIVE_POWER_OSC_CHANNEL_LEN;
 }
 
-size_t drive_power_oscillograms_start_index(void)
+size_t drive_power_oscillogram_start_index(void)
 {
     if(drive_power_osc_pause_mark_is_valid()){
         return drive_power.osc_buf.pause_mark;
@@ -142,58 +142,62 @@ size_t drive_power_oscillograms_start_index(void)
     return drive_power.osc_buf.index;
 }
 
-size_t drive_power_oscillograms_half_index(void)
+size_t drive_power_oscillogram_half_index(void)
 {
     size_t res = 0;
     if(drive_power_osc_pause_mark_is_valid()){
-        res = drive_power.osc_buf.pause_mark + (DRIVE_POWER_OSCILLOGRAM_SIZE / 2);
+        res = drive_power.osc_buf.pause_mark + (DRIVE_POWER_OSC_CHANNEL_LEN / 2);
     }else{
-        res = drive_power.osc_buf.index + (DRIVE_POWER_OSCILLOGRAM_SIZE / 2);
+        res = drive_power.osc_buf.index + (DRIVE_POWER_OSC_CHANNEL_LEN / 2);
     }
-    if(res >= DRIVE_POWER_OSCILLOGRAM_SIZE) res -= DRIVE_POWER_OSCILLOGRAM_SIZE;
+    if(res >= DRIVE_POWER_OSC_CHANNEL_LEN) res -= DRIVE_POWER_OSC_CHANNEL_LEN;
     
     return res;
 }
 
-size_t drive_power_oscillograms_end_index(void)
+size_t drive_power_oscillogram_end_index(void)
 {
     if(drive_power_osc_pause_mark_is_valid()){
-        return drive_power.osc_buf.pause_mark;
+        if(drive_power.osc_buf.pause_mark == 0){
+            return (DRIVE_POWER_OSC_CHANNEL_LEN - 1);
+        }
+        return drive_power.osc_buf.pause_mark - 1;
     }
     if(drive_power.osc_buf.index == 0){
-        return (DRIVE_POWER_OSCILLOGRAM_SIZE - 1);
+        return (DRIVE_POWER_OSC_CHANNEL_LEN - 1);
     }
     return drive_power.osc_buf.index - 1;
 }
 
-size_t drive_power_oscillograms_next_index(size_t index)
+size_t drive_power_oscillogram_next_index(size_t index)
 {
-    if(++ index >= DRIVE_POWER_OSCILLOGRAM_SIZE) index = 0;
+    if(++ index >= DRIVE_POWER_OSC_CHANNEL_LEN) index = 0;
     
     return index;
 }
 
-osc_value_t drive_power_oscillogram_data(size_t osc_index, size_t index)
+osc_value_t drive_power_osc_channel_data(size_t osc_channel, size_t index)
 {
-    if(osc_index >= DRIVE_POWER_OSC_COUNT) return 0;
-    if(index >= DRIVE_POWER_OSCILLOGRAM_SIZE) return 0;
-    return drive_power.osc_buf.oscillograms[osc_index].data[index];
+    if(osc_channel >= DRIVE_POWER_OSC_CHANNELS_COUNT) return 0;
+    if(index >= DRIVE_POWER_OSC_CHANNEL_LEN) return 0;
+    return drive_power.osc_buf.osc_channels[osc_channel].data[index];
 }
 
-err_t drive_power_oscillogram_get(size_t osc_index, drive_power_oscillogram_t* osc)
+err_t drive_power_osc_channel_get(size_t osc_channel, drive_power_osc_channel_t* osc)
 {
-    if(osc_index >= DRIVE_POWER_OSC_COUNT) return E_OUT_OF_RANGE;
+    if(osc_channel >= DRIVE_POWER_OSC_CHANNELS_COUNT) return E_OUT_OF_RANGE;
     
-    size_t start_index = drive_power_oscillograms_start_index();
-    size_t end_index = drive_power_oscillograms_end_index();
+    size_t start_index = drive_power_oscillogram_start_index();
+    size_t end_index = drive_power_oscillogram_end_index();
     
     if(end_index < start_index){
-        memcpy(osc->data, &drive_power.osc_buf.oscillograms[osc_index].data[start_index],
-                (DRIVE_POWER_OSCILLOGRAM_SIZE - start_index) * sizeof(osc_value_t));
-        memcpy(osc->data, &drive_power.osc_buf.oscillograms[osc_index].data[0],
+        memcpy(osc->data, &drive_power.osc_buf.osc_channels[osc_channel].data[start_index],
+                (DRIVE_POWER_OSC_CHANNEL_LEN - start_index) * sizeof(osc_value_t));
+        memcpy(osc->data + (DRIVE_POWER_OSC_CHANNEL_LEN - start_index),
+                &drive_power.osc_buf.osc_channels[osc_channel].data[0],
                 (end_index + 1) * sizeof(osc_value_t));
     }else{
-        memcpy(osc->data, &drive_power.osc_buf.oscillograms[osc_index].data[start_index],
+        memcpy(osc->data, &drive_power.osc_buf.osc_channels[osc_channel].data[start_index],
                 (end_index - start_index + 1) * sizeof(osc_value_t));
     }
     
@@ -204,27 +208,23 @@ static void drive_power_osc_buffer_put_data(void)
 {
     size_t i = 0;
     osc_value_t value = 0;
-    for(; i < DRIVE_POWER_OSC_COUNT; i ++){
+    for(; i < DRIVE_POWER_OSC_CHANNELS_COUNT; i ++){
         value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
                     drive_power_osc_channels_nums[i]
                 ));
-        drive_power.osc_buf.oscillograms[i].data[drive_power.osc_buf.index] = value;
+        drive_power.osc_buf.osc_channels[i].data[drive_power.osc_buf.index] = value;
     }
-    if(++ drive_power.osc_buf.index >= DRIVE_POWER_OSCILLOGRAM_SIZE){
+    if(++ drive_power.osc_buf.index >= DRIVE_POWER_OSC_CHANNEL_LEN){
         drive_power.osc_buf.index = 0;
     }
     
-    if(drive_power.osc_buf.count < DRIVE_POWER_OSCILLOGRAM_SIZE){
+    if(drive_power.osc_buf.count < DRIVE_POWER_OSC_CHANNEL_LEN){
         drive_power.osc_buf.count ++;
     }
 }
 
 static void drive_power_append_osc_data(void)
 {
-#warning DEBUG
-    settings_param_set_valueu(settings_param_by_id(PARAM_ID_DEBUG_2), drive_power.osc_buf.index);
-    settings_param_set_valueu(settings_param_by_id(PARAM_ID_DEBUG_3), drive_power.osc_buf.pause_mark);
-    
     if(drive_power.osc_buf.skip_counter ++ >= DRIVE_POWER_OSC_ADC_DIVIDER){
         drive_power.osc_buf.skip_counter = 0;
         

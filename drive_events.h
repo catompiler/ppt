@@ -22,6 +22,9 @@ typedef uint8_t drive_event_id_t;
 //! Тип индекса события.
 typedef uint8_t drive_event_index_t;
 
+//! Тип индекса осциллограммы.
+typedef uint8_t drive_osc_index_t;
+
 //! Тип события.
 typedef enum _Drive_Event_Type {
     DRIVE_EVENT_TYPE_ERROR = 0 //!< Ошибка.
@@ -87,6 +90,14 @@ extern void drive_events_make_event(drive_event_t* event, drive_event_type_t typ
 extern size_t drive_events_count(void);
 
 /**
+ * Получает индекс сообщения с заданным номером
+ * от 0 до drive_events_count() - 1.
+ * @param number Номер сообщения.
+ * @return Индекс сообщения.
+ */
+extern drive_event_index_t drive_events_index_by_number(size_t number);
+
+/**
  * Получает следующий индекс события.
  * @param index Индекс события.
  * @return Следующий индекс события.
@@ -128,29 +139,59 @@ extern err_t drive_events_read_event(drive_event_t* event, drive_event_index_t i
 extern size_t drive_events_oscillograms_count(void);
 
 /**
+ * Получает индекс осциллограммы с заданным номером
+ * от 0 до drive_events_oscillograms_count() - 1.
+ * @param number Номер сообщения.
+ * @return Индекс сообщения.
+ */
+extern drive_osc_index_t drive_events_osc_index_by_number(size_t number);
+
+/**
  * Получает следующий индекс осциллограммы.
  * @param index Индекс осциллограммы.
  * @return Следующий индекс осциллограммы.
  */
-extern drive_event_index_t drive_events_oscillograms_next_index(drive_event_index_t index);
+extern drive_osc_index_t drive_events_oscillograms_next_index(drive_osc_index_t index);
 
 /**
  * Получает индекс первой осциллограммы.
  * @return Индекс первой осциллограммы.
  */
-extern drive_event_index_t drive_events_oscillograms_first_index(void);
+extern drive_osc_index_t drive_events_oscillograms_first_index(void);
 
 /**
  * Получает индекс последней осциллограммы.
  * @return Индекс последней осциллограммы.
  */
-extern drive_event_index_t drive_events_oscillograms_last_index(void);
+extern drive_osc_index_t drive_events_oscillograms_last_index(void);
+
+/**
+ * Получает идентификатор события осциллограммы.
+ * @param index Индекс осциллограммы.
+ * @return Идентификатор события осциллограммы.
+ */
+extern drive_event_id_t drive_events_osc_event_id(drive_osc_index_t index);
 
 /**
  * Записывает текущую осциллограмму питания привода.
  * @param event_id Идентификатор события.
  * @return Код ошибки.
  */
-extern err_t drive_events_write_current_oscillograms(drive_event_id_t event_id);
+extern err_t drive_events_write_current_oscillogram(drive_event_id_t event_id);
+
+/**
+ * Считывает канал осциллограммы
+ * питания привода в буфер.
+ * @param index Индекс осциллограммы.
+ * @param osc_channel Канал осциллограммы.
+ * @return Код ошибки.
+ */
+extern err_t drive_events_read_osc_channel(drive_osc_index_t index, size_t osc_channel);
+
+/**
+ * Получает указатель на данные считанного канала осциллограммы.
+ * @return Указатель на данные канала осциллограммы.
+ */
+extern const osc_value_t* drive_events_readed_osc_data(void);
 
 #endif /* DRIVE_EVENTS_H */
