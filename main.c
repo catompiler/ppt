@@ -117,6 +117,28 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 //! Число измерений ADC.
 //static volatile int timer_cc_count = 0;
 
+
+/*
+ * Приоритеты прерываний.
+ */
+#define IRQ_PRIOR_ADC_DMA 1
+#define IRQ_PRIOR_NULL_SENSORS 2
+#define IRQ_PRIOR_TRIACS_TIMER 1
+#define IRQ_PRIOR_TRIAC_EXC_TIMER 1
+#define IRQ_PRIOR_I2C1 3
+#define IRQ_PRIOR_SPI1 3
+#define IRQ_PRIOR_SPI2 3
+#define IRQ_PRIOR_KEYPAD 4
+#define IRQ_PRIOR_USART 3
+#define IRQ_PRIOR_MODBUS_USART 3
+#define IRQ_PRIOR_DMA_CH1 3
+#define IRQ_PRIOR_DMA_CH2 3 // spi1
+#define IRQ_PRIOR_DMA_CH3 3 // spi1
+#define IRQ_PRIOR_DMA_CH4 3 // spi2
+#define IRQ_PRIOR_DMA_CH5 3 // spi2
+#define IRQ_PRIOR_DMA_CH6 3 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_DMA_CH7 3 // i2c1 usart2 (modbus)
+
 /*
  * Обработчики прерываний.
  */
@@ -454,7 +476,7 @@ static void init_usart(void)
     usart_buf_init(&usart_buf, &usartb_is);
     usart_setup_stdio(&usart_buf);
     
-    NVIC_SetPriority(USART3_IRQn, 3);
+    NVIC_SetPriority(USART3_IRQn, IRQ_PRIOR_USART);
     NVIC_EnableIRQ(USART3_IRQn);
 }
 
@@ -493,12 +515,12 @@ static void init_modbus_usart(void)
     
     usart_bus_set_idle_mode(&usart_bus, USART_IDLE_MODE_END_RX);
     
-    NVIC_SetPriority(USART2_IRQn, 3);
+    NVIC_SetPriority(USART2_IRQn, IRQ_PRIOR_MODBUS_USART);
     NVIC_EnableIRQ(USART2_IRQn);
     
-    /*NVIC_SetPriority(DMA1_Channel6_IRQn, 5);
+    /*NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIOR_DMA_CH6);
     NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-    NVIC_SetPriority(DMA1_Channel7_IRQn, 5);
+    NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
     NVIC_EnableIRQ(DMA1_Channel7_IRQn);*/
 }
 
@@ -560,11 +582,11 @@ static void init_spi(void)
     
     spi_bus_set_callback(&spi, spi_callback);
     
-    NVIC_SetPriority(SPI1_IRQn, 2);
+    NVIC_SetPriority(SPI1_IRQn, IRQ_PRIOR_SPI1);
     NVIC_EnableIRQ(SPI1_IRQn);
     
-    NVIC_SetPriority(DMA1_Channel2_IRQn, 2);
-    NVIC_SetPriority(DMA1_Channel3_IRQn, 2);
+    NVIC_SetPriority(DMA1_Channel2_IRQn, IRQ_PRIOR_DMA_CH2);
+    NVIC_SetPriority(DMA1_Channel3_IRQn, IRQ_PRIOR_DMA_CH3);
     NVIC_EnableIRQ(DMA1_Channel2_IRQn);
     NVIC_EnableIRQ(DMA1_Channel3_IRQn);
 }
@@ -603,11 +625,11 @@ static void init_spi2(void)
     
     spi_bus_set_callback(&spi2, spi2_callback);
     
-    NVIC_SetPriority(SPI2_IRQn, 2);
+    NVIC_SetPriority(SPI2_IRQn, IRQ_PRIOR_SPI2);
     NVIC_EnableIRQ(SPI2_IRQn);
     
-    NVIC_SetPriority(DMA1_Channel4_IRQn, 2);
-    NVIC_SetPriority(DMA1_Channel5_IRQn, 2);
+    NVIC_SetPriority(DMA1_Channel4_IRQn, IRQ_PRIOR_DMA_CH4);
+    NVIC_SetPriority(DMA1_Channel5_IRQn, IRQ_PRIOR_DMA_CH5);
     NVIC_EnableIRQ(DMA1_Channel4_IRQn);
     NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 }
@@ -667,13 +689,13 @@ static void init_i2c(void)
     
     i2c_bus_set_callback(&i2c, i2c_callback);
     
-    NVIC_SetPriority(I2C1_EV_IRQn, 1);
-    NVIC_SetPriority(I2C1_ER_IRQn, 1);
+    NVIC_SetPriority(I2C1_EV_IRQn, IRQ_PRIOR_I2C1);
+    NVIC_SetPriority(I2C1_ER_IRQn, IRQ_PRIOR_I2C1);
     NVIC_EnableIRQ(I2C1_EV_IRQn);
     NVIC_EnableIRQ(I2C1_ER_IRQn);
     
-    NVIC_SetPriority(DMA1_Channel6_IRQn, 2);
-    NVIC_SetPriority(DMA1_Channel7_IRQn, 2);
+    NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIOR_DMA_CH6);
+    NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
     NVIC_EnableIRQ(DMA1_Channel6_IRQn);
     NVIC_EnableIRQ(DMA1_Channel7_IRQn);
 }
@@ -765,22 +787,27 @@ static void init_adc(void)
     
     ADC_Init(ADC3, &adc_is);
     
+    
+#define ADC_SAMPLE_TIME ADC_SampleTime_71Cycles5
+    
     //Порядок оцифровки ADC1.
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_15, 1, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_8, 2, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_9, 3, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 4, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_15, 1, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_8, 2, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_9, 3, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 4, ADC_SAMPLE_TIME);
     
     //Порядок оцифровки ADC2.
-    ADC_RegularChannelConfig(ADC2, ADC_Channel_12, 1, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC2, ADC_Channel_13, 2, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC2, ADC_Channel_0, 3, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 4, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC2, ADC_Channel_12, 1, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC2, ADC_Channel_13, 2, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC2, ADC_Channel_0, 3, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 4, ADC_SAMPLE_TIME);
     
     //Порядок оцифровки ADC3.
-    ADC_RegularChannelConfig(ADC3, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC3, ADC_Channel_11, 2, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC3, ADC_Channel_10, 3, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_1, 1, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_11, 2, ADC_SAMPLE_TIME);
+    ADC_RegularChannelConfig(ADC3, ADC_Channel_10, 3, ADC_SAMPLE_TIME);
+    
+#undef ADC_SAMPLE_TIME
     
     ADC_DMACmd(ADC1, ENABLE); //Enable ADC1 DMA.
     DMA_Cmd(DMA1_Channel1, ENABLE);
@@ -822,7 +849,7 @@ static void init_adc(void)
     while (ADC_GetCalibrationStatus(ADC3)); //Check the end of ADC3 calibration.
     
     DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
-    NVIC_SetPriority(DMA1_Channel1_IRQn, 2);
+    NVIC_SetPriority(DMA1_Channel1_IRQn, IRQ_PRIOR_ADC_DMA);
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
@@ -1034,11 +1061,11 @@ static void init_triacs_timers(void)
     drive_set_triacs_pairs_timer(TRIACS_TIMER_1, TIM3);
     drive_set_triac_exc_timer(TIM4);
     
-    NVIC_SetPriority(TIM2_IRQn, 1);
+    NVIC_SetPriority(TIM2_IRQn, IRQ_PRIOR_TRIACS_TIMER);
     NVIC_EnableIRQ (TIM2_IRQn);         // Разрешаем прерывания по Таймеру2
-    NVIC_SetPriority(TIM3_IRQn, 1);
+    NVIC_SetPriority(TIM3_IRQn, IRQ_PRIOR_TRIACS_TIMER);
     NVIC_EnableIRQ (TIM3_IRQn);         // Разрешаем прерывания по Таймеру3
-    NVIC_SetPriority(TIM4_IRQn, 1);
+    NVIC_SetPriority(TIM4_IRQn, IRQ_PRIOR_TRIAC_EXC_TIMER);
     NVIC_EnableIRQ (TIM4_IRQn);         // Разрешаем прерывания по Таймеру4
 }
 
@@ -1081,8 +1108,8 @@ static void init_exti(void)
     EXTI_InitStructure.EXTI_LineCmd = ENABLE;
     EXTI_Init(&EXTI_InitStructure);
     
-    NVIC_SetPriority(EXTI9_5_IRQn, 3);
-    NVIC_SetPriority(EXTI15_10_IRQn, 2);
+    NVIC_SetPriority(EXTI9_5_IRQn, IRQ_PRIOR_KEYPAD);
+    NVIC_SetPriority(EXTI15_10_IRQn, IRQ_PRIOR_NULL_SENSORS);
  
     NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
     NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
