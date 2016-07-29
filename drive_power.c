@@ -236,11 +236,11 @@ static void drive_power_append_osc_data(void)
 
 err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
-    RETURN_ERR_IF_FAIL(power_process_adc_values(&drive_power.power, channels, adc_values));
+    err_t err = power_process_adc_values(&drive_power.power, channels, adc_values);
     
     drive_power_append_osc_data();
     
-    return E_NO_ERROR;
+    return err;
 }
 
 /*bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
