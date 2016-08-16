@@ -243,6 +243,20 @@ extern bool drive_power_calc_values(power_channels_t channels, phase_t phase, er
 extern err_t drive_power_calibrate(power_channels_t channels);
 
 /**
+ * Получает калибровочные данные канала АЦП.
+ * @param channel Номер канала АЦП.
+ * @return Калибровочные данные канала АЦП.
+ */
+extern uint16_t drive_power_calibration_data(size_t channel);
+
+/**
+ * Получает калибровочные данные канала АЦП.
+ * @param channel Номер канала АЦП.
+ * @param data Калибровочные данные канала АЦП.
+ */
+extern void drive_power_set_calibration_data(size_t channel, uint16_t data);
+
+/**
  * Получает флаг доступности данных на всех заданных каналах АЦП.
  * @param channels Маска каналов АЦП.
  * @return Флаг доступности данных.

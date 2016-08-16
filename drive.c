@@ -57,6 +57,7 @@ typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
     drive_status_t status; //!< Статус.
     drive_state_t state; //!< Состояние.
+    drive_state_t saved_state; //!< Сохранённое состояние.
     drive_errors_t errors; //!< Ошибки.
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
@@ -118,6 +119,22 @@ static void drive_set_state(drive_state_t state)
             drive.status = DRIVE_STATUS_ERROR;
             break;
     }
+}
+
+/**
+ * Восстанавливает состояние привода.
+ */
+static void drive_save_state(void)
+{
+    drive.saved_state = drive.state;
+}
+
+/**
+ * Восстанавливает состояние привода.
+ */
+static void drive_restore_state(void)
+{
+    drive_set_state(drive.saved_state);
 }
 
 /**
@@ -436,7 +453,7 @@ static void drive_check_power_running(void)
  * Обработка состояний привода.
  */
 
-//! Макрос для обновления параметра.
+//! Макрос для обновления параметра значения питания.
 #define DRIVE_UPDATE_POWER_PARAM(PARAM, CHANNEL)\
     do {\
         if(PARAM) settings_param_set_valuef(PARAM, drive_power_channel_real_value(CHANNEL));\
@@ -456,6 +473,31 @@ static void drive_update_power_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_c, DRIVE_POWER_Ic);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_rot, DRIVE_POWER_Irot);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
+}
+
+//! Макрос для обновления параметра калибровочных данных.
+#define DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID, CHANNEL)\
+    do {\
+        param_t* p = settings_param_by_id(PARAM_ID);\
+        if(p) settings_param_set_valueu(p, drive_power_calibration_data(CHANNEL));\
+    }while(0)
+
+/**
+ * Обновляет калибровочные данные в параметрах.
+ */
+static void drive_update_clibration_parameters(void)
+{
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ua, DRIVE_POWER_Ua);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ub, DRIVE_POWER_Ub);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Uc, DRIVE_POWER_Uc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Urot, DRIVE_POWER_Urot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ia, DRIVE_POWER_Ia);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ib, DRIVE_POWER_Ib);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ic, DRIVE_POWER_Ic);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Irot, DRIVE_POWER_Irot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iexc, DRIVE_POWER_Iexc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iref, DRIVE_POWER_Iref);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ifan, DRIVE_POWER_Ifan);
 }
 
 /**
@@ -486,6 +528,22 @@ static void drive_states_process_top(void)
 {
     if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
         drive_protection_top_process(drive_power_channel_real_value(DRIVE_POWER_Irot), DRIVE_TOP_DT);
+    }
+}
+
+/**
+ * Обрабатывает фазу.
+ * @param phase Фаза.
+ */
+static void drive_process_phase(phase_t phase)
+{
+    // Обработаем текущую фазу.
+    drive_phase_state_handle(phase);
+    
+    // Если ошибка фазы.
+    if(drive_phase_state_errors() != PHASE_NO_ERROR){
+        // Обработаем её.
+        drive_error_occured(DRIVE_ERROR_PHASE);
     }
 }
 
@@ -778,7 +836,9 @@ static void drive_state_process_power_calibration(phase_t phase)
                     drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
                     drive_set_flag(DRIVE_FLAG_POWER_CALIBRATED);
                     drive.power_calibration_state = DRIVE_PWR_CALIBRATION_DONE;
-                    drive_set_state(DRIVE_STATE_IDLE);
+                    drive_update_clibration_parameters();
+                    //drive_set_state(DRIVE_STATE_IDLE);
+                    drive_restore_state();
                 }
             }
             break;
@@ -801,8 +861,9 @@ static err_t drive_state_process_init(phase_t phase)
         drive_power_set_processing_periods(DRIVE_POWER_CALCULATION_PERIODS);
     }else if(drive_calculate_power(phase)){
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-            drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
-            drive_set_state(DRIVE_STATE_CALIBRATION);
+            drive_set_state(DRIVE_STATE_IDLE);
+            //drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
+            //drive_set_state(DRIVE_STATE_CALIBRATION);
         }
     }
     return E_NO_ERROR;
@@ -819,14 +880,7 @@ static err_t drive_states_process(phase_t phase)
         return E_INVALID_VALUE;
     }
     
-    // Обработаем текущую фазу.
-    drive_phase_state_handle(phase);
-    
-    // Если ошибка фазы.
-    if(drive_phase_state_errors() != PHASE_NO_ERROR){
-        // Обработаем её.
-        drive_error_occured(DRIVE_ERROR_PHASE);
-    }
+    drive_process_phase(phase);
     
     switch(drive.state){
         case DRIVE_STATE_INIT:
@@ -946,6 +1000,18 @@ err_t drive_update_settings(void)
                                 settings_valuef(PARAM_ID_EXC_PID_K_I),
                                 settings_valuef(PARAM_ID_EXC_PID_K_D));
     
+    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ua));
+    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ub));
+    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Uc));
+    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Urot));
+    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ia));
+    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ib));
+    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ic));
+    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Irot));
+    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iexc));
+    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iref));
+    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ifan));
+    
     return E_NO_ERROR;
 }
 
@@ -1056,6 +1122,19 @@ bool drive_stop(void)
     return true;
 }
 
+bool drive_calibrate_power(void)
+{
+    if(drive.state == DRIVE_STATE_IDLE ||
+       drive.state == DRIVE_STATE_ERROR){
+        drive_save_state();
+        drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
+        drive_set_state(DRIVE_STATE_CALIBRATION);
+        
+        return true;
+    }
+    return false;
+}
+
 bool drive_running(void)
 {
     return drive.status == DRIVE_STATUS_RUN;
@@ -1103,3 +1182,8 @@ err_t drive_process_null_sensor(phase_t phase)
 {
     return drive_states_process(phase);
 }
+
+//void drive_phases_timer_irq_handler(void)
+//{
+//#warning STUB!
+//}

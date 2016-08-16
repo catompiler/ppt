@@ -356,6 +356,12 @@ extern bool drive_start(void);
 extern bool drive_stop(void);
 
 /**
+ * Выполняет калибровку питания.
+ * @return Флаг калибровки питания.
+ */
+extern bool drive_calibrate_power(void);
+
+/**
  * Получает флаг работы привода.
  * @return Флаг работы привода.
  */
@@ -455,5 +461,10 @@ extern void drive_triac_exc_timer_irq_handler(void);
  * @return Код ошибки.
  */
 extern err_t drive_process_null_sensor(phase_t phase);
+
+///**
+// * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
+// */
+//extern void drive_phases_timer_irq_handler(void);
 
 #endif	/* DRIVE_H */

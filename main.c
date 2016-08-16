@@ -123,6 +123,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  */
 #define IRQ_PRIOR_ADC_DMA 1
 #define IRQ_PRIOR_NULL_SENSORS 2
+#define IRQ_PRIOR_PHASES_TIMER 2
 #define IRQ_PRIOR_TRIACS_TIMER 1
 #define IRQ_PRIOR_TRIAC_EXC_TIMER 1
 #define IRQ_PRIOR_I2C1 3
@@ -354,6 +355,12 @@ void TIM4_IRQHandler(void)
 {
     drive_triac_exc_timer_irq_handler();
 }
+
+//void TIM6_IRQHandler(void)
+//{
+//    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
+//    drive_phases_timer_irq_handler();
+//}
 
 /*
  * Функции обратного вызова (каллбэки).
@@ -1020,9 +1027,12 @@ static void init_phases_timer(void)
     TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
     //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!    
+    //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!
     
     drive_set_phase_state_timer(TIM6);
+    
+    //NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER)
+    //NVIC_EnableIRQ(TIM6_IRQn);
 }
 
 static void init_triacs(void)

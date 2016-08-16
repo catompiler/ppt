@@ -142,6 +142,28 @@ extern err_t power_calc_values(power_t* power, power_channels_t channels);
 extern err_t power_calibrate(power_t* power, power_channels_t channels);
 
 /**
+ * Получает калибровочные данные канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала АЦП.
+ * @return Калибровочные данные канала АЦП.
+ */
+ALWAYS_INLINE static uint16_t power_calibration_data(power_t* power, size_t channel)
+{
+    return (uint16_t)power->channels[channel].raw_zero_cal;
+}
+
+/**
+ * Получает калибровочные данные канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала АЦП.
+ * @param data Калибровочные данные канала АЦП.
+ */
+ALWAYS_INLINE static void power_set_calibration_data(power_t* power, size_t channel, uint16_t data)
+{
+    power->channels[channel].raw_zero_cal = (int16_t)data;
+}
+
+/**
  * Получает флаг доступности данных на всех заданных каналах АЦП.
  * @param power Питание.
  * @param channels Маска каналов АЦП.

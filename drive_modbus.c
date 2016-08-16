@@ -86,6 +86,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_APPLY_PARAMS (DRIVE_MODBUS_COILS_START + 2)
 //! Сохранение настроек.
 #define DRIVE_MODBUS_COIL_SAVE_PARAMS (DRIVE_MODBUS_COILS_START + 3)
+//! Калибровка питания.
+#define DRIVE_MODBUS_COIL_CALIBRATE_POWER (DRIVE_MODBUS_COILS_START + 4)
 
 
 /** Пользовательские функции и коды.
@@ -331,6 +333,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
                 return MODBUS_RTU_ERROR_INVALID_FUNC;
             }
             drive_modbus.save_settings_callback();
+            break;
+        case DRIVE_MODBUS_COIL_CALIBRATE_POWER:
+            drive_calibrate_power();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

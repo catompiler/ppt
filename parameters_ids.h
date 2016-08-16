@@ -135,6 +135,50 @@
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 100
 /**
+ * Данные калибровки канала АЦП Ua.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ua 200
+/**
+ * Данные калибровки канала АЦП Ub.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ub 201
+/**
+ * Данные калибровки канала АЦП Uc.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Uc 202
+/**
+ * Данные калибровки канала АЦП Urot.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Urot 203
+/**
+ * Данные калибровки канала АЦП Ia.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ia 204
+/**
+ * Данные калибровки канала АЦП Ib.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ib 205
+/**
+ * Данные калибровки канала АЦП Ic.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ic 206
+/**
+ * Данные калибровки канала АЦП Irot.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Irot 207
+/**
+ * Данные калибровки канала АЦП Iexc.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Iexc 208
+/**
+ * Данные калибровки канала АЦП Iref.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Iref 209
+/**
+ * Данные калибровки канала АЦП Ifan.
+ */
+#define PARAM_ID_CALIBRATION_DATA_Ifan 210
+/**
  * Скорость соединения Modbus RTU.
  */
 #define PARAM_ID_MODBUS_BAUD 500

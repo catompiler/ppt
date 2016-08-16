@@ -281,6 +281,16 @@ err_t drive_power_calibrate(power_channels_t channels)
     return power_calibrate(&drive_power.power, channels);
 }
 
+uint16_t drive_power_calibration_data(size_t channel)
+{
+    return power_calibration_data(&drive_power.power, channel);
+}
+
+void drive_power_set_calibration_data(size_t channel, uint16_t data)
+{
+    power_set_calibration_data(&drive_power.power, channel, data);
+}
+
 bool drive_power_data_avail(power_channels_t channels)
 {
     return power_data_avail(&drive_power.power, channels);
