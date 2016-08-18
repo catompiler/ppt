@@ -6,7 +6,7 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    drive_triacs.o drive_power.o drive.o settings.o ramp.o\
 	    drive_regulator.o drive_protection.o drive_phase_state.o\
 	    drive_keypad.o drive_gui.o drive_ui.o drive_modbus.o\
-	    drive_tasks.o
+	    drive_tasks.o drive_dio.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS += circular_buffer usart_buf newlib_stubs\

@@ -26,6 +26,7 @@
 #include "drive_gui.h"
 #include "drive_modbus.h"
 #include "drive_tasks.h"
+#include "drive_dio.h"
 #include <string.h>
 #include <stdlib.h>
 
