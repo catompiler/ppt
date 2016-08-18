@@ -105,6 +105,44 @@ extern err_t drive_dio_input_init(drive_dio_input_init_t* input_init);
 extern err_t drive_dio_output_init(drive_dio_output_init_t* output_init);
 
 /**
+ * Устанавливает пин для цифрового входа.
+ * @param input Цифровой вход.
+ * @param GPIO Порт.
+ * @param pin Пин.
+ * @return Код ошибки.
+ */
+extern err_t drive_dio_input_set_gpio(drive_dio_input_t input, GPIO_TypeDef* GPIO, uint16_t pin);
+
+/**
+ * Настраивает цифровой вход.
+ * @param input Цифровой вход.
+ * @param type Тип цифрового входа.
+ * @param inversion Инверсия значения.
+ * @return Код ошибки.
+ */
+extern err_t drive_dio_input_setup(drive_dio_input_t input,
+        drive_dio_input_type_t type, drive_dio_inversion_t inversion);
+
+/**
+ * Устанавливает пин для цифрового выхода.
+ * @param output Цифровой выход.
+ * @param GPIO Порт.
+ * @param pin Пин.
+ * @return Код ошибки.
+ */
+extern err_t drive_dio_output_set_gpio(drive_dio_output_t output, GPIO_TypeDef* GPIO, uint16_t pin);
+
+/**
+ * Настраивает цифровой выход.
+ * @param output Цифровой выход.
+ * @param type Тип цифрового выхода.
+ * @param inversion Инверсия значения.
+ * @return Код ошибки.
+ */
+extern err_t drive_dio_output_setup(drive_dio_output_t output,
+             drive_dio_output_type_t type, drive_dio_inversion_t inversion);
+
+/**
  * Устанавливает каллбэк при изменении состояния цифрового входа.
  * @param callback Каллбэк.
  */
@@ -142,8 +180,9 @@ extern drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t typ
  * Устанавливает состояние заданного цифрового выхода.
  * @param output Цифровой выход.
  * @param state Состояние цифрового выхода.
+ * @return Код ошибки.
  */
-extern void drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t state);
+extern err_t drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t state);
 
 /**
  * Устанавливает состояние типа цифрового выхода.
@@ -155,7 +194,8 @@ extern void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_
 /**
  * Обработчик изменения состояния цифрового входа.
  * @param input Цифровой вход.
+ * @return Код ошибки.
  */
-extern void drive_dio_input_changed(drive_dio_input_t input);
+extern err_t drive_dio_input_changed(drive_dio_input_t input);
 
 #endif /* DRIVE_DIO_H */

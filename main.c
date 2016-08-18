@@ -119,6 +119,32 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 //static volatile int timer_cc_count = 0;
 
 
+// Константы для цифровых входов-выходов.
+#define DIGITAL_IO_SPEED GPIO_Speed_2MHz
+#define DIGITAL_IO_IN_MODE GPIO_Mode_IN_FLOATING
+#define DIGITAL_IO_OUT_MODE GPIO_Mode_Out_PP
+// Цифровые выхода.
+#define DIGITAL_IO_OUT_1_GPIO GPIOE
+#define DIGITAL_IO_OUT_1_PIN GPIO_Pin_4
+#define DIGITAL_IO_OUT_2_GPIO GPIOE
+#define DIGITAL_IO_OUT_2_PIN GPIO_Pin_5
+#define DIGITAL_IO_OUT_3_GPIO GPIOE
+#define DIGITAL_IO_OUT_3_PIN GPIO_Pin_6
+#define DIGITAL_IO_OUT_4_GPIO GPIOC
+#define DIGITAL_IO_OUT_4_PIN GPIO_Pin_13
+// Цифровые входа.
+#define DIGITAL_IO_IN_1_GPIO GPIOE
+#define DIGITAL_IO_IN_1_PIN GPIO_Pin_3
+#define DIGITAL_IO_IN_2_GPIO GPIOE
+#define DIGITAL_IO_IN_2_PIN GPIO_Pin_2
+#define DIGITAL_IO_IN_3_GPIO GPIOE
+#define DIGITAL_IO_IN_3_PIN GPIO_Pin_1
+#define DIGITAL_IO_IN_4_GPIO GPIOE
+#define DIGITAL_IO_IN_4_PIN GPIO_Pin_0
+#define DIGITAL_IO_IN_5_GPIO GPIOB
+#define DIGITAL_IO_IN_5_PIN GPIO_Pin_9
+
+
 /*
  * Приоритеты прерываний.
  */
@@ -140,6 +166,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 #define IRQ_PRIOR_DMA_CH5 3 // spi2
 #define IRQ_PRIOR_DMA_CH6 3 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_DMA_CH7 3 // i2c1 usart2 (modbus)
+
 
 /*
  * Обработчики прерываний.
@@ -1128,39 +1155,7 @@ static void init_exti(void)
 
 static void init_gpio (void)
 {
-    /*
-     * Digital Outputs    (Relay)
-    */
     GPIO_InitTypeDef GPIO_InitStructure;
-     /* GPIOB Configuration: 7 (PC13 - DigitalOut_4) as output push-pull */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-    /* GPIOE Configuration: 3 (PE4 - DigitalOut_3); 4 (PE5 - DigitalOut_2); 5 (PE6 - DigitalOut_1) as output push-pull */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-    
-    /*
-     * Digital Inputs (24v)
-     */
-    /* GPIOB Configuration: 96 (PB9 - DigitalIn_1) as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-    /* GPIOB Configuration: 97 (PE0 - DigitalIn_2); 98 (PE1 - DigitalIn_3);
-     *                       1 (PE2 - DigitalIn_4); 2 (PE3 - DigitalIn_5)     as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
-
     /*
      * Dip 8 switch
      */
@@ -1183,6 +1178,55 @@ static void init_gpio (void)
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
+
+static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    GPIO_InitTypeDef gpio_is;
+    
+    gpio_is.GPIO_Mode = DIGITAL_IO_IN_MODE;
+    gpio_is.GPIO_Speed = DIGITAL_IO_SPEED;
+    gpio_is.GPIO_Pin = pin;
+    
+    GPIO_Init(GPIO, &gpio_is);
+}
+
+static void init_dio_out_pin(GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    GPIO_InitTypeDef gpio_is;
+    
+    gpio_is.GPIO_Mode = DIGITAL_IO_OUT_MODE;
+    gpio_is.GPIO_Speed = DIGITAL_IO_SPEED;
+    gpio_is.GPIO_Pin = pin;
+    
+    GPIO_Init(GPIO, &gpio_is);
+}
+
+static void init_dio_in(drive_dio_input_t input, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    init_dio_in_pin(GPIO, pin);
+    drive_set_dio_input_gpio(input, GPIO, pin);
+}
+
+static void init_dio_out(drive_dio_output_t output, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    init_dio_out_pin(GPIO, pin);
+    drive_set_dio_output_gpio(output, GPIO, pin);
+}
+
+static void init_dio(void)
+{
+    init_dio_in(DRIVE_DIO_INPUT_1, DIGITAL_IO_IN_1_GPIO, DIGITAL_IO_IN_1_PIN);
+    init_dio_in(DRIVE_DIO_INPUT_2, DIGITAL_IO_IN_2_GPIO, DIGITAL_IO_IN_2_PIN);
+    init_dio_in(DRIVE_DIO_INPUT_3, DIGITAL_IO_IN_3_GPIO, DIGITAL_IO_IN_3_PIN);
+    init_dio_in(DRIVE_DIO_INPUT_4, DIGITAL_IO_IN_4_GPIO, DIGITAL_IO_IN_4_PIN);
+    init_dio_in(DRIVE_DIO_INPUT_5, DIGITAL_IO_IN_5_GPIO, DIGITAL_IO_IN_5_PIN);
+    
+    init_dio_out(DRIVE_DIO_OUTPUT_1, DIGITAL_IO_OUT_1_GPIO, DIGITAL_IO_OUT_1_PIN);
+    init_dio_out(DRIVE_DIO_OUTPUT_2, DIGITAL_IO_OUT_2_GPIO, DIGITAL_IO_OUT_2_PIN);
+    init_dio_out(DRIVE_DIO_OUTPUT_3, DIGITAL_IO_OUT_3_GPIO, DIGITAL_IO_OUT_3_PIN);
+    init_dio_out(DRIVE_DIO_OUTPUT_4, DIGITAL_IO_OUT_4_GPIO, DIGITAL_IO_OUT_4_PIN);
+}
+
 /******************************************************************************/
 
 
@@ -1243,6 +1287,8 @@ int main(void)
     
     init_adc();
     init_adc_timer();
+    
+    init_dio();
     
     init_exti();
     

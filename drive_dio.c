@@ -55,13 +55,59 @@ err_t drive_dio_input_init(drive_dio_input_init_t* input_init)
 
 err_t drive_dio_output_init(drive_dio_output_init_t* output_init)
 {
-    if(output_init->output >= DRIVE_DIO_INPUTS_COUNT) return E_OUT_OF_RANGE;
+    if(output_init->output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
     
     drive_dio_out_t* output = &dio.outputs[output_init->output];
     output->type = output_init->type;
     output->io.GPIO = output_init->GPIO;
     output->io.pin = output_init->pin;
     output->io.inversion = output_init->inversion;
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_dio_input_set_gpio(drive_dio_input_t input, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    if(input >= DRIVE_DIO_INPUTS_COUNT) return E_OUT_OF_RANGE;
+    
+    drive_dio_in_t* in = &dio.inputs[input];
+    in->io.GPIO = GPIO;
+    in->io.pin = pin;
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_dio_input_setup(drive_dio_input_t input,
+                            drive_dio_input_type_t type, drive_dio_inversion_t inversion)
+{
+    if(input >= DRIVE_DIO_INPUTS_COUNT) return E_OUT_OF_RANGE;
+    
+    drive_dio_in_t* in = &dio.inputs[input];
+    in->type = type;
+    in->io.inversion = inversion;
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_dio_output_set_gpio(drive_dio_output_t output, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
+    
+    drive_dio_out_t* out = &dio.outputs[output];
+    out->io.GPIO = GPIO;
+    out->io.pin = pin;
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_dio_output_setup(drive_dio_output_t output,
+                            drive_dio_output_type_t type, drive_dio_inversion_t inversion)
+{
+    if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
+    
+    drive_dio_out_t* out = &dio.outputs[output];
+    out->type = type;
+    out->io.inversion = inversion;
     
     return E_NO_ERROR;
 }
@@ -128,9 +174,13 @@ drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t type)
     return DRIVE_DIO_OFF;
 }
 
-void drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t state)
+err_t drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t state)
 {
+    if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
+    
     drive_dio_set_state(&dio.outputs[output].io, state);
+    
+    return E_NO_ERROR;
 }
 
 void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_dio_state_t state)
@@ -142,10 +192,14 @@ void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_dio_sta
     }
 }
 
-void drive_dio_input_changed(drive_dio_input_t input)
+err_t drive_dio_input_changed(drive_dio_input_t input)
 {
+    if(input >= DRIVE_DIO_INPUTS_COUNT) return E_OUT_OF_RANGE;
+    
     if(dio.on_input_changed_callback){
         drive_dio_in_t* in = &dio.inputs[input];
         dio.on_input_changed_callback(in->type, drive_dio_state(&in->io));
     }
+    
+    return E_NO_ERROR;
 }

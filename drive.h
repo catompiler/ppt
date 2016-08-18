@@ -15,6 +15,7 @@
 #include "drive_power.h"
 #include "drive_triacs.h"
 #include "drive_regulator.h"
+#include "drive_dio.h"
 
 
 
@@ -383,6 +384,30 @@ extern drive_error_callback_t drive_error_callback(void);
  * @param callback Каллбэк при возникновении ошибки.
  */
 extern void drive_set_error_callback(drive_error_callback_t callback);
+
+/**
+ * Устанавливает порт ввода-вывода для цифрового входа.
+ * @param input Цифровой вход.
+ * @param GPIO Порт ввода-вывода.
+ * @param pin Пин.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_set_dio_input_gpio(drive_dio_input_t input, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    return drive_dio_input_set_gpio(input, GPIO, pin);
+}
+
+/**
+ * Устанавливает порт ввода-вывода для цифрового выхода.
+ * @param output Цифровой выход.
+ * @param GPIO Порт ввода-вывода.
+ * @param pin Пин.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_set_dio_output_gpio(drive_dio_output_t output, GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    return drive_dio_output_set_gpio(output, GPIO, pin);
+}
 
 /**
  * Устанавливает порт вывода для заданной пары тиристоров.

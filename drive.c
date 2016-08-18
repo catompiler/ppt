@@ -934,6 +934,8 @@ err_t drive_init(void)
     
     drive_protection_init();
     
+    drive_dio_init();
+    
     drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
     drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
