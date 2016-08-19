@@ -501,6 +501,45 @@ static void drive_update_clibration_parameters(void)
 }
 
 /**
+ * Обрабатывает цифровые входа привода.
+ */
+static void drive_process_digital_inputs(void)
+{
+    drive_dio_state_t state = DRIVE_DIO_OFF;
+    
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_EMERGENCY_STOP, &state)){
+        if(state) drive_emergency_stop();
+    }
+    
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_STOP_START, &state)){
+        if(state){
+            drive_start();
+        }else{ //DRIVE_DIO_OFF
+            drive_stop();
+        }
+    }
+    
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_REFERENCE_INC, &state)){
+        if(state) drive_regulator_inc_reference();
+    }
+    
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_REFERENCE_DEC, &state)){
+        if(state) drive_regulator_dec_reference();
+    }
+}
+
+/**
+ * Обновляет цифровые выхода привода.
+ */
+static void drive_update_digital_outputs(void)
+{
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_READY, drive_ready());
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_RUNNING, drive_running());
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_WARNING, drive_warnings() != DRIVE_WARNING_NONE);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR, drive_errors() != DRIVE_ERROR_NONE);
+}
+
+/**
  * Обработка данных с АЦП.
  * @param phase Текущая фаза.
  * @return Флаг обработки данных питания.
@@ -909,6 +948,10 @@ static err_t drive_states_process(phase_t phase)
             break;
     }
     
+    drive_process_digital_inputs();
+    
+    drive_update_digital_outputs();
+    
     drive_update_power_parameters();
     
     return E_NO_ERROR;
@@ -1014,6 +1057,26 @@ err_t drive_update_settings(void)
     drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iref));
     drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ifan));
     
+    drive_dio_input_setup(DRIVE_DIO_INPUT_1, settings_valueu(PARAM_ID_DIGITAL_IN_1_TYPE),
+                                             settings_valueu(PARAM_ID_DIGITAL_IN_1_INVERSION));
+    drive_dio_input_setup(DRIVE_DIO_INPUT_2, settings_valueu(PARAM_ID_DIGITAL_IN_2_TYPE),
+                                             settings_valueu(PARAM_ID_DIGITAL_IN_2_INVERSION));
+    drive_dio_input_setup(DRIVE_DIO_INPUT_3, settings_valueu(PARAM_ID_DIGITAL_IN_3_TYPE),
+                                             settings_valueu(PARAM_ID_DIGITAL_IN_3_INVERSION));
+    drive_dio_input_setup(DRIVE_DIO_INPUT_4, settings_valueu(PARAM_ID_DIGITAL_IN_4_TYPE),
+                                             settings_valueu(PARAM_ID_DIGITAL_IN_4_INVERSION));
+    drive_dio_input_setup(DRIVE_DIO_INPUT_5, settings_valueu(PARAM_ID_DIGITAL_IN_5_TYPE),
+                                             settings_valueu(PARAM_ID_DIGITAL_IN_5_INVERSION));
+    
+    drive_dio_output_setup(DRIVE_DIO_OUTPUT_1, settings_valueu(PARAM_ID_DIGITAL_OUT_1_TYPE),
+                                               settings_valueu(PARAM_ID_DIGITAL_OUT_1_INVERSION));
+    drive_dio_output_setup(DRIVE_DIO_OUTPUT_2, settings_valueu(PARAM_ID_DIGITAL_OUT_2_TYPE),
+                                               settings_valueu(PARAM_ID_DIGITAL_OUT_2_INVERSION));
+    drive_dio_output_setup(DRIVE_DIO_OUTPUT_3, settings_valueu(PARAM_ID_DIGITAL_OUT_3_TYPE),
+                                               settings_valueu(PARAM_ID_DIGITAL_OUT_3_INVERSION));
+    drive_dio_output_setup(DRIVE_DIO_OUTPUT_4, settings_valueu(PARAM_ID_DIGITAL_OUT_4_TYPE),
+                                               settings_valueu(PARAM_ID_DIGITAL_OUT_4_INVERSION));
+    
     return E_NO_ERROR;
 }
 
@@ -1108,7 +1171,8 @@ bool drive_start(void)
 {
     if(!drive_ready())
         return false;
-    if(drive.status == DRIVE_STATUS_IDLE){
+    if(drive.state == DRIVE_STATE_IDLE ||
+       drive.state == DRIVE_STATE_STOP){
         drive.starting_state = DRIVE_STARTING_START;
         drive_set_state(DRIVE_STATE_START);
     }
@@ -1117,11 +1181,21 @@ bool drive_start(void)
 
 bool drive_stop(void)
 {
-    if(drive.status == DRIVE_STATUS_RUN){
+    if(drive.state == DRIVE_STATE_RUN ||
+       drive.state == DRIVE_STATE_START){
         drive.stopping_state = DRIVE_STOPPING_STOP;
         drive_set_state(DRIVE_STATE_STOP);
     }
     return true;
+}
+
+bool drive_emergency_stop(void)
+{
+    if(!(drive.errors & DRIVE_ERROR_EMERGENCY_STOP)){
+        drive_error_occured(DRIVE_ERROR_EMERGENCY_STOP);
+        return true;
+    }
+    return false;
 }
 
 bool drive_calibrate_power(void)

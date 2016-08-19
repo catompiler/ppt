@@ -155,6 +155,26 @@ drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type)
     return DRIVE_DIO_OFF;
 }
 
+bool drive_dio_input_get_type_state(drive_dio_input_type_t type, drive_dio_state_t* state)
+{
+    bool has_type = false;
+    drive_dio_state_t st = DRIVE_DIO_OFF;
+    size_t i;
+    for(i = 0; i < DRIVE_DIO_INPUTS_COUNT; i ++){
+        drive_dio_in_t* input = &dio.inputs[i];
+        if(input->type == type){
+            has_type = true;
+            if(drive_dio_state(&input->io) == DRIVE_DIO_ON){
+                st = DRIVE_DIO_ON;
+            }
+        }
+    }
+    
+    if(state) *state = st;
+    
+    return has_type;
+}
+
 drive_dio_state_t drive_dio_output_state(drive_dio_output_t output)
 {
     if(output >= DRIVE_DIO_OUTPUTS_COUNT) return DRIVE_DIO_OFF;
@@ -172,6 +192,26 @@ drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t type)
         }
     }
     return DRIVE_DIO_OFF;
+}
+
+bool drive_dio_output_get_type_state(drive_dio_output_type_t type, drive_dio_state_t* state)
+{
+    bool has_type = false;
+    drive_dio_state_t st = DRIVE_DIO_OFF;
+    size_t i;
+    for(i = 0; i < DRIVE_DIO_OUTPUTS_COUNT; i ++){
+        drive_dio_out_t* output = &dio.outputs[i];
+        if(output->type == type){
+            has_type = true;
+            if(drive_dio_state(&output->io) == DRIVE_DIO_ON){
+                st = DRIVE_DIO_ON;
+            }
+        }
+    }
+    
+    if(state) *state = st;
+    
+    return has_type;
 }
 
 err_t drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t state)

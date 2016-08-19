@@ -6,6 +6,7 @@
 #define DRIVE_DIO_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "stm32f10x.h"
 #include "errors/errors.h"
 
@@ -163,6 +164,14 @@ extern drive_dio_state_t drive_dio_input_state(drive_dio_input_t input);
 extern drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type);
 
 /**
+ * Получает состояние типа цифрового входа.
+ * @param type Тип цифрового входа.
+ * @param state Состояние типа цифрового входа.
+ * @return Наличие цифрового входа с заданным типом.
+ */
+extern bool drive_dio_input_get_type_state(drive_dio_input_type_t type, drive_dio_state_t* state);
+
+/**
  * Получает состояние заданного цифрового выхода.
  * @param output Цифровой выход.
  * @return Состояние цифрового выхода.
@@ -175,6 +184,14 @@ extern drive_dio_state_t drive_dio_output_state(drive_dio_output_t output);
  * @return Состояние типа цифрового выхода.
  */
 extern drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t type);
+
+/**
+ * Получает состояние типа цифрового выхода.
+ * @param type Тип цифрового выхода.
+ * @param state Состояние типа цифрового выхода.
+ * @return Наличие цифрового выхода с заданным типом.
+ */
+extern bool drive_dio_output_get_type_state(drive_dio_output_type_t type, drive_dio_state_t* state);
 
 /**
  * Устанавливает состояние заданного цифрового выхода.

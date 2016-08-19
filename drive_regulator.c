@@ -87,6 +87,16 @@ err_t drive_regulator_set_reference(reference_t reference)
     return err;
 }
 
+bool drive_regulator_inc_reference(void)
+{
+    return ramp_inc_reference(&regulator.rot_ramp);
+}
+
+bool drive_regulator_dec_reference(void)
+{
+    return ramp_dec_reference(&regulator.rot_ramp);
+}
+
 void drive_regulator_start(void)
 {
     if(regulator.state == DRIVE_REGULATOR_STATE_IDLE ||

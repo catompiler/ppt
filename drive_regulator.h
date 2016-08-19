@@ -72,6 +72,18 @@ extern fixed32_t drive_regulator_current_reference(void);
 extern err_t drive_regulator_set_reference(reference_t reference);
 
 /**
+ * Увеличивает значение задания.
+ * @return Флаг изменения задания.
+ */
+extern bool drive_regulator_inc_reference(void);
+
+/**
+ * Уменьшает значение задания.
+ * @return Флаг изменения задания.
+ */
+extern bool drive_regulator_dec_reference(void);
+
+/**
  * Запускает регулирование.
  */
 extern void drive_regulator_start(void);

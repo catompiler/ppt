@@ -30,6 +30,30 @@ err_t ramp_set_target_reference(ramp_t* ramp, ramp_reference_t reference)
     return E_NO_ERROR;
 }
 
+bool ramp_inc_reference(ramp_t* ramp)
+{
+    if(ramp->target_ref == RAMP_REFERENCE_MAX) return false;
+    
+    fixed32_t new_ref = ramp->target_ref + ramp->step_ref;
+    if(new_ref > RAMP_REFERENCE_MAX) new_ref = RAMP_REFERENCE_MAX;
+    
+    ramp->target_ref = new_ref;
+    
+    return true;
+}
+
+bool ramp_dec_reference(ramp_t* ramp)
+{
+    if(ramp->target_ref == RAMP_REFERENCE_MIN) return false;
+    
+    fixed32_t new_ref = ramp->target_ref - ramp->step_ref;
+    if(new_ref < RAMP_REFERENCE_MIN) new_ref = RAMP_REFERENCE_MIN;
+    
+    ramp->target_ref = new_ref;
+    
+    return true;
+}
+
 bool ramp_calc_step(ramp_t* ramp)
 {
     if(ramp->current_ref == ramp->target_ref) return true;

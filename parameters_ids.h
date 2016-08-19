@@ -179,6 +179,78 @@
  */
 #define PARAM_ID_CALIBRATION_DATA_Ifan 210
 /**
+ * Тип цифрового входа 1.
+ */
+#define PARAM_ID_DIGITAL_IN_1_TYPE 230
+/**
+ * Инверсия цифрового входа 1.
+ */
+#define PARAM_ID_DIGITAL_IN_1_INVERSION 231
+/**
+ * Тип цифрового входа 2.
+ */
+#define PARAM_ID_DIGITAL_IN_2_TYPE 232
+/**
+ * Инверсия цифрового входа 2.
+ */
+#define PARAM_ID_DIGITAL_IN_2_INVERSION 233
+/**
+ * Тип цифрового входа 3.
+ */
+#define PARAM_ID_DIGITAL_IN_3_TYPE 234
+/**
+ * Инверсия цифрового входа 3.
+ */
+#define PARAM_ID_DIGITAL_IN_3_INVERSION 235
+/**
+ * Тип цифрового входа 4.
+ */
+#define PARAM_ID_DIGITAL_IN_4_TYPE 236
+/**
+ * Инверсия цифрового входа 4.
+ */
+#define PARAM_ID_DIGITAL_IN_4_INVERSION 237
+/**
+ * Тип цифрового входа 5.
+ */
+#define PARAM_ID_DIGITAL_IN_5_TYPE 238
+/**
+ * Инверсия цифрового входа 5.
+ */
+#define PARAM_ID_DIGITAL_IN_5_INVERSION 239
+/**
+ * Тип цифрового выхода 1.
+ */
+#define PARAM_ID_DIGITAL_OUT_1_TYPE 240
+/**
+ * Инверсия цифрового выхода 1.
+ */
+#define PARAM_ID_DIGITAL_OUT_1_INVERSION 241
+/**
+ * Тип цифрового выхода 2.
+ */
+#define PARAM_ID_DIGITAL_OUT_2_TYPE 242
+/**
+ * Инверсия цифрового выхода 2.
+ */
+#define PARAM_ID_DIGITAL_OUT_2_INVERSION 243
+/**
+ * Тип цифрового выхода 3.
+ */
+#define PARAM_ID_DIGITAL_OUT_3_TYPE 244
+/**
+ * Инверсия цифрового выхода 3.
+ */
+#define PARAM_ID_DIGITAL_OUT_3_INVERSION 245
+/**
+ * Тип цифрового выхода 4.
+ */
+#define PARAM_ID_DIGITAL_OUT_4_TYPE 246
+/**
+ * Инверсия цифрового выхода 4.
+ */
+#define PARAM_ID_DIGITAL_OUT_4_INVERSION 247
+/**
  * Скорость соединения Modbus RTU.
  */
 #define PARAM_ID_MODBUS_BAUD 500

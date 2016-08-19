@@ -357,6 +357,12 @@ extern bool drive_start(void);
 extern bool drive_stop(void);
 
 /**
+ * Аварийно останавливает привод.
+ * @return Флаг останова привода.
+ */
+extern bool drive_emergency_stop(void);
+
+/**
  * Выполняет калибровку питания.
  * @return Флаг калибровки питания.
  */

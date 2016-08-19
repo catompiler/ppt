@@ -124,6 +124,20 @@ ALWAYS_INLINE static bool ramp_done(ramp_t* ramp)
 }
 
 /**
+ * Увеличивает задание.
+ * @param ramp Разгон.
+ * @return Флаг увеличения задания.
+ */
+extern bool ramp_inc_reference(ramp_t* ramp);
+
+/**
+ * Уменьшает задание.
+ * @param ramp Разгон.
+ * @return Флаг увеличения задания.
+ */
+extern bool ramp_dec_reference(ramp_t* ramp);
+
+/**
  * Вычисляет очередной шаг разгона.
  * @param ramp Разгон.
  * @return Флаг завершения разгона.
