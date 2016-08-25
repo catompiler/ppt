@@ -68,6 +68,13 @@ err_t drive_power_init(void)
     return E_NO_ERROR;
 }
 
+void drive_power_reset(void)
+{
+    drive_power.power_phase = PHASE_UNK;
+    drive_power.processing_periods = DRIVE_POWER_PROCESSING_PERIODS_DEFAULT;
+    drive_power.periods_processed = 0;
+}
+
 phase_t drive_power_phase(void)
 {
     return drive_power.power_phase;

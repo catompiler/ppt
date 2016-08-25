@@ -120,7 +120,7 @@ static void drive_ui_update_leds(void)
 
     leds = (leds_cur | leds_to_on) & ~leds_to_off;
     
-    if(leds != leds_cur) drive_keypad_set_leds(leds);
+    /*if(leds != leds_cur)*/ drive_keypad_set_leds(leds);
 }
 
 void drive_ui_process(void)

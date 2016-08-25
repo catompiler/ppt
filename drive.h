@@ -19,6 +19,21 @@
 
 
 
+
+/*
+ * Конфигурация таймера для искусственных датчиков нуля..
+ */
+//! Число тиков.
+#define DRIVE_NULL_TIMER_CNT_TICKS (40000)
+//! Период в микросекундах.
+#define DRIVE_NULL_TIMER_CNT_PERIOD_US (6667)
+//! Период.
+#define DRIVE_NULL_TIMER_CNT_PERIOD (DRIVE_NULL_TIMER_CNT_TICKS - 1)
+//! Предделитель.
+#define DRIVE_NULL_TIMER_CNT_PRESCALER (12 - 1)
+
+
+
 //! Флаги привода - тип флага.
 typedef enum _Drive_Flag {
     DRIVE_FLAG_NONE             = 0x0,
@@ -147,6 +162,15 @@ typedef enum _Drive_Power_Warning {
 
 //! Тип предупреждений питания привода.
 typedef uint32_t drive_power_warnings_t;
+
+//! Перечисление состояний инициализации привода.
+typedef enum _Drive_Init_State {
+    DRIVE_INIT_NONE = 0,
+    DRIVE_INIT_RESET = 1,
+    DRIVE_INIT_WAIT_PHASES = 2,
+    DRIVE_INIT_WAIT_POWER = 3,
+    DRIVE_INIT_DONE = 4
+} drive_init_state_t;
 
 //! Перечисление состояний калибровки питания.
 typedef enum _Drive_Power_Calibration {
@@ -472,6 +496,13 @@ ALWAYS_INLINE static err_t drive_set_phase_state_timer(TIM_TypeDef* TIM)
 }
 
 /**
+ * Устанавливает таймер искусственных датчиков нуля.
+ * @param TIM Таймер.
+ * @return Код ошибки.
+ */
+extern err_t drive_set_null_timer(TIM_TypeDef* TIM);
+
+/**
  * Обработчик прерывания таймера 0 открытия тиристоров.
  */
 extern void drive_triac_pairs_timer0_irq_handler(void);
@@ -493,9 +524,17 @@ extern void drive_triac_exc_timer_irq_handler(void);
  */
 extern err_t drive_process_null_sensor(phase_t phase);
 
-///**
-// * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
-// */
-//extern void drive_phases_timer_irq_handler(void);
+/**
+ * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
+ */
+ALWAYS_INLINE static void drive_phases_timer_irq_handler(void)
+{
+    drive_phase_state_timer_irq_handler();
+}
+
+/**
+ * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
+ */
+extern void drive_null_timer_irq_handler(void);
 
 #endif	/* DRIVE_H */

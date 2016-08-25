@@ -44,6 +44,11 @@ ALWAYS_INLINE static bool drive_keypad_async_io_done(void)
     return pca9555_done(keypad.ioport);
 }
 
+ALWAYS_INLINE static err_t drive_keypad_async_io_error(void)
+{
+    return pca9555_error(keypad.ioport);
+}
+
 ALWAYS_INLINE static bool drive_keypad_async_io_timeout(void)
 {
     return system_counter_diff(&keypad.last_async_io_time) >= drive_keypad_io_timeout();
@@ -103,7 +108,7 @@ static err_t drive_keypad_try_safe_sync(err_t (*pca9555_io_proc)(pca9555_t*))
     return err;
 }
 
-#define drive_keypad_try_safe(proc) drive_keypad_try_safe_async(proc)
+#define drive_keypad_try_safe(proc) drive_keypad_try_safe_sync(proc)
 
 
 static err_t drive_keypad_ioport_init(void)
@@ -347,8 +352,12 @@ bool drive_keypad_update(void)
             break;
         case DRIVE_KPD_KBD_UPD_UPDATING:
             if(drive_keypad_async_io_done()){
-                keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
-                return true;
+                if(drive_keypad_async_io_error() == E_NO_ERROR){
+                    keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
+                    return true;
+                }else{
+                    keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
+                }
             }else if(drive_keypad_async_io_timeout()){
                 drive_keypad_async_io_reset();
                 keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;

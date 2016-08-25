@@ -10,13 +10,26 @@
 #include "errors/errors.h"
 
 
+//! Число фаз.
+#define PHASES_COUNT 3
+
+//! Идеальное время между фазами.
+#define PHASE_TIME_US 6667
+//! Максимальная разница во времени между фазами.
+#define PHASE_DELTA_US_MAX 100 // 0.1 мс
+//! Минимальный допустимый интервал времени между фазами.
+#define PHASE_TIME_US_MIN (PHASE_TIME_US - PHASE_DELTA_US_MAX)
+//! Максимальный допустимый интервал времени между фазами.
+#define PHASE_TIME_US_MAX (PHASE_TIME_US + PHASE_DELTA_US_MAX)
+
+
 /*
  * Конфигурация таймера для отсчёта времени между датчиками нуля.
  */
 //! Число тиков.
-#define DRIVE_PHASE_STATE_TIMER_CNT_TICKS (30000)
+#define DRIVE_PHASE_STATE_TIMER_CNT_TICKS (PHASE_TIME_US_MAX + 1)
 //! Период в микросекундах.
-#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD_US (30000)
+#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD_US (DRIVE_PHASE_STATE_TIMER_CNT_TICKS)
 //! Период.
 #define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD (DRIVE_PHASE_STATE_TIMER_CNT_TICKS - 1)
 //! Предделитель.
@@ -61,6 +74,9 @@ typedef uint32_t drive_phase_errors_t;
 
 typedef uint16_t phase_time_t;
 
+//! Каллбэк ошибки фаз.
+typedef void (drive_phase_state_error_callback_t)(void);
+
 /*
  * Функции отслеживания состояния фаз.
  */
@@ -70,6 +86,12 @@ typedef uint16_t phase_time_t;
  * @return Код ошибки.
  */
 extern err_t drive_phase_state_init(void);
+
+/**
+ * Устанавливает каллбэк при ошибке фаз.
+ * @param callback Каллбэк.
+ */
+extern void drive_phase_state_set_error_callback(drive_phase_state_error_callback_t callback);
 
 /**
  * Устанавливает таймер для отсчёта интервалов между датчиками нуля.
@@ -126,5 +148,10 @@ extern void drive_phase_state_clear_errors(void);
  * Сбрасывает состояние.
  */
 extern void drive_phase_state_reset(void);
+
+/**
+ * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
+ */
+extern void drive_phase_state_timer_irq_handler(void);
 
 #endif  //DRIVE_PHASE_STATE_H

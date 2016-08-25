@@ -149,6 +149,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  * Приоритеты прерываний.
  */
 #define IRQ_PRIOR_ADC_DMA 1
+#define IRQ_PRIOR_NULL_TIMER 2
 #define IRQ_PRIOR_NULL_SENSORS 2
 #define IRQ_PRIOR_PHASES_TIMER 2
 #define IRQ_PRIOR_TRIACS_TIMER 1
@@ -389,6 +390,11 @@ void TIM4_IRQHandler(void)
 //    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
 //    drive_phases_timer_irq_handler();
 //}
+
+void TIM7_IRQHandler(void)
+{
+    drive_null_timer_irq_handler();
+}
 
 /*
  * Функции обратного вызова (каллбэки).
@@ -1063,6 +1069,27 @@ static void init_phases_timer(void)
     //NVIC_EnableIRQ(TIM6_IRQn);
 }
 
+static void init_null_timer(void)
+{
+    TIM_TimeBaseInitTypeDef tim_is;
+            tim_is.TIM_Prescaler = DRIVE_NULL_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim_is.TIM_Period = DRIVE_NULL_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
+    TIM_TimeBaseInit(TIM7, &tim_is);
+    TIM_SelectOnePulseMode(TIM7, TIM_OPMode_Repetitive);                // Повторяющийся режим таймера
+    TIM_SetCounter(TIM7, 0);                                            // Сбрасываем счетный регистр в ноль
+    
+    TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    TIM_Cmd(TIM7, ENABLE);                                            // Начать отсчёт!
+    
+    drive_set_null_timer(TIM7);
+    
+    NVIC_SetPriority(TIM7_IRQn, IRQ_PRIOR_NULL_TIMER);
+    NVIC_EnableIRQ(TIM7_IRQn);
+}
+
+
 static void init_triacs(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -1282,6 +1309,8 @@ int main(void)
     init_triacs_timers();
     
     init_phases_timer();
+    
+    init_null_timer();
     
     //
     

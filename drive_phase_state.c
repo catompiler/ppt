@@ -2,19 +2,7 @@
 #include "defs/defs.h"
 #include <stdbool.h>
 #include <stddef.h>
-
-
-//! Число фаз.
-#define PHASES_COUNT 3
-
-//! Идеальное время между фазами.
-#define PHASE_TIME_US 6667
-//! Максимальная разница во времени между фазами.
-#define PHASE_DELTA_US_MAX 100 // 0.1 мс
-//! Минимальный допустимый интервал времени между фазами.
-#define PHASE_TIME_US_MIN (PHASE_TIME_US - PHASE_DELTA_US_MAX)
-//! Максимальный допустимый интервал времени между фазами.
-#define PHASE_TIME_US_MAX (PHASE_TIME_US + PHASE_DELTA_US_MAX)
+#include <string.h>
 
 
 //! Тип состояния фазы.
@@ -24,6 +12,7 @@ typedef struct _DrivePhaseState {
     drive_phase_errors_t phase_errs; //!< Ошибки.
     TIM_TypeDef* timer_cnt; //!< Таймер - счётчик времени между фазами.
     phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
+    drive_phase_state_error_callback_t error_callback; //!< Каллбэк ошибки фаз.
 } phase_state_t;
 
 static phase_state_t state;
@@ -33,6 +22,12 @@ static phase_state_t state;
 ALWAYS_INLINE static void drive_phase_state_set_error(drive_phase_error_t error)
 {
     state.phase_errs |= error;
+}
+
+static void drive_phase_state_error_occured(drive_phase_error_t error)
+{
+    drive_phase_state_set_error(error);
+    if(state.error_callback) state.error_callback();
 }
 
 ALWAYS_INLINE static void drive_phase_state_set_time(phase_t phase, phase_time_t time)
@@ -90,10 +85,10 @@ static void drive_phase_state_a_process(phase_t phase)
     switch(phase){
         default:
         case PHASE_UNK:
-            drive_phase_state_set_error(PHASE_INVALID);
+            drive_phase_state_error_occured(PHASE_INVALID);
             return;
         case PHASE_A:
-            drive_phase_state_set_error(PHASE_BC_ERROR);
+            drive_phase_state_error_occured(PHASE_BC_ERROR);
             return;
         case PHASE_B:
             drive_dir = DRIVE_DIR_FORW;
@@ -107,9 +102,9 @@ static void drive_phase_state_a_process(phase_t phase)
         state.drive_dir = drive_dir;
     }else if(state.drive_dir != drive_dir){
         if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_set_error(PHASE_B_ERROR);
+            drive_phase_state_error_occured(PHASE_B_ERROR);
         }else{//DRIVE_DIR_BACKW
-            drive_phase_state_set_error(PHASE_C_ERROR);
+            drive_phase_state_error_occured(PHASE_C_ERROR);
         }
     }
     
@@ -122,10 +117,10 @@ static void drive_phase_state_b_process(phase_t phase)
     switch(phase){
         default:
         case PHASE_UNK:
-            drive_phase_state_set_error(PHASE_INVALID);
+            drive_phase_state_error_occured(PHASE_INVALID);
             return;
         case PHASE_B:
-            drive_phase_state_set_error(PHASE_AC_ERROR);
+            drive_phase_state_error_occured(PHASE_AC_ERROR);
             return;
         case PHASE_C:
             drive_dir = DRIVE_DIR_FORW;
@@ -139,9 +134,9 @@ static void drive_phase_state_b_process(phase_t phase)
         state.drive_dir = drive_dir;
     }else if(state.drive_dir != drive_dir){
         if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_set_error(PHASE_C_ERROR);
+            drive_phase_state_error_occured(PHASE_C_ERROR);
         }else{//DRIVE_DIR_BACKW
-            drive_phase_state_set_error(PHASE_A_ERROR);
+            drive_phase_state_error_occured(PHASE_A_ERROR);
         }
     }
     
@@ -154,10 +149,10 @@ static void drive_phase_state_c_process(phase_t phase)
     switch(phase){
         default:
         case PHASE_UNK:
-            drive_phase_state_set_error(PHASE_INVALID);
+            drive_phase_state_error_occured(PHASE_INVALID);
             return;
         case PHASE_C:
-            drive_phase_state_set_error(PHASE_AB_ERROR);
+            drive_phase_state_error_occured(PHASE_AB_ERROR);
             return;
         case PHASE_A:
             drive_dir = DRIVE_DIR_FORW;
@@ -171,9 +166,9 @@ static void drive_phase_state_c_process(phase_t phase)
         state.drive_dir = drive_dir;
     }else if(state.drive_dir != drive_dir){
         if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_set_error(PHASE_A_ERROR);
+            drive_phase_state_error_occured(PHASE_A_ERROR);
         }else{//DRIVE_DIR_BACKW
-            drive_phase_state_set_error(PHASE_B_ERROR);
+            drive_phase_state_error_occured(PHASE_B_ERROR);
         }
     }
     
@@ -182,11 +177,14 @@ static void drive_phase_state_c_process(phase_t phase)
 
 err_t drive_phase_state_init(void)
 {
-    state.cur_phase = PHASE_UNK;
-    state.drive_dir = DRIVE_DIR_UNK;
-    state.phase_errs = PHASE_NO_ERROR;
+    memset(&state, 0x0, sizeof(phase_state_t));
     
     return E_NO_ERROR;
+}
+
+void drive_phase_state_set_error_callback(drive_phase_state_error_callback_t callback)
+{
+    state.error_callback = callback;
 }
 
 err_t drive_phase_state_set_timer(TIM_TypeDef* TIM)
@@ -225,13 +223,13 @@ void drive_phase_state_handle(phase_t phase)
             default:
                 break;
             case PHASE_A:
-                drive_phase_state_set_error(PHASE_A_TIME_ERROR);
+                drive_phase_state_error_occured(PHASE_A_TIME_ERROR);
                 break;
             case PHASE_B:
-                drive_phase_state_set_error(PHASE_B_TIME_ERROR);
+                drive_phase_state_error_occured(PHASE_B_TIME_ERROR);
                 break;
             case PHASE_C:
-                drive_phase_state_set_error(PHASE_C_TIME_ERROR);
+                drive_phase_state_error_occured(PHASE_C_TIME_ERROR);
                 break;
         }
     }
@@ -312,4 +310,25 @@ void drive_phase_state_reset(void)
     state.cur_phase = PHASE_UNK;
     state.drive_dir = DRIVE_DIR_UNK;
     state.phase_errs = PHASE_NO_ERROR;
+    drive_phase_state_stop_timer();
+    drive_phase_state_reset_timer();
+}
+
+void drive_phase_state_timer_irq_handler(void)
+{
+    TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
+    
+    switch(drive_phase_state_next_phase(state.cur_phase, state.drive_dir)){
+        default:
+            break;
+        case PHASE_A:
+            drive_phase_state_error_occured(PHASE_A_TIME_ERROR);
+            break;
+        case PHASE_B:
+            drive_phase_state_error_occured(PHASE_B_TIME_ERROR);
+            break;
+        case PHASE_C:
+            drive_phase_state_error_occured(PHASE_C_TIME_ERROR);
+            break;
+    }
 }

@@ -98,6 +98,11 @@ typedef struct _Drive_Power_Osc_Channel {
 extern err_t drive_power_init(void);
 
 /**
+ * Сбрасывает состояние питания привода.
+ */
+extern void drive_power_reset(void);
+
+/**
  * Получает фазу начала измерений питания.
  * @return Фаза питания.
  */
