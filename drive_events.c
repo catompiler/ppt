@@ -86,6 +86,7 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->type = (uint8_t)type;
     event->state = (uint8_t)drive_state();
     event->direction = (uint8_t)drive_direction();
+    event->init_state = (uint8_t)drive_init_state();
     event->calibration_state = (uint8_t)drive_power_calibration();
     event->starting_state = (uint8_t)drive_stopping();
     event->stopping_state = (uint8_t)drive_starting();
@@ -97,6 +98,9 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->power_warnings = drive_power_warnings();
     event->power_errors = drive_power_errors();
     event->phase_errors = drive_phase_errors();
+    event->phase_a_time = drive_phase_state_phase_time(PHASE_A);
+    event->phase_b_time = drive_phase_state_phase_time(PHASE_B);
+    event->phase_c_time = drive_phase_state_phase_time(PHASE_C);
     event->time = 0;
     event->crc = 0;
 }

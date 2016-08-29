@@ -19,6 +19,8 @@
 #define DRIVE_TASKS_READ_ERROR_EVENT_TASK_PRIOR 10
 //! Приоритет задачи чтения канала осциллограммы.
 #define DRIVE_TASKS_READ_OSC_CHANNEL_TASK_PRIOR 10
+//! Приоритет задачи очистки событий.
+#define DRIVE_TASKS_CLEAR_EVENTS_TASK_PRIOR 10
 
 
 #define TID_TO_ERR(T) ((T == INVALID_TASK_ID) ? E_INVALID_VALUE : E_NO_ERROR)
@@ -110,4 +112,18 @@ err_t drive_tasks_read_osc_channel(future_t* future, drive_osc_index_t osc_index
     uint32_t packed_arg = ((uint32_t)osc_index << 16) | ((uint32_t)osc_channel & 0xffff);
     return TID_TO_ERR(scheduler_add_task(drive_tasks_read_osc_task,
                 DRIVE_TASKS_READ_OSC_CHANNEL_TASK_PRIOR, (void*)packed_arg, TASK_RUN_ONCE, future));
+}
+
+static void* clear_events_task()
+{
+    drive_events_reset();
+    err_t err = drive_events_write();
+    
+    return int_to_pvoid(err);
+}
+
+err_t drive_tasks_clear_events(void)
+{
+    return TID_TO_ERR(scheduler_add_task(clear_events_task,
+                DRIVE_TASKS_CLEAR_EVENTS_TASK_PRIOR, NULL, TASK_RUN_ONCE, NULL));
 }

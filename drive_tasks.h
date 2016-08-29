@@ -22,7 +22,7 @@ extern err_t drive_tasks_apply_settings(void);
 extern err_t drive_tasks_save_settings(void);
 
 /**
- * Записывает событие
+ * Записывает событие.
  * ошибки привода.
  * @return Код ошибки.
  */
@@ -45,6 +45,12 @@ extern err_t drive_tasks_read_event(future_t* future, drive_event_index_t event_
  * @return Код ошибки.
  */
 extern err_t drive_tasks_read_osc_channel(future_t* future, drive_osc_index_t osc_index, size_t osc_channel);
+
+/**
+ * Очищает события.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_clear_events(void);
 
 #endif /* DRIVE_TASKS_H */
 

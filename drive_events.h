@@ -37,6 +37,7 @@ typedef struct _Drive_Event {
     uint8_t type; //!< Тип события.
     uint8_t state; //!< Состояние привода.
     uint8_t direction; //!< Направление вращения привода.
+    uint8_t init_state; //!< Состояние инициализации.
     uint8_t calibration_state; //!< Состояние калибровки привода.
     uint8_t starting_state; //!< Состояние запуска привода.
     uint8_t stopping_state; //!< Состояние останова привода.
@@ -48,6 +49,9 @@ typedef struct _Drive_Event {
     drive_power_warnings_t power_warnings; //!< Предупреждения питания привода.
     drive_power_errors_t power_errors; //!< Ошибки питания привода.
     drive_phase_errors_t phase_errors; //!< Ошибки фаз привода.
+    phase_time_t phase_a_time; //!< Время фазы A.
+    phase_time_t phase_b_time; //!< Время фазы B.
+    phase_time_t phase_c_time; //!< Время фазы C.
     uint32_t time; //!< Время возникновения события. 
     uint16_t crc; //!< Контрольная сумма.
 } drive_event_t;
