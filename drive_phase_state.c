@@ -318,7 +318,11 @@ void drive_phase_state_timer_irq_handler(void)
 {
     TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
     
-    switch(drive_phase_state_next_phase(state.cur_phase, state.drive_dir)){
+    phase_time_t time = PHASE_TIME_US_MAX + 1;
+    phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
+    drive_phase_state_set_time(phase, time);
+    
+    switch(phase){
         default:
             break;
         case PHASE_A:

@@ -303,6 +303,12 @@ extern bool drive_power_warning(drive_power_warning_t warning);
 extern drive_power_warnings_t drive_power_warnings(void);
 
 /**
+ * Получает состояние инициализации привода.
+ * @return Состояние инициализации привода.
+ */
+extern drive_init_state_t drive_init_state(void);
+
+/**
  * Получает состояние калибровки питания привода.
  * @return Состояние калибровки питания привода.
  */

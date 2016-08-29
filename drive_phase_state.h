@@ -70,12 +70,14 @@ typedef enum _DrivePhaseErr {
     PHASE_C_TIME_ERROR = 0x200
 } drive_phase_error_t;
 
+//! Тип ошибок фаз.
 typedef uint32_t drive_phase_errors_t;
 
+//! Тип времени между фазами.
 typedef uint16_t phase_time_t;
 
 //! Каллбэк ошибки фаз.
-typedef void (drive_phase_state_error_callback_t)(void);
+typedef void (*drive_phase_state_error_callback_t)(void);
 
 /*
  * Функции отслеживания состояния фаз.

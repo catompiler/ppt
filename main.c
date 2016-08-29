@@ -124,25 +124,25 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 #define DIGITAL_IO_IN_MODE GPIO_Mode_IN_FLOATING
 #define DIGITAL_IO_OUT_MODE GPIO_Mode_Out_PP
 // Цифровые выхода.
-#define DIGITAL_IO_OUT_1_GPIO GPIOE
-#define DIGITAL_IO_OUT_1_PIN GPIO_Pin_4
+#define DIGITAL_IO_OUT_1_GPIO GPIOC
+#define DIGITAL_IO_OUT_1_PIN GPIO_Pin_13
 #define DIGITAL_IO_OUT_2_GPIO GPIOE
-#define DIGITAL_IO_OUT_2_PIN GPIO_Pin_5
+#define DIGITAL_IO_OUT_2_PIN GPIO_Pin_6
 #define DIGITAL_IO_OUT_3_GPIO GPIOE
-#define DIGITAL_IO_OUT_3_PIN GPIO_Pin_6
-#define DIGITAL_IO_OUT_4_GPIO GPIOC
-#define DIGITAL_IO_OUT_4_PIN GPIO_Pin_13
+#define DIGITAL_IO_OUT_3_PIN GPIO_Pin_5
+#define DIGITAL_IO_OUT_4_GPIO GPIOE
+#define DIGITAL_IO_OUT_4_PIN GPIO_Pin_4
 // Цифровые входа.
-#define DIGITAL_IO_IN_1_GPIO GPIOE
-#define DIGITAL_IO_IN_1_PIN GPIO_Pin_3
+#define DIGITAL_IO_IN_1_GPIO GPIOB
+#define DIGITAL_IO_IN_1_PIN GPIO_Pin_9
 #define DIGITAL_IO_IN_2_GPIO GPIOE
-#define DIGITAL_IO_IN_2_PIN GPIO_Pin_2
+#define DIGITAL_IO_IN_2_PIN GPIO_Pin_0
 #define DIGITAL_IO_IN_3_GPIO GPIOE
 #define DIGITAL_IO_IN_3_PIN GPIO_Pin_1
 #define DIGITAL_IO_IN_4_GPIO GPIOE
-#define DIGITAL_IO_IN_4_PIN GPIO_Pin_0
-#define DIGITAL_IO_IN_5_GPIO GPIOB
-#define DIGITAL_IO_IN_5_PIN GPIO_Pin_9
+#define DIGITAL_IO_IN_4_PIN GPIO_Pin_2
+#define DIGITAL_IO_IN_5_GPIO GPIOE
+#define DIGITAL_IO_IN_5_PIN GPIO_Pin_3
 
 
 /*
@@ -385,11 +385,10 @@ void TIM4_IRQHandler(void)
     drive_triac_exc_timer_irq_handler();
 }
 
-//void TIM6_IRQHandler(void)
-//{
-//    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
-//    drive_phases_timer_irq_handler();
-//}
+void TIM6_IRQHandler(void)
+{
+    drive_phases_timer_irq_handler();
+}
 
 void TIM7_IRQHandler(void)
 {
@@ -492,6 +491,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
     // TIM6.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
+    // TIM7.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
     // SPI2.
     //RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);    // Запуск тактирования SPI2
 }
@@ -1052,25 +1053,27 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
 
 static void init_phases_timer(void)
 {
-    TIM_TimeBaseInitTypeDef TIM6_InitStructure;
-            TIM6_InitStructure.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
-            TIM6_InitStructure.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            TIM6_InitStructure.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
-            TIM6_InitStructure.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
-    TIM_TimeBaseInit(TIM6, &TIM6_InitStructure);
+    TIM_DeInit(TIM6);
+    TIM_TimeBaseInitTypeDef tim_is;
+            tim_is.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim_is.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
+    TIM_TimeBaseInit(TIM6, &tim_is);
     TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
-    //TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM6, ENABLE);                                            // Начать отсчёт!
     
     drive_set_phase_state_timer(TIM6);
     
-    //NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER)
-    //NVIC_EnableIRQ(TIM6_IRQn);
+    TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    
+    NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
+    NVIC_EnableIRQ(TIM6_IRQn);
 }
 
 static void init_null_timer(void)
 {
+    TIM_DeInit(TIM7);
     TIM_TimeBaseInitTypeDef tim_is;
             tim_is.TIM_Prescaler = DRIVE_NULL_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
@@ -1080,10 +1083,10 @@ static void init_null_timer(void)
     TIM_SelectOnePulseMode(TIM7, TIM_OPMode_Repetitive);                // Повторяющийся режим таймера
     TIM_SetCounter(TIM7, 0);                                            // Сбрасываем счетный регистр в ноль
     
+    drive_set_null_timer(TIM7);
+    
     TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
     TIM_Cmd(TIM7, ENABLE);                                            // Начать отсчёт!
-    
-    drive_set_null_timer(TIM7);
     
     NVIC_SetPriority(TIM7_IRQn, IRQ_PRIOR_NULL_TIMER);
     NVIC_EnableIRQ(TIM7_IRQn);
@@ -1304,20 +1307,16 @@ int main(void)
     init_gpio();
     
     init_drive();
+    init_dio();
     
     init_triacs();
     init_triacs_timers();
     
     init_phases_timer();
-    
     init_null_timer();
-    
-    //
     
     init_adc();
     init_adc_timer();
-    
-    init_dio();
     
     init_exti();
     

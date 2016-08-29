@@ -55,7 +55,6 @@ typedef struct _Drive_Parameters {
 //! Структура привода.
 typedef struct _Drive {
     TIM_TypeDef* tim_null; //!< Таймер искусственных датчиков нуля.
-    phase_t last_phase; //!< Последняя обработанная фаза.
     drive_init_state_t init_state; //!< Состояние инициализации.
     drive_flags_t flags; //!< Флаги.
     drive_status_t status; //!< Статус.
@@ -322,7 +321,8 @@ static void drive_power_warning_occured(drive_power_warnings_t warning)
  */
 static void drive_on_phase_error_occured(void)
 {
-    drive_error_occured(DRIVE_ERROR_PHASE);
+    if(drive.state != DRIVE_STATE_INIT)
+        drive_error_occured(DRIVE_ERROR_PHASE);
 }
 
 /*
@@ -587,8 +587,8 @@ static void drive_states_process_top(void)
  */
 static bool drive_process_phase(phase_t phase)
 {
-    // Обработаем текущую фазу.
-    drive_phase_state_handle(phase);
+    // Если неопределённая фаза - возврат.
+    if(phase == PHASE_UNK) return false;
     
     // Если ошибка фазы.
     if(drive_phase_state_errors() != PHASE_NO_ERROR){
@@ -690,11 +690,6 @@ static err_t drive_state_process_stop_error(phase_t phase)
  */
 static err_t drive_state_process_error(phase_t phase)
 {
-    // Нужна определённая фаза.
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    // Нужно какое-либо направление.
-    if(drive_phase_state_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
-    
     if(drive_calculate_power(phase)){
         drive_states_process_top();
     }
@@ -709,8 +704,7 @@ static err_t drive_state_process_error(phase_t phase)
  */
 static err_t drive_state_process_running(phase_t phase)
 {
-    // Нужно какое-либо направление.
-    if(drive_phase_state_direction() == DRIVE_DIR_UNK) return E_INVALID_VALUE;
+    if(!drive_process_phase(phase)) return E_INVALID_VALUE;
     
     drive_setup_triacs_open(phase);
     
@@ -732,6 +726,8 @@ static err_t drive_state_process_running(phase_t phase)
  */
 static err_t drive_state_process_stop(phase_t phase)
 {
+    if(!drive_process_phase(phase)) return E_INVALID_VALUE;
+    
     drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
     
     drive_setup_triacs_open(phase);
@@ -799,6 +795,8 @@ static err_t drive_state_process_stop(phase_t phase)
  */
 static err_t drive_state_process_start(phase_t phase)
 {
+    if(!drive_process_phase(phase)) return E_INVALID_VALUE;
+    
     drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
     
     drive_setup_triacs_open(phase);
@@ -858,6 +856,8 @@ static err_t drive_state_process_start(phase_t phase)
  */
 static err_t drive_state_process_idle(phase_t phase)
 {
+    if(!drive_process_phase(phase)) return E_INVALID_VALUE;
+    
     if(drive_calculate_power(phase)){
         drive_states_process_top();
         if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
@@ -872,8 +872,10 @@ static err_t drive_state_process_idle(phase_t phase)
  * Производит калибровку питания.
  * @param phase Текущая фаза.
  */
-static void drive_state_process_power_calibration(phase_t phase)
+static err_t drive_state_process_power_calibration(phase_t phase)
 {
+    if(!drive_process_phase(phase)) return E_INVALID_VALUE;
+    
     switch(drive.power_calibration_state){
         default:
         case DRIVE_PWR_CALIBRATION_NONE:
@@ -900,6 +902,8 @@ static void drive_state_process_power_calibration(phase_t phase)
             drive_set_state(DRIVE_STATE_IDLE);
             break;
     }
+    
+    return E_NO_ERROR;
 }
 
 /**
@@ -932,15 +936,13 @@ static err_t drive_state_process_init(phase_t phase)
         case DRIVE_INIT_RESET:
             drive_phase_state_reset();
             drive_power_reset();
-            //drive_power_reset_channels(DRIVE_POWER_CHANNELS);
+            drive_power_reset_channels(DRIVE_POWER_CHANNELS);
             drive_clear_flag(DRIVE_READY_FLAGS);
             drive.init_state = DRIVE_INIT_WAIT_PHASES;
             break;
             
         case DRIVE_INIT_WAIT_PHASES:
             if(phase == PHASE_UNK) break;
-            // Обработаем текущую фазу.
-            drive_phase_state_handle(phase);
 
             // Если ошибка фазы.
             if(drive_phase_state_errors() != PHASE_NO_ERROR){
@@ -1033,7 +1035,7 @@ err_t drive_init(void)
     memset(&drive, 0x0, sizeof(drive_t));
     
     drive_phase_state_init();
-    //drive_phase_state_set_error_callback(drive_on_phase_error_occured);
+    drive_phase_state_set_error_callback(drive_on_phase_error_occured);
     
     drive_regulator_init();
     
@@ -1207,6 +1209,11 @@ drive_power_warnings_t drive_power_warnings(void)
     return drive.power_warnings;
 }
 
+drive_init_state_t drive_init_state(void)
+{
+    return drive.init_state;
+}
+
 drive_power_calibration_t drive_power_calibration(void)
 {
     return drive.power_calibration_state;
@@ -1229,7 +1236,7 @@ drive_err_stopping_t drive_err_stopping(void)
 
 bool drive_ready(void)
 {
-    return (drive.errors) == 0 &&
+    return (drive.errors == 0) &&
             drive_flags_is_set(DRIVE_READY_FLAGS) &&
             drive_protection_top_ready();
 }
@@ -1332,13 +1339,14 @@ void drive_triac_exc_timer_irq_handler(void)
 
 err_t drive_process_null_sensor(phase_t phase)
 {
-    TIM_SetCounter(drive.tim_null, 0);
-    TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
-
-    if(drive.last_phase != phase){
-        drive.last_phase = phase;
+    if(drive_phase_state_errors() == PHASE_NO_ERROR){
+        TIM_SetCounter(drive.tim_null, 0);
+        TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
         
-        return drive_states_process(drive.last_phase);
+        // Обработаем текущую фазу.
+        drive_phase_state_handle(phase);
+
+        return drive_states_process(phase);
     }
     return E_NO_ERROR;
 }
@@ -1347,8 +1355,14 @@ void drive_null_timer_irq_handler(void)
 {
     TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
     
-    drive.last_phase = drive_phase_state_next_phase(drive_phase_sate_current_phase(),
-                                                    drive_phase_state_direction());
-    
-    drive_states_process(drive.last_phase);
+    if(drive_phase_state_errors() != PHASE_NO_ERROR){
+        phase_t phase = drive_phase_state_next_phase(
+                            drive_phase_sate_current_phase(),
+                            drive_phase_state_direction()
+                        );
+        // Обработаем текущую фазу.
+        drive_phase_state_handle(phase);
+        
+        drive_states_process(phase);
+    }
 }
