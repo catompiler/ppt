@@ -2,6 +2,7 @@
 #include <string.h>
 #include "crc/crc16_ccitt.h"
 #include "utils/utils.h"
+#include <time.h>
 #include "storage.h"
 
 
@@ -101,7 +102,7 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->phase_a_time = drive_phase_state_phase_time(PHASE_A);
     event->phase_b_time = drive_phase_state_phase_time(PHASE_B);
     event->phase_c_time = drive_phase_state_phase_time(PHASE_C);
-    event->time = 0;
+    event->time = (uint32_t)time(NULL);
     event->crc = 0;
 }
 

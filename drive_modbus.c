@@ -7,6 +7,8 @@
 #include "utils/utils.h"
 #include "utils/net.h"
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 
 #define DRIVE_ID_NAME_MAX 20
@@ -76,6 +78,19 @@ static drive_modbus_t drive_modbus;
 // Регистры хранения.
 //! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
+// Дата и время.
+//! Год.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR (DRIVE_MODBUS_HOLD_REGS_START + 1)
+//! Месяц.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_MONTH (DRIVE_MODBUS_HOLD_REGS_START + 2)
+//! День.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_DAY (DRIVE_MODBUS_HOLD_REGS_START + 3)
+//! Час.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_HOUR (DRIVE_MODBUS_HOLD_REGS_START + 4)
+//! Минута.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_MIN (DRIVE_MODBUS_HOLD_REGS_START + 5)
+//! Секунда.
+#define DRIVE_MODBUS_HOLD_REG_DATETIME_SEC (DRIVE_MODBUS_HOLD_REGS_START + 6)
 // Цифровые входа.
 // Регистры флагов.
 //! Запуск/останов.
@@ -264,6 +279,7 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
 static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16_t* value)
 {
     param_t* param = NULL;
+    time_t tm;
     switch(address){
         default:
             param = settings_param_by_id((param_id_t)address);
@@ -275,6 +291,30 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
             *value = drive_reference();
             break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_year;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_MONTH:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_mon;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_DAY:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_mday;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_HOUR:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_hour;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_MIN:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_min;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_SEC:
+            tm = time(NULL);
+            *value = localtime(&tm)->tm_sec;
+            break;
     }
     return MODBUS_RTU_ERROR_NONE;
 }
@@ -282,6 +322,10 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
 static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t value)
 {
     param_t* param = NULL;
+    
+    struct tm* ts;
+    struct timeval tv;
+    
     switch(address){
         default:
             param = settings_param_by_id((param_id_t)address);
@@ -293,6 +337,48 @@ static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t v
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
             if(drive_set_reference(value) != E_NO_ERROR)
                 return MODBUS_RTU_ERROR_INVALID_DATA;
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_year = value - 1900;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_MONTH:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_mon = value - 1;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_DAY:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_mday = value;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_HOUR:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_hour = value;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_MIN:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_min = value;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
+            break;
+        case DRIVE_MODBUS_HOLD_REG_DATETIME_SEC:
+            gettimeofday(&tv, NULL);
+            ts = localtime(&tv.tv_sec);
+            ts->tm_sec = value;
+            tv.tv_sec = mktime(ts);
+            settimeofday(&tv, NULL);
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

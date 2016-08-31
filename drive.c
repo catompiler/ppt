@@ -618,13 +618,13 @@ static bool drive_regulate(void)
 
         drive_triacs_set_pairs_open_angle(rot_pid_val);
         drive_triacs_set_exc_open_angle(exc_pid_val);
-        //drive_triacs_set_exc_open_angle(fixed32_make_from_int(120));
+        //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
 
         //pid_controller_t* pid = drive_regulator_rot_pid();
 
         //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
 
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), rot_pid_val);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;

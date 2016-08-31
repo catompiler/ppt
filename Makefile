@@ -10,7 +10,7 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS += circular_buffer usart_buf newlib_stubs\
-	    counter spi dma future mutex delay\
+	    counter spi dma future mutex delay rtc\
 	    tft9341 tft9341_cache graphics painter font\
 	    i2c pca9555 list key_input scheduler\
 	    gui gui_object gui_widget gui_label\
@@ -35,9 +35,9 @@ SRC_LIBS += circular_buffer usart_buf newlib_stubs\
  STD_PERIPH_DRIVERS += stm32f10x_gpio
  STD_PERIPH_DRIVERS += stm32f10x_i2c
 # STD_PERIPH_DRIVERS += stm32f10x_iwdg
-# STD_PERIPH_DRIVERS += stm32f10x_pwr
+ STD_PERIPH_DRIVERS += stm32f10x_pwr
  STD_PERIPH_DRIVERS += stm32f10x_rcc
-# STD_PERIPH_DRIVERS += stm32f10x_rtc
+ STD_PERIPH_DRIVERS += stm32f10x_rtc
 # STD_PERIPH_DRIVERS += stm32f10x_sdio
  STD_PERIPH_DRIVERS += stm32f10x_spi
  STD_PERIPH_DRIVERS += stm32f10x_tim
@@ -71,8 +71,8 @@ MCU_RAM_SIZE     = 0xC000
 MCU_FAMILY_UPPER = $(shell echo $(MCU_FAMILY) | tr '[:lower:]' '[:upper:]')
 
 # Макросы.
-DEFINES	  += WORK_RELAY RTC_TIMEOFDAY\
-	     USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V USE_GRAPHICS_VIRTUAL_BUFFER
+DEFINES	  += RTC_TIMEOFDAY USE_GRAPHICS_FORMAT_RGB_565\
+	     USE_GRAPHICS_FORMAT_BW_1_V USE_GRAPHICS_VIRTUAL_BUFFER
 # Макрос семейства МК.
 DEFINES   += STM32F10X_$(MCU_FAMILY_UPPER)
 # Использование стандартной библиотеки периферии.

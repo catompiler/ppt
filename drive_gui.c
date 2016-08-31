@@ -20,6 +20,8 @@
 #include "gui/gui_button.h"
 #include "drive_events.h"
 #include <string.h>
+#include <time.h>
+#include <stdio.h>
 //#include "input/key_layout_ru.h"
 //#include "input/key_layout_en.h"
 
@@ -106,6 +108,8 @@ typedef struct _Drive_Gui {
     gui_t gui;
     gui_widget_t root_widget;
     gui_widget_t parent_widget;
+    gui_label_t label_time;
+    gui_label_t label_time_val;
     gui_label_t label_val;
     gui_label_t label_errs;
     gui_label_t label_pwr_errs;
@@ -423,9 +427,23 @@ static void make_gui(void)
     gui_widget_set_border(&gui.parent_widget, GUI_BORDER_SOLID);
     gui_widget_set_visible(&gui.parent_widget, true);
     
+    gui_label_init_parent(&gui.label_time, &gui.gui, &gui.parent_widget);
+    gui_label_set_text(&gui.label_time, "Время:");
+    gui_widget_move(GUI_WIDGET(&gui.label_time), 5, GUI_LABEL_TOP(0));
+    gui_widget_resize(GUI_WIDGET(&gui.label_time), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&gui.label_time), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&gui.label_time), true);
+    
+    gui_label_init_parent(&gui.label_time_val, &gui.gui, &gui.parent_widget);
+    //gui_label_set_text(&gui.label_time_val, ":");
+    gui_widget_move(GUI_WIDGET(&gui.label_time_val), 60, GUI_LABEL_TOP(0));
+    gui_widget_resize(GUI_WIDGET(&gui.label_time_val), 50, GUI_LABEL_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&gui.label_time_val), GUI_BORDER_SOLID);
+    gui_widget_set_visible(GUI_WIDGET(&gui.label_time_val), true);
+    
     gui_label_init_parent(&gui.label_val, &gui.gui, &gui.parent_widget);
     gui_label_set_text(&gui.label_val, "Флаги:");
-    gui_widget_move(GUI_WIDGET(&gui.label_val), 5, GUI_LABEL_TOP(0));
+    gui_widget_move(GUI_WIDGET(&gui.label_val), 5, GUI_LABEL_TOP(1));
     gui_widget_resize(GUI_WIDGET(&gui.label_val), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_val), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
@@ -434,7 +452,7 @@ static void make_gui(void)
     gui_number_label_init_parent(&gui.label_num, &gui.gui, &gui.parent_widget);
     gui_number_label_set_number(&gui.label_num, 0);//0x1234
     gui_number_label_set_format(&gui.label_num, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num), 60, GUI_LABEL_TOP(0));
+    gui_widget_move(GUI_WIDGET(&gui.label_num), 60, GUI_LABEL_TOP(1));
     gui_widget_resize(GUI_WIDGET(&gui.label_num), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_num), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
@@ -442,7 +460,7 @@ static void make_gui(void)
     
     gui_label_init_parent(&gui.label_errs, &gui.gui, &gui.parent_widget);
     gui_label_set_text(&gui.label_errs, "Ошибки:");
-    gui_widget_move(GUI_WIDGET(&gui.label_errs), 5, GUI_LABEL_TOP(1));
+    gui_widget_move(GUI_WIDGET(&gui.label_errs), 5, GUI_LABEL_TOP(2));
     gui_widget_resize(GUI_WIDGET(&gui.label_errs), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_errs), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
@@ -451,7 +469,7 @@ static void make_gui(void)
     gui_number_label_init_parent(&gui.label_num_errs, &gui.gui, &gui.parent_widget);
     gui_number_label_set_number(&gui.label_num_errs, 0);//0x1234
     gui_number_label_set_format(&gui.label_num_errs, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_errs), 60, GUI_LABEL_TOP(1));
+    gui_widget_move(GUI_WIDGET(&gui.label_num_errs), 60, GUI_LABEL_TOP(2));
     gui_widget_resize(GUI_WIDGET(&gui.label_num_errs), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_num_errs), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
@@ -459,7 +477,7 @@ static void make_gui(void)
     
     gui_label_init_parent(&gui.label_pwr_errs, &gui.gui, &gui.parent_widget);
     gui_label_set_text(&gui.label_pwr_errs, "Ош пит:");
-    gui_widget_move(GUI_WIDGET(&gui.label_pwr_errs), 5, GUI_LABEL_TOP(2));
+    gui_widget_move(GUI_WIDGET(&gui.label_pwr_errs), 5, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&gui.label_pwr_errs), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_pwr_errs), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
@@ -468,7 +486,7 @@ static void make_gui(void)
     gui_number_label_init_parent(&gui.label_num_pwr_errs, &gui.gui, &gui.parent_widget);
     gui_number_label_set_number(&gui.label_num_pwr_errs, 0);//0x1234
     gui_number_label_set_format(&gui.label_num_pwr_errs, GUI_NUMBER_LABEL_HEX);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_pwr_errs), 60, GUI_LABEL_TOP(2));
+    gui_widget_move(GUI_WIDGET(&gui.label_num_pwr_errs), 60, GUI_LABEL_TOP(3));
     gui_widget_resize(GUI_WIDGET(&gui.label_num_pwr_errs), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_num_pwr_errs), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
@@ -476,7 +494,7 @@ static void make_gui(void)
     
     gui_label_init_parent(&gui.label_state, &gui.gui, &gui.parent_widget);
     gui_label_set_text(&gui.label_state, "Сост.:");
-    gui_widget_move(GUI_WIDGET(&gui.label_state), 5, GUI_LABEL_TOP(3));
+    gui_widget_move(GUI_WIDGET(&gui.label_state), 5, GUI_LABEL_TOP(4));
     gui_widget_resize(GUI_WIDGET(&gui.label_state), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_state), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
@@ -485,7 +503,7 @@ static void make_gui(void)
     gui_number_label_init_parent(&gui.label_num_state, &gui.gui, &gui.parent_widget);
     gui_number_label_set_number(&gui.label_num_state, 0);//0x1234
     gui_number_label_set_format(&gui.label_num_state, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_state), 60, GUI_LABEL_TOP(3));
+    gui_widget_move(GUI_WIDGET(&gui.label_num_state), 60, GUI_LABEL_TOP(4));
     gui_widget_resize(GUI_WIDGET(&gui.label_num_state), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_num_state), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
@@ -494,7 +512,7 @@ static void make_gui(void)
     gui_button_init_parent(&gui.button_start, &gui.gui, &gui.parent_widget);
     gui_button_set_text(&gui.button_start, "Старт");
     gui_button_set_on_clicked(&gui.button_start, button_start_on_clicked);
-    gui_widget_move(GUI_WIDGET(&gui.button_start), 5, GUI_LABEL_TOP(4));
+    gui_widget_move(GUI_WIDGET(&gui.button_start), 5, GUI_LABEL_TOP(5));
     gui_widget_resize(GUI_WIDGET(&gui.button_start), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.button_start), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.button2), THEME_COLOR_WIDGET);
@@ -503,7 +521,7 @@ static void make_gui(void)
     gui_button_init_parent(&gui.button_stop, &gui.gui, &gui.parent_widget);
     gui_button_set_text(&gui.button_stop, "Стоп");
     gui_button_set_on_clicked(&gui.button_stop, button_stop_on_clicked);
-    gui_widget_move(GUI_WIDGET(&gui.button_stop), 60, GUI_LABEL_TOP(4));
+    gui_widget_move(GUI_WIDGET(&gui.button_stop), 60, GUI_LABEL_TOP(5));
     gui_widget_resize(GUI_WIDGET(&gui.button_stop), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.button_stop), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.button2), THEME_COLOR_WIDGET);
@@ -511,7 +529,7 @@ static void make_gui(void)
     
     gui_label_init_parent(&gui.label_ref, &gui.gui, &gui.parent_widget);
     gui_label_set_text(&gui.label_ref, "Задание:");
-    gui_widget_move(GUI_WIDGET(&gui.label_ref), 5, GUI_LABEL_TOP(5));
+    gui_widget_move(GUI_WIDGET(&gui.label_ref), 5, GUI_LABEL_TOP(6));
     gui_widget_resize(GUI_WIDGET(&gui.label_ref), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_ref), GUI_BORDER_SOLID);
     //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
@@ -522,7 +540,7 @@ static void make_gui(void)
     gui_spinbox_set_format(&gui.spinbox_ref, GUI_NUMBER_LABEL_DEC);
     gui_spinbox_set_range(&gui.spinbox_ref, 0, 100);
     gui_spinbox_set_on_value_changed(&gui.spinbox_ref, spinbox_reference_on_value_changed);
-    gui_widget_move(GUI_WIDGET(&gui.spinbox_ref), 60, GUI_LABEL_TOP(5));
+    gui_widget_move(GUI_WIDGET(&gui.spinbox_ref), 60, GUI_LABEL_TOP(6));
     gui_widget_resize(GUI_WIDGET(&gui.spinbox_ref), 50, 20);
     gui_widget_set_visible(GUI_WIDGET(&gui.spinbox_ref), true);
     
@@ -563,6 +581,12 @@ void drive_gui_update(void)
     gui_number_label_set_number(&gui.label_num_errs, drive_errors());
     gui_number_label_set_number(&gui.label_num_pwr_errs, drive_power_errors());
     gui_spinbox_set_value(&gui.spinbox_ref, drive_reference());
+    
+    static char time_str[9];
+    time_t t = time(NULL);
+    struct tm* ts = localtime(&t);
+    snprintf(time_str, 9, "%02d:%02d:%02d", ts->tm_hour, ts->tm_min, ts->tm_sec);
+    gui_label_set_text(&gui.label_time_val, time_str);
     
     if(drive_gui_read_last_err()){
         gui_number_label_set_number(&gui.label_num_last_pwr_errs, gui.last_event.power_errors);

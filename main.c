@@ -8,6 +8,7 @@
 #include "modbus/modbus_rtu.h"
 #include <stdio.h>
 #include "counter/counter.h"
+#include "rtc/rtc.h"
 #include "spi/spi.h"
 #include "dma/dma.h"
 #include "utils/delay.h"
@@ -167,6 +168,8 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 #define IRQ_PRIOR_DMA_CH5 3 // spi2
 #define IRQ_PRIOR_DMA_CH6 3 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_DMA_CH7 3 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_RTC 4
+#define IRQ_PRIOR_RTC_ALARM 4
 
 
 /*
@@ -233,6 +236,16 @@ void I2C1_EV_IRQHandler(void)
 void I2C1_ER_IRQHandler(void)
 {
     i2c_bus_error_irq_handler(&i2c);
+}
+
+void RTCAlarm_IRQHandler(void)
+{
+    rtc_alarm_interrupt_handler();
+}
+
+void RTC_IRQHandler(void)
+{
+    rtc_interrupt_handler();
 }
 
 /**
@@ -493,8 +506,9 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
     // TIM7.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
-    // SPI2.
-    //RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);    // Запуск тактирования SPI2
+    // Backup domain + RTC.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 }
 
 static void init_usart(void)
@@ -520,6 +534,34 @@ static void init_usart(void)
     
     NVIC_SetPriority(USART3_IRQn, IRQ_PRIOR_USART);
     NVIC_EnableIRQ(USART3_IRQn);
+}
+
+static void init_rtc(void)
+{
+    rtc_init();
+    
+    if(rtc_state() == DISABLE){
+        PWR_BackupAccessCmd(ENABLE);
+        
+        RCC_BackupResetCmd(ENABLE);
+        __NOP();
+        RCC_BackupResetCmd(DISABLE);
+        
+        RCC_LSEConfig(RCC_LSE_ON);
+        while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET);
+        RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);
+        RCC_RTCCLKCmd(ENABLE);
+        
+        rtc_synchronize();
+        rtc_setup(0x7fff, NULL);
+        
+        PWR_BackupAccessCmd(DISABLE);
+    }
+    
+    NVIC_SetPriority(RTC_IRQn, IRQ_PRIOR_RTC);
+    NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
+    NVIC_EnableIRQ(RTC_IRQn);
+    NVIC_EnableIRQ(RTCAlarm_IRQn);
 }
 
 static void init_modbus_usart(void)
@@ -1278,6 +1320,8 @@ int main(void)
     remap_config();
     
     init_usart();
+    
+    init_rtc();
     
     printf("STM32 MCU\r\n");
     
