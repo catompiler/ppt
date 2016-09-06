@@ -624,7 +624,7 @@ static bool drive_regulate(void)
 
         //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
 
-        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;

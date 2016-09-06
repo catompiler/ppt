@@ -50,6 +50,11 @@ static usart_buf_t usart_buf;
 //! Шина USART для Modbus.
 static usart_bus_t usart_bus;
 
+//! GPIO контроля интерфейса RS485.
+#define RS485_IFACE_CTL_GPIO GPIOC
+//! Пин контроля интерфейса RS485.
+#define RS485_IFACE_CTL_PIN GPIO_Pin_9
+
 //! Modbus.
 static modbus_rtu_t modbus;
 //! Сообщения Modbus.
@@ -164,8 +169,8 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 #define IRQ_PRIOR_DMA_CH1 3
 #define IRQ_PRIOR_DMA_CH2 3 // spi1
 #define IRQ_PRIOR_DMA_CH3 3 // spi1
-#define IRQ_PRIOR_DMA_CH4 3 // spi2
-#define IRQ_PRIOR_DMA_CH5 3 // spi2
+#define IRQ_PRIOR_DMA_CH4 3 // spi2 usart1 (modbus)
+#define IRQ_PRIOR_DMA_CH5 3 // spi2 usart1 (modbus)
 #define IRQ_PRIOR_DMA_CH6 3 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_DMA_CH7 3 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_RTC 4
@@ -176,7 +181,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  * Обработчики прерываний.
  */
 
-void USART2_IRQHandler(void)
+void USART1_IRQHandler(void)
 {
     usart_bus_irq_handler(&usart_bus);
 }
@@ -208,23 +213,23 @@ void DMA1_Channel3_IRQHandler(void)
 
 void DMA1_Channel4_IRQHandler(void)
 {
+    usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_rx_channel_irq_handler(&spi2);
 }
 
 void DMA1_Channel5_IRQHandler(void)
 {
+    usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2);
 }
 
 void DMA1_Channel6_IRQHandler(void)
 {
-    usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     i2c_bus_dma_tx_channel_irq_handler(&i2c);
 }
 
 void DMA1_Channel7_IRQHandler(void)
 {
-    usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
     i2c_bus_dma_rx_channel_irq_handler(&i2c);
 }
 
@@ -427,6 +432,16 @@ static bool spi2_callback(void)
     return m95x_spi_callback(&eeprom);
 }
 
+ALWAYS_INLINE static void modbus_rs485_set_input(void)
+{
+    RS485_IFACE_CTL_GPIO->BRR = RS485_IFACE_CTL_PIN;
+}
+
+ALWAYS_INLINE static void modbus_rs485_set_output(void)
+{
+    RS485_IFACE_CTL_GPIO->BSRR = RS485_IFACE_CTL_PIN;
+}
+
 static bool usart_rx_byte_callback(uint8_t byte)
 {
     return modbus_rtu_usart_rx_byte_callback(&modbus, byte);
@@ -442,9 +457,23 @@ static bool usart_tx_callback(void)
     return modbus_rtu_usart_tx_callback(&modbus);
 }
 
+static bool usart_tc_callback(void)
+{
+    modbus_rs485_set_input();
+    
+    return true;
+}
+
 static void modbus_on_msg_recv(void)
 {
-    modbus_rtu_dispatch(&modbus);
+    modbus_rs485_set_output();
+    if(modbus_rtu_dispatch(&modbus) != E_NO_ERROR){
+        modbus_rs485_set_input();
+    }
+}
+
+static void modbus_on_msg_sent(void)
+{
 }
 
 /*
@@ -483,7 +512,7 @@ static void init_periph_clock(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
     // USART.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
     // DMA.
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
@@ -564,7 +593,8 @@ static void init_rtc(void)
     NVIC_EnableIRQ(RTCAlarm_IRQn);
 }
 
-static void init_modbus_usart(void)
+/*
+static void init_modbus_usart2(void)
 {
     GPIO_InitTypeDef gpio_tx =
         {.GPIO_Pin = GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
@@ -602,10 +632,56 @@ static void init_modbus_usart(void)
     NVIC_SetPriority(USART2_IRQn, IRQ_PRIOR_MODBUS_USART);
     NVIC_EnableIRQ(USART2_IRQn);
     
-    /*NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIOR_DMA_CH6);
-    NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-    NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
-    NVIC_EnableIRQ(DMA1_Channel7_IRQn);*/
+    //NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIOR_DMA_CH6);
+    //NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+    //NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
+    //NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+}
+*/
+
+static void init_modbus_usart(void)
+{
+    GPIO_InitTypeDef gpio_tx =
+        {.GPIO_Pin = GPIO_Pin_9, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+    GPIO_InitTypeDef gpio_rx =
+        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+    
+    USART_InitTypeDef usart_is =
+        {.USART_BaudRate = 9600, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
+         .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
+    
+    usart_bus_init_t usartb_is = {
+        .usart_device = USART1,
+        .dma_tx_channel = DMA1_Channel4,
+        .dma_rx_channel = DMA1_Channel5
+    };
+    
+    param_t* baud_param = settings_param_by_id(PARAM_ID_MODBUS_BAUD);
+    if(baud_param){
+        usart_is.USART_BaudRate = settings_param_valueu(baud_param);
+    }
+    
+    GPIO_Init(GPIOA, &gpio_tx);
+    GPIO_Init(GPIOA, &gpio_rx);
+    
+    USART_Init(USART1, &usart_is);
+    USART_Cmd(USART1, ENABLE);
+    usart_bus_init(&usart_bus, &usartb_is);
+    
+    usart_bus_set_rx_callback(&usart_bus, usart_rx_callback);
+    usart_bus_set_tx_callback(&usart_bus, usart_tx_callback);
+    usart_bus_set_tc_callback(&usart_bus, usart_tc_callback);
+    usart_bus_set_rx_byte_callback(&usart_bus, usart_rx_byte_callback);
+    
+    usart_bus_set_idle_mode(&usart_bus, USART_IDLE_MODE_END_RX);
+    
+    NVIC_SetPriority(USART1_IRQn, IRQ_PRIOR_MODBUS_USART);
+    NVIC_EnableIRQ(USART1_IRQn);
+    
+    /*NVIC_SetPriority(DMA1_Channel4_IRQn, IRQ_PRIOR_DMA_CH4);
+    NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+    NVIC_SetPriority(DMA1_Channel5_IRQn, IRQ_PRIOR_DMA_CH5);
+    NVIC_EnableIRQ(DMA1_Channel5_IRQn);*/
 }
 
 static void init_modbus(void)
@@ -620,6 +696,9 @@ static void init_modbus(void)
     
     modbus_rtu_init(&modbus, &modbus_is);
     modbus_rtu_set_msg_recv_callback(&modbus, modbus_on_msg_recv);
+    modbus_rtu_set_msg_sent_callback(&modbus, modbus_on_msg_sent);
+    
+    modbus_rs485_set_input();
 }
 
 static void init_drive_modbus(void)
@@ -1227,28 +1306,35 @@ static void init_exti(void)
 
 static void init_gpio (void)
 {
-    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitTypeDef gpio_is;
     /*
      * Dip 8 switch
      */
     /* GPIOB Configuration: 37 (PB2 - Dip_1) as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
+        gpio_is.GPIO_Pin = GPIO_Pin_2;
+        gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
+        gpio_is.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOB, &gpio_is);
 
-    /* GPIOB Configuration: 38 (PE7 - Dip_2);  39 (PE8 - Dip_3);  40 (PE9 - Dip_4);
+    /* GPIOE Configuration: 38 (PE7 - Dip_2);  39 (PE8 - Dip_3);  40 (PE9 - Dip_4);
      *                      41 (PE10 - Dip_5); 42 (PE11 - Dip_6); 43 (PE12 - Dip_7)  as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
+        gpio_is.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+        gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
+        gpio_is.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOE, &gpio_is);
 
-    /* GPIOB Configuration: 65 (PC8 - Dip_8) as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    /* GPIOC Configuration: 65 (PC8 - Dip_8) as input floating */
+        gpio_is.GPIO_Pin = GPIO_Pin_8;
+        gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
+        gpio_is.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(GPIOC, &gpio_is);
+    
+    /* GPIOC Configuration: 66 (PC9 - RS485 iface ctl) as output pp */
+        gpio_is.GPIO_Pin = RS485_IFACE_CTL_PIN;
+        gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
+        gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(RS485_IFACE_CTL_GPIO, &gpio_is);
+        
 }
 
 static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
