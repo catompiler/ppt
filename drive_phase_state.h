@@ -16,7 +16,7 @@
 //! Идеальное время между фазами.
 #define PHASE_TIME_US 6667
 //! Максимальная разница во времени между фазами.
-#define PHASE_DELTA_US_MAX 100 // 0.1 мс
+#define PHASE_DELTA_US_MAX 250 // 0.25 мс
 //! Минимальный допустимый интервал времени между фазами.
 #define PHASE_TIME_US_MIN (PHASE_TIME_US - PHASE_DELTA_US_MAX)
 //! Максимальный допустимый интервал времени между фазами.
