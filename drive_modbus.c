@@ -293,11 +293,11 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
             break;
         case DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR:
             tm = time(NULL);
-            *value = localtime(&tm)->tm_year;
+            *value = localtime(&tm)->tm_year + 1900;
             break;
         case DRIVE_MODBUS_HOLD_REG_DATETIME_MONTH:
             tm = time(NULL);
-            *value = localtime(&tm)->tm_mon;
+            *value = localtime(&tm)->tm_mon + 1;
             break;
         case DRIVE_MODBUS_HOLD_REG_DATETIME_DAY:
             tm = time(NULL);
