@@ -1,5 +1,6 @@
 #include "storage.h"
 #include <string.h>
+#include <stdint.h>
 #include "utils/utils.h"
 #include "utils/delay.h"
 
@@ -73,7 +74,7 @@ err_t storage_write(storage_address_t address, const void* data, size_t size)
         RETURN_ERR_IF_FAIL(storage_wait_eeprom_wip());
         
         address += avail_size;
-        data += avail_size;
+        data = (const void*)((uint8_t*)data + avail_size);
         size -= avail_size;
     } while(size != 0);
     
