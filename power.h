@@ -66,13 +66,15 @@ typedef struct _Power_Value {
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
+    int32_t count_zero; //!< Число значений.
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
     int16_t raw_value; //!< Сырое значение с АЦП.
     fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
     fixed32_t real_value; //!< Значение в СИ.
     int32_t sum; //!< Сумма значений.
-    int32_t count; //!< Число значений.
+    int32_t count_sum; //!< Число значений.
     power_filter_t filter; //!< Фильтр значенией.
+    bool is_soft; //!< Флаг программного вычисления канала.
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
 } power_value_t;
@@ -80,10 +82,11 @@ typedef struct _Power_Value {
 //! Инициализирует структуру значения канала АЦП по месту объявления.
 #define MAKE_POWER_CHANNEL(arg_type, arg_k) { .type = arg_type, .k = arg_k,\
                                     .raw_zero_cal = 0, .raw_zero_cur = 0,\
-                                    .sum_zero = 0, .raw_value_inst = 0,\
-                                    .raw_value = 0, .real_value_inst = 0,\
-                                    .real_value = 0, .sum = 0,\
-                                    .count = 0, .filter = {0},\
+                                    .sum_zero = 0, .count_zero = 0,\
+                                    .raw_value_inst = 0, .raw_value = 0,\
+                                    .real_value_inst = 0, .real_value = 0,\
+                                    .sum = 0, .count_sum = 0,\
+                                    .filter = {0}, .is_soft = false,\
                                     .calibrated = false, .data_avail = false }
 
 /**
@@ -115,6 +118,24 @@ extern err_t power_value_init(power_value_t* value, power_channel_type_t type, f
  * @return Код ошибки.
  */
 extern err_t power_init(power_t* power, power_value_t* channels, size_t channels_count);
+
+/**
+ * Устанавливает программное вычисление для заданного канала.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @param is_soft Флаг программного вычисления.
+ * @return Код ошибки.
+ */
+extern err_t power_set_soft_channel(power_t* power, size_t channel, bool is_soft);
+
+/**
+ * Устанавливает значение программно вычисляемого канала.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @param value Значенеи канала.
+ * @return Код ошибки.
+ */
+extern err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t value);
 
 /**
  * Обрабатывает очередные значения АЦП.
@@ -291,7 +312,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_zero_current(const power_t* power
  */
 ALWAYS_INLINE static size_t power_channel_samples_count(const power_t* power, size_t channel)
 {
-    return (size_t)power->channels[channel].count;
+    return (size_t)power->channels[channel].count_sum;
 }
 
 #endif	/* POWER_H */

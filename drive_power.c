@@ -35,6 +35,7 @@ typedef struct _Drive_Power {
     size_t processing_periods; //!< Число периодов для накопления и обработки данных.
     size_t periods_processed; //!< Число периодов данных.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
+    phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
 } drive_power_t;
 
 //! Питание привода.
@@ -51,13 +52,13 @@ err_t drive_power_init(void)
     
     drive_power.power_phase = PHASE_UNK;
     
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x4478); // Ua
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x6FE1); // Ua //0x4478
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x5f11); // Ia
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x44ac); // Ub
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x7037); // Ub //0x44ac
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x5f11); // Ib
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x450b); // Uc
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x70D2); // Uc //0x450b
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x5f11); // Ic
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0x6861); // Urot
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0xA5A0); // Urot //0x6861
     power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x5f11); // Irot //0x2e14
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x321); // Iexc //0x1bd
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
@@ -87,6 +88,44 @@ err_t drive_power_set_phase(phase_t phase)
     drive_power.power_phase = phase;
     
     return E_NO_ERROR;
+}
+
+phase_t drive_power_phase_calc_current(void)
+{
+    return drive_power.phase_calc_current;
+}
+
+ALWAYS_INLINE static bool drive_power_get_current_channel_by_phase(phase_t phase, size_t* channel)
+{
+    switch(phase){
+        default:
+            break;
+        case PHASE_A:
+            if(channel) *channel = DRIVE_POWER_Ia;
+            return true;
+        case PHASE_B:
+            if(channel) *channel = DRIVE_POWER_Ib;
+            return true;
+        case PHASE_C:
+            if(channel) *channel = DRIVE_POWER_Ic;
+            return true;
+    }
+    return false;
+}
+
+void drive_power_set_phase_calc_current(phase_t phase)
+{
+    size_t channel;
+    
+    if(drive_power_get_current_channel_by_phase(drive_power.phase_calc_current, &channel)){
+        power_set_soft_channel(&drive_power.power, channel, false);
+    }
+    
+    drive_power.phase_calc_current = phase;
+    
+    if(drive_power_get_current_channel_by_phase(phase, &channel)){
+        power_set_soft_channel(&drive_power.power, channel, true);
+    }
 }
 
 size_t drive_power_processing_periods(void)
@@ -214,13 +253,29 @@ err_t drive_power_osc_channel_get(size_t osc_channel, drive_power_osc_channel_t*
 static void drive_power_osc_buffer_put_data(void)
 {
     size_t i = 0;
-    osc_value_t value = 0;
     for(; i < DRIVE_POWER_OSC_CHANNELS_COUNT; i ++){
-        value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
+        osc_value_t value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
                     drive_power_osc_channels_nums[i]
                 ));
         drive_power.osc_buf.osc_channels[i].data[drive_power.osc_buf.index] = value;
     }
+
+/*
+    size_t i = 0;
+    osc_value_t value = 0;
+    osc_value_t new_value = 0;
+    static osc_value_t prev_value[DRIVE_POWER_OSC_CHANNELS_COUNT] = {0};
+    for(; i < DRIVE_POWER_OSC_CHANNELS_COUNT; i ++){
+        new_value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
+                    drive_power_osc_channels_nums[i]
+                ));
+        
+        value = (prev_value[i] + new_value) >> 1;
+        prev_value[i] = new_value;
+        drive_power.osc_buf.osc_channels[i].data[drive_power.osc_buf.index] = value;
+    }
+*/
+    
     if(++ drive_power.osc_buf.index >= DRIVE_POWER_OSC_CHANNEL_LEN){
         drive_power.osc_buf.index = 0;
     }
@@ -241,9 +296,38 @@ static void drive_power_append_osc_data(void)
     }
 }
 
+static void drive_power_calc_phase_current(void)
+{
+    fixed32_t I1 = 0, I2 = 0, I = 0;
+    switch(drive_power.phase_calc_current){
+        default:
+            break;
+        case PHASE_A:
+            I1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ib);
+            I2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ic);
+            I = -(I1 + I2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Ia, I);
+            break;
+        case PHASE_B:
+            I1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ia);
+            I2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ic);
+            I = -(I1 + I2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Ib, I);
+            break;
+        case PHASE_C:
+            I1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ia);
+            I2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ib);
+            I = -(I1 + I2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Ic, I);
+            break;
+    }
+}
+
 err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
     err_t err = power_process_adc_values(&drive_power.power, channels, adc_values);
+    
+    drive_power_calc_phase_current();
     
     drive_power_append_osc_data();
     

@@ -116,6 +116,18 @@ extern phase_t drive_power_phase(void);
 extern err_t drive_power_set_phase(phase_t phase);
 
 /**
+ * Получает фазу для которой нужно вычислять ток.
+ * @return Фаза с вычислением тока.
+ */
+extern phase_t drive_power_phase_calc_current(void);
+
+/**
+ * Устанавливает фазу для которой нужно вычислять ток.
+ * @param phase Фаза с вычислением тока.
+ */
+extern void drive_power_set_phase_calc_current(phase_t phase);
+
+/**
  * Получает количество периодов накопления данных.
  * @return Количество периодов накопления данных.
  */

@@ -86,27 +86,85 @@ err_t power_init(power_t* power, power_value_t* channels, size_t channels_count)
     return E_NO_ERROR;
 }
 
-ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
+err_t power_set_soft_channel(power_t* power, size_t channel, bool is_soft)
 {
-    // Вычтем значение АЦП при нуле.
-    int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
+    if(channel >= power->channels_count) return E_OUT_OF_RANGE;
+    
+    power->channels[channel].is_soft = is_soft;
+    
+    return E_NO_ERROR;
+}
+
+ALWAYS_INLINE static int16_t power_value_soft_to_raw(fixed32_t value)
+{
+    return  (int16_t)(value >> 10);
+}
+
+ALWAYS_INLINE static fixed32_t power_value_raw_to_soft(int16_t value)
+{
+    return ((fixed32_t)value) << 10;
+}
+
+ALWAYS_INLINE static void power_channel_set_soft_value(power_value_t* channel, fixed32_t value)
+{
+    // Упакованное значение.
+    int32_t raw_value = power_value_soft_to_raw(value);
     
     // Мгновенное сырое значение канала АЦП.
-    channel->raw_value_inst = value;
+    channel->raw_value_inst = raw_value;
     // Мгновенное реальное значение канала АЦП.
-    channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
-    // Значение нуля АЦП.
-    channel->sum_zero += adc_value;
-    // Увеличим число измерений.
-    channel->count ++;
+    channel->real_value_inst = value;
+    
+    // Увеличим число значений в сумме.
+    channel->count_sum ++;
     
     // Если канал питания - AC.
     if(channel->type == POWER_CHANNEL_AC){
         // Квадрат значения для RMS.
-        channel->sum += value * value;
+        channel->sum += raw_value * raw_value;
     }else{
         // Значение для среднего.
-        channel->sum += value;
+        channel->sum += raw_value;
+    }
+}
+
+err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t value)
+{
+    if(channel >= power->channels_count) return E_OUT_OF_RANGE;
+    if(!power->channels[channel].is_soft) return E_INVALID_VALUE;
+    
+    power_channel_set_soft_value(&power->channels[channel], value);
+    
+    return E_NO_ERROR;
+}
+
+ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
+{
+    // Значение нуля АЦП.
+    channel->sum_zero += adc_value;
+    // Увеличим число измерений для нуля.
+    channel->count_zero ++;
+    
+    // Если канал не вычисляется программно.
+    if(!channel->is_soft){
+        // Вычтем значение АЦП при нуле.
+        int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
+
+        // Мгновенное сырое значение канала АЦП.
+        channel->raw_value_inst = value;
+        // Мгновенное реальное значение канала АЦП.
+        channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
+
+        // Увеличим число измерений значений.
+        channel->count_sum ++;
+        // Если канал питания - AC.
+        if(channel->type == POWER_CHANNEL_AC){
+            // Квадрат значения для RMS.
+            channel->sum += value * value;
+        }else{
+            // Значение для среднего.
+            channel->sum += value;
+        }
     }
 }
 
@@ -151,7 +209,8 @@ err_t power_process_adc_values(power_t* power, power_channels_t channels, uint16
 
 ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
 {
-    channel->count = 0;
+    channel->count_sum = 0;
+    channel->count_zero = 0;
     channel->sum_zero = 0;
     channel->sum = 0;
 }
@@ -162,7 +221,7 @@ ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
  */
 ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
 {
-    if(channel->count == 0){
+    if(channel->count_sum == 0){
         channel->data_avail = false;
         return;
     }
@@ -170,17 +229,23 @@ ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
     int16_t value = 0;
     
     if(channel->type == POWER_CHANNEL_AC){
-        value = bsqrti(channel->sum / channel->count);
+        value = bsqrti(channel->sum / channel->count_sum);
     }else{
-        value = channel->sum / channel->count;
+        value = channel->sum / channel->count_sum;
     }
     
     power_filter_put(&channel->filter, value);
     channel->raw_value = power_filter_calculate(&channel->filter);
     
-    channel->raw_zero_cur = channel->sum_zero / channel->count;
+    if(!channel->is_soft){
+        channel->real_value = (fixed32_t)channel->raw_value * channel->k;
+    }else{
+        channel->real_value = power_value_raw_to_soft(channel->raw_value);
+    }
     
-    channel->real_value = (fixed32_t)channel->raw_value * channel->k;
+    if(channel->count_zero != 0){
+        channel->raw_zero_cur = channel->sum_zero / channel->count_zero;
+    }
     
     power_channel_reset_sums(channel);
     
