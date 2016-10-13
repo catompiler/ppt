@@ -14,7 +14,7 @@
 
 
 //! Максимальное число осциллограмм.
-#define DRIVE_OSCILLOGRAMS_COUNT_MAX 3
+#define DRIVE_OSCILLOGRAMS_COUNT_MAX 15
 
 //! Тип идентификатора события.
 typedef uint8_t drive_event_id_t;

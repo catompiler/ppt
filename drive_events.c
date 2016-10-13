@@ -30,7 +30,7 @@ typedef struct _Drive_Events_Map {
     //! Индекс следующей осциллограммы.
     drive_event_index_t osc_index;
     //! Принадлежность осциллограмм событиям.
-    drive_event_id_t osc_event_ids[DRIVE_OSCILLOGRAMS_COUNT_MAX];
+    drive_event_id_t osc_event_ids[DRIVE_OSCS_COUNT_MAX];
     //! Контрольная сумма.
     uint16_t crc;
 } drive_events_map_t;
@@ -207,7 +207,7 @@ drive_osc_index_t drive_events_osc_index_by_number(size_t number)
 
 drive_osc_index_t drive_events_oscillograms_next_index(drive_osc_index_t index)
 {
-    if(++ index >= DRIVE_OSCILLOGRAMS_COUNT_MAX) return 0;
+    if(++ index >= DRIVE_OSCS_COUNT_MAX) return 0;
     return index;
 }
 
