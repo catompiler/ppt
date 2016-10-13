@@ -19,6 +19,7 @@ typedef struct _Drive_Protection {
     fixed32_t U_in; //!< Номинальное напряжение, В.
     fixed32_t U_in_allow_delta; //!< Допустимое отклонение номинального напряжения, В.
     fixed32_t U_in_crit_delta; //!< Критическое отклонение номинального напряжения, В.
+    fixed32_t I_in_cutoff; //!< Токовая отсечка по фазам.
     fixed32_t U_zero_noise; //!< Шум напряжения нуля, В.
     fixed32_t I_zero_noise; //!< Шум тока нуля, А.
     fixed32_t I_rot_zero_noise; //!< Шум нуля тока ротора, А.
@@ -30,7 +31,7 @@ typedef struct _Drive_Protection {
     fixed32_t U_rot_allow_delta;
     fixed32_t U_rot_crit_delta;
     fixed32_t I_rot; //!< Номинальный ток якоря.
-    fixed32_t I_rot_cutorff;
+    fixed32_t I_rot_cutoff;
     fixed32_t I_rot_allow_delta;
     fixed32_t I_rot_crit_delta;
     drive_top_t top; //!< Тепловая защита.
@@ -113,6 +114,11 @@ void drive_protection_set_input_voltage(fixed32_t u_in, uint32_t allow_delta, ui
     drive_prot.U_in_crit_delta = u_in * crit_delta / 100;
 }
 
+void drive_protection_set_phases_current_cutoff(fixed32_t i_in_cutoff)
+{
+    drive_prot.I_in_cutoff = i_in_cutoff;
+}
+
 void drive_protection_set_zero_voltage_noise(fixed32_t u_noize)
 {
     drive_prot.U_zero_noise = u_noize;
@@ -152,7 +158,7 @@ void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_delta, uin
     drive_prot.I_rot = i_rot;
     drive_prot.I_rot_allow_delta = i_rot * allow_delta / 100;
     drive_prot.I_rot_crit_delta = i_rot * crit_delta / 100;
-    drive_prot.I_rot_cutorff = i_rot * cutoff_mult;
+    drive_prot.I_rot_cutoff = i_rot * cutoff_mult;
 }
 
 static bool drive_protection_check_delta(fixed32_t ref_value, fixed32_t cur_value, fixed32_t delta)
@@ -184,6 +190,15 @@ drive_pwr_check_res_t drive_protection_check_input_voltage(fixed32_t voltage)
         return (voltage < drive_prot.U_in) ? DRIVE_PWR_CHECK_ALLOW_UNDERFLOW : DRIVE_PWR_CHECK_ALLOW_OVERFLOW;
     }
     return (voltage < drive_prot.U_in) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;
+}
+
+drive_pwr_check_res_t drive_protection_check_input_current(fixed32_t current)
+{
+    current = fixed_abs(current);
+    
+    if(current >= drive_prot.I_in_cutoff) return DRIVE_PWR_CHECK_CRIT_OVERFLOW;
+    
+    return DRIVE_PWR_CHECK_NORMAL;
 }
 
 drive_pwr_check_res_t drive_protection_check_zero_voltage(fixed32_t voltage)
@@ -242,10 +257,10 @@ drive_pwr_check_res_t drive_protection_check_rot_voltage(fixed32_t voltage)
 
 drive_pwr_check_res_t drive_protection_check_rot_current(fixed32_t current)
 {
-    if(drive_protection_check_range(current, -drive_prot.I_rot_allow_delta, drive_prot.I_rot_cutorff)){
+    if(drive_protection_check_range(current, -drive_prot.I_rot_allow_delta, drive_prot.I_rot_cutoff)){
         return DRIVE_PWR_CHECK_NORMAL;
     }
-    if(drive_protection_check_range(current, -drive_prot.I_rot_crit_delta, drive_prot.I_rot_cutorff)){
+    if(drive_protection_check_range(current, -drive_prot.I_rot_crit_delta, drive_prot.I_rot_cutoff)){
         return (current < drive_prot.I_rot) ? DRIVE_PWR_CHECK_ALLOW_UNDERFLOW : DRIVE_PWR_CHECK_ALLOW_OVERFLOW;
     }
     return (current < drive_prot.I_rot) ? DRIVE_PWR_CHECK_CRIT_UNDERFLOW : DRIVE_PWR_CHECK_CRIT_OVERFLOW;
@@ -255,9 +270,7 @@ drive_break_check_res_t drive_protection_check_rot_break(fixed32_t voltage, fixe
 {
     if(u_ref <= drive_prot.U_rot_crit_delta) return DRIVE_BREAK_CHECK_NORMAL;
     
-    drive_pwr_check_res_t chk_res = DRIVE_PWR_CHECK_NORMAL;
-    
-    chk_res = drive_protection_check_zero_voltage(voltage);
+    drive_pwr_check_res_t chk_res = drive_protection_check_zero_voltage(voltage);
     if(chk_res == DRIVE_PWR_CHECK_CRIT_UNDERFLOW || chk_res == DRIVE_PWR_CHECK_CRIT_OVERFLOW){
         return DRIVE_BREAK_CHECK_NORMAL;
     }

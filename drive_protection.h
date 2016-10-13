@@ -80,6 +80,12 @@ extern bool drive_protection_is_allow(drive_pwr_check_res_t check_res);
 extern void drive_protection_set_input_voltage(fixed32_t u_in, uint32_t allow_delta, uint32_t crit_delta);
 
 /**
+ * Устанавливает токовую отсечку по фазам.
+ * @param i_in_cutoff Значение токовой отсечки, А.
+ */
+extern void drive_protection_set_phases_current_cutoff(fixed32_t i_in_cutoff);
+
+/**
  * Устанавливает шум нулевого напряжения.
  * @param u_noize Шум нулевого напряжения.
  */
@@ -134,6 +140,13 @@ extern void drive_protection_set_rot_current(fixed32_t i_rot, uint32_t allow_del
  * @return Результат проверки.
  */
 extern drive_pwr_check_res_t drive_protection_check_input_voltage(fixed32_t voltage);
+
+/**
+ * Выполняет проверку входных токов.
+ * @param current Ток.
+ * @return Результат проверки.
+ */
+extern drive_pwr_check_res_t drive_protection_check_input_current(fixed32_t current);
 
 /**
  * Выполняет проверку отсутствия напряжения.
