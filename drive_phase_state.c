@@ -207,6 +207,8 @@ void drive_phase_state_handle(phase_t phase)
     phase_time_t time = drive_phase_state_get_cur_time();
     drive_phase_state_start_timer();
     
+    if(phase == PHASE_UNK) return;
+    
     switch(state.cur_phase){
         case PHASE_UNK:
             state.cur_phase = phase;
@@ -323,6 +325,8 @@ void drive_phase_state_reset(void)
 void drive_phase_state_process_phase_timeout(phase_t phase)
 {
     drive_phase_state_start_timer();
+    
+    if(phase == PHASE_UNK) return;
     
     phase_time_t time = PHASE_TIME_US_MAX + 1;
     //phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
