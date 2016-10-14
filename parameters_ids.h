@@ -19,61 +19,65 @@
  */
 #define PARAM_ID_U_NOM_CRIT_VAR 12
 /**
+ * Токовая отсечка по фазам, А.
+ */
+#define PARAM_ID_I_IN_CUTOFF 15
+/**
  * Допустимый шим нуля по напряжению, В.
  */
-#define PARAM_ID_U_ZERO_NOISE 13
+#define PARAM_ID_U_ZERO_NOISE 30
 /**
  * Допустимый шим нуля по току, А.
  */
-#define PARAM_ID_I_ZERO_NOISE 14
+#define PARAM_ID_I_ZERO_NOISE 31
 /**
  * Допустимый шим нуля по току ротора, А.
  */
-#define PARAM_ID_I_ROT_ZERO_NOISE 15
+#define PARAM_ID_I_ROT_ZERO_NOISE 32
 /**
  * Допустимый шим нуля по току возбуждения, А.
  */
-#define PARAM_ID_I_EXC_ZERO_NOISE 16
+#define PARAM_ID_I_EXC_ZERO_NOISE 33
 /**
  * Номинальное напряжение якоря двигателя, В.
  */
-#define PARAM_ID_U_ROT_NOM 20
+#define PARAM_ID_U_ROT_NOM 35
 /**
  * Разрешённое отклонение напряжения якоря, %.
  */
-#define PARAM_ID_U_ROT_ALLOW_VAR 21
+#define PARAM_ID_U_ROT_ALLOW_VAR 36
 /**
  * Критическое отклонение напряжения якоря, %.
  */
-#define PARAM_ID_U_ROT_CRIT_VAR 22
+#define PARAM_ID_U_ROT_CRIT_VAR 37
 /**
  * Номинальный ток якоря двигателя, А.
  */
-#define PARAM_ID_I_ROT_NOM 23
+#define PARAM_ID_I_ROT_NOM 40
 /**
  * Кратность токовой отсечки тока якоря.
  */
-#define PARAM_ID_I_ROT_CUTOFF_MULT 24
+#define PARAM_ID_I_ROT_CUTOFF_MULT 41
 /**
  * Разрешённое отклонение от тока якоря, %.
  */
-#define PARAM_ID_I_ROT_ALLOW_VAR 25
+#define PARAM_ID_I_ROT_ALLOW_VAR 42
 /**
  * Критическое отклонение от тока якоря, %.
  */
-#define PARAM_ID_I_ROT_CRIT_VAR 26
+#define PARAM_ID_I_ROT_CRIT_VAR 43
 /**
  * Ток возбуждения двигателя, А.
  */
-#define PARAM_ID_I_EXC 27
+#define PARAM_ID_I_EXC 45
 /**
  * Разрешённое отклонение от тока возбуждения, %.
  */
-#define PARAM_ID_I_EXC_ALLOW_VAR 28
+#define PARAM_ID_I_EXC_ALLOW_VAR 46
 /**
  * Критическое отклонение от тока возбуждения, %.
  */
-#define PARAM_ID_I_EXC_CRIT_VAR 29
+#define PARAM_ID_I_EXC_CRIT_VAR 47
 /**
  * Фаза возбуждения.
  */
@@ -134,6 +138,10 @@
  * Время срабатывания тепловой защиты при шестикратном перегрузе по току.
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 100
+/**
+ * Фаза для которой необходимо вычислять ток.
+ */
+#define PARAM_ID_CALC_PHASE_CURRENT 150
 /**
  * Данные калибровки канала АЦП Ua.
  */

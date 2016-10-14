@@ -81,7 +81,7 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     
     ui.need_update = true;
     ui.last_update_time = 0;
-    ui.update_period = system_counter_ticks_per_sec() / 10;
+    ui.update_period = system_counter_ticks_per_sec() / 4;
     
     return E_NO_ERROR;
 }

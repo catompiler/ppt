@@ -14,7 +14,7 @@
 
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 62
+#define PARAMETERS_REAL_COUNT 64
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 19
 // Общее число параметров.
@@ -25,6 +25,7 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_U_NOM,           PARAM_TYPE_UINT,      0,       1000,      220,        0),
     PARAM_DESCR(PARAM_ID_U_NOM_ALLOW_VAR, PARAM_TYPE_UINT,      0,       10,        5,          0), // %
     PARAM_DESCR(PARAM_ID_U_NOM_CRIT_VAR,  PARAM_TYPE_UINT,      0,       20,        10,         0), // %
+    PARAM_DESCR(PARAM_ID_I_IN_CUTOFF,     PARAM_TYPE_UINT,      0,       1000,      200,        0),
     PARAM_DESCR(PARAM_ID_U_ZERO_NOISE,    PARAM_TYPE_FRACT_100, F32I(0), F32I(10),  F32I(10),   0),
     PARAM_DESCR(PARAM_ID_I_ZERO_NOISE,    PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32(1, 10), 0),
     PARAM_DESCR(PARAM_ID_I_ROT_ZERO_NOISE,PARAM_TYPE_FRACT_100, F32I(0), F32I(100), F32I(5),    0),
@@ -60,6 +61,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_TRIAC_EXC_OPEN_TIME,      PARAM_TYPE_UINT,      0,         1000,         200,     0),
     
     PARAM_DESCR(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I, PARAM_TYPE_FRACT_100, 0, F32I(100), F32I(5), 0),
+            
+    PARAM_DESCR(PARAM_ID_CALC_PHASE_CURRENT,     PARAM_TYPE_UINT,  0,    3,    0,   0),
     
     PARAM_DESCR(PARAM_ID_CALIBRATION_DATA_Ua,    PARAM_TYPE_UINT,  0,    4096,     2048,    0),
     PARAM_DESCR(PARAM_ID_CALIBRATION_DATA_Ub,    PARAM_TYPE_UINT,  0,    4096,     2048,    0),

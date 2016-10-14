@@ -261,7 +261,7 @@ void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
-        drive_power_process_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
+        drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
         //timer_cc_count ++;
     }
@@ -536,8 +536,8 @@ static void init_periph_clock(void)
     // TIM7.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
     // Backup domain + RTC.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
 }
 
 static void init_usart(void)
@@ -565,6 +565,12 @@ static void init_usart(void)
     NVIC_EnableIRQ(USART3_IRQn);
 }
 
+static void init_PDR(void)
+{
+    PWR->CR |= PWR_CR_PLS_2V9;
+    PWR->CR |= PWR_CR_PVDE;
+}
+
 static void init_rtc(void)
 {
     rtc_init();
@@ -575,6 +581,8 @@ static void init_rtc(void)
         RCC_BackupResetCmd(ENABLE);
         __NOP();
         RCC_BackupResetCmd(DISABLE);
+        
+        PWR_BackupAccessCmd(ENABLE);
         
         RCC_LSEConfig(RCC_LSE_ON);
         while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET);
@@ -805,7 +813,7 @@ static void init_eeprom(void)
     GPIO_Init(M95X_CE_GPIO, &gpio_ce);
     
     m95x_init_t m95x_is;
-    m95x_is.page = M95X_PAGE_DEFAULT;
+    m95x_is.page = M95X_PAGE_128; //M95X_PAGE_64
     m95x_is.spi = &spi2;
     m95x_is.transfer_id = M95X_DEFAULT_TRANSFER_ID;
     m95x_is.ce_gpio = M95X_CE_GPIO;
@@ -1402,6 +1410,7 @@ int main(void)
     init_sys_counter();
     
     init_periph_clock();
+    init_PDR();
     
     remap_config();
     

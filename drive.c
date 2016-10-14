@@ -352,6 +352,29 @@ static void drive_handle_power_check(drive_pwr_check_res_t res, uint32_t under_w
 }
 
 /**
+ * Проверяет значение входов питания на момент получения данных АЦП.
+ */
+static void drive_check_power_inst(void)
+{
+    // Токи.
+    // A.
+    drive_handle_power_check(
+        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ia)),
+            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ia, DRIVE_POWER_ERROR_OVERFLOW_Ia
+        );
+    // B.
+    drive_handle_power_check(
+        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ib)),
+            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ib, DRIVE_POWER_ERROR_OVERFLOW_Ib
+        );
+    // C.
+    drive_handle_power_check(
+        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ic)),
+            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ic, DRIVE_POWER_ERROR_OVERFLOW_Ic
+        );
+}
+
+/**
  * Проверка напряжений фаз.
  */
 static void drive_check_power_u_in(void)
@@ -1096,7 +1119,11 @@ err_t drive_update_settings(void)
     drive_protection_set_exc_current(settings_valuef(PARAM_ID_I_EXC),
                                      settings_valueu(PARAM_ID_I_EXC_ALLOW_VAR),
                                      settings_valueu(PARAM_ID_I_EXC_CRIT_VAR));
+    
+    drive_protection_set_phases_current_cutoff(settings_valuef(PARAM_ID_I_IN_CUTOFF));
 
+    drive_power_set_phase_calc_current((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_CURRENT));
+    
     drive.settings.stop_rot_periods = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
     drive.settings.stop_exc_periods = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
     drive.settings.start_exc_periods = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_POWER_NULL_SENSORS_FREQ;
@@ -1365,4 +1392,13 @@ void drive_null_timer_irq_handler(void)
         
         drive_states_process(phase);
     }
+}
+
+err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)
+{
+    err_t err = drive_power_process_adc_values(channels, adc_values);
+    
+    drive_check_power_inst();
+    
+    return err;
 }

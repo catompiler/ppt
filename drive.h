@@ -201,11 +201,11 @@ typedef enum _Drive_Stopping {
 
 //! Перечисление состояний останова привода при ошибке.
 typedef enum _Drive_Err_Stopping {
-    DRIVE_ERR_STOPPING_NONE = 0, //!< Не останавливается.
-    DRIVE_ERR_STOPPING_STOP, //!< Нужно остановить.
-    DRIVE_ERR_STOPPING_WAIT_ROT, //!< Ожидане остановки якоря.
-    DRIVE_ERR_STOPPING_WAIT_EXC, //!< Ожидане возвращения к нулю возбуждения.
-    DRIVE_ERR_STOPPING_DONE //!< Остановлен.
+    DRIVE_ERR_STOPPING_NONE     = 0, //!< Не останавливается.
+    DRIVE_ERR_STOPPING_STOP     = 1, //!< Нужно остановить.
+    DRIVE_ERR_STOPPING_WAIT_ROT = 2, //!< Ожидане остановки якоря.
+    DRIVE_ERR_STOPPING_WAIT_EXC = 3, //!< Ожидане возвращения к нулю возбуждения.
+    DRIVE_ERR_STOPPING_DONE     = 4//!< Остановлен.
 } drive_err_stopping_t;
 
 
@@ -542,5 +542,13 @@ ALWAYS_INLINE static void drive_phases_timer_irq_handler(void)
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
  */
 extern void drive_null_timer_irq_handler(void);
+
+/**
+ * Обрабатывает очередные значения АЦП.
+ * @param channels Маска каналов АЦП.
+ * @param adc_values Значения АЦП.
+ * @return Код ошибки.
+ */
+extern err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values);
 
 #endif	/* DRIVE_H */
