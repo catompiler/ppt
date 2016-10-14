@@ -114,6 +114,16 @@ ALWAYS_INLINE static fixed32_t ramp_current_reference(ramp_t* ramp)
 }
 
 /**
+ * Получает шаг изменения задания.
+ * @param ramp Разгон.
+ * @return Шаг изменения задания.
+ */
+ALWAYS_INLINE static fixed32_t ramp_reference_step(ramp_t* ramp)
+{
+    return ramp->step_ref;
+}
+
+/**
  * Получает флаг завершения разгона или торможения.
  * @param ramp Разгон.
  * @return Флаг завершения разгона или торможения.

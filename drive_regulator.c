@@ -1,5 +1,6 @@
 #include "drive_regulator.h"
 #include "pid_controller/pid_controller.h"
+#include "utils/utils.h"
 #include <string.h>
 
 
@@ -14,7 +15,7 @@
 typedef struct _Drive_Regulator {
     drive_regulator_state_t state; //!< Состояние регулятора.
     
-    reference_t reference; //!< Задание.
+    fixed32_t reference; //!< Задание.
     
     ramp_t rot_ramp; //!< Разгон.
     
@@ -60,7 +61,7 @@ drive_regulator_state_t drive_regulator_state(void)
 
 reference_t drive_regulator_reference(void)
 {
-    return regulator.reference;
+    return fixed32_get_int(regulator.reference);
 }
 
 fixed32_t drive_regulator_current_reference(void)
@@ -81,20 +82,32 @@ err_t drive_regulator_set_reference(reference_t reference)
     }
     
     if(err == E_NO_ERROR){
-        regulator.reference = reference;
+        regulator.reference = fixed32_make_from_int(reference);
     }
     
     return err;
 }
 
-bool drive_regulator_inc_reference(void)
+void drive_regulator_inc_reference(void)
 {
-    return ramp_inc_reference(&regulator.rot_ramp);
+    fixed32_t new_ref = regulator.reference + ramp_reference_step(&regulator.rot_ramp);
+    regulator.reference = CLAMP(new_ref, REFERENCE_MIN_F, REFERENCE_MAX_F);
+    
+    if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
+       regulator.state == DRIVE_REGULATOR_STATE_START){
+        ramp_set_target_reference(&regulator.rot_ramp, fixed32_make_from_int(regulator.reference));
+    }
 }
 
-bool drive_regulator_dec_reference(void)
+void drive_regulator_dec_reference(void)
 {
-    return ramp_dec_reference(&regulator.rot_ramp);
+    fixed32_t new_ref = regulator.reference - ramp_reference_step(&regulator.rot_ramp);
+    regulator.reference = CLAMP(new_ref, REFERENCE_MIN_F, REFERENCE_MAX_F);
+    
+    if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
+       regulator.state == DRIVE_REGULATOR_STATE_START){
+        ramp_set_target_reference(&regulator.rot_ramp, fixed32_make_from_int(regulator.reference));
+    }
 }
 
 void drive_regulator_start(void)
@@ -102,7 +115,7 @@ void drive_regulator_start(void)
     if(regulator.state == DRIVE_REGULATOR_STATE_IDLE ||
        regulator.state == DRIVE_REGULATOR_STATE_STOP){
         regulator.state = DRIVE_REGULATOR_STATE_START;
-        ramp_set_target_reference(&regulator.rot_ramp, regulator.reference);
+        ramp_set_target_reference(&regulator.rot_ramp, fixed32_get_int(regulator.reference));
     }
 }
 
@@ -237,7 +250,7 @@ bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_exc_back)
             return false;
         case DRIVE_REGULATOR_STATE_START:
             drive_regulator_regulate_impl(u_rot_back, i_exc_back);
-            if(ramp_current_reference(&regulator.rot_ramp) >= fixed32_make_from_int(regulator.reference)){
+            if(ramp_current_reference(&regulator.rot_ramp) >= regulator.reference){
                 regulator.state = DRIVE_REGULATOR_STATE_RUN;
             }
             break;

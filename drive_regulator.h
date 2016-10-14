@@ -23,8 +23,10 @@ typedef enum _Drive_Regulator_State {
 typedef ramp_reference_t reference_t;
 //! Минимальное задание.
 #define REFERENCE_MIN 0
+#define REFERENCE_MIN_F 0
 //! Максимальное задание.
 #define REFERENCE_MAX 100
+#define REFERENCE_MAX_F 0x640000
 
 /**
  * Инициализирует регулятор привода.
@@ -75,13 +77,13 @@ extern err_t drive_regulator_set_reference(reference_t reference);
  * Увеличивает значение задания.
  * @return Флаг изменения задания.
  */
-extern bool drive_regulator_inc_reference(void);
+extern void drive_regulator_inc_reference(void);
 
 /**
  * Уменьшает значение задания.
  * @return Флаг изменения задания.
  */
-extern bool drive_regulator_dec_reference(void);
+extern void drive_regulator_dec_reference(void);
 
 /**
  * Запускает регулирование.
