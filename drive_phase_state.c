@@ -41,6 +41,11 @@ ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
 {
     if(state.timer_cnt){
         return TIM_GetCounter(state.timer_cnt);
+        /*
+        uint16_t time = TIM_GetCounter(state.timer_cnt);
+        if(time != 0) return (phase_time_t)time;
+        return PHASE_TIME_US_MAX + 1;
+        */
     }
     return 0;
 }
@@ -75,6 +80,7 @@ ALWAYS_INLINE static void drive_phase_state_start_timer(void)
 {
     if(state.timer_cnt){
         TIM_SetCounter(state.timer_cnt, 0);
+        TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
         TIM_Cmd(state.timer_cnt, ENABLE);
     }
 }
@@ -204,7 +210,7 @@ void drive_phase_state_handle(phase_t phase)
     switch(state.cur_phase){
         case PHASE_UNK:
             state.cur_phase = phase;
-            return;
+            break;
         case PHASE_A:
             drive_phase_state_a_process(phase);
             break;
@@ -310,16 +316,32 @@ void drive_phase_state_reset(void)
     state.cur_phase = PHASE_UNK;
     state.drive_dir = DRIVE_DIR_UNK;
     state.phase_errs = PHASE_NO_ERROR;
-    drive_phase_state_stop_timer();
+    //drive_phase_state_stop_timer();
     drive_phase_state_reset_timer();
 }
 
-void drive_phase_state_timer_irq_handler(void)
+void drive_phase_state_process_phase_timeout(phase_t phase)
 {
-    TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
+    drive_phase_state_start_timer();
     
     phase_time_t time = PHASE_TIME_US_MAX + 1;
-    phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
+    //phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
+    
+    switch(state.cur_phase){
+        case PHASE_UNK:
+            state.cur_phase = phase;
+            break;
+        case PHASE_A:
+            drive_phase_state_a_process(phase);
+            break;
+        case PHASE_B:
+            drive_phase_state_b_process(phase);
+            break;
+        case PHASE_C:
+            drive_phase_state_c_process(phase);
+            break;
+    }
+    
     drive_phase_state_set_time(phase, time);
     
     switch(phase){

@@ -1189,12 +1189,13 @@ static void init_phases_timer(void)
             tim_is.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
             tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &tim_is);
-    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
+    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Repetitive);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
     
     drive_set_phase_state_timer(TIM6);
     
     TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    TIM_Cmd(TIM6, ENABLE);
     
     NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
     NVIC_EnableIRQ(TIM6_IRQn);
@@ -1451,8 +1452,8 @@ int main(void)
     init_triacs();
     init_triacs_timers();
     
-    init_phases_timer();
     init_null_timer();
+    init_phases_timer();
     
     init_adc();
     init_adc_timer();

@@ -442,7 +442,7 @@ static void make_gui(void)
     gui_widget_set_visible(GUI_WIDGET(&gui.label_time_val), true);
     
     gui_label_init_parent(&gui.label_val, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_val, "Флаги:");
+    gui_label_set_text(&gui.label_val, "Знач:");
     gui_widget_move(GUI_WIDGET(&gui.label_val), 5, GUI_LABEL_TOP(1));
     gui_widget_resize(GUI_WIDGET(&gui.label_val), 50, GUI_LABEL_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.label_val), GUI_BORDER_SOLID);
@@ -576,7 +576,7 @@ static bool drive_gui_read_last_err(void)
 void drive_gui_update(void)
 {
     //gui_number_label_set_number(&gui.label_num, drive_keypad_state());
-    gui_number_label_set_number(&gui.label_num, drive_flags());
+    gui_number_label_set_number(&gui.label_num, drive_init_state());
     gui_number_label_set_number(&gui.label_num_state, drive_state());
     gui_number_label_set_number(&gui.label_num_errs, drive_errors());
     gui_number_label_set_number(&gui.label_num_pwr_errs, drive_power_errors());

@@ -531,17 +531,14 @@ extern void drive_triac_exc_timer_irq_handler(void);
 extern err_t drive_process_null_sensor(phase_t phase);
 
 /**
- * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
- */
-ALWAYS_INLINE static void drive_phases_timer_irq_handler(void)
-{
-    drive_phase_state_timer_irq_handler();
-}
-
-/**
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
  */
 extern void drive_null_timer_irq_handler(void);
+
+/**
+ * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
+ */
+extern void drive_phases_timer_irq_handler(void);
 
 /**
  * Обрабатывает очередные значения АЦП.

@@ -456,9 +456,9 @@ static void drive_check_power_running(void)
             DRIVE_POWER_ERROR_UNDERFLOW_Irot, DRIVE_POWER_ERROR_OVERFLOW_Irot
             );
     // Обрыв якоря.
-    if(drive_protection_check_rot_break(u_rot, i_rot, drive_regulator_current_u_ref()) != DRIVE_BREAK_CHECK_NORMAL){
-        drive_power_error_occured(DRIVE_POWER_ERROR_ROT_BREAK);
-    }
+    //if(drive_protection_check_rot_break(u_rot, i_rot, drive_regulator_current_u_ref()) != DRIVE_BREAK_CHECK_NORMAL){
+    //    drive_power_error_occured(DRIVE_POWER_ERROR_ROT_BREAK);
+    //}
     // Exc.
     drive_handle_power_check(
             drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)),
@@ -558,6 +558,10 @@ static void drive_process_digital_inputs(void)
     
     if(drive_dio_input_get_type_state(DRIVE_DIO_IN_REFERENCE_DEC, &state)){
         if(state) drive_regulator_dec_reference();
+    }
+    
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_CLEAR_ERRORS, &state)){
+        if(state) drive_clear_errors();
     }
 }
 
@@ -1392,6 +1396,22 @@ void drive_null_timer_irq_handler(void)
         
         drive_states_process(phase);
     }
+}
+
+void drive_phases_timer_irq_handler(void)
+{
+    TIM_SetCounter(drive.tim_null, 0);
+    TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
+    
+    phase_t phase = drive_phase_state_next_phase(
+                            drive_phase_sate_current_phase(),
+                            drive_phase_state_direction()
+                        );
+    
+    // Обработаем текущую фазу.
+    drive_phase_state_process_phase_timeout(phase);
+
+    drive_states_process(phase);
 }
 
 err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)

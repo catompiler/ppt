@@ -154,6 +154,6 @@ extern void drive_phase_state_reset(void);
 /**
  * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
  */
-extern void drive_phase_state_timer_irq_handler(void);
+extern void drive_phase_state_process_phase_timeout(phase_t phase);
 
 #endif  //DRIVE_PHASE_STATE_H
