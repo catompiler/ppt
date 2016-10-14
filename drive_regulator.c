@@ -91,22 +91,24 @@ err_t drive_regulator_set_reference(reference_t reference)
 void drive_regulator_inc_reference(void)
 {
     fixed32_t new_ref = regulator.reference + ramp_reference_step(&regulator.rot_ramp);
-    regulator.reference = CLAMP(new_ref, REFERENCE_MIN_F, REFERENCE_MAX_F);
+    if(new_ref > REFERENCE_MAX_F) new_ref = REFERENCE_MAX_F;
+    regulator.reference = new_ref;
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.rot_ramp, fixed32_make_from_int(regulator.reference));
+        ramp_set_target_reference(&regulator.rot_ramp, fixed32_get_int(regulator.reference));
     }
 }
 
 void drive_regulator_dec_reference(void)
 {
     fixed32_t new_ref = regulator.reference - ramp_reference_step(&regulator.rot_ramp);
-    regulator.reference = CLAMP(new_ref, REFERENCE_MIN_F, REFERENCE_MAX_F);
+    if(new_ref < REFERENCE_MIN_F) new_ref = REFERENCE_MIN_F;
+    regulator.reference = new_ref;
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.rot_ramp, fixed32_make_from_int(regulator.reference));
+        ramp_set_target_reference(&regulator.rot_ramp, fixed32_get_int(regulator.reference));
     }
 }
 
