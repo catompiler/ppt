@@ -22,7 +22,7 @@ typedef struct _DriveModbusId {
 } drive_modbus_id_t;
 #pragma pack(pop)
 
-
+#define DRIVE_ID 0xAA
 #define DRIVE_ID_MAGIC 0x4702
 #define DRIVE_ID_MAJOR 0x1
 #define DRIVE_ID_MINOR 0x2
@@ -435,10 +435,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
 static modbus_rtu_error_t drive_modbus_on_report_slave_id(modbus_rtu_slave_id_t* slave_id)
 {
     slave_id->status = MODBUS_RTU_RUN_STATUS_ON;
-    slave_id->id = &drive_modbus.id;
-    slave_id->id_size = sizeof(drive_modbus_id_t);
-    slave_id->data = NULL;
-    slave_id->data_size = 0;
+    slave_id->id = DRIVE_ID;
+    slave_id->data = &drive_modbus.id;
+    slave_id->data_size = sizeof(drive_modbus_id_t);
     
     return MODBUS_RTU_ERROR_NONE;
 }
