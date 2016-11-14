@@ -5,28 +5,129 @@
 #include <string.h>
 
 
+typedef enum _Phase_State {
+    PHASE_STATE_UNK = 0,
+    PHASE_STATE_A = 1,
+    PHASE_STATE_B = 2,
+    PHASE_STATE_C = 3,
+    PHASE_STATE_A_FWD = 4,
+    PHASE_STATE_B_FWD = 5,
+    PHASE_STATE_C_FWD = 6,
+    PHASE_STATE_A_BWD = 7,
+    PHASE_STATE_B_BWD = 8,
+    PHASE_STATE_C_BWD = 9,
+    PHASE_STATE_ERROR = 10
+} phase_state_t;
+
+typedef struct _Phase_State_Values {
+    phase_state_t state;
+    drive_dir_t dir;
+    drive_phase_error_t error;
+} phase_state_values_t;
+
+#define PHASE_STATES_COUNT 11
+#define PHASE_VALUES_COUNT 4 /* UNK + A + B + C */
+
+static const phase_state_values_t
+phase_states [PHASE_STATES_COUNT][PHASE_VALUES_COUNT] = {
+    { // PHASE_STATE_UNK
+        { PHASE_STATE_UNK, DRIVE_DIR_UNK,     PHASE_NO_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A,   DRIVE_DIR_UNK,     PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_B,   DRIVE_DIR_UNK,     PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_C,   DRIVE_DIR_UNK,     PHASE_NO_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_BC_ERROR }, // PHASE_A
+        { PHASE_STATE_B_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_C_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AC_ERROR }, // PHASE_B
+        { PHASE_STATE_C_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_C
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_B_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AB_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_A_FWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_BC_ERROR }, // PHASE_A
+        { PHASE_STATE_B_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_B_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_B_FWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_C_ERROR }, // PHASE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AC_ERROR }, // PHASE_B
+        { PHASE_STATE_C_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_C_FWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A_FWD, DRIVE_DIR_FORW,  PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_A_ERROR }, // PHASE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AB_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_A_BWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_BC_ERROR }, // PHASE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_C_ERROR }, // PHASE_B
+        { PHASE_STATE_C_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_B_BWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AC_ERROR }, // PHASE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_A_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_C_BWD
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_UNK_ERROR }, // PHASE_UNK
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_B_ERROR }, // PHASE_A
+        { PHASE_STATE_B_BWD, DRIVE_DIR_BACKW, PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_ERROR, DRIVE_DIR_UNK,   PHASE_AB_ERROR }, // PHASE_C
+    },
+    { // PHASE_STATE_ERROR
+        { PHASE_STATE_UNK, DRIVE_DIR_UNK,     PHASE_NO_ERROR }, // PHASE_UNK
+        { PHASE_STATE_A, DRIVE_DIR_UNK,       PHASE_NO_ERROR }, // PHASE_A
+        { PHASE_STATE_B, DRIVE_DIR_UNK,       PHASE_NO_ERROR }, // PHASE_B
+        { PHASE_STATE_C, DRIVE_DIR_UNK,       PHASE_NO_ERROR }, // PHASE_C
+    }/*,
+    { // PHASE_STATE_
+        { PHASE_STATE_, DRIVE_DIR_, PHASE__ERROR }, // PHASE_UNK
+        { PHASE_STATE_, DRIVE_DIR_, PHASE__ERROR }, // PHASE_A
+        { PHASE_STATE_, DRIVE_DIR_, PHASE__ERROR }, // PHASE_B
+        { PHASE_STATE_, DRIVE_DIR_, PHASE__ERROR }, // PHASE_C
+    },*/
+};
+
+#define PHASE_TIME_ERRORS_COUNT 3
+static const drive_phase_error_t
+phase_time_errors[PHASE_TIME_ERRORS_COUNT] = {
+    PHASE_A_TIME_ERROR,
+    PHASE_B_TIME_ERROR,
+    PHASE_C_TIME_ERROR
+};
+
 //! Тип состояния фазы.
 typedef struct _DrivePhaseState {
+    phase_state_t state; //!< Состояние фаз.
     phase_t cur_phase; //!< Текущая фаза.
     drive_dir_t drive_dir; //!< Направление.
     drive_phase_errors_t phase_errs; //!< Ошибки.
     TIM_TypeDef* timer_cnt; //!< Таймер - счётчик времени между фазами.
     phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
     drive_phase_state_error_callback_t error_callback; //!< Каллбэк ошибки фаз.
-} phase_state_t;
+} drive_phase_state_t;
 
-static phase_state_t state;
+static drive_phase_state_t state;
 
 
-
-ALWAYS_INLINE static void drive_phase_state_set_error(drive_phase_error_t error)
+ALWAYS_INLINE static void drive_phase_state_on_error(void)
 {
-    state.phase_errs |= error;
-}
-
-static void drive_phase_state_error_occured(drive_phase_error_t error)
-{
-    drive_phase_state_set_error(error);
     if(state.error_callback) state.error_callback();
 }
 
@@ -37,15 +138,20 @@ ALWAYS_INLINE static void drive_phase_state_set_time(phase_t phase, phase_time_t
     }
 }
 
+ALWAYS_INLINE static drive_phase_error_t drive_phase_state_get_time_error(phase_t phase)
+{
+    if(phase == PHASE_UNK) return PHASE_UNK_TIME_ERROR;
+    
+    return phase_time_errors[phase - 1];
+}
+
 ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
 {
     if(state.timer_cnt){
-        return TIM_GetCounter(state.timer_cnt);
-        /*
+        //return TIM_GetCounter(state.timer_cnt);
         uint16_t time = TIM_GetCounter(state.timer_cnt);
         if(time != 0) return (phase_time_t)time;
         return PHASE_TIME_US_MAX + 1;
-        */
     }
     return 0;
 }
@@ -80,110 +186,13 @@ ALWAYS_INLINE static void drive_phase_state_start_timer(void)
 {
     if(state.timer_cnt){
         TIM_SetCounter(state.timer_cnt, 0);
-        TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
         TIM_Cmd(state.timer_cnt, ENABLE);
     }
 }
 
-static void drive_phase_state_a_process(phase_t phase)
-{
-    drive_dir_t drive_dir;
-    switch(phase){
-        default:
-        case PHASE_UNK:
-            drive_phase_state_error_occured(PHASE_INVALID);
-            return;
-        case PHASE_A:
-            drive_phase_state_error_occured(PHASE_BC_ERROR);
-            return;
-        case PHASE_B:
-            drive_dir = DRIVE_DIR_FORW;
-            break;
-        case PHASE_C:
-            drive_dir = DRIVE_DIR_BACKW;
-            break;
-    }
-    
-    if(state.drive_dir == DRIVE_DIR_UNK){
-        state.drive_dir = drive_dir;
-    }else if(state.drive_dir != drive_dir){
-        if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_error_occured(PHASE_B_ERROR);
-        }else{//DRIVE_DIR_BACKW
-            drive_phase_state_error_occured(PHASE_C_ERROR);
-        }
-    }
-    
-    state.cur_phase = phase;
-}
-
-static void drive_phase_state_b_process(phase_t phase)
-{
-    drive_dir_t drive_dir;
-    switch(phase){
-        default:
-        case PHASE_UNK:
-            drive_phase_state_error_occured(PHASE_INVALID);
-            return;
-        case PHASE_B:
-            drive_phase_state_error_occured(PHASE_AC_ERROR);
-            return;
-        case PHASE_C:
-            drive_dir = DRIVE_DIR_FORW;
-            break;
-        case PHASE_A:
-            drive_dir = DRIVE_DIR_BACKW;
-            break;
-    }
-    
-    if(state.drive_dir == DRIVE_DIR_UNK){
-        state.drive_dir = drive_dir;
-    }else if(state.drive_dir != drive_dir){
-        if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_error_occured(PHASE_C_ERROR);
-        }else{//DRIVE_DIR_BACKW
-            drive_phase_state_error_occured(PHASE_A_ERROR);
-        }
-    }
-    
-    state.cur_phase = phase;
-}
-
-static void drive_phase_state_c_process(phase_t phase)
-{
-    drive_dir_t drive_dir;
-    switch(phase){
-        default:
-        case PHASE_UNK:
-            drive_phase_state_error_occured(PHASE_INVALID);
-            return;
-        case PHASE_C:
-            drive_phase_state_error_occured(PHASE_AB_ERROR);
-            return;
-        case PHASE_A:
-            drive_dir = DRIVE_DIR_FORW;
-            break;
-        case PHASE_B:
-            drive_dir = DRIVE_DIR_BACKW;
-            break;
-    }
-    
-    if(state.drive_dir == DRIVE_DIR_UNK){
-        state.drive_dir = drive_dir;
-    }else if(state.drive_dir != drive_dir){
-        if(state.drive_dir == DRIVE_DIR_FORW){
-            drive_phase_state_error_occured(PHASE_A_ERROR);
-        }else{//DRIVE_DIR_BACKW
-            drive_phase_state_error_occured(PHASE_B_ERROR);
-        }
-    }
-    
-    state.cur_phase = phase;
-}
-
 err_t drive_phase_state_init(void)
 {
-    memset(&state, 0x0, sizeof(phase_state_t));
+    memset(&state, 0x0, sizeof(drive_phase_state_t));
     
     return E_NO_ERROR;
 }
@@ -204,43 +213,25 @@ err_t drive_phase_state_set_timer(TIM_TypeDef* TIM)
 
 void drive_phase_state_handle(phase_t phase)
 {
+    drive_phase_state_stop_timer();
     phase_time_t time = drive_phase_state_get_cur_time();
     drive_phase_state_start_timer();
     
-    if(phase == PHASE_UNK) return;
+    const phase_state_values_t* state_values = 
+                    &phase_states[state.state][phase];
     
-    switch(state.cur_phase){
-        case PHASE_UNK:
-            state.cur_phase = phase;
-            break;
-        case PHASE_A:
-            drive_phase_state_a_process(phase);
-            break;
-        case PHASE_B:
-            drive_phase_state_b_process(phase);
-            break;
-        case PHASE_C:
-            drive_phase_state_c_process(phase);
-            break;
-    }
+    state.state = state_values->state;
+    state.drive_dir = state_values->dir;
+    state.phase_errs = state_values->error;
+    state.cur_phase = phase;
     
     drive_phase_state_set_time(phase, time);
     
     if(!drive_phase_state_time_check(time)){
-        switch(phase){
-            default:
-                break;
-            case PHASE_A:
-                drive_phase_state_error_occured(PHASE_A_TIME_ERROR);
-                break;
-            case PHASE_B:
-                drive_phase_state_error_occured(PHASE_B_TIME_ERROR);
-                break;
-            case PHASE_C:
-                drive_phase_state_error_occured(PHASE_C_TIME_ERROR);
-                break;
-        }
+        state.phase_errs |= drive_phase_state_get_time_error(phase);
     }
+    
+    if(state.phase_errs != PHASE_NO_ERROR) drive_phase_state_on_error();
 }
 
 drive_phase_errors_t drive_phase_state_errors(void)
@@ -318,47 +309,21 @@ void drive_phase_state_reset(void)
     state.cur_phase = PHASE_UNK;
     state.drive_dir = DRIVE_DIR_UNK;
     state.phase_errs = PHASE_NO_ERROR;
-    //drive_phase_state_stop_timer();
+    state.state = PHASE_STATE_UNK;
+    drive_phase_state_stop_timer();
     drive_phase_state_reset_timer();
 }
 
-void drive_phase_state_process_phase_timeout(phase_t phase)
+void drive_phase_state_process_phase_timeout(void)
 {
-    drive_phase_state_start_timer();
-    
-    if(phase == PHASE_UNK) return;
+    if(state.timer_cnt) TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
     
     phase_time_t time = PHASE_TIME_US_MAX + 1;
-    //phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
-    
-    switch(state.cur_phase){
-        case PHASE_UNK:
-            state.cur_phase = phase;
-            break;
-        case PHASE_A:
-            drive_phase_state_a_process(phase);
-            break;
-        case PHASE_B:
-            drive_phase_state_b_process(phase);
-            break;
-        case PHASE_C:
-            drive_phase_state_c_process(phase);
-            break;
-    }
+    phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
     
     drive_phase_state_set_time(phase, time);
     
-    switch(phase){
-        default:
-            break;
-        case PHASE_A:
-            drive_phase_state_error_occured(PHASE_A_TIME_ERROR);
-            break;
-        case PHASE_B:
-            drive_phase_state_error_occured(PHASE_B_TIME_ERROR);
-            break;
-        case PHASE_C:
-            drive_phase_state_error_occured(PHASE_C_TIME_ERROR);
-            break;
-    }
+    state.phase_errs |= drive_phase_state_get_time_error(phase);
+    
+    drive_phase_state_on_error();
 }

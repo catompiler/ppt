@@ -58,16 +58,17 @@ typedef enum _DriveDir {
 //! Тип ошибки.
 typedef enum _DrivePhaseErr {
     PHASE_NO_ERROR     = 0,
-    PHASE_INVALID      = 0x1,
+    PHASE_UNK_ERROR    = 0x1,
     PHASE_A_ERROR      = 0x2,
     PHASE_B_ERROR      = 0x4,
     PHASE_C_ERROR      = 0x8,
-    PHASE_AB_ERROR     = 0x10,
-    PHASE_BC_ERROR     = 0x20,
-    PHASE_AC_ERROR     = 0x40,
-    PHASE_A_TIME_ERROR = 0x80,
-    PHASE_B_TIME_ERROR = 0x100,
-    PHASE_C_TIME_ERROR = 0x200
+    PHASE_AB_ERROR     = 0x6,
+    PHASE_BC_ERROR     = 0xC,
+    PHASE_AC_ERROR     = 0xA,
+    PHASE_UNK_TIME_ERROR = 0x10,
+    PHASE_A_TIME_ERROR = 0x20,
+    PHASE_B_TIME_ERROR = 0x40,
+    PHASE_C_TIME_ERROR = 0x80
 } drive_phase_error_t;
 
 //! Тип ошибок фаз.
@@ -154,6 +155,6 @@ extern void drive_phase_state_reset(void);
 /**
  * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
  */
-extern void drive_phase_state_process_phase_timeout(phase_t phase);
+extern void drive_phase_state_process_phase_timeout(void);
 
 #endif  //DRIVE_PHASE_STATE_H
