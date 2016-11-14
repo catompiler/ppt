@@ -15,7 +15,7 @@ SRC_LIBS += circular_buffer usart_buf newlib_stubs\
 	    i2c pca9555 list key_input scheduler\
 	    gui gui_object gui_widget gui_label\
 	    gui_number_label gui_checkbox gui_spinbox\
-	    gui_button mylib pid_controller m95x storage\
+	    gui_button pid_controller m95x storage\
 	    crc16_ccitt drive_events bsqrt usart_bus modbus_rtu
 
 
@@ -108,7 +108,7 @@ STD_PERIPH_SRC  = $(STD_PERIPH_PATH)/src
 STD_PERIPH_INC  = $(STD_PERIPH_PATH)/inc
 
 # Путь к собственным библиотекам в исходниках.
-SRC_LIBS_PATH     = ../lib ../libs
+SRC_LIBS_PATH     = ../lib
 # Пути ко всем собственным библиотекам в исходниках.
 SRC_LIBS_ALL_PATH = $(wildcard $(addsuffix /*, $(SRC_LIBS_PATH)))
 

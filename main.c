@@ -31,12 +31,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-/******************************************************************************/
-#include "Mylib/defines.h"
-#include "Mylib/mylib.h"
-#include "I2Clib/I2Clib.h"
-#include "drive_tasks.h"
-/******************************************************************************/
 
 //! Буфер записи USART.
 #define USART_WRITE_BUFFER_SIZE 1024
@@ -120,9 +114,12 @@ static tft9341_t tft;
 #define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS)
 //! Буфер ADC.
 static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
-
 //! Число измерений ADC.
-//static volatile int timer_cc_count = 0;
+#define ADC_MEASUREMENTS_PER_PERIOD 128
+//! Число измерений ADC для вычисления питания.
+#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 4)
+//! Число выполненных измерений ADC.
+static unsigned int adc_data_measured = 0;
 
 
 // Константы для цифровых входов-выходов.
@@ -154,27 +151,27 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 /*
  * Приоритеты прерываний.
  */
-#define IRQ_PRIOR_ADC_DMA 1
-#define IRQ_PRIOR_NULL_TIMER 2
-#define IRQ_PRIOR_NULL_SENSORS 2
-#define IRQ_PRIOR_PHASES_TIMER 2
-#define IRQ_PRIOR_TRIACS_TIMER 1
-#define IRQ_PRIOR_TRIAC_EXC_TIMER 1
-#define IRQ_PRIOR_I2C1 3
-#define IRQ_PRIOR_SPI1 3
-#define IRQ_PRIOR_SPI2 3
-#define IRQ_PRIOR_KEYPAD 4
-#define IRQ_PRIOR_USART 3
+#define IRQ_PRIOR_TRIACS_TIMER 0
+#define IRQ_PRIOR_TRIAC_EXC_TIMER 0
+#define IRQ_PRIOR_NULL_SENSORS 1
+#define IRQ_PRIOR_ADC_DMA 2
+#define IRQ_PRIOR_NULL_TIMER 4
+#define IRQ_PRIOR_PHASES_TIMER 4
 #define IRQ_PRIOR_MODBUS_USART 3
-#define IRQ_PRIOR_DMA_CH1 3
-#define IRQ_PRIOR_DMA_CH2 3 // spi1
-#define IRQ_PRIOR_DMA_CH3 3 // spi1
-#define IRQ_PRIOR_DMA_CH4 3 // spi2 usart1 (modbus)
-#define IRQ_PRIOR_DMA_CH5 3 // spi2 usart1 (modbus)
-#define IRQ_PRIOR_DMA_CH6 3 // i2c1 usart2 (modbus)
-#define IRQ_PRIOR_DMA_CH7 3 // i2c1 usart2 (modbus)
-#define IRQ_PRIOR_RTC 4
-#define IRQ_PRIOR_RTC_ALARM 4
+#define IRQ_PRIOR_I2C1 5
+#define IRQ_PRIOR_SPI1 5
+#define IRQ_PRIOR_SPI2 5
+#define IRQ_PRIOR_KEYPAD 6
+#define IRQ_PRIOR_USART 5
+#define IRQ_PRIOR_DMA_CH1 5
+#define IRQ_PRIOR_DMA_CH2 5 // spi1
+#define IRQ_PRIOR_DMA_CH3 5 // spi1
+#define IRQ_PRIOR_DMA_CH4 5 // spi2 usart1 (modbus)
+#define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus)
+#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_RTC 6
+#define IRQ_PRIOR_RTC_ALARM 6
 
 
 /*
@@ -263,7 +260,11 @@ void DMA1_Channel1_IRQHandler(void)
         
         drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
-        //timer_cc_count ++;
+        if(++ adc_data_measured >= ADC_MEASUREMENTS_FOR_CALCULATION){
+            adc_data_measured = 0;
+            
+            drive_process_power_accumulated_data(DRIVE_POWER_CHANNELS);
+        }
     }
 }
 
@@ -1189,13 +1190,13 @@ static void init_phases_timer(void)
             tim_is.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
             tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
     TIM_TimeBaseInit(TIM6, &tim_is);
-    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Repetitive);                    // Однопульсный режим таймера
+    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
     TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
     
     drive_set_phase_state_timer(TIM6);
     
     TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    TIM_Cmd(TIM6, ENABLE);
+    //TIM_Cmd(TIM6, ENABLE);
     
     NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
     NVIC_EnableIRQ(TIM6_IRQn);
@@ -1440,10 +1441,6 @@ int main(void)
     
     scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
     
-    init_modbus_usart();
-    init_modbus();
-    init_drive_modbus();
-    
     init_gpio();
     
     init_drive();
@@ -1452,13 +1449,17 @@ int main(void)
     init_triacs();
     init_triacs_timers();
     
-    init_null_timer();
-    init_phases_timer();
-    
     init_adc();
     init_adc_timer();
     
+    init_phases_timer();
+    init_null_timer();
+    
     init_exti();
+    
+    init_modbus_usart();
+    init_modbus();
+    init_drive_modbus();
     
     init_drive_ui();
     
