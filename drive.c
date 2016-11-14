@@ -129,7 +129,7 @@ static void drive_set_state(drive_state_t state)
 /**
  * Восстанавливает состояние привода.
  */
-static void drive_save_state(void)
+ALWAYS_INLINE static void drive_save_state(void)
 {
     drive.saved_state = drive.state;
 }
@@ -137,9 +137,17 @@ static void drive_save_state(void)
 /**
  * Восстанавливает состояние привода.
  */
-static void drive_restore_state(void)
+ALWAYS_INLINE static void drive_restore_state(void)
 {
     drive_set_state(drive.saved_state);
+}
+
+/**
+ * Устанавливает сохранённое состояние привода.
+ */
+ALWAYS_INLINE static void drive_set_saved_state(drive_state_t state)
+{
+    drive.saved_state = state;
 }
 
 /**
@@ -280,9 +288,11 @@ static void drive_error_occured(drive_errors_t error)
     
     switch(drive_get_state()){
         case DRIVE_STATE_INIT:
-        case DRIVE_STATE_CALIBRATION:
         case DRIVE_STATE_IDLE:
             drive_set_state(DRIVE_STATE_ERROR);
+            break;
+        case DRIVE_STATE_CALIBRATION:
+            drive_set_saved_state(DRIVE_STATE_ERROR);
             break;
         case DRIVE_STATE_START:
         case DRIVE_STATE_RUN:
@@ -1288,7 +1298,7 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
 {
     err_t err = drive_power_process_adc_values(channels, adc_values);
     
-    //drive_check_power_inst();
+    drive_check_power_inst();
     
     return err;
 }
