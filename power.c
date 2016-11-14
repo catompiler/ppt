@@ -17,45 +17,62 @@ static void power_filter_reset(power_filter_t* filter)
     memset(filter, 0x0, sizeof(power_filter_t));
 }
 
-static void power_filter_put(power_filter_t* filter, int16_t value)
+static void power_filter_put(power_filter_t* filter, int32_t sum, uint16_t count)
 {
-    filter->buffer[filter->index] = value;
+    filter->buffer[filter->index].sum = sum;
+    filter->buffer[filter->index].count = count;
+    
     if(filter->count < POWER_FILTER_SIZE) filter->count ++;
     if(++ filter->index >= POWER_FILTER_SIZE) filter->index = 0;
 }
 
-static int power_filter_cmp(const void* a, const void* b)
+static void power_filter_copy_values(power_filter_t* filter, power_filter_value_t* values)
 {
-    return (*(const int16_t*)a - *(const int16_t*)b);
+    size_t i = 0;
+    size_t j = 0;
+    
+    for(; i < filter->count; i ++){
+        if(i != filter->index){
+            memcpy(&values[j ++], &filter->buffer[i], sizeof(power_filter_value_t));
+        }
+    }
 }
 
-static int16_t power_filter_calculate(power_filter_t* filter)
+static int power_filter_cmp(const void* a, const void* b)
 {
-    if(filter->count == 0) return 0;
+    return (((const power_filter_value_t*)a)->sum - ((const power_filter_value_t*)b)->sum);
+}
+
+static int32_t power_filter_calculate(power_filter_t* filter)
+{
+    if(filter->count <= 1) return false;
     
-    int16_t buffer[filter->count];
+    size_t count = filter->count - 1;
     
-    memcpy(buffer, filter->buffer, sizeof(int16_t) * filter->count);
+    power_filter_value_t buffer[count];
     
-    qsort(buffer, filter->count, sizeof(int16_t), power_filter_cmp);
+    //memcpy(buffer, filter->buffer, sizeof(power_filter_value_t) * filter->count);
+    power_filter_copy_values(filter, buffer);
+    
+    qsort(buffer, count, sizeof(power_filter_value_t), power_filter_cmp);
     
     int32_t val = 0;
+    int32_t count_val = 0;
     size_t from = 0;
-    size_t to = filter->count;
-    size_t avg_count = filter->count;
+    size_t to = count;
     
-    if(filter->count > (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX)){
+    if(count > (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX)){
         from += POWER_FILTER_SKIP_MIN;
         to -= POWER_FILTER_SKIP_MAX;
-        avg_count -= (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX);
     }
     
     while(from < to){
-        val += buffer[from];
+        val       += buffer[from].sum;
+        count_val += buffer[from].count;
         from ++;
     }
     
-    val /= (int32_t)avg_count;
+    val /= count_val;
     
     return val;
 }
@@ -116,7 +133,7 @@ ALWAYS_INLINE static void power_channel_set_soft_value(power_value_t* channel, f
     channel->real_value_inst = value;
     
     // Увеличим число значений в сумме.
-    channel->count_sum ++;
+    channel->count ++;
     
     // Если канал питания - AC.
     if(channel->type == POWER_CHANNEL_AC){
@@ -142,13 +159,14 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
 {
     // Значение нуля АЦП.
     channel->sum_zero += adc_value;
-    // Увеличим число измерений для нуля.
+    // Увеличим число измерений значения нуля.
     channel->count_zero ++;
     
     // Если канал не вычисляется программно.
     if(!channel->is_soft){
+        
         // Вычтем значение АЦП при нуле.
-        int32_t value = (int16_t)adc_value - channel->raw_zero_cal;
+        int32_t value = (int32_t)adc_value - channel->raw_zero_cal;
 
         // Мгновенное сырое значение канала АЦП.
         channel->raw_value_inst = value;
@@ -156,7 +174,7 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
         channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
 
         // Увеличим число измерений значений.
-        channel->count_sum ++;
+        channel->count ++;
         // Если канал питания - AC.
         if(channel->type == POWER_CHANNEL_AC){
             // Квадрат значения для RMS.
@@ -178,10 +196,6 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
 ALWAYS_INLINE err_t power_process_adc_value(power_t* power, size_t channel, uint16_t adc_value)
 {
     if(power->channels_count <= channel) return E_OUT_OF_RANGE;
-    
-    /*if(channel == 6 && adc_value > 1024){
-        printf("ADC[%d] == %u\n", (int)channel, (unsigned int)adc_value);
-    }*/
     
     power_channel_process_adc_value(&power->channels[channel], adc_value);
     
@@ -209,10 +223,42 @@ err_t power_process_adc_values(power_t* power, power_channels_t channels, uint16
 
 ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
 {
-    channel->count_sum = 0;
-    channel->count_zero = 0;
-    channel->sum_zero = 0;
     channel->sum = 0;
+    channel->sum_zero = 0;
+    channel->count = 0;
+    channel->count_zero = 0;
+}
+
+/**
+ * Обрабатывает накопленные значения заданного канала АЦП.
+ * @param channel Канал АЦП.
+ */
+ALWAYS_INLINE static void power_channel_process_acc_data(power_value_t* channel)
+{
+    if(channel->count != 0)
+        power_filter_put(&channel->filter_value, channel->sum, channel->count);
+    
+    if(channel->count_zero != 0)
+        power_filter_put(&channel->filter_zero, channel->sum_zero, channel->count_zero);
+    
+    power_channel_reset_sums(channel);
+}
+
+err_t power_process_accumulated_data(power_t* power, power_channels_t channels)
+{
+    if(channels == POWER_CHANNEL_NONE) return E_INVALID_VALUE;
+    
+    size_t i = 0;
+    
+    for(; channels != 0; channels >>= 1, i ++){
+        if(!(channels & 0x1)) continue;
+        
+        if(i >= power->channels_count) return E_OUT_OF_RANGE;
+        
+        power_channel_process_acc_data(&power->channels[i]);
+    }
+    
+    return E_NO_ERROR;
 }
 
 /**
@@ -221,33 +267,21 @@ ALWAYS_INLINE static void power_channel_reset_sums(power_value_t* channel)
  */
 ALWAYS_INLINE static void power_channel_calc(power_value_t* channel)
 {
-    if(channel->count_sum == 0){
-        channel->data_avail = false;
-        return;
-    }
+    int32_t value = power_filter_calculate(&channel->filter_value);
     
-    int16_t value = 0;
+    channel->raw_zero_cur = power_filter_calculate(&channel->filter_zero);
     
     if(channel->type == POWER_CHANNEL_AC){
-        value = bsqrti(channel->sum / channel->count_sum);
+        channel->raw_value = bsqrti(value);
     }else{
-        value = channel->sum / channel->count_sum;
+        channel->raw_value = value;
     }
-    
-    power_filter_put(&channel->filter, value);
-    channel->raw_value = power_filter_calculate(&channel->filter);
     
     if(!channel->is_soft){
         channel->real_value = (fixed32_t)channel->raw_value * channel->k;
     }else{
         channel->real_value = power_value_raw_to_soft(channel->raw_value);
     }
-    
-    if(channel->count_zero != 0){
-        channel->raw_zero_cur = channel->sum_zero / channel->count_zero;
-    }
-    
-    power_channel_reset_sums(channel);
     
     channel->data_avail = true;
 }
@@ -277,8 +311,8 @@ ALWAYS_INLINE static void power_channel_calibrate(power_value_t* channel)
 {
     channel->raw_zero_cal = channel->raw_zero_cur;
     channel->calibrated = true;
-    channel->data_avail = false;
-    power_channel_reset_sums(channel);
+    //channel->data_avail = false;
+    //power_channel_reset_sums(channel);
 }
 
 err_t power_calibrate(power_t* power, power_channels_t channels)
@@ -293,7 +327,7 @@ err_t power_calibrate(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_calibrate(&power->channels[i]);
-        power_filter_reset(&power->channels[i].filter);
+        //power_filter_reset(&power->channels[i].filter);
     }
     
     return E_NO_ERROR;
@@ -351,7 +385,8 @@ err_t power_reset_channels(power_t* power, power_channels_t channels)
         if(i >= power->channels_count) return E_OUT_OF_RANGE;
         
         power_channel_reset_sums(&power->channels[i]);
-        power_filter_reset(&power->channels[i].filter);
+        power_filter_reset(&power->channels[i].filter_value);
+        power_filter_reset(&power->channels[i].filter_zero);
     }
     
     return E_NO_ERROR;

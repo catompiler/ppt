@@ -13,7 +13,7 @@
 #include "defs/defs.h"
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE 15
+#define POWER_FILTER_SIZE (20 + 1)
 
 /**
  * Перечисление каналов АЦП.
@@ -49,12 +49,19 @@ typedef enum _Power_Channel_Type {
 } power_channel_type_t;
 
 /**
+ * Тип значения буфера фильтра.
+ */
+typedef struct _Power_Filter_Value {
+    int32_t sum; //!< Сумма значений.
+    uint16_t count; //!< Число значений.
+} power_filter_value_t;
+/**
  * Структура фильтра значений.
  */
 typedef struct _Power_Filter {
-    int16_t buffer[POWER_FILTER_SIZE]; //!< Буфер значений.
-    size_t index; //!< Текущий индекс.
-    size_t count; //!< Число элементов в буфере.
+    power_filter_value_t buffer[POWER_FILTER_SIZE]; //!< Буфер значений.
+    uint16_t index; //!< Текущий индекс.
+    uint16_t count; //!< Число элементов в буфере.
 } power_filter_t;
 
 /**
@@ -65,15 +72,16 @@ typedef struct _Power_Value {
     fixed32_t k; //!< Коэффициент пропорциональности.
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
-    int32_t sum_zero; //!< Сумма значений для вычисления нуля.
-    int32_t count_zero; //!< Число значений.
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
     int16_t raw_value; //!< Сырое значение с АЦП.
     fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
     fixed32_t real_value; //!< Значение в СИ.
     int32_t sum; //!< Сумма значений.
-    int32_t count_sum; //!< Число значений.
-    power_filter_t filter; //!< Фильтр значенией.
+    int32_t sum_zero; //!< Сумма значений для вычисления нуля.
+    uint16_t count; //!< Число значений.
+    uint16_t count_zero; //!< Число значений нуля.
+    power_filter_t filter_value; //!< Фильтр значенией.
+    power_filter_t filter_zero; //!< Фильтр нуля.
     bool is_soft; //!< Флаг программного вычисления канала.
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
@@ -82,11 +90,12 @@ typedef struct _Power_Value {
 //! Инициализирует структуру значения канала АЦП по месту объявления.
 #define MAKE_POWER_CHANNEL(arg_type, arg_k) { .type = arg_type, .k = arg_k,\
                                     .raw_zero_cal = 0, .raw_zero_cur = 0,\
-                                    .sum_zero = 0, .count_zero = 0,\
                                     .raw_value_inst = 0, .raw_value = 0,\
                                     .real_value_inst = 0, .real_value = 0,\
-                                    .sum = 0, .count_sum = 0,\
-                                    .filter = {0}, .is_soft = false,\
+                                    .sum = 0, .sum_zero = 0,\
+                                    .count = 0, .count_zero = 0,\
+                                    .filter_value = {0}, .filter_zero = {0},\
+                                    .is_soft = false,\
                                     .calibrated = false, .data_avail = false }
 
 /**
@@ -147,6 +156,14 @@ extern err_t power_process_soft_channel_value(power_t* power, size_t channel, fi
 extern err_t power_process_adc_values(power_t* power, power_channels_t channels, uint16_t* adc_values);
 
 /**
+ * Обрабатывает накопленные данные АЦП.
+ * @param power Питание.
+ * @param channels Маска каналов АЦП.
+ * @return Код ошибки.
+ */
+extern err_t power_process_accumulated_data(power_t* power, power_channels_t channels);
+
+/**
  * Вычисляет значения каналов АЦП.
  * @param power Питание.
  * @param channels Маска каналов АЦП.
@@ -161,6 +178,28 @@ extern err_t power_calc_values(power_t* power, power_channels_t channels);
  * @return Код ошибки.
  */
 extern err_t power_calibrate(power_t* power, power_channels_t channels);
+
+/**
+ * Получает множитель значения канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала АЦП.
+ * @return Множитель значения канала АЦП.
+ */
+ALWAYS_INLINE static fixed32_t power_value_multiplier(power_t* power, size_t channel)
+{
+    return power->channels[channel].k;
+}
+
+/**
+ * Устанавливает множитель значения канала АЦП.
+ * @param power Питание.
+ * @param channel Номер канала АЦП.
+ * @param data Множитель значения канала АЦП.
+ */
+ALWAYS_INLINE static void power_set_value_multiplier(power_t* power, size_t channel, fixed32_t mult)
+{
+    power->channels[channel].k = mult;
+}
 
 /**
  * Получает калибровочные данные канала АЦП.
@@ -235,7 +274,7 @@ ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t 
  */
 ALWAYS_INLINE static bool power_channel_data_filter_filled(const power_t* power, size_t channel)
 {
-    return power->channels[channel].filter.count == POWER_FILTER_SIZE;
+    return power->channels[channel].filter_value.count == POWER_FILTER_SIZE;
 }
 
 /**
@@ -312,7 +351,7 @@ ALWAYS_INLINE static int16_t power_channel_raw_zero_current(const power_t* power
  */
 ALWAYS_INLINE static size_t power_channel_samples_count(const power_t* power, size_t channel)
 {
-    return (size_t)power->channels[channel].count_sum;
+    return (size_t)power->channels[channel].count;
 }
 
 #endif	/* POWER_H */
