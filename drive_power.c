@@ -29,11 +29,10 @@ typedef struct _Oscillogram_Buf {
 
 //! Тип питания привода.
 typedef struct _Drive_Power {
-    phase_t power_phase; //!< Фаза отсчёта периодов измерения питания.
     power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
     power_t power; //!< Питание.
-    size_t processing_periods; //!< Число периодов для накопления и обработки данных.
-    size_t periods_processed; //!< Число периодов данных.
+    size_t processing_iters; //!< Число итераций для накопления и обработки данных.
+    size_t iters_processed; //!< Число итераций обработки данных.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
     phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
 } drive_power_t;
@@ -48,10 +47,21 @@ err_t drive_power_init(void)
     
     drive_power.osc_buf.pause_mark = DRIVE_POWER_OSC_CHANNEL_LEN;
     
-    drive_power.processing_periods = DRIVE_POWER_PROCESSING_PERIODS_DEFAULT;
+    drive_power.processing_iters = DRIVE_POWER_PROCESSING_ITERS_DEFAULT;
     
-    drive_power.power_phase = PHASE_UNK;
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x10000); // Ua //0x4478
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x10000); // Ub //0x44ac
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x10000); // Uc //0x450b
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0x10000); // Urot //0x6861
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x10000); // Irot //0x2e14
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x10000); // Iexc //0x1bd
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
     
+    /*
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x6FE1); // Ua //0x4478
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x5f11); // Ia
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x7037); // Ub //0x44ac
@@ -63,6 +73,7 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x321); // Iexc //0x1bd
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
+    */
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS);
     
@@ -71,23 +82,8 @@ err_t drive_power_init(void)
 
 void drive_power_reset(void)
 {
-    drive_power.power_phase = PHASE_UNK;
-    drive_power.processing_periods = DRIVE_POWER_PROCESSING_PERIODS_DEFAULT;
-    drive_power.periods_processed = 0;
-}
-
-phase_t drive_power_phase(void)
-{
-    return drive_power.power_phase;
-}
-
-err_t drive_power_set_phase(phase_t phase)
-{
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    
-    drive_power.power_phase = phase;
-    
-    return E_NO_ERROR;
+    drive_power.processing_iters = DRIVE_POWER_PROCESSING_ITERS_DEFAULT;
+    drive_power.iters_processed = 0;
 }
 
 phase_t drive_power_phase_calc_current(void)
@@ -128,16 +124,14 @@ void drive_power_set_phase_calc_current(phase_t phase)
     }
 }
 
-size_t drive_power_processing_periods(void)
+size_t drive_power_processing_iters(void)
 {
-    return drive_power.processing_periods;
+    return drive_power.processing_iters;
 }
 
-err_t drive_power_set_processing_periods(size_t periods)
+err_t drive_power_set_processing_iters(size_t iters)
 {
-    //if(periods == 0) return E_INVALID_VALUE;
-    
-    drive_power.processing_periods = periods;
+    drive_power.processing_iters = iters;
     
     return E_NO_ERROR;
 }
@@ -334,6 +328,13 @@ err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_va
     return err;
 }
 
+err_t drive_power_process_accumulated_data(power_channels_t channels)
+{
+    err_t err = power_process_accumulated_data(&drive_power.power, channels);
+    
+    return err;
+}
+
 /*bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
 {
     if(phase != drive_power.power_phase) return false;
@@ -352,15 +353,14 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
     if(err) *err = e;
 }
 
-bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
+bool drive_power_calc_values(power_channels_t channels, err_t* err)
 {
-    if(drive_power.processing_periods == 0){
+    if(drive_power.processing_iters == 0){
         drive_power_calc_values_impl(channels, err);
         return power_data_filter_filled(&drive_power.power, channels);
     }
-    if(phase != drive_power.power_phase) return false;
-    if(++ drive_power.periods_processed >= drive_power.processing_periods){
-        drive_power.periods_processed = 0;
+    if(++ drive_power.iters_processed >= drive_power.processing_iters){
+        drive_power.iters_processed = 0;
         drive_power_calc_values_impl(channels, err);
         return power_data_filter_filled(&drive_power.power, channels);
     }
@@ -370,6 +370,16 @@ bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* er
 err_t drive_power_calibrate(power_channels_t channels)
 {
     return power_calibrate(&drive_power.power, channels);
+}
+
+fixed32_t drive_power_value_multiplier(size_t channel)
+{
+    return power_value_multiplier(&drive_power.power, channel);
+}
+
+void drive_power_set_value_multiplier(size_t channel, fixed32_t mult)
+{
+    power_set_value_multiplier(&drive_power.power, channel, mult);
 }
 
 uint16_t drive_power_calibration_data(size_t channel)
@@ -384,7 +394,12 @@ void drive_power_set_calibration_data(size_t channel, uint16_t data)
 
 bool drive_power_data_avail(power_channels_t channels)
 {
-    return power_data_avail(&drive_power.power, channels);
+    return power_data_filter_filled(&drive_power.power, channels);
+}
+
+bool drive_power_new_data_avail(power_channels_t channels)
+{
+    return drive_power.iters_processed == 0 && drive_power_data_avail(channels);
 }
 
 err_t drive_power_reset_channels(power_channels_t channels)

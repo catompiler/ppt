@@ -39,11 +39,8 @@
 //! Частота сети.
 #define DRIVE_POWER_FREQ 50
 
-//! Частота срабатывания датчиков нуля.
-#define DRIVE_POWER_NULL_SENSORS_FREQ (DRIVE_POWER_FREQ * 3)
-
-//! Число периодов накопления и обработки данных по-умолчанию.
-#define DRIVE_POWER_PROCESSING_PERIODS_DEFAULT 1
+//! Число итераций накопления и обработки данных по-умолчанию.
+#define DRIVE_POWER_PROCESSING_ITERS_DEFAULT 3
 
 
 //! Тип значения в осциллограмме (fixed11_5_t).
@@ -103,19 +100,6 @@ extern err_t drive_power_init(void);
 extern void drive_power_reset(void);
 
 /**
- * Получает фазу начала измерений питания.
- * @return Фаза питания.
- */
-extern phase_t drive_power_phase(void);
-
-/**
- * Устанавливает фазу начала измерений питания.
- * @param phase Фаза питания.
- * @return Код ошибки.
- */
-extern err_t drive_power_set_phase(phase_t phase);
-
-/**
  * Получает фазу для которой нужно вычислять ток.
  * @return Фаза с вычислением тока.
  */
@@ -128,17 +112,17 @@ extern phase_t drive_power_phase_calc_current(void);
 extern void drive_power_set_phase_calc_current(phase_t phase);
 
 /**
- * Получает количество периодов накопления данных.
- * @return Количество периодов накопления данных.
+ * Получает количество итераций накопления данных.
+ * @return Количество итераций накопления данных.
  */
-extern size_t drive_power_processing_periods(void);
+extern size_t drive_power_processing_iters(void);
 
 /**
- * Устанавливает количество периодов накопления данных.
- * @param periods Количество периодов накопления данных.
+ * Устанавливает количество итераций накопления данных.
+ * @param periods Количество итераций накопления данных.
  * @return Код ошибки.
  */
-extern err_t drive_power_set_processing_periods(size_t periods);
+extern err_t drive_power_set_processing_iters(size_t iters);
 
 /**
  * Получает количество осциллограмм.
@@ -245,12 +229,19 @@ ALWAYS_INLINE static fixed32_t drive_power_osc_value_to_fixed32(osc_value_t valu
 extern err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_values);
 
 /**
+ * Обрабатывает накопленные данные АЦП.
+ * @param channels Маска каналов АЦП.
+ * @return Код ошибки.
+ */
+extern err_t drive_power_process_accumulated_data(power_channels_t channels);
+
+/**
  * Вычисляет значения каналов АЦП.
  * @param channels Маска каналов АЦП.
  * @param err Код ошибки.
  * @return Флаг обработки результатов, независимо от ошибки.
  */
-extern bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err);
+extern bool drive_power_calc_values(power_channels_t channels, err_t* err);
 
 /**
  * Записывает текущее значение нуля в калиброванное.
@@ -260,6 +251,20 @@ extern bool drive_power_calc_values(power_channels_t channels, phase_t phase, er
 extern err_t drive_power_calibrate(power_channels_t channels);
 
 /**
+ * Получает множитель значения канала АЦП.
+ * @param channel Номер канала АЦП.
+ * @return Множитель значения канала АЦП.
+ */
+extern fixed32_t drive_power_value_multiplier(size_t channel);
+
+/**
+ * Устанавливает множитель значения канала АЦП.
+ * @param channel Номер канала АЦП.
+ * @param data Множитель значения канала АЦП.
+ */
+extern void drive_power_set_value_multiplier(size_t channel, fixed32_t mult);
+
+/**
  * Получает калибровочные данные канала АЦП.
  * @param channel Номер канала АЦП.
  * @return Калибровочные данные канала АЦП.
@@ -267,7 +272,7 @@ extern err_t drive_power_calibrate(power_channels_t channels);
 extern uint16_t drive_power_calibration_data(size_t channel);
 
 /**
- * Получает калибровочные данные канала АЦП.
+ * Устанавливает калибровочные данные канала АЦП.
  * @param channel Номер канала АЦП.
  * @param data Калибровочные данные канала АЦП.
  */
@@ -279,6 +284,13 @@ extern void drive_power_set_calibration_data(size_t channel, uint16_t data);
  * @return Флаг доступности данных.
  */
 extern bool drive_power_data_avail(power_channels_t channels);
+
+/**
+ * Получает флаг доступности новых данных на всех заданных каналах АЦП.
+ * @param channels Каналы АЦП.
+ * @return Флаг доступности новых данных.
+ */
+extern bool drive_power_new_data_avail(power_channels_t channels);
 
 /**
  * Сбрасывает накопленные данные каналов АЦП.
