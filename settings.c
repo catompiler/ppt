@@ -96,6 +96,8 @@ static int32_t settings_param_get_int32(param_t* param)
             return data / 100;
         case PARAM_TYPE_FRACT_1000:
             return data / 1000;
+        case PARAM_TYPE_FRACT_10000:
+            return data / 10000;
     }
     
     return data;
@@ -127,6 +129,9 @@ static void settings_param_set_int32(param_t* param, int32_t value)
         case PARAM_TYPE_FRACT_1000:
             *data = value * 1000;
             break;
+        case PARAM_TYPE_FRACT_10000:
+            *data = value * 10000;
+            break;
     }
 }
 
@@ -152,6 +157,8 @@ static uint32_t settings_param_get_uint32(param_t* param)
             return data / 100;
         case PARAM_TYPE_FRACT_1000:
             return data / 1000;
+        case PARAM_TYPE_FRACT_10000:
+            return data / 10000;
     }
     
     return data;
@@ -183,6 +190,9 @@ static void settings_param_set_uint32(param_t* param, uint32_t value)
         case PARAM_TYPE_FRACT_1000:
             *data = value * 1000;
             break;
+        case PARAM_TYPE_FRACT_10000:
+            *data = value * 10000;
+            break;
     }
 }
 
@@ -208,6 +218,8 @@ static fixed32_t settings_param_get_fixed32(param_t* param)
             return fixed32_make_from_fract((fixed32_t)data, 100);
         case PARAM_TYPE_FRACT_1000:
             return fixed32_make_from_fract((fixed32_t)data, 1000);
+        case PARAM_TYPE_FRACT_10000:
+            return fixed32_make_from_fract((fixed32_t)data, 10000);
     }
     return fixed32_make_from_int((fixed32_t)data);
 }
@@ -262,6 +274,15 @@ static void settings_param_set_fixed32(param_t* param, fixed32_t value)
             int_part = fixed32_get_int(value);
             fract_part = fixed32_get_fract_by_denom(value, 1000);
             *data = int_part * 1000 + fract_part;
+            break;
+        case PARAM_TYPE_FRACT_10000:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 100000);
+            else
+                value -= fixed32_make_from_fract(5, 100000);
+            int_part = fixed32_get_int(value);
+            fract_part = fixed32_get_fract_by_denom(value, 10000);
+            *data = int_part * 10000 + fract_part;
             break;
     }
 }
@@ -322,6 +343,7 @@ err_t settings_default(void)
         case PARAM_TYPE_FRACT_10:
         case PARAM_TYPE_FRACT_100:
         case PARAM_TYPE_FRACT_1000:
+        case PARAM_TYPE_FRACT_10000:
             settings_param_set_valuef(param, descr->def.fixed_value);
             break;
     }
