@@ -127,6 +127,10 @@
  */
 #define PARAM_ID_EXC_START_TIME 82
 /**
+ * Время проверки фаз сети, мс.
+ */
+#define PARAM_ID_PHASES_CHECK_TIME 85
+/**
  * Длительность импульса открытия тиристоров, мкс.
  */
 #define PARAM_ID_TRIACS_PAIRS_OPEN_TIME 90
@@ -142,6 +146,50 @@
  * Фаза для которой необходимо вычислять ток.
  */
 #define PARAM_ID_CALC_PHASE_CURRENT 150
+/**
+ * Множитель данных канала АЦП Ua.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ua 170
+/**
+ * Множитель данных канала АЦП Ub.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ub 171
+/**
+ * Множитель данных канала АЦП Uc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Uc 172
+/**
+ * Множитель данных канала АЦП Urot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Urot 173
+/**
+ * Множитель данных канала АЦП Ia.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ia 174
+/**
+ * Множитель данных канала АЦП Ib.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ib 175
+/**
+ * Множитель данных канала АЦП Ic.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ic 176
+/**
+ * Множитель данных канала АЦП Irot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Irot 177
+/**
+ * Множитель данных канала АЦП Iexc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iexc 178
+/**
+ * Множитель данных канала АЦП Iref.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iref 179
+/**
+ * Множитель данных канала АЦП Ifan.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ifan 180
 /**
  * Данные калибровки канала АЦП Ua.
  */
