@@ -31,6 +31,8 @@
 #define DRIVE_NULL_TIMER_CNT_PERIOD (DRIVE_NULL_TIMER_CNT_TICKS - 1)
 //! Предделитель.
 #define DRIVE_NULL_TIMER_CNT_PRESCALER (12 - 1)
+//! Частота срабатывания таймера нуля.
+#define DRIVE_NULL_TIMER_FREQ (DRIVE_POWER_FREQ * 3)
 
 
 
@@ -538,7 +540,10 @@ extern void drive_null_timer_irq_handler(void);
 /**
  * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
  */
-extern void drive_phases_timer_irq_handler(void);
+ALWAYS_INLINE static void drive_phases_timer_irq_handler(void)
+{
+    drive_phase_state_process_phase_timeout();
+}
 
 /**
  * Обрабатывает очередные значения АЦП.
@@ -547,5 +552,22 @@ extern void drive_phases_timer_irq_handler(void);
  * @return Код ошибки.
  */
 extern err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values);
+
+/**
+ * Обрабатывает накопленные данные АЦП.
+ * @param channels Маска каналов АЦП.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_process_power_accumulated_data(power_channels_t channels)
+{
+    return drive_power_process_accumulated_data(channels);
+}
+
+/**
+ * Обработка данных с АЦП.
+ * Вызывается из прерывания АЦП. 
+ * @return Флаг обработки данных питания.
+ */
+bool drive_calculate_power(void);
 
 #endif	/* DRIVE_H */
