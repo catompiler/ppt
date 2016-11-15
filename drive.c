@@ -734,7 +734,7 @@ static err_t drive_state_process_stop(void)
             }
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            check_res = drive_protection_check_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
+            check_res = drive_protection_check_exc_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
 
             if(drive_protection_is_allow(check_res)){
                 drive_set_state(DRIVE_STATE_IDLE);
