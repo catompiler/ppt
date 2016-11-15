@@ -12,6 +12,15 @@
 #include "errors/errors.h"
 #include "defs/defs.h"
 
+
+#define POWER_IGNORE_BITS 0
+#if POWER_IGNORE_BITS != 0
+#define POWER_IGNORE_BITS_MASK (~(1<<(POWER_IGNORE_BITS - 1)))
+#else
+#define POWER_IGNORE_BITS_MASK (~0)
+#endif
+
+
 //! Число элементов в буфере фильтра.
 #define POWER_FILTER_SIZE (20 + 1)
 
