@@ -15,6 +15,8 @@
 #define DRIVE_TASKS_SAVE_SETTINGS_TASK_PRIOR 10
 //! Приоритет задачи записи события ошибки.
 #define DRIVE_TASKS_WRITE_ERROR_EVENT_TASK_PRIOR 100
+//! Приоритет задачи записи события состояния.
+#define DRIVE_TASKS_WRITE_STATUS_EVENT_TASK_PRIOR 10
 //! Приоритет задачи чтения события ошибки.
 #define DRIVE_TASKS_READ_ERROR_EVENT_TASK_PRIOR 10
 //! Приоритет задачи чтения канала осциллограммы.
@@ -55,7 +57,7 @@ err_t drive_tasks_save_settings(void)
                 DRIVE_TASKS_SAVE_SETTINGS_TASK_PRIOR, NULL, TASK_RUN_ONCE, NULL));
 }
 
-static void* drive_tasks_write_error_event_task(void* event)
+static void* drive_tasks_write_event_task(void* event)
 {
     err_t err = E_NO_ERROR;
     
@@ -93,8 +95,18 @@ err_t drive_tasks_write_error_event(void)
     drive_events_make_event(&event, DRIVE_EVENT_TYPE_ERROR);
     drive_power_oscillogram_half_pause();
     
-    return TID_TO_ERR(scheduler_add_task(drive_tasks_write_error_event_task,
+    return TID_TO_ERR(scheduler_add_task(drive_tasks_write_event_task,
                 DRIVE_TASKS_WRITE_ERROR_EVENT_TASK_PRIOR, &event, TASK_RUN_ONCE, NULL));
+}
+
+err_t drive_tasks_write_status_event(void)
+{
+    static drive_event_t event;
+    drive_events_make_event(&event, DRIVE_EVENT_TYPE_STATUS);
+    drive_power_oscillogram_pause();
+    
+    return TID_TO_ERR(scheduler_add_task(drive_tasks_write_event_task,
+                DRIVE_TASKS_WRITE_STATUS_EVENT_TASK_PRIOR, &event, TASK_RUN_ONCE, NULL));
 }
 
 void* drive_tasks_read_event_task(void* event)

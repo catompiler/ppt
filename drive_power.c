@@ -151,6 +151,11 @@ bool drive_power_oscillogram_full(void)
     return drive_power.osc_buf.count == DRIVE_POWER_OSC_CHANNEL_LEN;
 }
 
+void drive_power_oscillogram_pause(void)
+{
+    drive_power.osc_buf.pause_mark = drive_power.osc_buf.index;
+}
+
 void drive_power_oscillogram_half_pause(void)
 {
     drive_power.osc_buf.pause_mark = drive_power.osc_buf.index + (DRIVE_POWER_OSC_CHANNEL_LEN / 2);

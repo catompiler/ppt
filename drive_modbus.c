@@ -105,6 +105,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_CALIBRATE_POWER (DRIVE_MODBUS_COILS_START + 4)
 //! Очистка событий.
 #define DRIVE_MODBUS_COIL_CLEAR_EVENTS (DRIVE_MODBUS_COILS_START + 5)
+//! Создаёт событие с записью состояния.
+#define DRIVE_MODBUS_COIL_MAKE_STATUS_EVENT (DRIVE_MODBUS_COILS_START + 6)
 
 
 /** Пользовательские функции и коды.
@@ -427,6 +429,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             break;
         case DRIVE_MODBUS_COIL_CLEAR_EVENTS:
             drive_tasks_clear_events();
+            break;
+        case DRIVE_MODBUS_COIL_MAKE_STATUS_EVENT:
+            drive_tasks_write_status_event();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

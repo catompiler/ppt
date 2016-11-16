@@ -29,6 +29,13 @@ extern err_t drive_tasks_save_settings(void);
 extern err_t drive_tasks_write_error_event(void);
 
 /**
+ * Записывает событие.
+ * состояния привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_write_status_event(void);
+
+/**
  * Читает событие из eeprom.
  * @param future Будущее.
  * @param event_index Индекс события.

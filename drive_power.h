@@ -143,6 +143,11 @@ extern size_t drive_power_oscillogram_length(void);
 extern bool drive_power_oscillogram_full(void);
 
 /**
+ * Прекращает запись осциллограмм.
+ */
+extern void drive_power_oscillogram_pause(void);
+
+/**
  * Прекращает запись осциллограмм при заполнении
  * следующей половины буфера.
  */
