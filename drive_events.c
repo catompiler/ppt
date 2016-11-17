@@ -213,7 +213,7 @@ drive_osc_index_t drive_events_oscillograms_next_index(drive_osc_index_t index)
 
 drive_osc_index_t drive_events_oscillograms_first_index(void)
 {
-    if(events.events_map.osc_count < DRIVE_EVENTS_COUNT_MAX)
+    if(events.events_map.osc_count < DRIVE_OSCS_COUNT_MAX)
         return 0;
     
     return drive_events_oscillograms_next_index(events.events_map.osc_index);
