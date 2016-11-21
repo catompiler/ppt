@@ -622,7 +622,7 @@ static bool drive_regulate(void)
 
         //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
 
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
@@ -874,13 +874,16 @@ static err_t drive_state_process_init(void)
             // Если ошибка фазы.
             if(drive_phase_state_errors() != PHASE_NO_ERROR){
                 drive_phase_state_clear_errors();
+                drive.iters_counter = 0;
                 break;
             }
             
-            if(drive_phase_state_direction() == DRIVE_DIR_UNK) break;
+            if(drive_phase_state_direction() == DRIVE_DIR_UNK){
+                drive.iters_counter = 0;
+                break;
+            }
             
             if(++ drive.iters_counter >= drive.settings.check_phases_iters) {
-            
                 drive.init_state = DRIVE_INIT_WAIT_POWER;
             }
             
