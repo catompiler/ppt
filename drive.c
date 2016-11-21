@@ -14,7 +14,7 @@
 #define DRIVE_ROT_PID_VALUE_MIN 0
 
 //! Максимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MAX 0x8C0000 // 170.0 - 30.0
+#define DRIVE_EXC_PID_VALUE_MAX 0x960000 // 180.0 - 30.0
 //! Минимальное значение PID-регулятора тока возбуждения.
 #define DRIVE_EXC_PID_VALUE_MIN 0
 //! Добавочный угол открытия тиристора возбуждения.
