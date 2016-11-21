@@ -75,7 +75,7 @@ typedef size_t triac_pair_number_t;
 //! Период в микросекундах.
 #define TRIACS_TIM_PERIOD_US (20000)
 //! Значение счётчика за период.
-#define TRIACS_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
+#define TRIACS_TIM_PERIOD (0xffff)
 //! Предделитель.
 #define TRIACS_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
@@ -118,7 +118,7 @@ typedef size_t triac_pair_number_t;
 //! Период в микросекундах.
 #define TRIAC_EXC_TIM_PERIOD_US (20000)
 //! Значение счётчика за период.
-#define TRIAC_EXC_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
+#define TRIAC_EXC_TIM_PERIOD (0xffff)
 //! Предделитель.
 #define TRIAC_EXC_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
@@ -143,9 +143,9 @@ typedef size_t triac_pair_number_t;
 #define TRIAC_EXC_ANGLE_MIN_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MIN))
 
 //! Перевод времени открытия в тики таймера.
-#define OPEN_TIME_TO_TICKS(T) (((uint32_t)T * TRIACS_TIM_PERIOD) / TRIACS_TIM_PERIOD_US)
+#define OPEN_TIME_TO_TICKS(T) (((uint32_t)T * 18) / 10) // 72M / 40 тиков : 1M мкс
 //! Перевод тиков таймера в время открытия.
-#define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * TRIACS_TIM_PERIOD_US) / TRIACS_TIM_PERIOD)
+#define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * 10) / 18) // 1M мкс : 72M / 40 тиков
 
 
 //! Режим возбуждения.
