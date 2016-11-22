@@ -239,7 +239,7 @@ drive_phase_errors_t drive_phase_state_errors(void)
     return state.phase_errs;
 }
 
-phase_t drive_phase_sate_current_phase(void)
+phase_t drive_phase_state_current_phase(void)
 {
     return state.cur_phase;
 }

@@ -119,7 +119,7 @@ extern drive_phase_errors_t drive_phase_state_errors(void);
  * Получает текущую фазу.
  * @return Текущая фаза.
  */
-extern phase_t drive_phase_sate_current_phase(void);
+extern phase_t drive_phase_state_current_phase(void);
 
 /**
  * Получает направление.
