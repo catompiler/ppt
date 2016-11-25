@@ -198,6 +198,11 @@ void SPI1_IRQHandler(void)
     spi_bus_irq_handler(&spi);
 }
 
+void SPI2_IRQHandler(void)
+{
+    spi_bus_irq_handler(&spi2);
+}
+
 void DMA1_Channel2_IRQHandler(void)
 {
     spi_bus_dma_rx_channel_irq_handler(&spi);
