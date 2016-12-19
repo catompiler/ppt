@@ -2,6 +2,7 @@
 #include "drive.h"
 #include "drive_events.h"
 #include "drive_tasks.h"
+#include "drive_dio.h"
 #include "settings.h"
 #include "future/future.h"
 #include "utils/utils.h"
@@ -107,6 +108,10 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_CLEAR_EVENTS (DRIVE_MODBUS_COILS_START + 5)
 //! Создаёт событие с записью состояния.
 #define DRIVE_MODBUS_COIL_MAKE_STATUS_EVENT (DRIVE_MODBUS_COILS_START + 6)
+//! Устанавливает пользовательские цифровые выхода.
+#define DRIVE_MODBUS_COIL_DOUT_USER_SET_VALUE (DRIVE_MODBUS_COILS_START + 7)
+//! Переключает пользовательские цифровые выхода.
+#define DRIVE_MODBUS_COIL_DOUT_USER_TOGGLE (DRIVE_MODBUS_COILS_START + 8)
 
 
 /** Пользовательские функции и коды.
@@ -432,6 +437,12 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             break;
         case DRIVE_MODBUS_COIL_MAKE_STATUS_EVENT:
             drive_tasks_write_status_event();
+            break;
+        case DRIVE_MODBUS_COIL_DOUT_USER_SET_VALUE:
+            drive_dio_set_output_type_state(DRIVE_DIO_OUT_USER, value ? DRIVE_DIO_ON : DRIVE_DIO_OFF);
+            break;
+        case DRIVE_MODBUS_COIL_DOUT_USER_TOGGLE:
+            drive_dio_toggle_output_type_state(DRIVE_DIO_OUT_USER);
             break;
     }
     return MODBUS_RTU_ERROR_NONE;
