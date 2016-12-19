@@ -232,6 +232,26 @@ void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_dio_sta
     }
 }
 
+err_t drive_dio_toggle_output_state(drive_dio_output_t output)
+{
+    if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
+    
+    drive_dio_set_state(&dio.outputs[output].io,
+            (drive_dio_state(&dio.outputs[output].io) == DRIVE_DIO_OFF) ? DRIVE_DIO_ON : DRIVE_DIO_OFF
+        );
+    
+    return E_NO_ERROR;
+}
+
+void drive_dio_toggle_output_type_state(drive_dio_output_type_t type)
+{
+    size_t i;
+    for(i = 0; i < DRIVE_DIO_OUTPUTS_COUNT; i ++){
+        drive_dio_out_t* output = &dio.outputs[i];
+        if(output->type == type) drive_dio_toggle_output_state((drive_dio_output_t)i);
+    }
+}
+
 err_t drive_dio_input_changed(drive_dio_input_t input)
 {
     if(input >= DRIVE_DIO_INPUTS_COUNT) return E_OUT_OF_RANGE;

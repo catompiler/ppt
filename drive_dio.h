@@ -29,6 +29,7 @@ typedef enum _Drive_Dio_Input_Type {
     DRIVE_DIO_IN_REFERENCE_INC = 3,
     DRIVE_DIO_IN_REFERENCE_DEC = 4,
     DRIVE_DIO_IN_CLEAR_ERRORS = 5,
+    DRIVE_DIO_IN_USER = 6,
 } drive_dio_input_type_t;
 
 //! Перечисление типов цифровых выходов.
@@ -37,7 +38,8 @@ typedef enum _Drive_Dio_Output_Type {
     DRIVE_DIO_OUT_READY = 1,
     DRIVE_DIO_OUT_RUNNING = 2,
     DRIVE_DIO_OUT_ERROR = 3,
-    DRIVE_DIO_OUT_WARNING = 4
+    DRIVE_DIO_OUT_WARNING = 4,
+    DRIVE_DIO_OUT_USER = 5,
 } drive_dio_output_type_t;
 
 //! Перечисление номеров цифровых входов.
@@ -207,6 +209,19 @@ extern err_t drive_dio_set_output_state(drive_dio_output_t output, drive_dio_sta
  * @param state Состояние типа цифрового выхода.
  */
 extern void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_dio_state_t state);
+
+/**
+ * Устанавливает состояние заданного цифрового выхода.
+ * @param output Цифровой выход.
+ * @return Код ошибки.
+ */
+extern err_t drive_dio_toggle_output_state(drive_dio_output_t output);
+
+/**
+ * Устанавливает состояние типа цифрового выхода.
+ * @param type Тип цифрового выхода.
+ */
+extern void drive_dio_toggle_output_type_state(drive_dio_output_type_t type);
 
 /**
  * Обработчик изменения состояния цифрового входа.
