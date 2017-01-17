@@ -55,7 +55,10 @@ static modbus_rtu_t modbus;
 static modbus_rtu_message_t modbus_rx_msg, modbus_tx_msg;
 
 //! Счётчик.
-static counter_t counter;
+static counter_t counter = 0;
+
+//! Счётчик миллисекунд для функции gettimeofday.
+static counter_t counter_ms_gtod = 0;
 
 //! Планеровщик задач.
 //! Максимум задач.
@@ -252,7 +255,48 @@ void RTCAlarm_IRQHandler(void)
 
 void RTC_IRQHandler(void)
 {
+    counter_ms_gtod = system_counter_ticks();
     rtc_interrupt_handler();
+}
+
+/*
+ * get/set time of day functions.
+ */
+int _gettimeofday(struct timeval *tv, struct timezone *tz)
+{
+    if(tv == NULL){
+        errno = EFAULT;
+        return -1;
+    }
+    
+    tv->tv_sec = rtc_time(NULL);
+    tv->tv_usec = system_counter_diff(&counter_ms_gtod) * 1000;
+    
+    if(tz != NULL){
+        tz->tz_minuteswest = 0;
+        tz->tz_dsttime = DST_NONE;
+    }
+    
+    return 0;
+}
+
+int settimeofday(const struct timeval *tv, const struct timezone *tz)
+{
+    if(tv == NULL){
+        errno = EFAULT;
+        return -1;
+    }
+    
+    if(tz != NULL){
+        if(tz->tz_dsttime != DST_NONE){
+            errno = EINVAL;
+            return -1;
+        }
+    }
+    
+    rtc_set_time(&tv->tv_sec);
+    
+    return 0;
 }
 
 /**
@@ -1399,8 +1443,6 @@ static void init_dio(void)
     init_dio_out(DRIVE_DIO_OUTPUT_3, DIGITAL_IO_OUT_3_GPIO, DIGITAL_IO_OUT_3_PIN);
     init_dio_out(DRIVE_DIO_OUTPUT_4, DIGITAL_IO_OUT_4_GPIO, DIGITAL_IO_OUT_4_PIN);
 }
-
-/******************************************************************************/
 
 
 static void* main_task(void* arg)
