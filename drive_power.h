@@ -284,6 +284,13 @@ extern uint16_t drive_power_calibration_data(size_t channel);
 extern void drive_power_set_calibration_data(size_t channel, uint16_t data);
 
 /**
+ * Получает тип канала питания.
+ * @param channel Номер канала.
+ * @return Тип канала.
+ */
+extern power_channel_type_t drive_power_channel_type(size_t channel);
+
+/**
  * Получает флаг доступности данных на всех заданных каналах АЦП.
  * @param channels Маска каналов АЦП.
  * @return Флаг доступности данных.

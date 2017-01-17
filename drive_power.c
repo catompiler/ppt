@@ -397,6 +397,11 @@ void drive_power_set_calibration_data(size_t channel, uint16_t data)
     power_set_calibration_data(&drive_power.power, channel, data);
 }
 
+power_channel_type_t drive_power_channel_type(size_t channel)
+{
+    return power_channel_type(&drive_power.power, channel);
+}
+
 bool drive_power_data_avail(power_channels_t channels)
 {
     return power_data_filter_filled(&drive_power.power, channels);
