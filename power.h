@@ -257,6 +257,17 @@ extern bool power_data_filter_filled(const power_t* power, power_channels_t chan
 extern err_t power_reset_channels(power_t* power, power_channels_t channels);
 
 /**
+ * Получает тип канала питания.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Тип канала.
+ */
+ALWAYS_INLINE static power_channel_type_t power_channel_type(const power_t* power, size_t channel)
+{
+    return power->channels[channel].type;
+}
+
+/**
  * Получает флаг калибровки.
  * @param power Питание.
  * @return Флаг калибровки.
