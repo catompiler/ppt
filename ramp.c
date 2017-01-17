@@ -6,7 +6,7 @@ err_t ramp_init(ramp_t* ramp)
 {
     ramp->current_ref = 0;
     ramp->target_ref = 0;
-    ramp->step_ref = RAMP_TIME_MAX / RAMP_TIME_DEFAULT;
+    ramp->step_ref = 0x20000 /* 20 ms * 100 */ / RAMP_TIME_DEFAULT;
     
     return E_NO_ERROR;
 }

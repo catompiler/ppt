@@ -34,10 +34,10 @@ typedef int32_t ramp_time_t;
 #define RAMP_TIME_MIN 1
 
 //! Максимальное время разгона.
-#define RAMP_TIME_MAX 0x20000
+#define RAMP_TIME_MAX 300
 
 //! Время разгона по-умолчанию.
-#define RAMP_TIME_DEFAULT 10
+#define RAMP_TIME_DEFAULT 30
 
 
 
