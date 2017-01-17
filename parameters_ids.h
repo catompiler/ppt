@@ -6,90 +6,58 @@
 #define	PARAMETERS_IDS_H
 
 // Идентификаторы.
+
+/*
+ * Питание - напряжения и токи.
+ */
 /**
- * Номинальное напряжение, В.
+ * Номинальное фазное напряжение, В.
  */
 #define PARAM_ID_U_NOM 10
 /**
- * Разрешённое отклонение от номинального напряжения, %.
+ * Номинальный фазный ток, А.
  */
-#define PARAM_ID_U_NOM_ALLOW_VAR 11
+#define PARAM_ID_I_NOM 11
 /**
- * Критическое отклонение от номинального напряжения, %.
+ * Фаза для которой необходимо вычислять ток.
  */
-#define PARAM_ID_U_NOM_CRIT_VAR 12
-/**
- * Токовая отсечка по фазам, А.
- */
-#define PARAM_ID_I_IN_CUTOFF 15
-/**
- * Допустимый шим нуля по напряжению, В.
- */
-#define PARAM_ID_U_ZERO_NOISE 30
-/**
- * Допустимый шим нуля по току, А.
- */
-#define PARAM_ID_I_ZERO_NOISE 31
-/**
- * Допустимый шим нуля по току ротора, А.
- */
-#define PARAM_ID_I_ROT_ZERO_NOISE 32
-/**
- * Допустимый шим нуля по току возбуждения, А.
- */
-#define PARAM_ID_I_EXC_ZERO_NOISE 33
+#define PARAM_ID_CALC_PHASE_CURRENT 12
 /**
  * Номинальное напряжение якоря двигателя, В.
  */
-#define PARAM_ID_U_ROT_NOM 35
-/**
- * Разрешённое отклонение напряжения якоря, %.
- */
-#define PARAM_ID_U_ROT_ALLOW_VAR 36
-/**
- * Критическое отклонение напряжения якоря, %.
- */
-#define PARAM_ID_U_ROT_CRIT_VAR 37
+#define PARAM_ID_U_ROT_NOM 30
 /**
  * Номинальный ток якоря двигателя, А.
  */
-#define PARAM_ID_I_ROT_NOM 40
-/**
- * Кратность токовой отсечки тока якоря.
- */
-#define PARAM_ID_I_ROT_CUTOFF_MULT 41
-/**
- * Разрешённое отклонение от тока якоря, %.
- */
-#define PARAM_ID_I_ROT_ALLOW_VAR 42
-/**
- * Критическое отклонение от тока якоря, %.
- */
-#define PARAM_ID_I_ROT_CRIT_VAR 43
+#define PARAM_ID_I_ROT_NOM 31
 /**
  * Ток возбуждения двигателя, А.
  */
-#define PARAM_ID_I_EXC 45
-/**
- * Разрешённое отклонение от тока возбуждения, %.
+#define PARAM_ID_I_EXC 40
+
+/*
+ * Возбуждение.
  */
-#define PARAM_ID_I_EXC_ALLOW_VAR 46
-/**
- * Критическое отклонение от тока возбуждения, %.
- */
-#define PARAM_ID_I_EXC_CRIT_VAR 47
 /**
  * Фаза возбуждения.
  */
-#define PARAM_ID_EXC_PHASE 50
+#define PARAM_ID_EXC_PHASE 45
 /**
  * Режим возбуждения.
  */
-#define PARAM_ID_EXC_MODE 51
+#define PARAM_ID_EXC_MODE 46
+
+/*
+ * Рампа.
+ */
 /**
  * Время разгона.
  */
-#define PARAM_ID_RAMP_TIME 60
+#define PARAM_ID_RAMP_TIME 50
+
+/*
+ * ПИД якоря и возбуждения.
+ */
 /**
  * Коэффициент пропорционального звена ПИД-регулятора напряжения якоря.
  */
@@ -114,6 +82,10 @@
  * Коэффициент дифференциального звена ПИД-регулятора тока возбуждения.
  */
 #define PARAM_ID_EXC_PID_K_D 75
+
+/*
+ * Время ожидания запуска и останова.
+ */
 /**
  * Время ожидания остановки ротора при выключении, с.
  */
@@ -130,6 +102,10 @@
  * Время проверки фаз сети, мс.
  */
 #define PARAM_ID_PHASES_CHECK_TIME 85
+
+/*
+ * Тиристоры - время открытия.
+ */
 /**
  * Длительность импульса открытия тиристоров, мкс.
  */
@@ -138,178 +114,596 @@
  * Длительность импульса открытия симистора возбуждения, мкс.
  */
 #define PARAM_ID_TRIAC_EXC_OPEN_TIME 91
+
+/*
+ * Защита.
+ */
+/*
+ * Тепловая защита.
+ */
 /**
  * Время срабатывания тепловой защиты при шестикратном перегрузе по току.
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 100
 /**
- * Фаза для которой необходимо вычислять ток.
+ * Разрешение тепловой защиты по току.
  */
-#define PARAM_ID_CALC_PHASE_CURRENT 150
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE 101
+
+/*
+ * Защита питания.
+ */
+/*
+ * Сеть.
+ */
+/*
+ * Напряжение.
+ */
+/*
+ * Ошибки.
+ */
+/*
+ * Отсечка.
+ */
+//! Уровень, %.
+#define PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE 109
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE 110
+//! Уровень, %.
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE 111
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS 112
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE 113
+//! Действие.
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION 115
+/*
+ * Понижение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE 120
+//! Уровень, %.
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE 121
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS 122
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE 123
+//! Действие.
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION 125
+/*
+ * Предупреждения.
+ */
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE 130
+//! Уровень, %.
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE 131
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS 132
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE 133
+//! Действие.
+#define PARAM_ID_PROT_U_IN_OVF_WARN_ACTION 135
+/*
+ * Понижение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE 140
+//! Уровень, %.
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE 141
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS 142
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE 143
+//! Действие.
+#define PARAM_ID_PROT_U_IN_UDF_WARN_ACTION 145
+/*
+ * Ток.
+ */
+/*
+ * Ошибки.
+ */
+/*
+ * Отсечка.
+ */
+//! Уровень, %.
+#define PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE 149
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE 150
+//! Уровень, %.
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE 151
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS 152
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE 153
+//! Действие.
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION 155
+/*
+ * Предупреждения.
+ */
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE 160
+//! Уровень, %.
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE 161
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS 162
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE 163
+//! Действие.
+#define PARAM_ID_PROT_I_IN_OVF_WARN_ACTION 165
+/*
+ * Якорь.
+ */
+/*
+ * Напряжение.
+ */
+/*
+ * Ошибки.
+ */
+/*
+ * Отсечка.
+ */
+//! Уровень, %.
+#define PARAM_ID_PROT_U_ROT_CUTOFF_LEVEL_VALUE 169
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ENABLE 170
+//! Уровень, %.
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_VALUE 171
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_TIME_MS 172
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LATCH_ENABLE 173
+//! Действие.
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ACTION 175
+/*
+ * Предупреждения.
+ */
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_ENABLE 180
+//! Уровень, %.
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_VALUE 181
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_TIME_MS 182
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LATCH_ENABLE 183
+//! Действие.
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_ACTION 185
+/*
+ * Ток.
+ */
+/*
+ * Ошибки.
+ */
+/*
+ * Отсечка.
+ */
+//! Уровень, %.
+#define PARAM_ID_PROT_I_ROT_CUTOFF_LEVEL_VALUE 189
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ENABLE 190
+//! Уровень, %.
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_VALUE 191
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_TIME_MS 192
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LATCH_ENABLE 193
+//! Действие.
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ACTION 195
+/*
+ * Предупреждения.
+ */
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_ENABLE 200
+//! Уровень, %.
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_VALUE 201
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_TIME_MS 202
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LATCH_ENABLE 203
+//! Действие.
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_ACTION 205
+/*
+ * Возбуждение.
+ */
+/*
+ * Ошибки.
+ */
+/*
+ * Отсечка.
+ */
+//! Уровень, %.
+#define PARAM_ID_PROT_I_EXC_CUTOFF_LEVEL_VALUE 209
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ENABLE 210
+//! Уровень, %.
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_VALUE 211
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_TIME_MS 212
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LATCH_ENABLE 213
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ACTION 215
+/*
+ * Понижение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ENABLE 220
+//! Уровень, %.
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_VALUE 221
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_TIME_MS 222
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LATCH_ENABLE 223
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ACTION 225
+/*
+ * Предупреждения.
+ */
+/*
+ * Превышение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_ENABLE 230
+//! Уровень, %.
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_VALUE 231
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_TIME_MS 232
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LATCH_ENABLE 233
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_ACTION 235
+/*
+ * Понижение.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_ENABLE 240
+//! Уровень, %.
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_VALUE 241
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_TIME_MS 242
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LATCH_ENABLE 243
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_ACTION 245
+/*
+ * Отклонения нулей (допустимые значения в простое).
+ */
+/*
+ * Ток фаз.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE 250
+//! Уровень, А.
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE 251
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS 252
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE 253
+//! Действие.
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION 254
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE 260
+//! Уровень, А.
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE 261
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS 262
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE 263
+//! Действие.
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION 264
+/*
+ * Напряжение якоря.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ENABLE 270
+//! Уровень, В.
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE 271
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_TIME_MS 272
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LATCH_ENABLE 273
+//! Действие.
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ACTION 274
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ENABLE 280
+//! Уровень, В.
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_VALUE 281
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_TIME_MS 282
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LATCH_ENABLE 283
+//! Действие.
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ACTION 284
+/*
+ * Ток якоря.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ENABLE 290
+//! Уровень, А.
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE 291
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_TIME_MS 292
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LATCH_ENABLE 293
+//! Действие.
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ACTION 294
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ENABLE 300
+//! Уровень, А.
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_VALUE 301
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_TIME_MS 302
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LATCH_ENABLE 303
+//! Действие.
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ACTION 304
+/*
+ * Ток возбуждения.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ENABLE 310
+//! Уровень, А.
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_VALUE 311
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_TIME_MS 312
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LATCH_ENABLE 313
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ACTION 314
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ENABLE 320
+//! Уровень, А.
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_VALUE 321
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_TIME_MS 322
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LATCH_ENABLE 323
+//! Действие.
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ACTION 324
+
+/*
+ * АЦП.
+ */
+/*
+ * Коэффициенты.
+ */
 /**
  * Множитель данных канала АЦП Ua.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ua 170
+#define PARAM_ID_VALUE_MULTIPLIER_Ua 500
 /**
  * Множитель данных канала АЦП Ub.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ub 171
+#define PARAM_ID_VALUE_MULTIPLIER_Ub 501
 /**
  * Множитель данных канала АЦП Uc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Uc 172
+#define PARAM_ID_VALUE_MULTIPLIER_Uc 502
 /**
  * Множитель данных канала АЦП Urot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Urot 173
+#define PARAM_ID_VALUE_MULTIPLIER_Urot 503
 /**
  * Множитель данных канала АЦП Ia.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ia 174
+#define PARAM_ID_VALUE_MULTIPLIER_Ia 504
 /**
  * Множитель данных канала АЦП Ib.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ib 175
+#define PARAM_ID_VALUE_MULTIPLIER_Ib 505
 /**
  * Множитель данных канала АЦП Ic.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ic 176
+#define PARAM_ID_VALUE_MULTIPLIER_Ic 506
 /**
  * Множитель данных канала АЦП Irot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Irot 177
+#define PARAM_ID_VALUE_MULTIPLIER_Irot 507
 /**
  * Множитель данных канала АЦП Iexc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iexc 178
+#define PARAM_ID_VALUE_MULTIPLIER_Iexc 508
 /**
  * Множитель данных канала АЦП Iref.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iref 179
+#define PARAM_ID_VALUE_MULTIPLIER_Iref 509
 /**
  * Множитель данных канала АЦП Ifan.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ifan 180
+#define PARAM_ID_VALUE_MULTIPLIER_Ifan 510
+
+/*
+ * Данные калибровки нуля.
+ */
 /**
  * Данные калибровки канала АЦП Ua.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ua 200
+#define PARAM_ID_CALIBRATION_DATA_Ua 520
 /**
  * Данные калибровки канала АЦП Ub.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ub 201
+#define PARAM_ID_CALIBRATION_DATA_Ub 521
 /**
  * Данные калибровки канала АЦП Uc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Uc 202
+#define PARAM_ID_CALIBRATION_DATA_Uc 522
 /**
  * Данные калибровки канала АЦП Urot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Urot 203
+#define PARAM_ID_CALIBRATION_DATA_Urot 523
 /**
  * Данные калибровки канала АЦП Ia.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ia 204
+#define PARAM_ID_CALIBRATION_DATA_Ia 524
 /**
  * Данные калибровки канала АЦП Ib.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ib 205
+#define PARAM_ID_CALIBRATION_DATA_Ib 525
 /**
  * Данные калибровки канала АЦП Ic.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ic 206
+#define PARAM_ID_CALIBRATION_DATA_Ic 526
 /**
  * Данные калибровки канала АЦП Irot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Irot 207
+#define PARAM_ID_CALIBRATION_DATA_Irot 527
 /**
  * Данные калибровки канала АЦП Iexc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iexc 208
+#define PARAM_ID_CALIBRATION_DATA_Iexc 528
 /**
  * Данные калибровки канала АЦП Iref.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iref 209
+#define PARAM_ID_CALIBRATION_DATA_Iref 529
 /**
  * Данные калибровки канала АЦП Ifan.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ifan 210
+#define PARAM_ID_CALIBRATION_DATA_Ifan 530
+
+/*
+ * Цифровые входа и выхода.
+ */
+/*
+ * Цифровые входа.
+ */
 /**
  * Тип цифрового входа 1.
  */
-#define PARAM_ID_DIGITAL_IN_1_TYPE 230
+#define PARAM_ID_DIGITAL_IN_1_TYPE 600
 /**
  * Инверсия цифрового входа 1.
  */
-#define PARAM_ID_DIGITAL_IN_1_INVERSION 231
+#define PARAM_ID_DIGITAL_IN_1_INVERSION 601
 /**
  * Тип цифрового входа 2.
  */
-#define PARAM_ID_DIGITAL_IN_2_TYPE 232
+#define PARAM_ID_DIGITAL_IN_2_TYPE 602
 /**
  * Инверсия цифрового входа 2.
  */
-#define PARAM_ID_DIGITAL_IN_2_INVERSION 233
+#define PARAM_ID_DIGITAL_IN_2_INVERSION 603
 /**
  * Тип цифрового входа 3.
  */
-#define PARAM_ID_DIGITAL_IN_3_TYPE 234
+#define PARAM_ID_DIGITAL_IN_3_TYPE 604
 /**
  * Инверсия цифрового входа 3.
  */
-#define PARAM_ID_DIGITAL_IN_3_INVERSION 235
+#define PARAM_ID_DIGITAL_IN_3_INVERSION 605
 /**
  * Тип цифрового входа 4.
  */
-#define PARAM_ID_DIGITAL_IN_4_TYPE 236
+#define PARAM_ID_DIGITAL_IN_4_TYPE 606
 /**
  * Инверсия цифрового входа 4.
  */
-#define PARAM_ID_DIGITAL_IN_4_INVERSION 237
+#define PARAM_ID_DIGITAL_IN_4_INVERSION 607
 /**
  * Тип цифрового входа 5.
  */
-#define PARAM_ID_DIGITAL_IN_5_TYPE 238
+#define PARAM_ID_DIGITAL_IN_5_TYPE 608
 /**
  * Инверсия цифрового входа 5.
  */
-#define PARAM_ID_DIGITAL_IN_5_INVERSION 239
+#define PARAM_ID_DIGITAL_IN_5_INVERSION 609
+
+/*
+ * Цифровые выхода.
+ */
 /**
  * Тип цифрового выхода 1.
  */
-#define PARAM_ID_DIGITAL_OUT_1_TYPE 240
+#define PARAM_ID_DIGITAL_OUT_1_TYPE 620
 /**
  * Инверсия цифрового выхода 1.
  */
-#define PARAM_ID_DIGITAL_OUT_1_INVERSION 241
+#define PARAM_ID_DIGITAL_OUT_1_INVERSION 621
 /**
  * Тип цифрового выхода 2.
  */
-#define PARAM_ID_DIGITAL_OUT_2_TYPE 242
+#define PARAM_ID_DIGITAL_OUT_2_TYPE 622
 /**
  * Инверсия цифрового выхода 2.
  */
-#define PARAM_ID_DIGITAL_OUT_2_INVERSION 243
+#define PARAM_ID_DIGITAL_OUT_2_INVERSION 623
 /**
  * Тип цифрового выхода 3.
  */
-#define PARAM_ID_DIGITAL_OUT_3_TYPE 244
+#define PARAM_ID_DIGITAL_OUT_3_TYPE 624
 /**
  * Инверсия цифрового выхода 3.
  */
-#define PARAM_ID_DIGITAL_OUT_3_INVERSION 245
+#define PARAM_ID_DIGITAL_OUT_3_INVERSION 625
 /**
  * Тип цифрового выхода 4.
  */
-#define PARAM_ID_DIGITAL_OUT_4_TYPE 246
+#define PARAM_ID_DIGITAL_OUT_4_TYPE 626
 /**
  * Инверсия цифрового выхода 4.
  */
-#define PARAM_ID_DIGITAL_OUT_4_INVERSION 247
+#define PARAM_ID_DIGITAL_OUT_4_INVERSION 627
+
+/*
+ * Modbus.
+ */
 /**
  * Скорость соединения Modbus RTU.
  */
-#define PARAM_ID_MODBUS_BAUD 500
+#define PARAM_ID_MODBUS_BAUD 700
+
+/*
+ * Отладочные параметры.
+ */
 /**
  * Отладочный параметр 0
  */
@@ -350,6 +744,10 @@
  * Отладочный параметр 9
  */
 #define PARAM_ID_DEBUG_9 1009
+
+/*
+ * Данные питания.
+ */
 /**
  * Напряжение фазы A.
  */

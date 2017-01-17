@@ -81,8 +81,129 @@ typedef struct _Drive {
 static drive_t drive;
 
 
-//! Алиас для текущего значения угла открытия тиристоров в тиках таймера.
-#define CURRENT_TIMER_ANGLE_TICKS (drive.triacs_pairs_angle_ticks)
+#define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+
+
+//! Структура данных защиты в каждом состоянии.
+typedef struct _Drive_Prot_Data {
+    drive_power_errors_t errors_mask; //!< Маска ошибок.
+    drive_power_errors_t warnings_mask; //!< Маска предупреждений.
+} drive_prot_data_t;
+
+//! Маска ошибок защиты по входным напряжениям и токам.
+#define PROT_ERRORS_MASK_IN (\
+    DRIVE_POWER_ERROR_UNDERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ua |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Ub |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Uc | DRIVE_POWER_ERROR_OVERFLOW_Uc |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ia |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ib |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Ic | DRIVE_POWER_ERROR_OVERFLOW_Ic  \
+)
+
+//! Маска предупреждений защиты по входным напряжениям и токам.
+#define PROT_WARNINGS_MASK_IN (\
+    DRIVE_POWER_WARNING_UNDERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ua |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Ub |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Uc | DRIVE_POWER_WARNING_OVERFLOW_Uc |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ia |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ib |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Ic | DRIVE_POWER_WARNING_OVERFLOW_Ic  \
+)
+
+//! Маска ошибок защиты по значениям нуля в простое.
+#define PROT_ERRORS_MASK_IDLE (\
+    DRIVE_POWER_ERROR_IDLE_Ia | DRIVE_POWER_ERROR_IDLE_Urot |\
+    DRIVE_POWER_ERROR_IDLE_Ib | DRIVE_POWER_ERROR_IDLE_Irot |\
+    DRIVE_POWER_ERROR_IDLE_Ic | DRIVE_POWER_ERROR_IDLE_Iexc  \
+)
+
+//! Маска предупреждений защиты по значениям нуля в простое.
+#define PROT_WARNINGS_MASK_IDLE (\
+    DRIVE_POWER_WARNING_IDLE_Ia | DRIVE_POWER_WARNING_IDLE_Urot |\
+    DRIVE_POWER_WARNING_IDLE_Ib | DRIVE_POWER_WARNING_IDLE_Irot |\
+    DRIVE_POWER_WARNING_IDLE_Ic | DRIVE_POWER_WARNING_IDLE_Iexc  \
+)
+
+//! Маска ошибок защиты по напряжению и току якоря.
+#define PROT_ERRORS_MASK_ROT (\
+    DRIVE_POWER_ERROR_UNDERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Urot |\
+    DRIVE_POWER_ERROR_UNDERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Irot  \
+)
+
+//! Маска предупреждений защиты по напряжению и току якоря.
+#define PROT_WARNINGS_MASK_ROT (\
+    DRIVE_POWER_WARNING_UNDERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Urot |\
+    DRIVE_POWER_WARNING_UNDERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Irot  \
+)
+
+//! Маска ошибок защиты по току возбуждения.
+#define PROT_ERRORS_MASK_EXC (\
+    DRIVE_POWER_ERROR_UNDERFLOW_Iexc | DRIVE_POWER_ERROR_OVERFLOW_Iexc  \
+)
+
+//! Маска предупреждений защиты по току возбуждения.
+#define PROT_WARNINGS_MASK_EXC (\
+    DRIVE_POWER_WARNING_UNDERFLOW_Iexc | DRIVE_POWER_WARNING_OVERFLOW_Iexc  \
+)
+
+
+static const size_t drive_prot_items[] = {
+    DRIVE_PROT_ITEM_FAULT_OVF_Ua, DRIVE_PROT_ITEM_FAULT_UDF_Ua, DRIVE_PROT_ITEM_FAULT_OVF_Ia,
+    DRIVE_PROT_ITEM_FAULT_OVF_Ub, DRIVE_PROT_ITEM_FAULT_UDF_Ub, DRIVE_PROT_ITEM_FAULT_OVF_Ib,
+    DRIVE_PROT_ITEM_FAULT_OVF_Uc, DRIVE_PROT_ITEM_FAULT_UDF_Uc, DRIVE_PROT_ITEM_FAULT_OVF_Ic,
+    DRIVE_PROT_ITEM_FAULT_OVF_Urot, DRIVE_PROT_ITEM_FAULT_OVF_Irot,
+    DRIVE_PROT_ITEM_FAULT_OVF_Iexc, DRIVE_PROT_ITEM_FAULT_UDF_Iexc,
+    DRIVE_PROT_ITEM_WARN_OVF_Ua, DRIVE_PROT_ITEM_WARN_UDF_Ua, DRIVE_PROT_ITEM_WARN_OVF_Ia,
+    DRIVE_PROT_ITEM_WARN_OVF_Ub, DRIVE_PROT_ITEM_WARN_UDF_Ub, DRIVE_PROT_ITEM_WARN_OVF_Ib,
+    DRIVE_PROT_ITEM_WARN_OVF_Uc, DRIVE_PROT_ITEM_WARN_UDF_Uc, DRIVE_PROT_ITEM_WARN_OVF_Ic,
+    DRIVE_PROT_ITEM_WARN_OVF_Urot, DRIVE_PROT_ITEM_WARN_OVF_Irot,
+    DRIVE_PROT_ITEM_WARN_OVF_Iexc, DRIVE_PROT_ITEM_WARN_UDF_Iexc,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Ia, DRIVE_PROT_ITEM_WARN_IDLE_Ia,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Ib, DRIVE_PROT_ITEM_WARN_IDLE_Ib,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Ic, DRIVE_PROT_ITEM_WARN_IDLE_Ic,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Urot, DRIVE_PROT_ITEM_WARN_IDLE_Urot,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Irot, DRIVE_PROT_ITEM_WARN_IDLE_Irot,
+    DRIVE_PROT_ITEM_FAULT_IDLE_Iexc, DRIVE_PROT_ITEM_WARN_IDLE_Iexc
+};
+#define DRIVE_CHECK_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_items)
+
+// INIT
+#define PROT_ITEMS_INIT_ERRORS_MASK     DRIVE_POWER_ERROR_NONE
+#define PROT_ITEMS_INIT_WARNINGS_MASK   DRIVE_POWER_WARNING_NONE
+// CALIBRATION
+#define PROT_ITEMS_CALIBRATION_ERRORS_MASK     DRIVE_POWER_ERROR_NONE
+#define PROT_ITEMS_CALIBRATION_WARNINGS_MASK   DRIVE_POWER_WARNING_NONE
+// IDLE
+#define PROT_ITEMS_IDLE_ERRORS_MASK     PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_IDLE
+#define PROT_ITEMS_IDLE_WARNINGS_MASK   PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_IDLE
+// START
+#define PROT_ITEMS_START_ERRORS_MASK    PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | DRIVE_POWER_ERROR_OVERFLOW_Iexc
+#define PROT_ITEMS_START_WARNINGS_MASK  PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | DRIVE_POWER_WARNING_OVERFLOW_Iexc
+// RUN
+#define PROT_ITEMS_RUN_ERRORS_MASK      PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | PROT_ERRORS_MASK_EXC
+#define PROT_ITEMS_RUN_WARNINGS_MASK    PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | PROT_WARNINGS_MASK_EXC
+// STOP
+#define PROT_ITEMS_STOP_ERRORS_MASK     PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | PROT_ERRORS_MASK_EXC
+#define PROT_ITEMS_STOP_WARNINGS_MASK   PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | PROT_WARNINGS_MASK_EXC
+// STOP ERROR
+#define PROT_ITEMS_STOP_ERROR_ERRORS_MASK   DRIVE_POWER_ERROR_NONE
+#define PROT_ITEMS_STOP_ERROR_WARNINGS_MASK DRIVE_POWER_WARNING_NONE
+// ERROR
+#define PROT_ITEMS_ERROR_ERRORS_MASK    DRIVE_POWER_ERROR_NONE
+#define PROT_ITEMS_ERROR_WARNINGS_MASK  DRIVE_POWER_WARNING_NONE
+
+
+static const drive_prot_data_t drive_prot_data[] = {
+    {PROT_ITEMS_INIT_ERRORS_MASK,           PROT_ITEMS_INIT_WARNINGS_MASK}, // Init
+    {PROT_ITEMS_CALIBRATION_ERRORS_MASK,    PROT_ITEMS_CALIBRATION_WARNINGS_MASK}, // Calibration
+    {PROT_ITEMS_IDLE_ERRORS_MASK,           PROT_ITEMS_IDLE_WARNINGS_MASK}, // Idle
+    {PROT_ITEMS_START_ERRORS_MASK,          PROT_ITEMS_START_WARNINGS_MASK}, // Start
+    {PROT_ITEMS_RUN_ERRORS_MASK,            PROT_ITEMS_RUN_WARNINGS_MASK}, // Run
+    {PROT_ITEMS_STOP_ERRORS_MASK,           PROT_ITEMS_STOP_WARNINGS_MASK}, // Stop
+    {PROT_ITEMS_STOP_ERROR_ERRORS_MASK,     PROT_ITEMS_STOP_ERROR_WARNINGS_MASK}, // Stop error
+    {PROT_ITEMS_ERROR_ERRORS_MASK,          PROT_ITEMS_ERROR_WARNINGS_MASK}  // Error
+};
+#define DRIVE_PROT_DATA_COUNT ARRAY_LEN(drive_prot_data)
 
 
 /*
@@ -104,6 +225,16 @@ ALWAYS_INLINE static drive_state_t drive_get_state(void)
  */
 static void drive_set_state(drive_state_t state)
 {
+    if(drive.state == state) return;
+    
+    if(state < DRIVE_PROT_DATA_COUNT){
+        drive_protection_set_errs_mask(drive_prot_data[state].errors_mask);
+        drive_protection_set_warn_mask(drive_prot_data[state].warnings_mask);
+    }else{
+        drive_protection_set_errs_mask(DRIVE_POWER_ERROR_ALL);
+        drive_protection_set_warn_mask(DRIVE_POWER_WARNING_ALL);
+    }
+    
     drive.state = state;
     
     switch(drive.state){
@@ -139,7 +270,7 @@ ALWAYS_INLINE static void drive_save_state(void)
  */
 ALWAYS_INLINE static void drive_restore_state(void)
 {
-    drive_set_state(drive.saved_state);
+    drive.state = drive.saved_state;
 }
 
 /**
@@ -326,7 +457,7 @@ static void drive_power_error_occured(drive_power_errors_t error)
 static void drive_power_warning_occured(drive_power_warnings_t warning)
 {
     drive_set_power_warning(warning);
-    //drive_set_warning(DRIVE_WARNING_POWER);
+    drive_set_warning(DRIVE_WARNING_POWER);
 }
 
 /**
@@ -349,16 +480,16 @@ static void drive_handle_power_check(drive_pwr_check_res_t res, uint32_t under_w
         default:
         case DRIVE_PWR_CHECK_NORMAL:
             break;
-        case DRIVE_PWR_CHECK_ALLOW_UNDERFLOW:
+        case DRIVE_PWR_CHECK_WARN_UNDERFLOW:
             drive_power_warning_occured(under_warning);
             break;
-        case DRIVE_PWR_CHECK_ALLOW_OVERFLOW:
+        case DRIVE_PWR_CHECK_WARN_OVERFLOW:
             drive_power_warning_occured(over_warning);
             break;
-        case DRIVE_PWR_CHECK_CRIT_UNDERFLOW:
+        case DRIVE_PWR_CHECK_FAULT_UNDERFLOW:
             drive_power_error_occured(under_error);
             break;
-        case DRIVE_PWR_CHECK_CRIT_OVERFLOW:
+        case DRIVE_PWR_CHECK_FAULT_OVERFLOW:
             drive_power_error_occured(over_error);
             break;
     }
@@ -369,127 +500,72 @@ static void drive_handle_power_check(drive_pwr_check_res_t res, uint32_t under_w
  */
 static void drive_check_power_inst(void)
 {
-    // Токи.
-    // A.
-    drive_handle_power_check(
-        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ia)),
-            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ia, DRIVE_POWER_ERROR_OVERFLOW_Ia
-        );
-    // B.
-    drive_handle_power_check(
-        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ib)),
-            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ib, DRIVE_POWER_ERROR_OVERFLOW_Ib
-        );
-    // C.
-    drive_handle_power_check(
-        drive_protection_check_input_current(drive_power_channel_real_value_inst(DRIVE_POWER_Ic)),
-            0, 0, DRIVE_POWER_ERROR_UNDERFLOW_Ic, DRIVE_POWER_ERROR_OVERFLOW_Ic
-        );
+    static const size_t prot_cutoff_items[] = {
+        DRIVE_PROT_ITEM_CUTOFF_Ua, DRIVE_PROT_ITEM_CUTOFF_Ub, DRIVE_PROT_ITEM_CUTOFF_Uc,
+        DRIVE_PROT_ITEM_CUTOFF_Ia, DRIVE_PROT_ITEM_CUTOFF_Ib, DRIVE_PROT_ITEM_CUTOFF_Ic,
+        DRIVE_PROT_ITEM_CUTOFF_Urot, DRIVE_PROT_ITEM_CUTOFF_Irot, DRIVE_PROT_ITEM_CUTOFF_Iexc
+    };
+    
+    static const size_t prot_cutoff_items_count = ARRAY_LEN(prot_cutoff_items);
+    
+    static const drive_power_errors_t prot_cutoff_errs_mask = 
+        DRIVE_POWER_ERROR_OVERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Uc |
+        DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |
+        DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc;
+    
+    static const drive_power_warnings_t prot_cutoff_warn_mask = 
+        DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |
+        DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |
+        DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc;
+    
+    drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
+    drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
+    
+    drive_protection_set_cutoff_errs_mask(prot_cutoff_errs_mask);
+    drive_protection_set_cutoff_warn_mask(prot_cutoff_warn_mask);
+    
+    if(!drive_protection_check_power_items(prot_cutoff_items, prot_cutoff_items_count, &warnings, &errors)){
+        if(errors != DRIVE_POWER_ERROR_NONE){
+            drive_power_error_occured(errors);
+        }
+
+        if(warnings != DRIVE_POWER_WARNING_NONE){
+            drive_power_warning_occured(errors);
+        }
+    }
 }
 
 /**
- * Проверка напряжений фаз.
+ * Проверяет значение входов питания.
  */
-static void drive_check_power_u_in(void)
+static void drive_check_power(void)
 {
-    // Напряжения - превышение критической разности.
-    // A.
-    drive_handle_power_check(
-            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Ua)),
-            DRIVE_POWER_WARNING_UNDERFLOW_Ua, DRIVE_POWER_WARNING_OVERFLOW_Ua,
-            DRIVE_POWER_ERROR_UNDERFLOW_Ua, DRIVE_POWER_ERROR_OVERFLOW_Ua
-            );
-    // B.
-    drive_handle_power_check(
-            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Ub)),
-            DRIVE_POWER_WARNING_UNDERFLOW_Ub, DRIVE_POWER_WARNING_OVERFLOW_Ub,
-            DRIVE_POWER_ERROR_UNDERFLOW_Ub, DRIVE_POWER_ERROR_OVERFLOW_Ub
-            );
-    // C.
-    drive_handle_power_check(
-            drive_protection_check_input_voltage(drive_power_channel_real_value(DRIVE_POWER_Uc)),
-            DRIVE_POWER_WARNING_UNDERFLOW_Uc, DRIVE_POWER_WARNING_OVERFLOW_Uc,
-            DRIVE_POWER_ERROR_UNDERFLOW_Uc, DRIVE_POWER_ERROR_OVERFLOW_Uc
-            );
-}
+    // Напряжения и токи.
+    drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
+    drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
+    
+    if(!drive_protection_check_power_items(drive_prot_items, DRIVE_CHECK_PROT_ITEMS_COUNT, &warnings, &errors)){
+        if(errors != DRIVE_POWER_ERROR_NONE){
+            drive_power_error_occured(errors);
+        }
 
-/*
- * Состояние простоя (готовность).
- */
-
-/**
- * Проверяет значение входов питания в состоянии простоя (готовности).
- */
-static void drive_check_power_idle(void)
-{
-    // Напряжения.
-    // Фазы.
-    drive_check_power_u_in();
-    // Напряжения - отклонения от нуля.
-    // Rot.
-    drive_handle_power_check(
-            drive_protection_check_zero_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot)), 0, 0,
-            DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot
-            );
-    // Токи - отклонения от нуля.
-    // Exc.
-    drive_handle_power_check(
-            drive_protection_check_exc_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)), 0, 0,
-            DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc
-            );
-    // Rot.
-    drive_handle_power_check(
-            drive_protection_check_rot_zero_current(drive_power_channel_real_value(DRIVE_POWER_Irot)), 0, 0,
-            DRIVE_POWER_ERROR_IDLE_Irot, DRIVE_POWER_ERROR_IDLE_Irot
-            );
-}
-
-/**
- * Проверяет значение входов питания в состоянии работы.
- */
-static void drive_check_power_running(void)
-{
-    // Напряжения.
-    // Фазы.
-    drive_check_power_u_in();
-    // Rot.
-    fixed32_t u_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
-    fixed32_t i_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
-    // Допустимые пределы.
-    drive_handle_power_check(
-            drive_protection_check_rot_voltage(u_rot),
-            DRIVE_POWER_WARNING_UNDERFLOW_Urot, DRIVE_POWER_WARNING_OVERFLOW_Urot,
-            DRIVE_POWER_ERROR_UNDERFLOW_Urot, DRIVE_POWER_ERROR_OVERFLOW_Urot
-            );
-    // Токи.
-    // Rot.
-    drive_handle_power_check(
-            drive_protection_check_rot_current(i_rot),
-            DRIVE_POWER_WARNING_UNDERFLOW_Irot, DRIVE_POWER_WARNING_OVERFLOW_Irot,
-            DRIVE_POWER_ERROR_UNDERFLOW_Irot, DRIVE_POWER_ERROR_OVERFLOW_Irot
-            );
-    // Обрыв якоря.
-    //if(drive_protection_check_rot_break(u_rot, i_rot, drive_regulator_current_u_ref()) != DRIVE_BREAK_CHECK_NORMAL){
-    //    drive_power_error_occured(DRIVE_POWER_ERROR_ROT_BREAK);
-    //}
-    // Exc.
-    drive_handle_power_check(
-            drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc)),
-            DRIVE_POWER_WARNING_UNDERFLOW_Iexc, DRIVE_POWER_WARNING_OVERFLOW_Iexc,
-            DRIVE_POWER_ERROR_UNDERFLOW_Iexc, DRIVE_POWER_ERROR_OVERFLOW_Iexc
-            );
+        if(warnings != DRIVE_POWER_WARNING_NONE){
+            drive_power_warning_occured(warnings);
+        }
+    }
+    
     // TOP.
     drive_top_check_res_t top_check = drive_protection_top_check();
     switch(top_check){
         case DRIVE_TOP_CHECK_NORMAL:
-            drive_clear_power_warning(DRIVE_POWER_WARNING_THERMAL_OVERLOAD);
+            drive_clear_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
             break;
         case DRIVE_TOP_CHECK_HEATING:
-            drive_set_power_warning(DRIVE_POWER_WARNING_THERMAL_OVERLOAD);
+            drive_set_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
             break;
         case DRIVE_TOP_CHECK_OVERHEAT:
         case DRIVE_TOP_CHECK_COOLING:
-            drive_power_error_occured(DRIVE_POWER_ERROR_THERMAL_OVERLOAD);
+            drive_error_occured(DRIVE_ERROR_THERMAL_OVERLOAD);
             break;
     }
 }
@@ -592,7 +668,7 @@ static void drive_update_digital_outputs(void)
 /**
  * Обрабатывает тепловую защиту. 
  */
-static void drive_states_process_top(void)
+static void drive_process_top(void)
 {
     if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
         drive_protection_top_process(drive_power_channel_real_value(DRIVE_POWER_Irot), DRIVE_TOP_DT);
@@ -687,7 +763,6 @@ static err_t drive_state_process_error(void)
  */
 static err_t drive_state_process_running(void)
 {
-    drive_check_power_running();
     drive_regulate();
     
     return E_NO_ERROR;
@@ -720,30 +795,46 @@ static err_t drive_state_process_stop(void)
             }
             break;
         case DRIVE_STOPPING_WAIT_ROT:
-            check_res = drive_protection_check_zero_voltage(drive_power_channel_real_value(DRIVE_POWER_Urot));
+            check_res = drive_protection_check_rot_zero_voltage();
             
-            if(drive_protection_is_allow(check_res)){
+            if(drive_protection_is_normal(check_res) ||
+                    ( drive.iters_counter >= drive.settings.stop_rot_iters &&
+                      drive_protection_is_allow(check_res) )){
+                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Urot);
+                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Urot);
+                drive_protection_reset_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                drive_protection_reset_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 drive_triacs_set_exc_enabled(false);
                 drive_regulator_set_exc_enabled(false);
                 drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
                 drive.iters_counter = 0;
-            }else if(++ drive.iters_counter >= drive.settings.stop_rot_iters){
-                drive_handle_power_check(check_res, 0, 0,
-                        DRIVE_POWER_ERROR_IDLE_Urot, DRIVE_POWER_ERROR_IDLE_Urot
-                        );
+            }else if(drive.iters_counter >= drive.settings.stop_rot_iters){
+                if(drive.iters_counter >= drive.settings.stop_rot_iters){
+                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Urot);
+                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Urot);
+                }else{
+                    drive.iters_counter ++;
+                }
             }
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            check_res = drive_protection_check_exc_zero_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
+            check_res = drive_protection_check_exc_zero_current();
 
-            if(drive_protection_is_allow(check_res)){
+            if(drive_protection_is_normal(check_res) ||
+                    ( drive.iters_counter >= drive.settings.stop_exc_iters &&
+                      drive_protection_is_allow(check_res) )){
+                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
+                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
                 drive_set_state(DRIVE_STATE_IDLE);
                 drive.stopping_state = DRIVE_STOPPING_DONE;
                 drive.iters_counter = 0;
-            }else if(++ drive.iters_counter >= drive.settings.stop_exc_iters){
-                drive_handle_power_check(check_res, 0, 0,
-                        DRIVE_POWER_ERROR_IDLE_Iexc, DRIVE_POWER_ERROR_IDLE_Iexc
-                        );
+            }else if(drive.iters_counter >= drive.settings.stop_exc_iters){
+                if(drive.iters_counter >= drive.settings.stop_exc_iters){
+                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
+                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
+                }else{
+                    drive.iters_counter ++;
+                }
             }
             break;
         case DRIVE_STOPPING_DONE:
@@ -778,18 +869,24 @@ static err_t drive_state_process_start(void)
             drive.iters_counter = 0;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            check_res = drive_protection_check_exc_current(drive_power_channel_real_value(DRIVE_POWER_Iexc));
+            check_res = drive_protection_check_exc();
             
-            if(drive_protection_is_allow(check_res)){
+            if(drive_protection_is_normal(check_res) ||
+                    ( drive.iters_counter >= drive.settings.start_exc_iters &&
+                      drive_protection_is_allow(check_res) )){
+                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 drive_triacs_set_pairs_enabled(true);
                 drive_regulator_set_rot_enabled(true);
                 drive.starting_state = DRIVE_STARTING_RAMP;
                 drive.iters_counter = 0;
-            }else if(++ drive.iters_counter >= drive.settings.start_exc_iters){
-                drive_handle_power_check(check_res,
-                    DRIVE_POWER_WARNING_UNDERFLOW_Iexc, DRIVE_POWER_WARNING_OVERFLOW_Iexc,
-                    DRIVE_POWER_ERROR_UNDERFLOW_Iexc, DRIVE_POWER_ERROR_OVERFLOW_Iexc
-                    );
+            }else{
+                if(drive.iters_counter >= drive.settings.start_exc_iters){
+                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+                }else{
+                    drive.iters_counter ++;
+                }
             }
             
             break;
@@ -813,8 +910,6 @@ static err_t drive_state_process_start(void)
  */
 static err_t drive_state_process_idle(void)
 {
-    drive_check_power_idle();
-    
     return E_NO_ERROR;
 }
 
@@ -892,7 +987,7 @@ static err_t drive_state_process_init(void)
         case DRIVE_INIT_WAIT_POWER:
             if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS)){
                 drive.init_state = DRIVE_INIT_DONE;
-                drive.state = DRIVE_STATE_IDLE;
+                drive_set_state(DRIVE_STATE_IDLE);
             }
             break;
         case DRIVE_INIT_DONE:
@@ -973,13 +1068,14 @@ err_t drive_init(void)
     drive_update_settings();
     
     drive.flags = DRIVE_FLAG_NONE;
-    drive.status = DRIVE_STATUS_INIT;
-    drive.state = DRIVE_STATE_INIT;
     drive.init_state = DRIVE_INIT_RESET;
     drive.errors = DRIVE_ERROR_NONE;
     drive.starting_state = DRIVE_STARTING_NONE;
     drive.stopping_state = DRIVE_STOPPING_NONE;
     drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
+    drive.status = DRIVE_STATUS_INIT;
+    //drive.state = DRIVE_STATE_INIT;
+    drive_set_state(DRIVE_STATE_INIT);
     
     drive.on_error_occured = NULL;
     
@@ -998,26 +1094,7 @@ err_t drive_init(void)
 
 err_t drive_update_settings(void)
 {
-    drive_protection_init_top(settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I));
-    drive_protection_set_input_voltage(settings_valuef(PARAM_ID_U_NOM),
-                                       settings_valueu(PARAM_ID_U_NOM_ALLOW_VAR),
-                                       settings_valueu(PARAM_ID_U_NOM_CRIT_VAR));
-    drive_protection_set_zero_voltage_noise(settings_valuef(PARAM_ID_U_ZERO_NOISE));
-    drive_protection_set_zero_current_noise(settings_valuef(PARAM_ID_I_ZERO_NOISE));
-    drive_protection_set_rot_zero_current_noise(settings_valuef(PARAM_ID_I_ROT_ZERO_NOISE));
-    drive_protection_set_exc_zero_current_noise(settings_valuef(PARAM_ID_I_EXC_ZERO_NOISE));
-    drive_protection_set_rot_voltage(settings_valuef(PARAM_ID_U_ROT_NOM),
-                                     settings_valueu(PARAM_ID_U_ROT_ALLOW_VAR),
-                                     settings_valueu(PARAM_ID_U_ROT_CRIT_VAR));
-    drive_protection_set_rot_current(settings_valuef(PARAM_ID_I_ROT_NOM),
-                                     settings_valueu(PARAM_ID_I_ROT_ALLOW_VAR),
-                                     settings_valueu(PARAM_ID_I_ROT_CRIT_VAR),
-                                     settings_valueu(PARAM_ID_I_ROT_CUTOFF_MULT));
-    drive_protection_set_exc_current(settings_valuef(PARAM_ID_I_EXC),
-                                     settings_valueu(PARAM_ID_I_EXC_ALLOW_VAR),
-                                     settings_valueu(PARAM_ID_I_EXC_CRIT_VAR));
-    
-    drive_protection_set_phases_current_cutoff(settings_valuef(PARAM_ID_I_IN_CUTOFF));
+    drive_protection_update_settings();
 
     drive_power_set_phase_calc_current((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_CURRENT));
     
@@ -1234,6 +1311,7 @@ void drive_clear_errors(void)
     if(drive.state == DRIVE_STATE_ERROR){
         drive.errors = DRIVE_ERROR_NONE;
         drive.power_errors = DRIVE_POWER_ERROR_NONE;
+        drive_protection_clear_power_errors();
         drive_phase_state_clear_errors();
         drive.init_state = DRIVE_INIT_RESET;
         drive_set_state(DRIVE_STATE_INIT);
@@ -1290,8 +1368,9 @@ void drive_null_timer_irq_handler(void)
 {
     TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
     
-    if(drive_calculate_power()){
-        drive_states_process_top();
+    if(drive_calculate_power() && drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
+        drive_process_top();
+        drive_check_power();
     }
     
     drive_states_process();
