@@ -12,11 +12,22 @@
 #include "fixed/fixed32.h"
 
 
+
+//! Режим останова.
+typedef enum _Ramp_Stop_Mode {
+    RAMP_STOP_MODE_NORMAL = 0, //!< Нормальный останов.
+    RAMP_STOP_MODE_FAST   = 1  //!< Быстрый останов.
+} ramp_stop_mode_t;
+
 //! Тип структуры разгона.
 typedef struct _Ramp {
     fixed32_t current_ref; //!< Текущее задание.
     fixed32_t target_ref; //!< Установленное задание.
-    fixed32_t step_ref; //!< Шаг за период.
+    fixed32_t reference_step; //!< Шаг задания за период.
+    fixed32_t start_step; //!< Шаг разгона за период.
+    fixed32_t stop_step; //!< Шаг останова за период.
+    fixed32_t fast_stop_step; //!< Шаг быстрого останова за период.
+    ramp_stop_mode_t stop_mode; //!< Режим останова.
 } ramp_t;
 
 //! Тип задания разгона.
@@ -36,8 +47,17 @@ typedef int32_t ramp_time_t;
 //! Максимальное время разгона.
 #define RAMP_TIME_MAX 300
 
+//! Время изменения задания по-умолчанию.
+#define RAMP_REFERENCE_TIME_DEFAULT 10
+
 //! Время разгона по-умолчанию.
-#define RAMP_TIME_DEFAULT 30
+#define RAMP_START_TIME_DEFAULT 30
+
+//! Время разгона по-умолчанию.
+#define RAMP_STOP_TIME_DEFAULT 20
+
+//! Время разгона по-умолчанию.
+#define RAMP_FAST_STOP_TIME_DEFAULT 2
 
 
 
@@ -49,13 +69,60 @@ typedef int32_t ramp_time_t;
 extern err_t ramp_init(ramp_t* ramp);
 
 /**
+ * Устанавливает время изменения задания от 0 до 100%.
+ * @param ramp Разгон.
+ * @param time Время изменения задания.
+ * @param step_dt Время шага разгона.
+ * @return Код ошибки.
+ */
+extern err_t ramp_set_reference_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
+
+/**
  * Устанавливает время разгона.
  * @param ramp Разгон.
  * @param time Время разгона.
  * @param step_dt Время шага разгона.
  * @return Код ошибки.
  */
-extern err_t ramp_set_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
+extern err_t ramp_set_start_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
+
+/**
+ * Устанавливает время останова.
+ * @param ramp Разгон.
+ * @param time Время останова.
+ * @param step_dt Время шага разгона.
+ * @return Код ошибки.
+ */
+extern err_t ramp_set_stop_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
+
+/**
+ * Устанавливает время быстрого останова.
+ * @param ramp Разгон.
+ * @param time Время быстрого останова.
+ * @param step_dt Время шага разгона.
+ * @return Код ошибки.
+ */
+extern err_t ramp_set_fast_stop_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt);
+
+/**
+ * Получает режим останова.
+ * @param ramp Разгон.
+ * @return Режим останова.
+ */
+ALWAYS_INLINE static ramp_stop_mode_t ramp_stop_mode(ramp_t* ramp)
+{
+    return ramp->stop_mode;
+}
+
+/**
+ * Устанавливает режим останова.
+ * @param ramp Разгон.
+ * @param mode Режим останова.
+ */
+ALWAYS_INLINE static void ramp_set_stop_mode(ramp_t* ramp, ramp_stop_mode_t mode)
+{
+    ramp->stop_mode = mode;
+}
 
 /**
  * Устанавливает целевое задание разгона.
@@ -120,7 +187,7 @@ ALWAYS_INLINE static fixed32_t ramp_current_reference(ramp_t* ramp)
  */
 ALWAYS_INLINE static fixed32_t ramp_reference_step(ramp_t* ramp)
 {
-    return ramp->step_ref;
+    return ramp->reference_step;
 }
 
 /**

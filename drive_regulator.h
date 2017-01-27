@@ -86,21 +86,47 @@ extern void drive_regulator_inc_reference(void);
 extern void drive_regulator_dec_reference(void);
 
 /**
- * Запускает регулирование.
+ * Выполняет запуск.
  */
 extern void drive_regulator_start(void);
 
 /**
- * Останавливает регулирование.
+ * Выполняет останов.
  */
 extern void drive_regulator_stop(void);
+
+/**
+ * Выполняет быстрый останов.
+ */
+extern void drive_regulator_fast_stop(void);
+
+/**
+ * Устанавливает время изменения задания от 0 до 100%.
+ * @param time Время изменения задания.
+ * @return Код ошибки.
+ */
+extern err_t drive_regulator_set_reference_time(ramp_time_t time);
 
 /**
  * Устанавливает время разгона от 0 до 100%.
  * @param time Время разгона.
  * @return Код ошибки.
  */
-extern err_t drive_regulator_set_ramp_time(ramp_time_t time);
+extern err_t drive_regulator_set_start_time(ramp_time_t time);
+
+/**
+ * Устанавливает время останова от 100 до 0%.
+ * @param time Время разгона.
+ * @return Код ошибки.
+ */
+extern err_t drive_regulator_set_stop_time(ramp_time_t time);
+
+/**
+ * Устанавливает время быстрого останова от 100 до 0%.
+ * @param time Время разгона.
+ * @return Код ошибки.
+ */
+extern err_t drive_regulator_set_fast_stop_time(ramp_time_t time);
 
 /**
  * Получает разрешение регулирования напряжения якоря.

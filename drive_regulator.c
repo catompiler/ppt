@@ -116,7 +116,9 @@ void drive_regulator_start(void)
 {
     if(regulator.state == DRIVE_REGULATOR_STATE_IDLE ||
        regulator.state == DRIVE_REGULATOR_STATE_STOP){
+        
         regulator.state = DRIVE_REGULATOR_STATE_START;
+        
         ramp_set_target_reference(&regulator.rot_ramp, fixed32_get_int(regulator.reference));
     }
 }
@@ -125,14 +127,45 @@ void drive_regulator_stop(void)
 {
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
+        
         regulator.state = DRIVE_REGULATOR_STATE_STOP;
+        
+        ramp_set_stop_mode(&regulator.rot_ramp, RAMP_STOP_MODE_NORMAL);
         ramp_set_target_reference(&regulator.rot_ramp, 0);
     }
 }
 
-err_t drive_regulator_set_ramp_time(ramp_time_t time)
+void drive_regulator_fast_stop(void)
 {
-    return ramp_set_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
+    if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
+       regulator.state == DRIVE_REGULATOR_STATE_START ||
+       regulator.state == DRIVE_REGULATOR_STATE_STOP){
+        
+        regulator.state = DRIVE_REGULATOR_STATE_STOP;
+        
+        ramp_set_stop_mode(&regulator.rot_ramp, RAMP_STOP_MODE_FAST);
+        ramp_set_target_reference(&regulator.rot_ramp, 0);
+    }
+}
+
+err_t drive_regulator_set_reference_time(ramp_time_t time)
+{
+    return ramp_set_reference_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
+}
+
+err_t drive_regulator_set_start_time(ramp_time_t time)
+{
+    return ramp_set_start_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
+}
+
+err_t drive_regulator_set_stop_time(ramp_time_t time)
+{
+    return ramp_set_stop_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
+}
+
+err_t drive_regulator_set_fast_stop_time(ramp_time_t time)
+{
+    return ramp_set_fast_stop_time(&regulator.rot_ramp, time, DRIVE_RAMP_DT);
 }
 
 bool drive_regulator_rot_enabled(void)
