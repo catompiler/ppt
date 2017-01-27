@@ -61,21 +61,23 @@ static drive_modbus_t drive_modbus;
 
 // Константы адресов.
 // Регистры ввода.
+//! Полуслова состояния.
+#define DRIVE_MODBUS_INPUT_REG_STATE (DRIVE_MODBUS_INPUT_REGS_START + 0)
 //! Полуслова ошибок.
-#define DRIVE_MODBUS_INPUT_REG_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 0)
-#define DRIVE_MODBUS_INPUT_REG_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 1)
+#define DRIVE_MODBUS_INPUT_REG_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 10)
+#define DRIVE_MODBUS_INPUT_REG_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 11)
 //! Полуслова предупреждений
-#define DRIVE_MODBUS_INPUT_REG_WARNINGS0 (DRIVE_MODBUS_INPUT_REGS_START + 2)
-#define DRIVE_MODBUS_INPUT_REG_WARNINGS1 (DRIVE_MODBUS_INPUT_REGS_START + 3)
+#define DRIVE_MODBUS_INPUT_REG_WARNINGS0 (DRIVE_MODBUS_INPUT_REGS_START + 12)
+#define DRIVE_MODBUS_INPUT_REG_WARNINGS1 (DRIVE_MODBUS_INPUT_REGS_START + 13)
 //! Полуслова ошибок питания.
-#define DRIVE_MODBUS_INPUT_REG_PWR_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 4)
-#define DRIVE_MODBUS_INPUT_REG_PWR_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 5)
+#define DRIVE_MODBUS_INPUT_REG_PWR_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 14)
+#define DRIVE_MODBUS_INPUT_REG_PWR_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 15)
 //! Полуслова предупреждений питания.
-#define DRIVE_MODBUS_INPUT_REG_PWR_WARNINGS0 (DRIVE_MODBUS_INPUT_REGS_START + 6)
-#define DRIVE_MODBUS_INPUT_REG_PWR_WARNINGS1 (DRIVE_MODBUS_INPUT_REGS_START + 7)
+#define DRIVE_MODBUS_INPUT_REG_PWR_WARNINGS0 (DRIVE_MODBUS_INPUT_REGS_START + 16)
+#define DRIVE_MODBUS_INPUT_REG_PWR_WARNINGS1 (DRIVE_MODBUS_INPUT_REGS_START + 17)
 //! Полуслова ошибок фаз.
-#define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 8)
-#define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 9)
+#define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 18)
+#define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 19)
 // Регистры хранения.
 //! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
@@ -112,6 +114,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_DOUT_USER_SET_VALUE (DRIVE_MODBUS_COILS_START + 7)
 //! Переключает пользовательские цифровые выхода.
 #define DRIVE_MODBUS_COIL_DOUT_USER_TOGGLE (DRIVE_MODBUS_COILS_START + 8)
+//! Экстренный останов.
+#define DRIVE_MODBUS_COIL_EMERGENCY_STOP (DRIVE_MODBUS_COILS_START + 9)
 
 
 /** Пользовательские функции и коды.
@@ -248,6 +252,9 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
                 return MODBUS_RTU_ERROR_INVALID_ADDRESS;
             }
             *value = settings_param_value_raw(param);
+            break;
+        case DRIVE_MODBUS_INPUT_REG_STATE:
+            *value = drive_state();
             break;
         case DRIVE_MODBUS_INPUT_REG_ERRORS0:
             *value = drive_errors() & 0xffff;
@@ -443,6 +450,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             break;
         case DRIVE_MODBUS_COIL_DOUT_USER_TOGGLE:
             drive_dio_toggle_output_type_state(DRIVE_DIO_OUT_USER);
+            break;
+        case DRIVE_MODBUS_COIL_EMERGENCY_STOP:
+            drive_emergency_stop();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;
