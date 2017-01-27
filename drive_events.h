@@ -27,8 +27,9 @@ typedef uint8_t drive_osc_index_t;
 
 //! Тип события.
 typedef enum _Drive_Event_Type {
-    DRIVE_EVENT_TYPE_ERROR = 0, //!< Ошибка.
-    DRIVE_EVENT_TYPE_STATUS = 1 //!< Состояние.
+    DRIVE_EVENT_TYPE_STATUS = 0, //!< Состояние.
+    DRIVE_EVENT_TYPE_WARNING = 1, //!< Предупреждение.
+    DRIVE_EVENT_TYPE_ERROR = 2 //!< Ошибка.
 } drive_event_type_t;
 
 #pragma pack(push, 1)
