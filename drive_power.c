@@ -12,6 +12,9 @@ static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_CHANNELS_COU
     DRIVE_POWER_Urot, DRIVE_POWER_Irot, DRIVE_POWER_Iexc
 };
 
+//! Максимальный разрешённый дрифт.
+#define DRIVE_POWER_MAX_DRIFT 32
+
 /**
  * Делитель измерений АЦП.
  * Число точек за период осцилограммы = Число измерений за период ADC / (делитель измерений АЦП + 1).

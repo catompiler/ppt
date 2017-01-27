@@ -51,9 +51,25 @@
  * Рампа.
  */
 /**
- * Время разгона.
+ * Время разгона 0-100%.
  */
-#define PARAM_ID_RAMP_TIME 50
+#define PARAM_ID_RAMP_START_TIME 50
+/**
+ * Время торможения 100-0%.
+ */
+#define PARAM_ID_RAMP_STOP_TIME 51
+/**
+ * Время быстрого торможения 100-0%.
+ */
+#define PARAM_ID_RAMP_FAST_STOP_TIME 52
+/**
+ * Время изменения задания 0-100%.
+ */
+#define PARAM_ID_RAMP_REFERENCE_TIME 53
+/**
+ * Режим останова.
+ */
+#define PARAM_ID_RAMP_STOP_MODE 60
 
 /*
  * ПИД якоря и возбуждения.
@@ -129,6 +145,18 @@
  * Разрешение тепловой защиты по току.
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE 101
+/**
+ * Действие при срабатывании тепловой защиты по току.
+ */
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION 102
+
+/**
+ * Грибок.
+ */
+/**
+ * Действие при срабатывании грибка.
+ */
+#define PARAM_ID_EMERGENCY_STOP_ACTION  105
 
 /*
  * Защита питания.

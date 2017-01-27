@@ -15,6 +15,7 @@ typedef struct _Drive_TOP {
     fixed32_t k_pie_max; //!< Коэффициент зависимости времени срабатывания от перегрузки по току.
     fixed32_t cur_pie; //!< Текущее тепло двигателя.
     bool overheat; //!< Флаг перегрева.
+    drive_prot_action_t action; //!< Действие при срабатывании.
 } drive_top_t;
 
 //! Тип сравнения значений защиты.
@@ -286,6 +287,7 @@ typedef struct _Drive_Protection {
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
+    drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
 } drive_protection_t;
 
 //! Структура защиты привода.
@@ -299,12 +301,12 @@ bool drive_protection_init(void)
     return true;
 }
 
-ALWAYS_INLINE static drive_protection_item_t* drive_protection_get_prot_item(size_t index)
+ALWAYS_INLINE static drive_protection_item_t* drive_protection_get_prot_item(drive_prot_index_t index)
 {
     return &drive_prot.prot_items[index];
 }
 
-ALWAYS_INLINE static const drive_protection_descr_t* drive_protection_get_prot_item_descr(size_t index)
+ALWAYS_INLINE static const drive_protection_descr_t* drive_protection_get_prot_item_descr(drive_prot_index_t index)
 {
     return &drive_prot_items_descrs[index];
 }
@@ -324,7 +326,7 @@ ALWAYS_INLINE static fixed32_t drive_protection_get_udf_level(fixed32_t value, u
     return value - drive_protection_get_part(value, percents);
 }
 
-static void drive_prot_update_prot_item_settings(size_t index)
+static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
 {
     // Если превышен индекс - возврат.
     if(index >= DRIVE_PROT_ITEMS_COUNT) return;
@@ -392,7 +394,7 @@ static void drive_prot_update_prot_item_settings(size_t index)
 
 static void drive_prot_update_prot_items_settings(void)
 {
-    size_t i;
+    drive_prot_index_t i;
     for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
         drive_prot_update_prot_item_settings(i);
     }
@@ -410,6 +412,9 @@ void drive_protection_update_settings(void)
             * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I);
     
     drive_prot.top.enabled = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE);
+    drive_prot.top.action = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION);
+    
+    drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     
     drive_prot_update_prot_items_settings();
 }
@@ -557,6 +562,8 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
                 if(item->latch_enabled){
                     item->hold_value = true;
                 }
+            }else{
+                item->active = false;
             }
         }
         
@@ -567,7 +574,7 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
         
         if(item->pie < 0) item->pie = 0;
         
-        if(item->latch_enabled){
+        if(item->latch_enabled && masked){
             item->active = item->hold_value;
         }else{
             item->active = false;
@@ -576,15 +583,15 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
         item->allow = true;
     }
     
-    if(item->active){
+    if(item->active && masked){
         if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
-            if(warnings) (*warnings) |= (descr->flag & drive_prot.prot_warn_mask);
+            if(warnings) (*warnings) |= descr->flag;
         }else{ // DRIVE_PROT_TYPE_ERR
-            if(errors) (*errors) |= (descr->flag & drive_prot.prot_errs_mask);
+            if(errors) (*errors) |= descr->flag;
         }
     }
     
-    return item->allow;
+    return item->active;
 }
 
 /**
@@ -597,20 +604,33 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
  */
 static bool drive_protection_check_item_inst(drive_protection_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
+    bool masked = drive_protection_item_masked_impl(descr);
+    
     fixed32_t value = drive_power_channel_real_value_inst(descr->power_channel);
     
     if(drive_protection_check_item_value(descr->type, value, item->value_level)){
-        if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
-            if(warnings) (*warnings) |= (descr->flag & drive_prot.prot_cutoff_warn_mask);
-        }else{ // DRIVE_PROT_TYPE_ERR
-            if(errors) (*errors) |= (descr->flag & drive_prot.prot_cutoff_errs_mask);
+        
+        item->allow = false;
+        
+        if(masked){
+            if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
+                if(warnings) (*warnings) |= descr->flag;
+            }else{ // DRIVE_PROT_TYPE_ERR
+                if(errors) (*errors) |= descr->flag;
+            }
+            item->active = true;
+        }else{
+            item->active = false;
         }
-        return false;
+    }else{
+        item->allow = true;
+        item->active = false;
     }
-    return true;
+    
+    return item->active;
 }
 
-bool drive_protection_check_item(size_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return true;
     
@@ -620,28 +640,33 @@ bool drive_protection_check_item(size_t index, drive_power_warnings_t* warnings,
     
     const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
     
+    bool prev_active = item->active;
+    bool new_active = false;
+    
     if(descr->type != DRIVE_PROT_TYPE_CUT){//fault || warn
-        return drive_protection_check_item_real(item, descr, warnings, errors);
+        new_active = drive_protection_check_item_real(item, descr, warnings, errors);
     }else{//cutoff
-        return drive_protection_check_item_inst(item, descr, warnings, errors);
+        new_active = drive_protection_check_item_inst(item, descr, warnings, errors);
     }
+    
+    return (prev_active == false) && new_active;
 }
 
-bool drive_protection_check_power_items(const size_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     if(items == NULL || items_count == 0) return true;
     
-    bool res_good = true;
+    bool res = false;
     
-    size_t i;
+    drive_prot_index_t i;
     for(i = 0; i < items_count; i ++){
-        res_good &= drive_protection_check_item(items[i], warnings, errors);
+        res |= drive_protection_check_item(items[i], warnings, errors);
     }
     
-    return res_good;
+    return res;
 }
 
-void drive_protection_clear_power_item_error(size_t index)
+void drive_protection_clear_power_item_error(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return;
     
@@ -654,13 +679,22 @@ void drive_protection_clear_power_item_error(size_t index)
 
 void drive_protection_clear_power_errors(void)
 {
-    size_t i;
+    drive_prot_index_t i;
     for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
         drive_protection_clear_power_item_error(i);
     }
 }
 
-bool drive_protection_item_masked(size_t index)
+drive_prot_action_t drive_protection_item_action(drive_prot_index_t index)
+{
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ACTION_IGNORE;
+    
+    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    
+    return item->action;
+}
+
+bool drive_protection_item_masked(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
     
@@ -669,7 +703,7 @@ bool drive_protection_item_masked(size_t index)
     return drive_protection_item_masked_impl(descr);
 }
 
-bool drive_protection_item_allow(size_t index)
+bool drive_protection_item_allow(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ALLOW_DEFAULT;
     
@@ -678,7 +712,7 @@ bool drive_protection_item_allow(size_t index)
     return item->allow;
 }
 
-bool drive_protection_item_active(size_t index)
+bool drive_protection_item_active(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
     
@@ -686,6 +720,28 @@ bool drive_protection_item_active(size_t index)
     
     return item->active;
 }
+
+ drive_power_warnings_t drive_protection_item_warning(drive_prot_index_t index)
+ {
+     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_POWER_WARNING_NONE;
+    
+    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
+    
+    if(descr->flag_type == DRIVE_PROT_FLAG_WRN) return descr->flag;
+    
+    return DRIVE_POWER_WARNING_NONE;
+ }
+
+ drive_power_errors_t drive_protection_item_error(drive_prot_index_t index)
+ {
+     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_POWER_ERROR_NONE;
+    
+    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
+    
+    if(descr->flag_type == DRIVE_PROT_FLAG_ERR) return descr->flag;
+    
+    return DRIVE_POWER_ERROR_NONE;
+ }
 
 void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt)
 {
@@ -731,6 +787,16 @@ bool drive_protection_top_ready(void)
     return !drive_prot.top.overheat;
 }
 
+drive_prot_action_t drive_protection_top_action(void)
+{
+    return drive_prot.top.action;
+}
+
+drive_prot_action_t drive_protection_emergency_stop_action(void)
+{
+    return drive_prot.emergency_stop_action;
+}
+
 bool drive_protection_is_normal(drive_pwr_check_res_t check_res)
 {
     if(check_res != DRIVE_PWR_CHECK_NORMAL) return false;
@@ -744,6 +810,7 @@ bool drive_protection_is_allow(drive_pwr_check_res_t check_res)
     return true;
 }
 
+/*
 static bool drive_protection_check_delta(fixed32_t ref_value, fixed32_t cur_value, fixed32_t delta)
 {
     cur_value -= ref_value;
@@ -763,6 +830,7 @@ static bool drive_protection_check_zero(fixed32_t value, fixed32_t delta)
 {
     return value <= delta;
 }
+*/
 
 drive_pwr_check_res_t drive_protection_check_rot_zero_voltage(void)
 {

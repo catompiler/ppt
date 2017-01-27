@@ -1107,6 +1107,7 @@ static void init_drive(void)
 {
     drive_init();
     drive_set_error_callback((drive_error_callback_t)drive_tasks_write_error_event);
+    drive_set_warning_callback((drive_warning_callback_t)drive_tasks_write_warning_event);
 }
 
 static void init_drive_ui(void)

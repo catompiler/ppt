@@ -36,6 +36,7 @@
 
 //! Тип структуры настроек привода.
 typedef struct _Drive_Settings {
+    drive_stop_mode_t stop_mode; //!< Режим нормального останова привода.
     uint32_t stop_rot_iters; //!< Время остановки ротора в итерациях.
     uint32_t stop_exc_iters; //!< Время остановки возбуждения в итерациях.
     uint32_t start_exc_iters; //!< Время остановки возбуждения в итерациях.
@@ -70,11 +71,14 @@ typedef struct _Drive {
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
+    drive_stop_mode_t stopping_cur_mode; //!< Режим текущего останова привода.
+    drive_state_t stopping_next_state; //!< Состояние привода после останова.
     drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
     drive_parameters_t params; //!< Обновляемые параметры.
     uint32_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
+    drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
 } drive_t;
 
 //! Состояние привода.
@@ -89,6 +93,26 @@ typedef struct _Drive_Prot_Data {
     drive_power_errors_t errors_mask; //!< Маска ошибок.
     drive_power_errors_t warnings_mask; //!< Маска предупреждений.
 } drive_prot_data_t;
+
+//! Маска ошибок защиты по входным напряжениям и токам (только превышение).
+#define PROT_ERRORS_MASK_IN_OVF (\
+    DRIVE_POWER_ERROR_OVERFLOW_Ua |\
+    DRIVE_POWER_ERROR_OVERFLOW_Ub |\
+    DRIVE_POWER_ERROR_OVERFLOW_Uc |\
+    DRIVE_POWER_ERROR_OVERFLOW_Ia |\
+    DRIVE_POWER_ERROR_OVERFLOW_Ib |\
+    DRIVE_POWER_ERROR_OVERFLOW_Ic  \
+)
+
+//! Маска предупреждений защиты по входным напряжениям и токам (только превышение).
+#define PROT_WARNINGS_MASK_IN_OVF (\
+    DRIVE_POWER_WARNING_OVERFLOW_Ua |\
+    DRIVE_POWER_WARNING_OVERFLOW_Ub |\
+    DRIVE_POWER_WARNING_OVERFLOW_Uc |\
+    DRIVE_POWER_WARNING_OVERFLOW_Ia |\
+    DRIVE_POWER_WARNING_OVERFLOW_Ib |\
+    DRIVE_POWER_WARNING_OVERFLOW_Ic  \
+)
 
 //! Маска ошибок защиты по входным напряжениям и токам.
 #define PROT_ERRORS_MASK_IN (\
@@ -168,8 +192,8 @@ static const size_t drive_prot_items[] = {
 #define DRIVE_CHECK_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_items)
 
 // INIT
-#define PROT_ITEMS_INIT_ERRORS_MASK     DRIVE_POWER_ERROR_NONE
-#define PROT_ITEMS_INIT_WARNINGS_MASK   DRIVE_POWER_WARNING_NONE
+#define PROT_ITEMS_INIT_ERRORS_MASK     PROT_ERRORS_MASK_IN_OVF
+#define PROT_ITEMS_INIT_WARNINGS_MASK   PROT_WARNINGS_MASK_IN_OVF
 // CALIBRATION
 #define PROT_ITEMS_CALIBRATION_ERRORS_MASK     DRIVE_POWER_ERROR_NONE
 #define PROT_ITEMS_CALIBRATION_WARNINGS_MASK   DRIVE_POWER_WARNING_NONE
@@ -186,8 +210,8 @@ static const size_t drive_prot_items[] = {
 #define PROT_ITEMS_STOP_ERRORS_MASK     PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | PROT_ERRORS_MASK_EXC
 #define PROT_ITEMS_STOP_WARNINGS_MASK   PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | PROT_WARNINGS_MASK_EXC
 // STOP ERROR
-#define PROT_ITEMS_STOP_ERROR_ERRORS_MASK   DRIVE_POWER_ERROR_NONE
-#define PROT_ITEMS_STOP_ERROR_WARNINGS_MASK DRIVE_POWER_WARNING_NONE
+#define PROT_ITEMS_STOP_ERROR_ERRORS_MASK   PROT_ITEMS_STOP_ERRORS_MASK//DRIVE_POWER_ERROR_NONE
+#define PROT_ITEMS_STOP_ERROR_WARNINGS_MASK PROT_ITEMS_STOP_WARNINGS_MASK//DRIVE_POWER_WARNING_NONE
 // ERROR
 #define PROT_ITEMS_ERROR_ERRORS_MASK    DRIVE_POWER_ERROR_NONE
 #define PROT_ITEMS_ERROR_WARNINGS_MASK  DRIVE_POWER_WARNING_NONE
@@ -220,12 +244,11 @@ ALWAYS_INLINE static drive_state_t drive_get_state(void)
 }
 
 /**
- * Установка состояния.
- * @param state Состояние.
+ * Устанавливает маски ошибок и предупреждений питания.
  */
-static void drive_set_state(drive_state_t state)
+static void drive_update_prot_masks(void)
 {
-    if(drive.state == state) return;
+    drive_state_t state = drive_get_state();
     
     if(state < DRIVE_PROT_DATA_COUNT){
         drive_protection_set_errs_mask(drive_prot_data[state].errors_mask);
@@ -234,23 +257,46 @@ static void drive_set_state(drive_state_t state)
         drive_protection_set_errs_mask(DRIVE_POWER_ERROR_ALL);
         drive_protection_set_warn_mask(DRIVE_POWER_WARNING_ALL);
     }
+}
+
+/**
+ * Установка состояния.
+ * @param state Состояние.
+ */
+static void drive_set_state(drive_state_t state)
+{
+    if(drive.state == state) return;
     
     drive.state = state;
     
+    drive_update_prot_masks();
+    
     switch(drive.state){
         case DRIVE_STATE_INIT:
-        case DRIVE_STATE_CALIBRATION:
+            drive.init_state = DRIVE_INIT_BEGIN;
             drive.status = DRIVE_STATUS_INIT;
+            break;
+        case DRIVE_STATE_CALIBRATION:
+            drive.power_calibration_state = DRIVE_PWR_CALIBRATION_BEGIN;
             break;
         case DRIVE_STATE_IDLE:
             drive.status = DRIVE_STATUS_IDLE;
             break;
         case DRIVE_STATE_START:
+            drive.starting_state = DRIVE_STARTING_BEGIN;
+            drive.status = DRIVE_STATUS_RUN;
+            break;
         case DRIVE_STATE_RUN:
+            drive.status = DRIVE_STATUS_RUN;
+            break;
         case DRIVE_STATE_STOP:
+            drive.stopping_state = DRIVE_STOPPING_BEGIN;
             drive.status = DRIVE_STATUS_RUN;
             break;
         case DRIVE_STATE_STOP_ERROR:
+            drive.err_stopping_state = DRIVE_ERR_STOPPING_BEGIN;
+            drive.status = DRIVE_STATUS_ERROR;
+            break;
         case DRIVE_STATE_ERROR:
             drive.status = DRIVE_STATUS_ERROR;
             break;
@@ -279,24 +325,6 @@ ALWAYS_INLINE static void drive_restore_state(void)
 ALWAYS_INLINE static void drive_set_saved_state(drive_state_t state)
 {
     drive.saved_state = state;
-}
-
-/**
- * Получение состояния калибровки.
- * @return Состояние калибровки.
- */
-ALWAYS_INLINE static drive_power_calibration_t drive_get_calibration_state(void)
-{
-    return drive.power_calibration_state;
-}
-
-/**
- * Установка состояния калибровки.
- * @param state Состояние калибровки.
- */
-ALWAYS_INLINE static void drive_set_calibration_state(drive_power_calibration_t state)
-{
-    drive.power_calibration_state = state;
 }
 
 /**
@@ -358,7 +386,7 @@ ALWAYS_INLINE static void drive_set_warning(drive_warnings_t warning)
  * Снятие предупреждения.
  * @param warning Предупреждение.
  */
-ALWAYS_INLINE static void drive_clear_warning(drive_warnings_t warning)
+static void drive_clear_warning(drive_warnings_t warning)
 {
     drive.warnings &= ~warning;
 }
@@ -367,18 +395,30 @@ ALWAYS_INLINE static void drive_clear_warning(drive_warnings_t warning)
  * Установка ошибки питания.
  * @param error Ошибка.
  */
-ALWAYS_INLINE static void drive_set_power_error(drive_power_errors_t error)
+static void drive_set_power_error(drive_power_errors_t error)
 {
     drive.power_errors |= error;
+    drive_set_error(DRIVE_ERROR_POWER_INVALID);
 }
 
 /**
  * Снятие ошибки питания.
  * @param error Ошибка.
  */
-ALWAYS_INLINE static void drive_clear_power_error(drive_power_errors_t error)
+static void drive_clear_power_error(drive_power_errors_t error)
 {
     drive.power_errors &= ~error;
+    if(drive.power_errors == DRIVE_POWER_ERROR_NONE) drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+}
+
+/**
+ * Получает флаг возникновения новой ошибки питания.
+ * @param error Ошибка питания.
+ * @return Флаг возникновения новой ошибки питания.
+ */
+ALWAYS_INLINE static bool drive_is_new_power_error(drive_power_error_t error)
+{
+    return (drive.power_errors & error) == 0;
 }
 
 /**
@@ -401,9 +441,27 @@ static void drive_clear_power_warning(drive_power_warnings_t warning)
     if(drive.power_warnings == DRIVE_POWER_WARNING_NONE) drive_clear_warning(DRIVE_WARNING_POWER);
 }
 
+/**
+ * Получает флаг возникновения нового предупреждения питания.
+ * @param warning Предупреждение питания.
+ * @return Флаг возникновения нового предупреждения питания.
+ */
+ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warning)
+{
+    return (drive.power_warnings & warning) == 0;
+}
+
 /*
  * Обработка возникновения ошибки.
  */
+
+/**
+ * Обработчик возникновения ошибки.
+ */
+static void drive_on_error(void)
+{
+    if(drive.on_error_occured) drive.on_error_occured();
+}
 
 /**
  * Обработчик возникновения ошибки.
@@ -414,29 +472,28 @@ static void drive_error_occured(drive_errors_t error)
     drive_set_error(error);
 
     if(drive.status != DRIVE_STATUS_ERROR){
-        if(drive.on_error_occured) drive.on_error_occured();
+        drive_on_error();
     }
-    
-    switch(drive_get_state()){
-        case DRIVE_STATE_INIT:
-        case DRIVE_STATE_IDLE:
-            drive_set_state(DRIVE_STATE_ERROR);
-            break;
-        case DRIVE_STATE_CALIBRATION:
-            drive_set_saved_state(DRIVE_STATE_ERROR);
-            break;
-        case DRIVE_STATE_START:
-        case DRIVE_STATE_RUN:
-        case DRIVE_STATE_STOP:
-            drive.err_stopping_state = DRIVE_ERR_STOPPING_STOP;
-            drive_set_state(DRIVE_STATE_STOP_ERROR);
-            drive_triacs_stop();
-            break;
-        case DRIVE_STATE_STOP_ERROR:
-        case DRIVE_STATE_ERROR:
-            break;
-        default:
-            break;
+}
+
+/**
+ * Обработчик возникновения предупреждения.
+ */
+static void drive_on_warning(void)
+{
+    if(drive.on_warning_occured) drive.on_warning_occured();
+}
+
+/**
+ * Обработчик возникновения предупреждения.
+ * @param error Предупреждение.
+ */
+static void drive_warning_occured(drive_warnings_t warning)
+{
+    drive_set_warning(warning);
+
+    if(drive.status != DRIVE_STATUS_ERROR){
+        drive_on_warning();
     }
 }
 
@@ -457,7 +514,7 @@ static void drive_power_error_occured(drive_power_errors_t error)
 static void drive_power_warning_occured(drive_power_warnings_t warning)
 {
     drive_set_power_warning(warning);
-    drive_set_warning(DRIVE_WARNING_POWER);
+    drive_warning_occured(DRIVE_WARNING_POWER);
 }
 
 /**
@@ -469,29 +526,251 @@ static void drive_on_phase_error_occured(void)
         drive_error_occured(DRIVE_ERROR_PHASE);
 }
 
-/*
- * Общие функции обработки питания.
+/**
+ * Прекращает подачу питания на двигатель.
  */
-
-static void drive_handle_power_check(drive_pwr_check_res_t res, uint32_t under_warning, uint32_t over_warning,
-                                                                   uint32_t under_error,   uint32_t over_error)
+static void drive_supply_off(void)
 {
-    switch(res){
-        default:
-        case DRIVE_PWR_CHECK_NORMAL:
+    // Остановить таймеры открытия тиристоров.
+    drive_triacs_stop();
+    // Запретить открытие тиристоров.
+    drive_triacs_set_pairs_enabled(false);
+    drive_triacs_set_exc_enabled(false);
+    // Остановить регулятор.
+    drive_regulator_stop();
+    // Запретить регулирование якоря и возбуждения.
+    drive_regulator_set_rot_enabled(false);
+    drive_regulator_set_exc_enabled(false);
+}
+
+/**
+ * Устанавливает параметры останова привода.
+ * @param fast_stop Флаг быстрого останова.
+ * @param stop_to_error Флаг останова в состояние ошибки.
+ */
+static void drive_setup_stop(drive_stop_mode_t stop_mode, drive_state_t next_state)
+{
+    drive.stopping_cur_mode = stop_mode;
+    drive.stopping_next_state = next_state;
+}
+
+static void drive_stop_normal(void)
+{
+    drive_setup_stop(DRIVE_STOP_MODE_NORMAL, DRIVE_STATE_IDLE);
+    drive_set_state(DRIVE_STATE_STOP);
+}
+
+static void drive_stop_fast(void)
+{
+    drive_setup_stop(DRIVE_STOP_MODE_FAST, DRIVE_STATE_IDLE);
+    drive_set_state(DRIVE_STATE_STOP);
+}
+
+static void drive_stop_coast(void)
+{
+    drive_supply_off();
+    drive_set_state(DRIVE_STATE_IDLE);
+}
+
+/*static void drive_error_stop_normal(void)
+{
+    drive_setup_stop(DRIVE_STOP_MODE_NORMAL, DRIVE_STATE_ERROR);
+    drive_set_state(DRIVE_STATE_STOP_ERROR);
+}*/
+
+static void drive_error_stop_fast(void)
+{
+    drive_setup_stop(DRIVE_STOP_MODE_FAST, DRIVE_STATE_ERROR);
+    drive_set_state(DRIVE_STATE_STOP_ERROR);
+}
+
+static void drive_error_stop_coast(void)
+{
+    drive_supply_off();
+    drive_set_state(DRIVE_STATE_ERROR);
+}
+
+static void drive_error_stop_cutoff(void)
+{
+    // Отключить питание двигателя.
+    drive_supply_off();
+    // Перейти в состояние ошибки.
+    drive_set_state(DRIVE_STATE_ERROR);
+}
+
+/**
+ * Обрабатывает действие останова по ошибке элемента защиты.
+ * @param action Действие элемента защиты.
+ * @return Флаг обработки элемента защиты.
+ */
+static bool drive_prot_error_stop_by_action(drive_prot_action_t action)
+{
+    switch(action){
+        case DRIVE_PROT_ACTION_IGNORE:
+            return false;
+        case DRIVE_PROT_ACTION_WARNING:
             break;
-        case DRIVE_PWR_CHECK_WARN_UNDERFLOW:
-            drive_power_warning_occured(under_warning);
+        case DRIVE_PROT_ACTION_COAST_STOP:
+            drive_error_stop_coast();
             break;
-        case DRIVE_PWR_CHECK_WARN_OVERFLOW:
-            drive_power_warning_occured(over_warning);
+        case DRIVE_PROT_ACTION_FAST_STOP:
+            drive_error_stop_fast();
             break;
-        case DRIVE_PWR_CHECK_FAULT_UNDERFLOW:
-            drive_power_error_occured(under_error);
+        case DRIVE_PROT_ACTION_EMERGENCY_STOP:
+            drive_error_stop_cutoff();
             break;
-        case DRIVE_PWR_CHECK_FAULT_OVERFLOW:
-            drive_power_error_occured(over_error);
+    }
+    return true;
+}
+
+/**
+ * Обрабатывает действие останова элемента защиты.
+ * @param action Действие элемента защиты.
+ * @return Флаг обработки элемента защиты.
+ */
+static bool drive_prot_stop_by_action(drive_prot_action_t action)
+{
+    switch(action){
+        case DRIVE_PROT_ACTION_IGNORE:
+            return false;
+        case DRIVE_PROT_ACTION_WARNING:
             break;
+        case DRIVE_PROT_ACTION_COAST_STOP:
+            drive_stop_coast();
+            break;
+        case DRIVE_PROT_ACTION_FAST_STOP:
+            drive_stop_fast();
+            break;
+        case DRIVE_PROT_ACTION_EMERGENCY_STOP:
+            drive_error_stop_cutoff();
+            break;
+    }
+    return true;
+}
+
+/**
+ * Обрабатывает событие действия элемента защиты.
+ * @param action Действие элемента защиты.
+ * @return Флаг обработки элемента защиты.
+ */
+static bool drive_prot_event_by_action(drive_prot_action_t action)
+{
+    switch(action){
+        case DRIVE_PROT_ACTION_IGNORE:
+            return false;
+        case DRIVE_PROT_ACTION_WARNING:
+            drive_on_warning();
+            break;
+        case DRIVE_PROT_ACTION_COAST_STOP:
+        case DRIVE_PROT_ACTION_FAST_STOP:
+        case DRIVE_PROT_ACTION_EMERGENCY_STOP:
+            drive_on_error();
+            break;
+    }
+    return true;
+}
+
+/**
+ * Сравнивает действия элементы защиты исходя из жёсткости реакции.
+ * Например, EMERGENCY_STOP > FAST_STOP и WARNING > IGNORE.
+ * @param lact Действие элемента защиты.
+ * @param ract Действие элемента защиты.
+ * @return Результат сравнения элементов защиты.
+ *  1 - lact больше ract;
+ * -1 - lact меньше ract;
+ *  0 - lact равен  ract.
+ */
+static int drive_prot_action_compare(drive_prot_action_t lact, drive_prot_action_t ract)
+{
+    if((int)lact > (int)ract) return 1;
+    if((int)lact < (int)ract) return -1;
+    return 0;
+}
+
+/**
+ * Получает наиболее жёсткое действие элемента защиты.
+ * @param lact Действие элемента защиты.
+ * @param ract Действие элемента защиты.
+ * @return Наиболее жёсткое действие элемента защиты.
+ */
+static drive_prot_action_t drive_prot_get_hard_action(drive_prot_action_t lact, drive_prot_action_t ract)
+{
+    if(drive_prot_action_compare(lact, ract) > 0) return lact;
+    return ract;
+}
+
+/**
+ * Проверяет значение входов питания.
+ */
+static void drive_check_power(void)
+{
+    // Предупреждения и ошибки элемента защиты.
+    drive_power_warnings_t item_warnings;
+    drive_power_errors_t item_errors;
+    
+    // Наиболее жёсткое действие.
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    // Индекс элемента защиты.
+    drive_prot_index_t index;
+    
+    size_t i;
+    for(i = 0; i < DRIVE_CHECK_PROT_ITEMS_COUNT; i ++){
+        
+        index = drive_prot_items[i];
+        
+        item_warnings = drive_protection_item_warning(index);
+        item_errors = drive_protection_item_error(index);
+        
+        if(drive_protection_check_item(index, NULL, NULL)){
+            
+            res_action = drive_prot_get_hard_action(res_action,
+                                drive_protection_item_action(index));
+            
+        }
+        if(drive_protection_item_active(index)){
+            
+            if(item_warnings != DRIVE_POWER_WARNING_NONE){
+                drive_set_power_warning(item_warnings);
+            }
+            
+            if(item_errors != DRIVE_POWER_ERROR_NONE){
+                drive_set_power_error(item_errors);
+            }
+        }else{
+            
+            if(item_warnings != DRIVE_POWER_WARNING_NONE){
+                drive_clear_power_warning(item_warnings);
+            }
+            
+            if(item_errors != DRIVE_POWER_ERROR_NONE){
+                drive_clear_power_error(item_errors);
+            }
+        }
+    }
+    
+    // TOP.
+    drive_top_check_res_t top_check = drive_protection_top_check();
+    switch(top_check){
+        case DRIVE_TOP_CHECK_NORMAL:
+            drive_clear_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
+            break;
+        case DRIVE_TOP_CHECK_HEATING:
+            drive_set_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
+            break;
+        case DRIVE_TOP_CHECK_OVERHEAT:
+        case DRIVE_TOP_CHECK_COOLING:
+            res_action = drive_prot_get_hard_action(res_action,
+                                    drive_protection_top_action());
+            drive_set_error(DRIVE_ERROR_THERMAL_OVERLOAD);
+            break;
+    }
+    
+    // Если требуется действие.
+    if(res_action != DRIVE_PROT_ACTION_IGNORE){
+        if(drive_prot_event_by_action(res_action)){
+            drive_prot_stop_by_action(res_action);
+        }
     }
 }
 
@@ -524,49 +803,16 @@ static void drive_check_power_inst(void)
     drive_protection_set_cutoff_errs_mask(prot_cutoff_errs_mask);
     drive_protection_set_cutoff_warn_mask(prot_cutoff_warn_mask);
     
-    if(!drive_protection_check_power_items(prot_cutoff_items, prot_cutoff_items_count, &warnings, &errors)){
+    if(drive_protection_check_power_items(prot_cutoff_items, prot_cutoff_items_count, &warnings, &errors)){
+        
         if(errors != DRIVE_POWER_ERROR_NONE){
-            drive_power_error_occured(errors);
-        }
-
-        if(warnings != DRIVE_POWER_WARNING_NONE){
-            drive_power_warning_occured(errors);
-        }
-    }
-}
-
-/**
- * Проверяет значение входов питания.
- */
-static void drive_check_power(void)
-{
-    // Напряжения и токи.
-    drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
-    drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
-    
-    if(!drive_protection_check_power_items(drive_prot_items, DRIVE_CHECK_PROT_ITEMS_COUNT, &warnings, &errors)){
-        if(errors != DRIVE_POWER_ERROR_NONE){
+            drive_error_stop_cutoff();
             drive_power_error_occured(errors);
         }
 
         if(warnings != DRIVE_POWER_WARNING_NONE){
             drive_power_warning_occured(warnings);
         }
-    }
-    
-    // TOP.
-    drive_top_check_res_t top_check = drive_protection_top_check();
-    switch(top_check){
-        case DRIVE_TOP_CHECK_NORMAL:
-            drive_clear_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
-            break;
-        case DRIVE_TOP_CHECK_HEATING:
-            drive_set_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
-            break;
-        case DRIVE_TOP_CHECK_OVERHEAT:
-        case DRIVE_TOP_CHECK_COOLING:
-            drive_error_occured(DRIVE_ERROR_THERMAL_OVERLOAD);
-            break;
     }
 }
 
@@ -633,7 +879,7 @@ static void drive_process_digital_inputs(void)
         if(state) drive_emergency_stop();
     }
     
-    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_STOP_START, &state)){
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_START_STOP, &state)){
         if(state){
             drive_start();
         }else{ //DRIVE_DIO_OFF
@@ -659,10 +905,11 @@ static void drive_process_digital_inputs(void)
  */
 static void drive_update_digital_outputs(void)
 {
-    drive_dio_set_output_type_state(DRIVE_DIO_OUT_READY, drive_ready());
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_OK,      drive_get_state() != DRIVE_STATE_ERROR);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_READY,   drive_ready());
     drive_dio_set_output_type_state(DRIVE_DIO_OUT_RUNNING, drive_running());
     drive_dio_set_output_type_state(DRIVE_DIO_OUT_WARNING, drive_warnings() != DRIVE_WARNING_NONE);
-    drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR, drive_errors() != DRIVE_ERROR_NONE);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR,   drive_errors() != DRIVE_ERROR_NONE);
 }
 
 /**
@@ -717,38 +964,6 @@ static void drive_setup_triacs_open(phase_t phase)
 }
 
 /**
- * Обработка состояния останова привода при ошибке.
- * @return Код ошибки.
- */
-static err_t drive_state_process_stop_error(void)
-{
-    switch(drive.err_stopping_state){
-        default:
-        case DRIVE_ERR_STOPPING_NONE:
-            return E_NO_ERROR;
-        case DRIVE_ERR_STOPPING_STOP:
-            drive_triacs_set_pairs_enabled(false);
-            drive_regulator_set_rot_enabled(false);
-            
-            drive_regulate();
-            
-            drive.err_stopping_state = DRIVE_ERR_STOPPING_WAIT_ROT;
-            break;
-        case DRIVE_ERR_STOPPING_WAIT_ROT:
-            drive_regulator_stop();
-            drive_triacs_set_exc_enabled(false);
-            drive_regulator_set_exc_enabled(false);
-        case DRIVE_ERR_STOPPING_WAIT_EXC:
-            drive.err_stopping_state = DRIVE_ERR_STOPPING_DONE;
-        case DRIVE_ERR_STOPPING_DONE:
-            drive_set_state(DRIVE_STATE_ERROR);
-            break;
-    }
-    
-    return E_NO_ERROR;
-}
-
-/**
  * Обработка состояния ошибки привода.
  * @return Код ошибки.
  */
@@ -769,10 +984,11 @@ static err_t drive_state_process_running(void)
 }
 
 /**
- * Обработка состояния останова привода.
- * @return Код ошибки.
+ * Функция останова привода с торможением.
+ * @param fast_stop Флаг необходимости быстрого останова.
+ * @return Флаг завершения останова.
  */
-static err_t drive_state_process_stop(void)
+static bool drive_state_process_stop_brake(bool fast_stop)
 {
     drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
     
@@ -781,9 +997,13 @@ static err_t drive_state_process_stop(void)
     switch(drive.stopping_state){
         default:
         case DRIVE_STOPPING_NONE:
-            return E_NO_ERROR;
-        case DRIVE_STOPPING_STOP:
-            drive_regulator_stop();
+            break;
+        case DRIVE_STOPPING_BEGIN:
+            if(fast_stop){
+                drive_regulator_fast_stop();
+            }else{
+                drive_regulator_stop();
+            }
             drive.stopping_state = DRIVE_STOPPING_RAMP;
             break;
         case DRIVE_STOPPING_RAMP:
@@ -825,9 +1045,9 @@ static err_t drive_state_process_stop(void)
                       drive_protection_is_allow(check_res) )){
                 drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
                 drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
-                drive_set_state(DRIVE_STATE_IDLE);
                 drive.stopping_state = DRIVE_STOPPING_DONE;
                 drive.iters_counter = 0;
+                return true;
             }else if(drive.iters_counter >= drive.settings.stop_exc_iters){
                 if(drive.iters_counter >= drive.settings.stop_exc_iters){
                     drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
@@ -838,11 +1058,55 @@ static err_t drive_state_process_stop(void)
             }
             break;
         case DRIVE_STOPPING_DONE:
-            drive_set_state(DRIVE_STATE_IDLE);
+            return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Функция останова привода выбегом.
+ * @return Флаг завершения останова.
+ */
+static bool drive_state_process_stop_coast(void)
+{
+    drive_supply_off();
+    return true;
+}
+
+/**
+ * Обработка состояния останова привода.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_stop(void)
+{
+    bool stopping_done = false;
+    
+    switch(drive.stopping_cur_mode){
+        case DRIVE_STOP_MODE_NORMAL:
+            stopping_done = drive_state_process_stop_brake(false);
             break;
+        case DRIVE_STOP_MODE_FAST:
+            stopping_done = drive_state_process_stop_brake(true);
+            break;
+        case DRIVE_STOP_MODE_COAST:
+            stopping_done = drive_state_process_stop_coast();
+            break;
+    }
+    if(stopping_done){
+        drive_set_state(drive.stopping_next_state);
     }
     
     return E_NO_ERROR;
+}
+
+/**
+ * Обработка состояния останова привода при ошибке.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_stop_error(void)
+{
+    return drive_state_process_stop();
 }
 
 /**
@@ -859,7 +1123,7 @@ static err_t drive_state_process_start(void)
         default:
         case DRIVE_STARTING_NONE:
             return E_NO_ERROR;
-        case DRIVE_STARTING_START:
+        case DRIVE_STARTING_BEGIN:
             drive_triacs_set_exc_enabled(true);
             if(drive_triacs_exc_mode() == DRIVE_TRIACS_EXC_REGULATED){
                 drive_regulator_set_exc_enabled(true);
@@ -923,7 +1187,7 @@ static err_t drive_state_process_power_calibration(void)
         default:
         case DRIVE_PWR_CALIBRATION_NONE:
             break;
-        case DRIVE_PWR_CALIBRATION_START:
+        case DRIVE_PWR_CALIBRATION_BEGIN:
             drive_clear_flag(DRIVE_FLAG_POWER_CALIBRATED);
             drive.power_calibration_state = DRIVE_PWR_CALIBRATION_RUNNING;
             //drive_power_set_processing_iters(DRIVE_POWER_CALIBRATION_ITERS);
@@ -956,7 +1220,7 @@ static err_t drive_state_process_init(void)
     switch(drive.init_state){
         case DRIVE_INIT_NONE:
             break;
-        case DRIVE_INIT_RESET:
+        case DRIVE_INIT_BEGIN:
             drive_phase_state_reset();
             //drive_power_reset();
             //drive_power_reset_channels(DRIVE_POWER_CHANNELS);
@@ -991,6 +1255,7 @@ static err_t drive_state_process_init(void)
             }
             break;
         case DRIVE_INIT_DONE:
+            drive_set_state(DRIVE_STATE_IDLE);
             break;
     }
     return E_NO_ERROR;
@@ -1066,18 +1331,7 @@ err_t drive_init(void)
     drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
     drive_update_settings();
-    
-    drive.flags = DRIVE_FLAG_NONE;
-    drive.init_state = DRIVE_INIT_RESET;
-    drive.errors = DRIVE_ERROR_NONE;
-    drive.starting_state = DRIVE_STARTING_NONE;
-    drive.stopping_state = DRIVE_STOPPING_NONE;
-    drive.err_stopping_state = DRIVE_ERR_STOPPING_NONE;
-    drive.status = DRIVE_STATUS_INIT;
-    //drive.state = DRIVE_STATE_INIT;
-    drive_set_state(DRIVE_STATE_INIT);
-    
-    drive.on_error_occured = NULL;
+    drive_update_prot_masks();
     
     drive.params.param_u_a = settings_param_by_id(PARAM_ID_POWER_U_A);
     drive.params.param_u_b = settings_param_by_id(PARAM_ID_POWER_U_B);
@@ -1089,6 +1343,9 @@ err_t drive_init(void)
     drive.params.param_i_rot = settings_param_by_id(PARAM_ID_POWER_I_ROT);
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     
+    //drive_set_state(DRIVE_STATE_INIT);
+    drive.init_state = DRIVE_INIT_BEGIN;
+    
     return E_NO_ERROR;
 }
 
@@ -1098,6 +1355,7 @@ err_t drive_update_settings(void)
 
     drive_power_set_phase_calc_current((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_CURRENT));
     
+    drive.settings.stop_mode = settings_valueu(PARAM_ID_RAMP_STOP_MODE);
     drive.settings.stop_rot_iters = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_NULL_TIMER_FREQ;
     drive.settings.stop_exc_iters = settings_valueu(PARAM_ID_EXC_STOP_TIME) * DRIVE_NULL_TIMER_FREQ;
     drive.settings.start_exc_iters = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_NULL_TIMER_FREQ;
@@ -1108,7 +1366,12 @@ err_t drive_update_settings(void)
     drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
     drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
     drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
-    drive_regulator_set_ramp_time(settings_valuei(PARAM_ID_RAMP_TIME));
+    
+    drive_regulator_set_reference_time(settings_valueu(PARAM_ID_RAMP_REFERENCE_TIME));
+    drive_regulator_set_start_time(settings_valueu(PARAM_ID_RAMP_START_TIME));
+    drive_regulator_set_stop_time(settings_valueu(PARAM_ID_RAMP_STOP_TIME));
+    drive_regulator_set_fast_stop_time(settings_valueu(PARAM_ID_RAMP_FAST_STOP_TIME));
+    
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
@@ -1253,6 +1516,7 @@ drive_err_stopping_t drive_err_stopping(void)
 bool drive_ready(void)
 {
     return (drive.errors == 0) &&
+           (drive.state != DRIVE_STATE_INIT) &&
             drive_flags_is_set(DRIVE_READY_FLAGS) &&
             drive_protection_top_ready();
 }
@@ -1263,7 +1527,6 @@ bool drive_start(void)
         return false;
     if(drive.state == DRIVE_STATE_IDLE ||
        drive.state == DRIVE_STATE_STOP){
-        drive.starting_state = DRIVE_STARTING_START;
         drive_set_state(DRIVE_STATE_START);
     }
     return true;
@@ -1273,8 +1536,17 @@ bool drive_stop(void)
 {
     if(drive.state == DRIVE_STATE_RUN ||
        drive.state == DRIVE_STATE_START){
-        drive.stopping_state = DRIVE_STOPPING_STOP;
-        drive_set_state(DRIVE_STATE_STOP);
+        switch(drive.settings.stop_mode){
+            case DRIVE_STOP_MODE_NORMAL:
+                drive_stop_normal();
+                break;
+            case DRIVE_STOP_MODE_FAST:
+                drive_stop_fast();
+                break;
+            case DRIVE_STOP_MODE_COAST:
+                drive_stop_coast();
+                break;
+        }
     }
     return true;
 }
@@ -1282,8 +1554,15 @@ bool drive_stop(void)
 bool drive_emergency_stop(void)
 {
     if(!(drive.errors & DRIVE_ERROR_EMERGENCY_STOP)){
-        drive_error_occured(DRIVE_ERROR_EMERGENCY_STOP);
-        return true;
+        
+        drive_prot_action_t action = drive_protection_emergency_stop_action();
+        
+        if(action != DRIVE_PROT_ACTION_IGNORE) drive_set_error(DRIVE_ERROR_EMERGENCY_STOP);
+        
+        if(drive_prot_event_by_action(action)){
+            drive_prot_error_stop_by_action(action);
+            return true;
+        }
     }
     return false;
 }
@@ -1293,7 +1572,6 @@ bool drive_calibrate_power(void)
     if(drive.state == DRIVE_STATE_IDLE ||
        drive.state == DRIVE_STATE_ERROR){
         drive_save_state();
-        drive_set_calibration_state(DRIVE_PWR_CALIBRATION_START);
         drive_set_state(DRIVE_STATE_CALIBRATION);
         
         return true;
@@ -1308,14 +1586,15 @@ bool drive_running(void)
 
 void drive_clear_errors(void)
 {
+    drive.errors = DRIVE_ERROR_NONE;
+    drive.power_errors = DRIVE_POWER_ERROR_NONE;
+    drive_protection_clear_power_errors();
+    drive_phase_state_clear_errors();
+    
     if(drive.state == DRIVE_STATE_ERROR){
-        drive.errors = DRIVE_ERROR_NONE;
-        drive.power_errors = DRIVE_POWER_ERROR_NONE;
-        drive_protection_clear_power_errors();
-        drive_phase_state_clear_errors();
-        drive.init_state = DRIVE_INIT_RESET;
         drive_set_state(DRIVE_STATE_INIT);
     }
+    
     drive.warnings = DRIVE_WARNING_NONE;
     drive.power_warnings = DRIVE_POWER_WARNING_NONE;
 }
@@ -1328,6 +1607,16 @@ drive_error_callback_t drive_error_callback(void)
 void drive_set_error_callback(drive_error_callback_t callback)
 {
     drive.on_error_occured = callback;
+}
+
+drive_warning_callback_t drive_warning_callback(void)
+{
+    return drive.on_warning_occured;
+}
+
+void drive_set_warning_callback(drive_warning_callback_t callback)
+{
+    drive.on_warning_occured = callback;
 }
 
 err_t drive_set_null_timer(TIM_TypeDef* TIM)

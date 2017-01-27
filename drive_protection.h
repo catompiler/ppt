@@ -12,7 +12,12 @@
 #include "drive.h"
 
 
+//! Количество элементов защиты.
 #define DRIVE_PROT_ITEMS_COUNT 47
+
+/*
+ * Индексы элементов защиты.
+ */
 
 #define DRIVE_PROT_ITEM_FAULT_OVF_Ua    0
 #define DRIVE_PROT_ITEM_FAULT_UDF_Ua    1
@@ -86,6 +91,11 @@
 #define DRIVE_PROT_ITEM_CUTOFF_Iexc     46
 
 
+//! Тип индекса элемента защиты.
+typedef size_t drive_prot_index_t;
+
+
+//! Тип результата проверки питания.
 typedef enum _Drive_Pwr_Check_Res {
     DRIVE_PWR_CHECK_NORMAL = 0,
     DRIVE_PWR_CHECK_WARN_UNDERFLOW,
@@ -94,6 +104,7 @@ typedef enum _Drive_Pwr_Check_Res {
     DRIVE_PWR_CHECK_FAULT_OVERFLOW,
 } drive_pwr_check_res_t;
 
+//! Тип результата проверки тепловой защиты.
 typedef enum _Drive_Top_Check_Res {
     DRIVE_TOP_CHECK_NORMAL = 0,
     DRIVE_TOP_CHECK_HEATING,
@@ -101,18 +112,19 @@ typedef enum _Drive_Top_Check_Res {
     DRIVE_TOP_CHECK_OVERHEAT
 } drive_top_check_res_t;
 
+//! Тип результата проверки обрыва якоря.
 typedef enum _Drive_Break_Check_Res {
     DRIVE_BREAK_CHECK_NORMAL = 0,
     DRIVE_BREAK_CHECK_FAIL
 } drive_break_check_res_t;
 
-
+//! Тип действия при активации элемента защиты.
 typedef enum _Drive_Prot_Action {
-    DRIVE_PROT_IGNORE         = 0,
-    DRIVE_PROT_WARNING        = 1,
-    DRIVE_PROT_STOP           = 2,
-    DRIVE_PROT_FAST_STOP      = 3,
-    DRIVE_PROT_EMERGENCY_STOP = 4
+    DRIVE_PROT_ACTION_IGNORE         = 0,
+    DRIVE_PROT_ACTION_WARNING        = 1,
+    DRIVE_PROT_ACTION_FAST_STOP      = 2,
+    DRIVE_PROT_ACTION_COAST_STOP     = 3,
+    DRIVE_PROT_ACTION_EMERGENCY_STOP = 4
 } drive_prot_action_t;
 
 
@@ -253,9 +265,9 @@ extern void drive_protection_reset_cutoff_warn_mask_flags(drive_power_warnings_t
  * @param index Индекс элемента защиты.
  * @param warnings Указатель на переменную для предупреждений. Может быть NULL.
  * @param errors Указатель на переменную для ошибок. Может быть NULL.
- * @return Флаг нахождения элемента защиты в допустимом диапазоне.
+ * @return Флаг активации элемента защиты.
  */
-extern bool drive_protection_check_item(size_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors);
+extern bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors);
 
 /**
  * Выполняет проверку по элементам защиты.
@@ -264,15 +276,15 @@ extern bool drive_protection_check_item(size_t index, drive_power_warnings_t* wa
  * @param items_count Число индексов элементов защиты в массиве.
  * @param warnings Указатель на переменную для предупреждений. Может быть NULL.
  * @param errors Указатель на переменную для ошибок. Может быть NULL.
- * @return Флаг нахождения всех элементов в допустимых диапазонах питания.
+ * @return Флаг активации минимум одного элемента защиты.
  */
-extern bool drive_protection_check_power_items(const size_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors);
+extern bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors);
 
 /**
  * Очищает ошибки элементов защиты.
  * @param index Индекс элемента защиты.
  */
-extern void drive_protection_clear_power_item_error(size_t index);
+extern void drive_protection_clear_power_item_error(drive_prot_index_t index);
 
 /**
  * Очищает ошибки элементов защиты.
@@ -280,25 +292,46 @@ extern void drive_protection_clear_power_item_error(size_t index);
 extern void drive_protection_clear_power_errors(void);
 
 /**
+ * Получает действие элемента защиты.
+ * @param index Индекс элемента защиты.
+ * @return Действие элемента защиты.
+ */
+extern drive_prot_action_t drive_protection_item_action(drive_prot_index_t index);
+
+/**
  * Получает наличие элемента защиты в маске ошибок или предупреждений.
  * @param index Индекс элемента защиты.
  * @return Флаг наличия элемента защиты в маске ошибок или предупреждений.
  */
-extern bool drive_protection_item_masked(size_t index);
+extern bool drive_protection_item_masked(drive_prot_index_t index);
 
 /**
  * Получает флаг допустимости значения элемента защиты.
  * @param index Индекс элемента защиты.
  * @return Флаг допустимости значения элемента защиты.
  */
-extern bool drive_protection_item_allow(size_t index);
+extern bool drive_protection_item_allow(drive_prot_index_t index);
 
 /**
  * Получает флаг активности(срабатывания) элемента защиты.
  * @param index Индекс элемента защиты.
  * @return Флаг активности(срабатывания) элемента защиты.
  */
-extern bool drive_protection_item_active(size_t index);
+extern bool drive_protection_item_active(drive_prot_index_t index);
+
+/**
+ * Получает флаг предупреждения элемента защиты.
+ * @param index Индекс элемента защиты.
+ * @return Флаг предупреждения элемента защиты.
+ */
+extern drive_power_warnings_t drive_protection_item_warning(drive_prot_index_t index);
+
+/**
+ * Получает флаг ошибки элемента защиты.
+ * @param index Индекс элемента защиты.
+ * @return Флаг ошибки элемента защиты.
+ */
+extern drive_power_errors_t drive_protection_item_error(drive_prot_index_t index);
 
 /*
  * Тепловая защита.
@@ -323,6 +356,21 @@ extern drive_top_check_res_t drive_protection_top_check(void);
  * @return Флаг готовности привода по тепловой защите.
  */
 extern bool drive_protection_top_ready(void);
+
+/**
+ * Получает действие при срабатывании тепловой защиты.
+ * @return Действие при срабатывании тепловой защиты.
+ */
+extern drive_prot_action_t drive_protection_top_action(void);
+
+/*
+ * Грибок.
+ */
+/**
+ * Получает действие при нажатии на грибок.
+ * @return Действие при нажатии на грибок.
+ */
+extern drive_prot_action_t drive_protection_emergency_stop_action(void);
 
 /**
  * Получает флаг отсутствия отклонения (предупреждения и ошибки).
