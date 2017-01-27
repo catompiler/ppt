@@ -17,29 +17,30 @@
 
 //! Перечисление инвертированности логического уровня сигнала.
 typedef enum _Drive_Dio_Inversion {
-    DRIVE_DIO_INVERSION_NONE = 0,
+    DRIVE_DIO_INVERSION_NONE     = 0,
     DRIVE_DIO_INVERSION_INVERTED = 1,
 } drive_dio_inversion_t;
 
 //! Перечисление типов цифровых входов.
 typedef enum _Drive_Dio_Input_Type {
-    DRIVE_DIO_IN_NONE = 0,
-    DRIVE_DIO_IN_STOP_START = 1,
+    DRIVE_DIO_IN_NONE           = 0,
+    DRIVE_DIO_IN_START_STOP     = 1,
     DRIVE_DIO_IN_EMERGENCY_STOP = 2,
-    DRIVE_DIO_IN_REFERENCE_INC = 3,
-    DRIVE_DIO_IN_REFERENCE_DEC = 4,
-    DRIVE_DIO_IN_CLEAR_ERRORS = 5,
-    DRIVE_DIO_IN_USER = 6,
+    DRIVE_DIO_IN_REFERENCE_INC  = 3,
+    DRIVE_DIO_IN_REFERENCE_DEC  = 4,
+    DRIVE_DIO_IN_CLEAR_ERRORS   = 5,
+    DRIVE_DIO_IN_USER           = 6,
 } drive_dio_input_type_t;
 
 //! Перечисление типов цифровых выходов.
 typedef enum _Drive_Dio_Output_Type {
-    DRIVE_DIO_OUT_NONE = 0,
-    DRIVE_DIO_OUT_READY = 1,
-    DRIVE_DIO_OUT_RUNNING = 2,
-    DRIVE_DIO_OUT_ERROR = 3,
-    DRIVE_DIO_OUT_WARNING = 4,
-    DRIVE_DIO_OUT_USER = 5,
+    DRIVE_DIO_OUT_NONE    = 0,
+    DRIVE_DIO_OUT_OK      = 1,
+    DRIVE_DIO_OUT_READY   = 2,
+    DRIVE_DIO_OUT_RUNNING = 3,
+    DRIVE_DIO_OUT_ERROR   = 4,
+    DRIVE_DIO_OUT_WARNING = 5,
+    DRIVE_DIO_OUT_USER    = 6,
 } drive_dio_output_type_t;
 
 //! Перечисление номеров цифровых входов.
