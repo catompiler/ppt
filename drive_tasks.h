@@ -23,17 +23,24 @@ extern err_t drive_tasks_save_settings(void);
 
 /**
  * Записывает событие.
- * ошибки привода.
+ * ошибки привода и осциллограмму.
  * @return Код ошибки.
  */
 extern err_t drive_tasks_write_error_event(void);
 
 /**
  * Записывает событие.
- * состояния привода.
+ * состояния привода и осциллограмму.
  * @return Код ошибки.
  */
 extern err_t drive_tasks_write_status_event(void);
+
+/**
+ * Записывает событие.
+ * предупреждения привода без осциллограммы.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_write_warning_event(void);
 
 /**
  * Читает событие из eeprom.
