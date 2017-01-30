@@ -245,17 +245,47 @@ ALWAYS_INLINE static drive_state_t drive_get_state(void)
 
 /**
  * Устанавливает маски ошибок и предупреждений питания.
+ * @param state Состояние привода.
  */
-static void drive_update_prot_masks(void)
+static void drive_set_prot_masks(drive_state_t state)
 {
-    drive_state_t state = drive_get_state();
-    
     if(state < DRIVE_PROT_DATA_COUNT){
         drive_protection_set_errs_mask(drive_prot_data[state].errors_mask);
         drive_protection_set_warn_mask(drive_prot_data[state].warnings_mask);
     }else{
         drive_protection_set_errs_mask(DRIVE_POWER_ERROR_ALL);
         drive_protection_set_warn_mask(DRIVE_POWER_WARNING_ALL);
+    }
+}
+
+/**
+ * Устанавливает маски ошибок и предупреждений питания.
+ */
+static void drive_update_prot_masks(void)
+{
+    drive_state_t state = drive_get_state();
+    
+    drive_set_prot_masks(state);
+}
+
+/**
+ * Устанавливает маски ошибок и предупреждений питания.
+ * @param state_from Текущее состояние.
+ * @param state_to Необходимое состояние.
+ */
+static void drive_change_prot_masks(drive_state_t state_from, drive_state_t state_to)
+{
+    bool from_start = (state_from == DRIVE_STATE_START);
+    bool to_stop = ((state_to == DRIVE_STATE_STOP) || (state_to == DRIVE_STATE_STOP_ERROR));
+    
+    bool from_stop = (state_from == DRIVE_STATE_STOP);
+    bool to_start = (state_to == DRIVE_STATE_START);
+    
+    bool start_to_stop = from_start && to_stop;
+    bool stop_to_start = from_stop && to_start;
+    
+    if(!(start_to_stop || stop_to_start)){
+        drive_set_prot_masks(state_to);
     }
 }
 
@@ -267,9 +297,9 @@ static void drive_set_state(drive_state_t state)
 {
     if(drive.state == state) return;
     
-    drive.state = state;
+    drive_change_prot_masks(drive.state, state);
     
-    drive_update_prot_masks();
+    drive.state = state;
     
     switch(drive.state){
         case DRIVE_STATE_INIT:
