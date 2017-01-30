@@ -563,7 +563,11 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
                     item->hold_value = true;
                 }
             }else{
-                item->active = false;
+                if(item->latch_enabled){
+                    item->active = item->hold_value;
+                }else{
+                    item->active = false;
+                }
             }
         }
         
@@ -574,7 +578,7 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
         
         if(item->pie < 0) item->pie = 0;
         
-        if(item->latch_enabled && masked){
+        if(item->latch_enabled){
             item->active = item->hold_value;
         }else{
             item->active = false;
@@ -583,7 +587,7 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
         item->allow = true;
     }
     
-    if(item->active && masked){
+    if(item->active){
         if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
             if(warnings) (*warnings) |= descr->flag;
         }else{ // DRIVE_PROT_TYPE_ERR
