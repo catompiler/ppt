@@ -237,6 +237,8 @@
 #define TR_ID_MENU_DIO_TYPE         372
 //! Инверсия.
 #define TR_ID_MENU_DIO_INVERSION    373
+//! Цифровые входа/выхода.
+#define TR_ID_MENU_DIGITAL_IO       374
 //! Вход 1.
 #define TR_ID_MENU_DIO_INPUT1       380
 //! Вход 2.
@@ -305,6 +307,21 @@
 #define TR_ID_MENU_CALIBRATION_DATA_Ifan  431
 // //! .
 // #define TR_ID_MENU_
+
+//! Питание.
+#define TR_ID_HELP_POWER            550
+//! Сеть.
+#define TR_ID_HELP_POWER_IN         551
+//! Ном. U сети.
+#define TR_ID_HELP_U_NOM            552
+//! Ном. I сети.
+#define TR_ID_HELP_I_NOM            553
+//! Якорь.
+#define TR_ID_HELP_ROTOR            560
+//! Ном. U якоря.
+#define TR_ID_HELP_U_ROT_NOM        561
+//! Ном. I якоря.
+#define TR_ID_HELP_I_ROT_NOM        562
 
 // /**
 //  * .

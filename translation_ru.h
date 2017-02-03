@@ -109,6 +109,7 @@ TEXT_TR(TR_ID_MENU_DIGITAL_INPUTS, "Цифровые входа")
 TEXT_TR(TR_ID_MENU_DIGITAL_OUTPUTS, "Цифровые выхода")
 TEXT_TR(TR_ID_MENU_DIO_TYPE, "Тип")
 TEXT_TR(TR_ID_MENU_DIO_INVERSION, "Инверсия")
+TEXT_TR(TR_ID_MENU_DIGITAL_IO, "Цифровые входа/выхода")
 TEXT_TR(TR_ID_MENU_DIO_INPUT1, "Вход 1")
 TEXT_TR(TR_ID_MENU_DIO_INPUT2, "Вход 2")
 TEXT_TR(TR_ID_MENU_DIO_INPUT3, "Вход 3")
@@ -145,6 +146,15 @@ TEXT_TR(TR_ID_MENU_CALIBRATION_DATA_Ifan, "Значение калибровки
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")
+        
+// справка меню
+TEXT_TR(TR_ID_HELP_POWER, "Питание")
+TEXT_TR(TR_ID_HELP_POWER_IN, "Номинальное напряжение и ток сети")
+TEXT_TR(TR_ID_HELP_U_NOM, "Номинальное напряжение сети в вольтах")
+TEXT_TR(TR_ID_HELP_I_NOM, "Номинальный ток сети в амперах")
+TEXT_TR(TR_ID_HELP_ROTOR, "Напряжение и ток якоря")
+TEXT_TR(TR_ID_HELP_U_ROT_NOM, "Номинальное напряжение якоря в вольтах")
+TEXT_TR(TR_ID_HELP_I_ROT_NOM, "Номинальный ток якоря в амперах")
         
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Напряжение\nякоря")
