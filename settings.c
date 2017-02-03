@@ -413,9 +413,19 @@ bool settings_param_is_virtual(param_t* param)
     return (settings_param_descr_by_index(param->descr_index)->flags & PARAM_FLAG_VIRTUAL) != 0;
 }
 
+param_type_t settings_param_type(param_t* param)
+{
+    return settings_param_descr_by_index(param->descr_index)->type;
+}
+
 bool settings_param_flags(param_t* param)
 {
     return settings_param_descr_by_index(param->descr_index)->flags;
+}
+
+param_units_t settings_param_units(param_t* param)
+{
+    return settings_param_descr_by_index(param->descr_index)->units;
 }
 
  param_data_t settings_param_value_raw(param_t* param)

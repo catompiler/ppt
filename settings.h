@@ -57,6 +57,9 @@ typedef enum _Param_Flag {
 //! Тип флагов параметров.
 typedef uint32_t param_flags_t;
 
+//! Тип единиц измерения параметров.
+typedef const char* param_units_t;
+
 //! Тип дескриптора параметра.
 typedef struct _Param_Descr {
     param_id_t id;
@@ -65,6 +68,7 @@ typedef struct _Param_Descr {
     param_value_t max;
     param_value_t def;
     param_flags_t flags;
+    param_units_t units;
 } param_descr_t;
 
 
@@ -73,8 +77,9 @@ typedef struct _Param_Descr {
         static const param_descr_t arg_name[arg_count] = 
 
 //! Описывает дескриптор параметра.
-#define PARAM_DESCR(arg_id, arg_type, arg_min, arg_max, arg_def, arg_flags)\
-        { .id = arg_id, .type = arg_type, .min.int_value = arg_min, .max.int_value = arg_max, .def.int_value = arg_def, .flags = arg_flags }
+#define PARAM_DESCR(arg_id, arg_type, arg_min, arg_max, arg_def, arg_flags, arg_units)\
+        { .id = arg_id, .type = arg_type, .min.int_value = arg_min, .max.int_value = arg_max,\
+          .def.int_value = arg_def, .flags = arg_flags, .units = arg_units }
 
 
 //! Тип параметра.
@@ -138,11 +143,25 @@ extern param_t* settings_param_by_id(param_id_t id);
 extern bool settings_param_is_virtual(param_t* param);
 
 /**
+ * Получает тип параметра.
+ * @param param Параметр.
+ * @return Тип параметра.
+ */
+extern param_type_t settings_param_type(param_t* param);
+
+/**
  * Получает флаги параметра.
  * @param param Параметр.
  * @return Флаги параметра.
  */
 extern bool settings_param_flags(param_t* param);
+
+/**
+ * Получает единицу измерения параметра.
+ * @param param Параметр.
+ * @return Единица измерения параметра.
+ */
+extern param_units_t settings_param_units(param_t* param);
 
 /**
  * Получает сырое значение параметра.
