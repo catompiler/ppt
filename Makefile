@@ -80,11 +80,16 @@ DEFINES   += USE_STDPERIPH_DRIVER
 # Использование набора инстркций Thumb-2
 DEFINES   += __thumb2__=1
 
-# Программа st-flash.
+# ST st-link utility.
 STFLASH_WIN    = "C:\Program Files\STMicroelectronics\STM32 ST-LINK Utility\ST-LINK Utility\ST-LINK_CLI.exe"
+# st-flash.
 STFLASH    = "C:\bin\st-flash.exe"
-# Устройство stlink.
-STLINK_DEV = /dev/stlinkv2_4
+# OpenOCD
+OPENOCD      = openocd
+# Аргументы OpenOCD
+OPENOCD_ARGS = -f "interface/stlink-v2.cfg" -f "target/stm32f1x.cfg"
+# Команда OpenOCD
+OPENOCD_CMD  = $(OPENOCD) $(OPENOCD_ARGS)
 
 # Путь к стандартной библиотеке периферии.
 SPL_PATH        = ../stm32/StdPeriphLib/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries
@@ -272,7 +277,12 @@ burn_win: $(TARGET_BIN)
 	$(STFLASH_WIN) -Q -P $(TARGET_BIN) $(MCU_FLASH_ORIGIN)
 	$(STFLASH_WIN) -Q -Rst
 
-burn: $(TARGET_BIN)
+burn_stflash: $(TARGET_BIN)
 	$(STFLASH) erase
 	$(STFLASH) write $(TARGET_BIN) $(MCU_FLASH_ORIGIN)
+
+burn_openocd: $(TARGET_BIN)
+	$(OPENOCD_CMD) -c "init" -c "reset halt" -c "flash write_image erase unlock $(TARGET_BIN) $(MCU_FLASH_ORIGIN) bin" -c "reset run" -c "exit"
+
+burn: burn_openocd
 
