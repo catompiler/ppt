@@ -171,6 +171,8 @@
 #define TR_ID_MENU_EXC_START_TIME   303
 //! Время ожидания фаз.
 #define TR_ID_MENU_PHASES_CHECK_TIME 304
+//! Время ожидания фаз.
+#define TR_ID_MENU_ZERO_SENSOR_TIME 305
 //! Тиристоры.
 #define TR_ID_MENU_TRIACS           310
 //! Время открытия.

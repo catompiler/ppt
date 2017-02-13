@@ -7,6 +7,7 @@
 
 #include <stm32f10x.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "errors/errors.h"
 
 
@@ -133,6 +134,25 @@ extern drive_dir_t drive_phase_state_direction(void);
  * @return Время между датчиками нуля.
  */
 extern phase_time_t drive_phase_state_phase_time(phase_t phase);
+
+/**
+ * Получает время с последнего срабатывания датчика нуля.
+ * @return Время с последнего срабатывания датчика нуля.
+ */
+extern phase_time_t drive_phase_state_time(void);
+
+/**
+ * Получает флаг допустимости времени между срабатываниями датчиков нуля.
+ * @param time Время между срабатываниями датчиков нуля.
+ * @return Флаг допустимости времени между срабатываниями датчиков нуля.
+ */
+extern bool drive_phase_state_time_valid(phase_time_t time);
+
+/**
+ * Получает флаг наличия актуальных данных о времени.
+ * @return Флаг наличия данных о времени.
+ */
+extern bool drive_phase_state_has_time(void);
 
 /**
  * Получает следующую фазу после заданной при заданном направлении вращения.

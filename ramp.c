@@ -6,10 +6,11 @@ err_t ramp_init(ramp_t* ramp)
 {
     ramp->current_ref = 0;
     ramp->target_ref = 0;
-    ramp->reference_step = 0x20000 /* 20 ms * 100 */ / RAMP_REFERENCE_TIME_DEFAULT;
-    ramp->start_step = 0x20000 /* 20 ms * 100 */ / RAMP_START_TIME_DEFAULT;
-    ramp->stop_step = 0x20000 /* 20 ms * 100 */ / RAMP_STOP_TIME_DEFAULT;
-    ramp->fast_stop_step = 0x20000 /* 20 ms * 100 */ / RAMP_FAST_STOP_TIME_DEFAULT;
+    // (0.02 * 0x10000 << 16) / (time / 100).
+    ramp->reference_step = 0x51E0000 /* 20 ms << 16 */ / (RAMP_REFERENCE_TIME_DEFAULT / 100);
+    ramp->start_step = 0x51E0000 /* 20 ms << 16 */ / (RAMP_START_TIME_DEFAULT / 100);
+    ramp->stop_step = 0x51E0000 /* 20 ms << 16 */ / (RAMP_STOP_TIME_DEFAULT / 100);
+    ramp->fast_stop_step = 0x51E0000 /* 20 ms << 16 */ / (RAMP_FAST_STOP_TIME_DEFAULT / 100);
     ramp->stop_mode = RAMP_STOP_MODE_NORMAL;
     
     return E_NO_ERROR;
@@ -20,7 +21,10 @@ err_t ramp_set_reference_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt)
     if(time < 0) return E_INVALID_VALUE;
     if(time > RAMP_TIME_MAX) return E_OUT_OF_RANGE;
     
-    ramp->reference_step = step_dt * 100 / time;
+    fixed32_t step = step_dt * 100;
+    step = fixed32_div((int64_t)step, time);
+    
+    ramp->reference_step = step;
     
     return E_NO_ERROR;
 }
@@ -30,7 +34,10 @@ err_t ramp_set_start_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt)
     if(time < 0) return E_INVALID_VALUE;
     if(time > RAMP_TIME_MAX) return E_OUT_OF_RANGE;
     
-    ramp->start_step = step_dt * 100 / time;
+    fixed32_t step = step_dt * 100;
+    step = fixed32_div((int64_t)step, time);
+    
+    ramp->start_step = step;
     
     return E_NO_ERROR;
 }
@@ -40,7 +47,10 @@ err_t ramp_set_stop_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt)
     if(time < 0) return E_INVALID_VALUE;
     if(time > RAMP_TIME_MAX) return E_OUT_OF_RANGE;
     
-    ramp->stop_step = step_dt * 100 / time;
+    fixed32_t step = step_dt * 100;
+    step = fixed32_div((int64_t)step, time);
+    
+    ramp->stop_step = step;
     
     return E_NO_ERROR;
 }
@@ -50,7 +60,10 @@ err_t ramp_set_fast_stop_time(ramp_t* ramp, ramp_time_t time, fixed32_t step_dt)
     if(time < 0) return E_INVALID_VALUE;
     if(time > RAMP_TIME_MAX) return E_OUT_OF_RANGE;
     
-    ramp->fast_stop_step = step_dt * 100 / time;
+    fixed32_t step = step_dt * 100;
+    step = fixed32_div((int64_t)step, time);
+    
+    ramp->fast_stop_step = step;
     
     return E_NO_ERROR;
 }

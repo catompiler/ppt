@@ -37,10 +37,11 @@
 //! Тип структуры настроек привода.
 typedef struct _Drive_Settings {
     drive_stop_mode_t stop_mode; //!< Режим нормального останова привода.
-    uint32_t stop_rot_iters; //!< Время остановки ротора в итерациях.
-    uint32_t stop_exc_iters; //!< Время остановки возбуждения в итерациях.
-    uint32_t start_exc_iters; //!< Время остановки возбуждения в итерациях.
-    uint32_t check_phases_iters; //!< Время проверки состояния фаз сети.
+    uint16_t stop_rot_iters; //!< Время остановки ротора в итерациях.
+    uint16_t stop_exc_iters; //!< Время остановки возбуждения в итерациях.
+    uint16_t start_exc_iters; //!< Время остановки возбуждения в итерациях.
+    uint16_t check_phases_iters; //!< Время проверки состояния фаз сети.
+    uint16_t zero_sensor_time; //!< Время срабатывания датчика нуля.
 } drive_settings_t;
 
 //! Тип структуры обновляемых параметров.
@@ -76,7 +77,7 @@ typedef struct _Drive {
     drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
     drive_parameters_t params; //!< Обновляемые параметры.
-    uint32_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
+    uint16_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
     drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
 } drive_t;
@@ -1391,16 +1392,17 @@ err_t drive_update_settings(void)
     drive.settings.start_exc_iters = settings_valueu(PARAM_ID_EXC_START_TIME) * DRIVE_NULL_TIMER_FREQ;
     drive.settings.check_phases_iters =
             settings_valueu(PARAM_ID_PHASES_CHECK_TIME) * DRIVE_NULL_TIMER_FREQ / 1000;
+    drive.settings.zero_sensor_time = settings_valueu(PARAM_ID_ZERO_SENSOR_TIME);
     
     drive_triacs_set_exc_mode(settings_valueu(PARAM_ID_EXC_MODE));
     drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
     drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
     drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     
-    drive_regulator_set_reference_time(settings_valueu(PARAM_ID_RAMP_REFERENCE_TIME));
-    drive_regulator_set_start_time(settings_valueu(PARAM_ID_RAMP_START_TIME));
-    drive_regulator_set_stop_time(settings_valueu(PARAM_ID_RAMP_STOP_TIME));
-    drive_regulator_set_fast_stop_time(settings_valueu(PARAM_ID_RAMP_FAST_STOP_TIME));
+    drive_regulator_set_reference_time(settings_valuef(PARAM_ID_RAMP_REFERENCE_TIME));
+    drive_regulator_set_start_time(settings_valuef(PARAM_ID_RAMP_START_TIME));
+    drive_regulator_set_stop_time(settings_valuef(PARAM_ID_RAMP_STOP_TIME));
+    drive_regulator_set_fast_stop_time(settings_valuef(PARAM_ID_RAMP_FAST_STOP_TIME));
     
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
@@ -1673,13 +1675,53 @@ void drive_triac_exc_timer_irq_handler(void)
     drive_triacs_exc_timer_irq_handler();
 }
 
-err_t drive_process_null_sensor(phase_t phase)
+/**
+ * Обрабатывает действительно сработавший датчик нуля.
+ * @param phase Фаза.
+ * @return Код ошибки.
+ */
+static err_t drive_process_null_sensor_impl(phase_t phase)
 {
     drive_phase_state_handle(phase);
-    
+
     if(drive_phase_state_errors() == PHASE_NO_ERROR){
         drive_setup_triacs_open(phase);
     }
+    return E_NO_ERROR;
+}
+
+err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
+{
+    if(phase == PHASE_UNK) return E_INVALID_VALUE;
+    
+    static phase_time_t sensors_time[PHASES_COUNT] = {0};
+    static null_sensor_edge_t sensors_edges[PHASES_COUNT] = {0};
+    
+    phase_time_t time = drive_phase_state_time();
+    phase_time_t prev_time = sensors_time[phase - 1];
+    null_sensor_edge_t prev_edge = sensors_edges[phase - 1];
+    
+    if(edge == NULL_SENSOR_EDGE_LEADING){
+        if(drive_phase_state_time_valid(time) || !drive_phase_state_has_time()){
+            return drive_process_null_sensor_impl(phase);
+        }
+    }else if(prev_edge != edge){// NULL_SENSOR_EDGE_TRAILING
+        
+        if(!drive_phase_state_time_valid(prev_time)){
+            
+            if(time >= prev_time){
+                phase_time_t diff_time = time - prev_time;
+                
+                if(diff_time >= drive.settings.zero_sensor_time){
+                    return drive_process_null_sensor_impl(phase);
+                }
+            }
+        }
+    }
+    
+    sensors_edges[phase - 1] = edge;
+    sensors_time[phase - 1] = time;
+    
     return E_NO_ERROR;
 }
 

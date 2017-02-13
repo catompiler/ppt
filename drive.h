@@ -214,6 +214,13 @@ typedef enum _Drive_Stop_Mode {
     DRIVE_STOP_MODE_COAST  = 2, //!< Останов выбегом.
 } drive_stop_mode_t;
 
+//! Фронт сигнала датчика нуля.
+typedef enum _Null_Sensor_Edge {
+    NULL_SENSOR_EDGE_LEADING = 0, //!< Передний фронт.
+    NULL_SENSOR_EDGE_TRAILING = 1 //!< Задний фронт.
+} null_sensor_edge_t;
+
+
 
 //! Каллбэк возникновения ошибки привода.
 typedef void (*drive_error_callback_t)(void);
@@ -549,7 +556,7 @@ extern void drive_triac_exc_timer_irq_handler(void);
  * @param phase Фаза.
  * @return Код ошибки.
  */
-extern err_t drive_process_null_sensor(phase_t phase);
+extern err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge);
 
 /**
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.

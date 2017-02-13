@@ -39,25 +39,25 @@ typedef uint32_t ramp_reference_t;
 #define RAMP_REFERENCE_MAX 100
 
 //! Тип времени разгона.
-typedef int32_t ramp_time_t;
+typedef fixed32_t ramp_time_t;
 
 //! Максимальное время разгона.
-#define RAMP_TIME_MIN 1
+#define RAMP_TIME_MIN 0x1999 //0.1
 
 //! Максимальное время разгона.
-#define RAMP_TIME_MAX 300
+#define RAMP_TIME_MAX 0x12c0000 //300
 
 //! Время изменения задания по-умолчанию.
-#define RAMP_REFERENCE_TIME_DEFAULT 10
+#define RAMP_REFERENCE_TIME_DEFAULT 0xa0000 //10
 
 //! Время разгона по-умолчанию.
-#define RAMP_START_TIME_DEFAULT 30
+#define RAMP_START_TIME_DEFAULT 0x1e0000 //30
 
 //! Время разгона по-умолчанию.
-#define RAMP_STOP_TIME_DEFAULT 20
+#define RAMP_STOP_TIME_DEFAULT 0x140000 //20
 
 //! Время разгона по-умолчанию.
-#define RAMP_FAST_STOP_TIME_DEFAULT 2
+#define RAMP_FAST_STOP_TIME_DEFAULT 0x20000 //2
 
 
 

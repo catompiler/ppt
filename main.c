@@ -99,6 +99,14 @@ static tft9341_t tft;
 /******************************************************************************/
 
 // EXTI.
+//! Порт EXTI.
+#define EXTI_PHASE_GPIO GPIOE
+//! Пин датчика нуля фазы A.
+#define EXTI_PHASE_A_Pin GPIO_Pin_13
+//! Пин датчика нуля фазы B.
+#define EXTI_PHASE_B_Pin GPIO_Pin_14
+//! Пин датчика нуля фазы C.
+#define EXTI_PHASE_C_Pin GPIO_Pin_15
 //! Линия фазы A.
 #define EXTI_PHASE_A_LINE EXTI_Line13
 //! Линия фазы B.
@@ -401,6 +409,11 @@ ALWAYS_INLINE static void exti_clear_it(uint16_t exti_line)
     EXTI->PR |= exti_line;
 }
 
+ALWAYS_INLINE static null_sensor_edge_t exti_gpio_edge(GPIO_TypeDef* GPIO, uint16_t pin)
+{
+    return (GPIO->IDR & pin) ? NULL_SENSOR_EDGE_TRAILING : NULL_SENSOR_EDGE_LEADING;
+}
+
 /**
  * Прерывание по датчикам нуля.
  */
@@ -410,7 +423,8 @@ void EXTI15_10_IRQHandler(void)
     // Датчик нуля фазы A.
     if (exti_it_status(EXTI_PHASE_A_LINE, imr) != RESET)
     {
-        drive_process_null_sensor(PHASE_A); // Обрабатывает событие.
+        drive_process_null_sensor(PHASE_A,
+                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_A_Pin)); // Обрабатывает событие.
 #ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_A);        // Обновим разрешения внешних прерываний.
 #endif
@@ -420,7 +434,8 @@ void EXTI15_10_IRQHandler(void)
     // Датчик нуля фазы B.
     if (exti_it_status(EXTI_PHASE_B_LINE, imr) != RESET)
     {
-        drive_process_null_sensor(PHASE_B); // Обрабатывает событие.
+        drive_process_null_sensor(PHASE_B,
+                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_B_Pin)); // Обрабатывает событие.
 #ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_B);        // Обновим разрешения внешних прерываний.
 #endif
@@ -430,7 +445,8 @@ void EXTI15_10_IRQHandler(void)
     // Датчик нуля фазы C.
     if (exti_it_status(EXTI_PHASE_C_LINE, imr) != RESET)
     {
-        drive_process_null_sensor(PHASE_C); // Обрабатывает событие.
+        drive_process_null_sensor(PHASE_C,
+                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_C_Pin)); // Обрабатывает событие.
 #ifdef DISABLE_LAST_NULL_SENSOR
         update_exti_inputs(PHASE_C);        // Обновим разрешения внешних прерываний.
 #endif
@@ -1335,10 +1351,10 @@ static void init_exti(void)
      * Zero sensor
      */
     /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+        GPIO_InitStructure.GPIO_Pin = EXTI_PHASE_A_Pin | EXTI_PHASE_B_Pin | EXTI_PHASE_C_Pin;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
+    GPIO_Init(EXTI_PHASE_GPIO, &GPIO_InitStructure);
         
         
     /*
@@ -1353,7 +1369,7 @@ static void init_exti(void)
     EXTI_InitTypeDef EXTI_InitStructure;
     EXTI_InitStructure.EXTI_Line = EXTI_Line7 | EXTI_PHASE_A_LINE | EXTI_PHASE_B_LINE | EXTI_PHASE_C_LINE;
     EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
     EXTI_InitStructure.EXTI_LineCmd = ENABLE;
     EXTI_Init(&EXTI_InitStructure);
     

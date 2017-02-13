@@ -148,10 +148,7 @@ ALWAYS_INLINE static drive_phase_error_t drive_phase_state_get_time_error(phase_
 ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
 {
     if(state.timer_cnt){
-        //return TIM_GetCounter(state.timer_cnt);
-        uint16_t time = TIM_GetCounter(state.timer_cnt);
-        if(time != 0) return (phase_time_t)time;
-        return PHASE_TIME_US_MAX + 1;
+        return (phase_time_t)TIM_GetCounter(state.timer_cnt);
     }
     return 0;
 }
@@ -217,6 +214,10 @@ void drive_phase_state_handle(phase_t phase)
     phase_time_t time = drive_phase_state_get_cur_time();
     drive_phase_state_start_timer();
     
+    // Если время равно нулю - скорее всего было
+    // переполнение - установим время в максимум + 1.
+    if(time == 0) time = PHASE_TIME_US_MAX + 1;
+    
     const phase_state_values_t* state_values = 
                     &phase_states[state.state][phase];
     
@@ -254,6 +255,23 @@ phase_time_t drive_phase_state_phase_time(phase_t phase)
     if(phase == PHASE_UNK) return 0;
     
     return state.phases_time[phase - 1];
+}
+
+phase_time_t drive_phase_state_time(void)
+{
+    return drive_phase_state_get_cur_time();
+}
+
+bool drive_phase_state_time_valid(phase_time_t time)
+{
+    return drive_phase_state_time_check(time);
+}
+
+bool drive_phase_state_has_time(void)
+{
+    if(!state.timer_cnt) return false;
+    if(!(state.timer_cnt->CR1 & TIM_CR1_CEN)) return false;
+    return true;
 }
 
 #define NEXT_PHASE_TABLE
