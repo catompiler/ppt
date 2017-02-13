@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include "stm32f10x.h"
 
 
 #define DRIVE_ID_NAME_MAX 20
@@ -116,6 +117,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_DOUT_USER_TOGGLE (DRIVE_MODBUS_COILS_START + 8)
 //! Экстренный останов.
 #define DRIVE_MODBUS_COIL_EMERGENCY_STOP (DRIVE_MODBUS_COILS_START + 9)
+//! Перезагрузка.
+#define DRIVE_MODBUS_COIL_REBOOT (DRIVE_MODBUS_COILS_START + 10)
 
 
 /** Пользовательские функции и коды.
@@ -453,6 +456,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             break;
         case DRIVE_MODBUS_COIL_EMERGENCY_STOP:
             drive_emergency_stop();
+            break;
+        case DRIVE_MODBUS_COIL_REBOOT:
+            NVIC_SystemReset();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;
