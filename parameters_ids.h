@@ -725,6 +725,14 @@
  */
 #define PARAM_ID_DIGITAL_OUT_4_INVERSION 627
 
+/**
+ * Параметры цифровых входов/выходов.
+ */
+/**
+ * Время игнорирования изменения цифровых входов.
+ */
+#define PARAM_ID_DIGITAL_IO_DEADTIME_MS 640
+
 /*
  * Modbus.
  */

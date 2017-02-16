@@ -173,6 +173,12 @@ extern void drive_power_oscillogram_half_pause(void);
 extern bool drive_power_oscillogram_paused(void);
 
 /**
+ * Получает флаг необходимости останова записи осциллограмм.
+ * @return Флаг необходимости останова записи осциллограмм.
+ */
+extern bool drive_power_oscillogram_is_paused(void);
+
+/**
  * Возобнавляет запись осциллограмм.
  */
 extern void drive_power_oscillogram_resume(void);

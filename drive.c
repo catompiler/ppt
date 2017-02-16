@@ -31,7 +31,10 @@
 #define DRIVE_READY_FLAGS (DRIVE_FLAG_POWER_DATA_AVAIL)
 
 //! dt Тепловой защиты.
-#define DRIVE_TOP_DT 0x1b5
+#define DRIVE_TOP_DT 0x1b5 //0.006667 с
+
+//! dt Цифровых входов, мс.
+#define DRIVE_DIO_DT 0x6AAC0 //6.667 мс.
 
 
 //! Тип структуры настроек привода.
@@ -904,6 +907,8 @@ static void drive_update_clibration_parameters(void)
  */
 static void drive_process_digital_inputs(void)
 {
+    drive_dio_process_inputs(DRIVE_DIO_DT);
+    
     drive_dio_state_t state = DRIVE_DIO_OFF;
     
     if(drive_dio_input_get_type_state(DRIVE_DIO_IN_EMERGENCY_STOP, &state)){
@@ -988,10 +993,10 @@ static bool drive_regulate(void)
 /**
  * Запускает открытие тиристоров.
  */
-static void drive_setup_triacs_open(phase_t phase)
+static void drive_setup_triacs_open(phase_t phase, phase_time_t sensor_time)
 {
-    drive_triacs_setup_exc(phase);
-    drive_triacs_setup_next_pairs(phase);
+    drive_triacs_setup_exc(phase, sensor_time);
+    drive_triacs_setup_next_pairs(phase, sensor_time);
 }
 
 /**
@@ -1457,6 +1462,8 @@ err_t drive_update_settings(void)
     drive_dio_output_setup(DRIVE_DIO_OUTPUT_4, settings_valueu(PARAM_ID_DIGITAL_OUT_4_TYPE),
                                                settings_valueu(PARAM_ID_DIGITAL_OUT_4_INVERSION));
     
+    drive_dio_set_deadtime(settings_valuef(PARAM_ID_DIGITAL_IO_DEADTIME_MS));
+    
     return E_NO_ERROR;
 }
 
@@ -1680,12 +1687,12 @@ void drive_triac_exc_timer_irq_handler(void)
  * @param phase Фаза.
  * @return Код ошибки.
  */
-static err_t drive_process_null_sensor_impl(phase_t phase)
+static err_t drive_process_null_sensor_impl(phase_t phase, phase_time_t sensor_time)
 {
     drive_phase_state_handle(phase);
 
     if(drive_phase_state_errors() == PHASE_NO_ERROR){
-        drive_setup_triacs_open(phase);
+        drive_setup_triacs_open(phase, sensor_time);
     }
     return E_NO_ERROR;
 }
@@ -1701,20 +1708,17 @@ err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
     phase_time_t prev_time = sensors_time[phase - 1];
     null_sensor_edge_t prev_edge = sensors_edges[phase - 1];
     
-    if(edge == NULL_SENSOR_EDGE_LEADING){
-        if(drive_phase_state_time_valid(time) || !drive_phase_state_has_time()){
-            return drive_process_null_sensor_impl(phase);
-        }
-    }else if(prev_edge != edge){// NULL_SENSOR_EDGE_TRAILING
+    if(edge == NULL_SENSOR_EDGE_TRAILING && prev_edge != edge){
         
-        if(!drive_phase_state_time_valid(prev_time)){
+        if(!drive_phase_state_has_time()){
+            return drive_process_null_sensor_impl(phase, 0);
+        }
+        
+        if(time >= prev_time){
+            phase_time_t diff_time = time - prev_time;
             
-            if(time >= prev_time){
-                phase_time_t diff_time = time - prev_time;
-                
-                if(diff_time >= drive.settings.zero_sensor_time){
-                    return drive_process_null_sensor_impl(phase);
-                }
+            if(diff_time >= drive.settings.zero_sensor_time){
+                return drive_process_null_sensor_impl(phase, diff_time);
             }
         }
     }

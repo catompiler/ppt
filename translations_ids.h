@@ -237,6 +237,12 @@
 #define TR_ID_MENU_DIO_TYPE         372
 //! Инверсия.
 #define TR_ID_MENU_DIO_INVERSION    373
+//! Цифровые входа/выхода.
+#define TR_ID_MENU_DIGITAL_IO       374
+//! Параметры Цифровых входов/выходов.
+#define TR_ID_MENU_DIGITAL_IO_SETTINGS 375
+//! Время игнорирования изменения состояния входа.
+#define TR_ID_MENU_DIGITAL_IO_DEADTIME_MS 376
 //! Вход 1.
 #define TR_ID_MENU_DIO_INPUT1       380
 //! Вход 2.

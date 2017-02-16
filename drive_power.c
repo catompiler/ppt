@@ -172,6 +172,11 @@ bool drive_power_oscillogram_paused(void)
     return drive_power.osc_buf.index == drive_power.osc_buf.pause_mark;
 }
 
+bool drive_power_oscillogram_is_paused(void)
+{
+    return drive_power.osc_buf.pause_mark != DRIVE_POWER_OSC_CHANNEL_LEN;
+}
+
 void drive_power_oscillogram_resume(void)
 {
     drive_power.osc_buf.pause_mark = DRIVE_POWER_OSC_CHANNEL_LEN;

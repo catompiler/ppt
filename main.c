@@ -1505,6 +1505,8 @@ int main(void)
     
     scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
     
+    drive_tasks_init();
+    
     init_gpio();
     
     init_drive();
