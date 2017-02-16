@@ -211,28 +211,28 @@ err_t drive_triacs_set_exc_open_angle(fixed32_t angle)
 
 uint16_t drive_triacs_pairs_open_time_us(void)
 {
-    return OPEN_TICKS_TO_TIME(drive_triacs.triacs_pairs_open_ticks);
+    return TICKS_TO_TIME(drive_triacs.triacs_pairs_open_ticks);
 }
 
 err_t drive_triacs_set_pairs_open_time_us(uint16_t time)
 {
     if(time == 0) return E_INVALID_VALUE;
     
-    drive_triacs.triacs_pairs_open_ticks = OPEN_TIME_TO_TICKS(time);
+    drive_triacs.triacs_pairs_open_ticks = TIME_TO_TICKS(time);
     
     return E_NO_ERROR;
 }
 
 uint16_t drive_triacs_exc_open_time_us(void)
 {
-    return OPEN_TICKS_TO_TIME(drive_triacs.triac_exc_open_ticks);
+    return TICKS_TO_TIME(drive_triacs.triac_exc_open_ticks);
 }
 
 err_t drive_triacs_set_exc_open_time_us(uint16_t time)
 {
     if(time == 0) return E_INVALID_VALUE;
     
-    drive_triacs.triac_exc_open_ticks = OPEN_TIME_TO_TICKS(time);
+    drive_triacs.triac_exc_open_ticks = TIME_TO_TICKS(time);
     
     return E_NO_ERROR;
 }
@@ -414,15 +414,16 @@ void drive_triacs_exc_timer_irq_handler(void)
  * Инициализирует таймер для открытия пар тиристоров.
  * @param triacs_a Номер первой пары тиристоров.
  * @param triacs_b Номер второй пары тиристоров.
+ * @param offset_ticks Компенсация времени до запуска открытия тиристоров в тиках таймера.
  */
-static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_number_t triacs_b)
+static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_number_t triacs_b, uint16_t offset_ticks)
 {
     // Получим следующий свободный таймер тиристоров.
     timer_triacs_t* tim_trcs = timer_triacs_next();
     // Остановим таймер.
     TIM_Cmd(tim_trcs->timer, DISABLE);
     // Сбросим счётчик.
-    TIM_SetCounter(tim_trcs->timer, 0);
+    TIM_SetCounter(tim_trcs->timer, offset_ticks);
     // Установим тиристорные пары таймера.
     // Первая пара тиристоров.
     tim_trcs->triacs_a = triacs_a;
@@ -441,10 +442,8 @@ static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_num
     TIM_Cmd(tim_trcs->timer, ENABLE);
 }
 
-err_t drive_triacs_setup_next_pairs(phase_t phase)
+err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset)
 {
-    // Нужен угол открытия.
-    if(drive_triacs.triacs_pairs_angle_ticks == 0) return E_NO_ERROR;
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Направление вращения.
@@ -456,6 +455,11 @@ err_t drive_triacs_setup_next_pairs(phase_t phase)
     if(!drive_triacs.pairs_enabled){
         return E_NO_ERROR;
     }
+    
+    uint16_t offset_ticks = TIME_TO_TICKS(offset);
+    
+    // Нужен угол открытия не меньше смещения.
+    if(drive_triacs.triacs_pairs_angle_ticks <= offset_ticks) return E_NO_ERROR;
     
     // Индекс пары тиристоров.
     size_t triacs_index = 0;
@@ -493,20 +497,21 @@ err_t drive_triacs_setup_next_pairs(phase_t phase)
             return E_INVALID_VALUE;
     }
     
-    timer_triacs_setup_next(triacs_seq[triacs_index], triacs_seq[triacs_index + 1]);
+    timer_triacs_setup_next(triacs_seq[triacs_index], triacs_seq[triacs_index + 1], offset_ticks);
     
     return E_NO_ERROR;
 }
 
 /**
  * Инициализирует таймер для открытия симистора возбуждения.
+ * @param offset_ticks Компенсация времени до запуска открытия симистора в тиках таймера.
  */
-static void timer_triac_exc_setup(void)
+static void timer_triac_exc_setup(uint16_t offset_ticks)
 {
     // Остановим таймер.
     TIM_Cmd(drive_triacs.timer_exc, DISABLE);
     // Сбросим счётчик.
-    TIM_SetCounter(drive_triacs.timer_exc, 0);
+    TIM_SetCounter(drive_triacs.timer_exc, offset_ticks);
     // Закроем симистор возбуждения.
     triac_close(&drive_triacs.triac_exc);
     // Установим каналы таймера.
@@ -530,12 +535,10 @@ static void timer_triac_exc_setup(void)
  * @param phase Текущая фаза.
  * @return Код ошибки.
  */
-err_t drive_triacs_setup_exc(phase_t phase)
+err_t drive_triacs_setup_exc(phase_t phase, phase_time_t offset)
 {
     // Нужен режим регулирования.
     if(drive_triacs.exc_mode != DRIVE_TRIACS_EXC_REGULATED) return E_NO_ERROR;
-    // Нужен угол открытия.
-    if(drive_triacs.triac_exc_angle_ticks == 0) return E_NO_ERROR;
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Направление вращения.
@@ -548,6 +551,11 @@ err_t drive_triacs_setup_exc(phase_t phase)
         return E_NO_ERROR;
     }
     
+    uint16_t offset_ticks = TIME_TO_TICKS(offset);
+    
+    // Нужен угол открытия не меньше смещения.
+    if(drive_triacs.triac_exc_angle_ticks <= offset_ticks) return E_NO_ERROR;
+    
     phase_t exc_ctl_phase = drive_triacs.phase_exc;
     
     if(dir == DRIVE_DIR_BACKW){
@@ -555,7 +563,7 @@ err_t drive_triacs_setup_exc(phase_t phase)
     }
     
     if(exc_ctl_phase == phase){
-        timer_triac_exc_setup();
+        timer_triac_exc_setup(offset_ticks);
     }
     
     return E_NO_ERROR;

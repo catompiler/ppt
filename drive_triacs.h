@@ -143,9 +143,9 @@ typedef size_t triac_pair_number_t;
 #define TRIAC_EXC_ANGLE_MIN_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MIN))
 
 //! Перевод времени открытия в тики таймера.
-#define OPEN_TIME_TO_TICKS(T) (((uint32_t)T * 18) / 10) // 72M / 40 тиков : 1M мкс
+#define TIME_TO_TICKS(T) (((uint32_t)T * 18) / 10) // 72M / 40 тиков : 1M мкс
 //! Перевод тиков таймера в время открытия.
-#define OPEN_TICKS_TO_TIME(T) (((uint32_t)T * 10) / 18) // 1M мкс : 72M / 40 тиков
+#define TICKS_TO_TIME(T) (((uint32_t)T * 10) / 18) // 1M мкс : 72M / 40 тиков
 
 
 //! Режим возбуждения.
@@ -306,16 +306,18 @@ extern void drive_triacs_exc_timer_irq_handler(void);
 /**
  * Настраивает таймер открытия тиристорных пар.
  * @param phase Текущая фаза.
+ * @param offset Компенсация времени до запуска открытия тиристоров.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_next_pairs(phase_t phase);
+extern err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset);
 
 /**
  * Настраивает таймер открытия симистора возбуждения.
  * @param phase Текущая фаза.
  * @param exc_phase Фаза возбуждения.
+ * @param offset Компенсация времени до запуска открытия симистора.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_exc(phase_t phase);
+extern err_t drive_triacs_setup_exc(phase_t phase, phase_time_t offset);
 
 #endif /* DRIVE_TRIACS_H */
