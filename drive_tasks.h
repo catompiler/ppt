@@ -9,6 +9,14 @@
 #include "future/future.h"
 #include "drive_events.h"
 
+
+
+/**
+ * Инициализирует задачи привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_tasks_init(void);
+
 /**
  * Обновляет настройки.
  * @return Код ошибки.
