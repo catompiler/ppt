@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include "stm32f10x.h"
 #include "errors/errors.h"
+#include "fixed/fixed32.h"
 
 //! Количество цифровых входов.
 #define DRIVE_DIO_INPUTS_COUNT 5
@@ -95,6 +96,12 @@ typedef void (*drive_dio_on_input_changed_callback_t)(drive_dio_input_type_t typ
 extern err_t drive_dio_init(void);
 
 /**
+ * Устанавливает время игнорирования измненения сигнала.
+ * @param dead_time Время игнорирования изменения сигнала.
+ */
+extern void drive_dio_set_deadtime(fixed32_t dead_time);
+
+/**
  * Инициализирует цифровой вход.
  * @param input_init Структура инициализации цифрового входа.
  * @return Код ошибки.
@@ -151,6 +158,12 @@ extern err_t drive_dio_output_setup(drive_dio_output_t output,
  * @param callback Каллбэк.
  */
 extern void drive_dio_set_on_input_changed_callback(drive_dio_on_input_changed_callback_t callback);
+
+/**
+ * Обрабатывает цифровые входа.
+ * @param time Время с последней обработки.
+ */
+extern void drive_dio_process_inputs(fixed32_t dt);
 
 /**
  * Получает состояние заданного цифрового входа.

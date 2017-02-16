@@ -14,6 +14,8 @@ typedef struct _Drive_Dio_Io {
 typedef struct _Drive_Dio_In {
     drive_dio_io_t io;
     drive_dio_input_type_t type;
+    fixed32_t time; //!< Время с момента изменения сигнала.
+    drive_dio_state_t state; //!< Текущее состояние.
 } drive_dio_in_t;
 
 //! Структура цифрового выхода.
@@ -27,6 +29,7 @@ typedef struct _Drive_Dio {
     drive_dio_in_t inputs[DRIVE_DIO_INPUTS_COUNT];
     drive_dio_out_t outputs[DRIVE_DIO_OUTPUTS_COUNT];
     drive_dio_on_input_changed_callback_t on_input_changed_callback;
+    fixed32_t dead_time; //!< Время игнорирования изменения сигнала.
 } drive_dio_t;
 
 static drive_dio_t dio;
@@ -38,6 +41,11 @@ err_t drive_dio_init(void)
     memset(&dio, 0x0, sizeof(drive_dio_t));
     
     return E_NO_ERROR;
+}
+
+void drive_dio_set_deadtime(fixed32_t dead_time)
+{
+    dio.dead_time = dead_time;
 }
 
 err_t drive_dio_input_init(drive_dio_input_init_t* input_init)
@@ -117,16 +125,50 @@ void drive_dio_set_on_input_changed_callback(drive_dio_on_input_changed_callback
     dio.on_input_changed_callback = callback;
 }
 
-static drive_dio_state_t drive_dio_state(drive_dio_io_t* io)
+static drive_dio_state_t drive_din_state_raw(drive_dio_in_t* input)
 {
+    drive_dio_io_t* io = &input->io;
     if(io->inversion == DRIVE_DIO_INVERSION_NONE){
         return (io->GPIO->IDR & io->pin) ? DRIVE_DIO_ON : DRIVE_DIO_OFF;
     }
     return (io->GPIO->IDR & io->pin) ? DRIVE_DIO_OFF : DRIVE_DIO_ON;
 }
 
-static void drive_dio_set_state(drive_dio_io_t* io, drive_dio_state_t state)
+void drive_dio_process_inputs(fixed32_t dt)
 {
+    size_t i;
+    for(i = 0; i < DRIVE_DIO_INPUTS_COUNT; i ++){
+        drive_dio_in_t* input = &dio.inputs[i];
+        drive_dio_state_t state = drive_din_state_raw(input);
+        if(state != input->state){
+            input->time += dt;
+            if(input->time >= dio.dead_time){
+                input->state = state;
+                input->time = 0;
+            }
+        }else{
+            input->time = 0;
+        }
+    }
+}
+
+static drive_dio_state_t drive_din_state(drive_dio_in_t* input)
+{
+    return input->state;
+}
+
+static drive_dio_state_t drive_dout_state(drive_dio_out_t* output)
+{
+    drive_dio_io_t* io = &output->io;
+    if(io->inversion == DRIVE_DIO_INVERSION_NONE){
+        return (io->GPIO->ODR & io->pin) ? DRIVE_DIO_ON : DRIVE_DIO_OFF;
+    }
+    return (io->GPIO->ODR & io->pin) ? DRIVE_DIO_OFF : DRIVE_DIO_ON;
+}
+
+static void drive_dout_set_state(drive_dio_out_t* output, drive_dio_state_t state)
+{
+    drive_dio_io_t* io = &output->io;
     if(io->inversion == DRIVE_DIO_INVERSION_NONE){
         if(state == DRIVE_DIO_ON) io->GPIO->BSRR |= io->pin;
         else io->GPIO->BRR |= io->pin;
@@ -140,7 +182,7 @@ drive_dio_state_t drive_dio_input_state(drive_dio_input_t input)
 {
     if(input >= DRIVE_DIO_INPUTS_COUNT) return DRIVE_DIO_OFF;
     
-    return drive_dio_state(&dio.inputs[input].io);
+    return drive_din_state(&dio.inputs[input]);
 }
 
 drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type)
@@ -148,7 +190,7 @@ drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type)
     size_t i;
     for(i = 0; i < DRIVE_DIO_INPUTS_COUNT; i ++){
         drive_dio_in_t* input = &dio.inputs[i];
-        if(input->type == type && drive_dio_state(&input->io) == DRIVE_DIO_ON){
+        if(input->type == type && drive_din_state(input) == DRIVE_DIO_ON){
             return DRIVE_DIO_ON;
         }
     }
@@ -164,7 +206,7 @@ bool drive_dio_input_get_type_state(drive_dio_input_type_t type, drive_dio_state
         drive_dio_in_t* input = &dio.inputs[i];
         if(input->type == type){
             has_type = true;
-            if(drive_dio_state(&input->io) == DRIVE_DIO_ON){
+            if(drive_din_state(input) == DRIVE_DIO_ON){
                 st = DRIVE_DIO_ON;
             }
         }
@@ -179,7 +221,7 @@ drive_dio_state_t drive_dio_output_state(drive_dio_output_t output)
 {
     if(output >= DRIVE_DIO_OUTPUTS_COUNT) return DRIVE_DIO_OFF;
     
-    return drive_dio_state(&dio.outputs[output].io);
+    return drive_dout_state(&dio.outputs[output]);
 }
 
 drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t type)
@@ -187,7 +229,7 @@ drive_dio_state_t drive_dio_output_type_state(drive_dio_output_type_t type)
     size_t i;
     for(i = 0; i < DRIVE_DIO_OUTPUTS_COUNT; i ++){
         drive_dio_out_t* output = &dio.outputs[i];
-        if(output->type == type && drive_dio_state(&output->io) == DRIVE_DIO_ON){
+        if(output->type == type && drive_dout_state(output) == DRIVE_DIO_ON){
             return DRIVE_DIO_ON;
         }
     }
@@ -203,7 +245,7 @@ bool drive_dio_output_get_type_state(drive_dio_output_type_t type, drive_dio_sta
         drive_dio_out_t* output = &dio.outputs[i];
         if(output->type == type){
             has_type = true;
-            if(drive_dio_state(&output->io) == DRIVE_DIO_ON){
+            if(drive_dout_state(output) == DRIVE_DIO_ON){
                 st = DRIVE_DIO_ON;
             }
         }
@@ -218,7 +260,7 @@ err_t drive_dio_set_output_state(drive_dio_output_t output, drive_dio_state_t st
 {
     if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
     
-    drive_dio_set_state(&dio.outputs[output].io, state);
+    drive_dout_set_state(&dio.outputs[output], state);
     
     return E_NO_ERROR;
 }
@@ -228,7 +270,7 @@ void drive_dio_set_output_type_state(drive_dio_output_type_t type, drive_dio_sta
     size_t i;
     for(i = 0; i < DRIVE_DIO_OUTPUTS_COUNT; i ++){
         drive_dio_out_t* output = &dio.outputs[i];
-        if(output->type == type) drive_dio_set_state(&output->io, state);
+        if(output->type == type) drive_dout_set_state(output, state);
     }
 }
 
@@ -236,8 +278,8 @@ err_t drive_dio_toggle_output_state(drive_dio_output_t output)
 {
     if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
     
-    drive_dio_set_state(&dio.outputs[output].io,
-            (drive_dio_state(&dio.outputs[output].io) == DRIVE_DIO_OFF) ? DRIVE_DIO_ON : DRIVE_DIO_OFF
+    drive_dout_set_state(&dio.outputs[output],
+            (drive_dout_state(&dio.outputs[output]) == DRIVE_DIO_OFF) ? DRIVE_DIO_ON : DRIVE_DIO_OFF
         );
     
     return E_NO_ERROR;
@@ -258,7 +300,7 @@ err_t drive_dio_input_changed(drive_dio_input_t input)
     
     if(dio.on_input_changed_callback){
         drive_dio_in_t* in = &dio.inputs[input];
-        dio.on_input_changed_callback(in->type, drive_dio_state(&in->io));
+        dio.on_input_changed_callback(in->type, drive_din_state(in));
     }
     
     return E_NO_ERROR;
