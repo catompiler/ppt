@@ -8,7 +8,7 @@
 #include "menu/menu.h"
 #include "localization/localization.h"
 #include "translations_ids.h"
-
+#include "parameters_ids.h"
 
 /*
  * Перечисления типов для выбора в меню.

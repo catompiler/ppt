@@ -8,7 +8,8 @@
 #include "errors/errors.h"
 #include "tft9341/tft9341.h"
 #include "input/key_input.h"
-
+#include "gui/widgets/gui_home.h"
+#include "gui/widgets/gui_menu.h"
 
 //! Структура инициализации графического интерфейса привода.
 typedef struct _Drive_Gui_Init {
@@ -44,5 +45,24 @@ extern void drive_gui_on_key_pressed(keycode_t key);
  * @param key Код клавиши.
  */
 extern void drive_gui_on_key_released(keycode_t key);
+
+/**
+ * Обработка перехода от главного экрана к меню по нажатию Enter
+ * @param home
+ */
+extern void drive_gui_home_on_enter(gui_home_t* home);
+
+/**
+ * Обработка перехода от меню к главному экрану по нажатию Home (Esc)
+ * @param menu
+ */
+extern void drive_gui_menu_on_home(gui_menu_t* menu);
+
+/**
+ * Обновление состояния плитки
+ * @param tile Плитка
+ * @param value Идинтификатор значения
+ */
+extern void drive_gui_update_tile(gui_tile_t* tile, size_t value);
 
 #endif /* DRIVE_GUI_H */

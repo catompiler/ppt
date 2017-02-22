@@ -244,4 +244,25 @@ extern uint32_t settings_valueu(param_id_t id);
  */
 extern fixed32_t settings_valuef(param_id_t id);
 
+/**
+ * Получает минимальное значение параметра
+ * @param param Параметр.
+ * @return Минимальное значение параметра.
+ */
+extern param_value_t settings_param_min(param_t* param);
+
+/**
+ * Получает максимальное значение параметра
+ * @param param Параметр.
+ * @return Максимальное значение параметра.
+ */
+extern param_value_t settings_param_max(param_t* param);
+
+/**
+ * Получает значение по-умолчанию параметра
+ * @param param Параметр.
+ * @return Значение по-умалчанию параметра.
+ */
+extern param_value_t settings_param_def(param_t* param);
+
 #endif	/* SETTINGS_H */

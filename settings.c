@@ -507,3 +507,21 @@ fixed32_t settings_valuef(param_id_t id)
     if(!param) return 0;
     return settings_param_valuef(param);
 }
+
+param_value_t settings_param_min(param_t* param) {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    //if(!descr) return 0;
+    return descr->min;
+}
+
+param_value_t settings_param_max(param_t* param) {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    //if(!descr) return 0;
+    return descr->max;
+}
+
+param_value_t settings_param_def(param_t* param) {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    //if(!descr) return 0;
+    return descr->def;
+}

@@ -20,6 +20,8 @@
 #define TR_ID_UNITS_US 112
 //! Проценты.
 #define TR_ID_UNITS_PERCENT 120
+//! Градусы цельсия.
+#define TR_ID_UNITS_DEGREE_CELSIUS 130
 
 /**
  * Перечисления меню.
@@ -323,6 +325,18 @@
 //  */
 // //!
 // #define TR_ID_
+
+//! Напряжение якоря
+#define TR_ID_HOME_ANCHOR_VOLTAGE 910
+//! Ток якоря
+#define TR_ID_HOME_ANCHOR_CURRENT 920
+//! Ток возбуждения
+#define TR_ID_HOME_EXCITATION_CURRENT 930
+//! Температура радиатора
+#define TR_ID_HOME_RADIATOR_TEMPERATURE 940
+
+//! Заголовок меню
+#define TR_ID_MENU_HEADER_TITLE  1010
 
 #endif /* TRANSLATIONS_IDS_H */
 

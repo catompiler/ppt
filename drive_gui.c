@@ -8,43 +8,47 @@
 #include "tft9341/tft9341_cache_vbuf.h"
 #include "graphics/graphics.h"
 #include "graphics/painter.h"
-#include "graphics/font_5x8_utf8.h"
-#include "graphics/font_10x16_utf8.h"
-#include "gui/gui.h"
+#include "gui/gui_metro.h"
 #include "gui/gui_object.h"
 #include "gui/gui_widget.h"
-#include "gui/gui_label.h"
-#include "gui/gui_number_label.h"
-#include "gui/gui_checkbox.h"
-#include "gui/gui_spinbox.h"
-#include "gui/gui_button.h"
 #include "drive_events.h"
+#include "fixed/fixed.h"
+#include "gui/widgets/gui_time.h"
+#include "gui/widgets/gui_statusbar.h"
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-//#include "input/key_layout_ru.h"
-//#include "input/key_layout_en.h"
+#include <gui/bitmaps/icons_statusbar.h>
+#include <gui/fonts/arialnarrow12.h>
+#include <gui/fonts/arialnarrow18.h>
+#include <gui/fonts/arialbold42.h>
+#include <gui/widgets/gui_tile.h>
+#include <gui/widgets/gui_statusbar.h>
+#include <gui/widgets/gui_menu.h>
+#include "gui/widgets/gui_home.h"
+#include <stdlib.h>
+#include <locale.h>
+#include "../lib/list/list.h"
+#include "gui/resources/resources_menu.h"
+#include "gui/resources/resources_colors.h"
+#include "gui/resources/resources_params.h"
+#include "gui/menu/menu_explorer.h"
+#include "translations.h"
 
+// позиция иконки статусбара
+#define gui_statusbar_icon_pos(pos) pos * ICONS_STATUSBAR_HEIGHT
 
+// наименования и единицы измерения плиток
+HOME_TILES_TEXT(home_tiles_text)
 
-//! Размер пиксела - 2 байта (16 бит).
-#define TFT_PIXEL_SIZE 2
-//! Ширина экрана.
-#define TFT_WIDTH 320
-//! Высота экрана.
-#define TFT_HEIGHT 240
-//! Число буферов кэша TFT.
-#define TFT_CACHE_BUFS_COUNT 2
-//! Размер первого буфера.
-#define TFT_CACHE_BUF0_PIXELS 240
-#define TFT_CACHE_BUF0_SIZE (TFT_CACHE_BUF0_PIXELS * TFT_PIXEL_SIZE)
-//! Размер второго буфера.
-#define TFT_CACHE_BUF1_PIXELS 80
-#define TFT_CACHE_BUF1_SIZE (TFT_CACHE_BUF1_PIXELS * TFT_PIXEL_SIZE)
+// отображаемые значения плиток
+HOME_TILES_VALUES(home_tiles_values)
+
 //! Первый буфер кэша TFT.
 static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
 //! Второй буфер кэша TFT.
 static uint8_t tft_cache_buf_data1[TFT_CACHE_BUF1_SIZE];
+
 //! Буферы кэша TFT.
 static tft9341_cache_buffer_t tft_cache_bufs[TFT_CACHE_BUFS_COUNT] = {
     make_tft9341_cache_buffer(tft_cache_buf_data0, TFT_CACHE_BUF0_SIZE),
@@ -57,110 +61,134 @@ static graphics_vbuf_t graph_vbuf = make_tft9341_cache_vbuf();
 //! Изображение на экране.
 static graphics_t graphics = make_tft9341_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 //static painter_t painter = make_painter(&graphics);
-//! Битмапы шрифта 5x8.
-static const font_bitmap_t font_5x8_utf8_bitmaps[] = {
-    make_font_bitmap(32, 127, font_5x8_utf8_part0_data, FONT_5X8_UTF8_PART0_WIDTH, FONT_5X8_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0xb0, 0xb0, font_5x8_utf8_part1_data, FONT_5X8_UTF8_PART1_WIDTH, FONT_5X8_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0x400, 0x451, font_5x8_utf8_part2_data, FONT_5X8_UTF8_PART2_WIDTH, FONT_5X8_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
+
+// графика иконок статусбара
+static graphics_t icon_statusbar_graphics = make_graphics(icons_statusbar_data, ICONS_STATUSBAR_WIDTH, ICONS_STATUSBAR_HEIGHT, ICONS_STATUSBAR_FORMAT);
+
+// маленький шрифт
+static const font_bitmap_t font_arialnarrow12_bitmaps[] = {
+	make_font_bitmap_descrs(ARIALNARROW12_PART0_FIRST_CHAR,ARIALNARROW12_PART0_LAST_CHAR, arialnarrow12_part0_data, ARIALNARROW12_PART0_WIDTH, ARIALNARROW12_PART0_HEIGHT, ARIALNARROW12_PART0_GRAPHICS_FORMAT, arialnarrow12_part0_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART1_FIRST_CHAR,ARIALNARROW12_PART1_LAST_CHAR, arialnarrow12_part1_data, ARIALNARROW12_PART1_WIDTH, ARIALNARROW12_PART1_HEIGHT, ARIALNARROW12_PART1_GRAPHICS_FORMAT, arialnarrow12_part1_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART2_FIRST_CHAR,ARIALNARROW12_PART2_LAST_CHAR, arialnarrow12_part2_data, ARIALNARROW12_PART2_WIDTH, ARIALNARROW12_PART2_HEIGHT, ARIALNARROW12_PART2_GRAPHICS_FORMAT, arialnarrow12_part2_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART3_FIRST_CHAR,ARIALNARROW12_PART3_LAST_CHAR, arialnarrow12_part3_data, ARIALNARROW12_PART3_WIDTH, ARIALNARROW12_PART3_HEIGHT, ARIALNARROW12_PART3_GRAPHICS_FORMAT, arialnarrow12_part3_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART4_FIRST_CHAR,ARIALNARROW12_PART4_LAST_CHAR, arialnarrow12_part4_data, ARIALNARROW12_PART4_WIDTH, ARIALNARROW12_PART4_HEIGHT, ARIALNARROW12_PART4_GRAPHICS_FORMAT, arialnarrow12_part4_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART5_FIRST_CHAR,ARIALNARROW12_PART5_LAST_CHAR, arialnarrow12_part5_data, ARIALNARROW12_PART5_WIDTH, ARIALNARROW12_PART5_HEIGHT, ARIALNARROW12_PART5_GRAPHICS_FORMAT, arialnarrow12_part5_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART6_FIRST_CHAR,ARIALNARROW12_PART6_LAST_CHAR, arialnarrow12_part6_data, ARIALNARROW12_PART6_WIDTH, ARIALNARROW12_PART6_HEIGHT, ARIALNARROW12_PART6_GRAPHICS_FORMAT, arialnarrow12_part6_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART7_FIRST_CHAR,ARIALNARROW12_PART7_LAST_CHAR, arialnarrow12_part7_data, ARIALNARROW12_PART7_WIDTH, ARIALNARROW12_PART7_HEIGHT, ARIALNARROW12_PART7_GRAPHICS_FORMAT, arialnarrow12_part7_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART8_FIRST_CHAR,ARIALNARROW12_PART8_LAST_CHAR, arialnarrow12_part8_data, ARIALNARROW12_PART8_WIDTH, ARIALNARROW12_PART8_HEIGHT, ARIALNARROW12_PART8_GRAPHICS_FORMAT, arialnarrow12_part8_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART9_FIRST_CHAR,ARIALNARROW12_PART9_LAST_CHAR, arialnarrow12_part9_data, ARIALNARROW12_PART9_WIDTH, ARIALNARROW12_PART9_HEIGHT, ARIALNARROW12_PART9_GRAPHICS_FORMAT, arialnarrow12_part9_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART10_FIRST_CHAR,ARIALNARROW12_PART10_LAST_CHAR, arialnarrow12_part10_data, ARIALNARROW12_PART10_WIDTH, ARIALNARROW12_PART10_HEIGHT, ARIALNARROW12_PART10_GRAPHICS_FORMAT, arialnarrow12_part10_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART11_FIRST_CHAR,ARIALNARROW12_PART11_LAST_CHAR, arialnarrow12_part11_data, ARIALNARROW12_PART11_WIDTH, ARIALNARROW12_PART11_HEIGHT, ARIALNARROW12_PART11_GRAPHICS_FORMAT, arialnarrow12_part11_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART12_FIRST_CHAR,ARIALNARROW12_PART12_LAST_CHAR, arialnarrow12_part12_data, ARIALNARROW12_PART12_WIDTH, ARIALNARROW12_PART12_HEIGHT, ARIALNARROW12_PART12_GRAPHICS_FORMAT, arialnarrow12_part12_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART13_FIRST_CHAR,ARIALNARROW12_PART13_LAST_CHAR, arialnarrow12_part13_data, ARIALNARROW12_PART13_WIDTH, ARIALNARROW12_PART13_HEIGHT, ARIALNARROW12_PART13_GRAPHICS_FORMAT, arialnarrow12_part13_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART14_FIRST_CHAR,ARIALNARROW12_PART14_LAST_CHAR, arialnarrow12_part14_data, ARIALNARROW12_PART14_WIDTH, ARIALNARROW12_PART14_HEIGHT, ARIALNARROW12_PART14_GRAPHICS_FORMAT, arialnarrow12_part14_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART15_FIRST_CHAR,ARIALNARROW12_PART15_LAST_CHAR, arialnarrow12_part15_data, ARIALNARROW12_PART15_WIDTH, ARIALNARROW12_PART15_HEIGHT, ARIALNARROW12_PART15_GRAPHICS_FORMAT, arialnarrow12_part15_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART16_FIRST_CHAR,ARIALNARROW12_PART16_LAST_CHAR, arialnarrow12_part16_data, ARIALNARROW12_PART16_WIDTH, ARIALNARROW12_PART16_HEIGHT, ARIALNARROW12_PART16_GRAPHICS_FORMAT, arialnarrow12_part16_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART17_FIRST_CHAR,ARIALNARROW12_PART17_LAST_CHAR, arialnarrow12_part17_data, ARIALNARROW12_PART17_WIDTH, ARIALNARROW12_PART17_HEIGHT, ARIALNARROW12_PART17_GRAPHICS_FORMAT, arialnarrow12_part17_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART18_FIRST_CHAR,ARIALNARROW12_PART18_LAST_CHAR, arialnarrow12_part18_data, ARIALNARROW12_PART18_WIDTH, ARIALNARROW12_PART18_HEIGHT, ARIALNARROW12_PART18_GRAPHICS_FORMAT, arialnarrow12_part18_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART19_FIRST_CHAR,ARIALNARROW12_PART19_LAST_CHAR, arialnarrow12_part19_data, ARIALNARROW12_PART19_WIDTH, ARIALNARROW12_PART19_HEIGHT, ARIALNARROW12_PART19_GRAPHICS_FORMAT, arialnarrow12_part19_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART20_FIRST_CHAR,ARIALNARROW12_PART20_LAST_CHAR, arialnarrow12_part20_data, ARIALNARROW12_PART20_WIDTH, ARIALNARROW12_PART20_HEIGHT, ARIALNARROW12_PART20_GRAPHICS_FORMAT, arialnarrow12_part20_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART21_FIRST_CHAR,ARIALNARROW12_PART21_LAST_CHAR, arialnarrow12_part21_data, ARIALNARROW12_PART21_WIDTH, ARIALNARROW12_PART21_HEIGHT, ARIALNARROW12_PART21_GRAPHICS_FORMAT, arialnarrow12_part21_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART22_FIRST_CHAR,ARIALNARROW12_PART22_LAST_CHAR, arialnarrow12_part22_data, ARIALNARROW12_PART22_WIDTH, ARIALNARROW12_PART22_HEIGHT, ARIALNARROW12_PART22_GRAPHICS_FORMAT, arialnarrow12_part22_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART23_FIRST_CHAR,ARIALNARROW12_PART23_LAST_CHAR, arialnarrow12_part23_data, ARIALNARROW12_PART23_WIDTH, ARIALNARROW12_PART23_HEIGHT, ARIALNARROW12_PART23_GRAPHICS_FORMAT, arialnarrow12_part23_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART24_FIRST_CHAR,ARIALNARROW12_PART24_LAST_CHAR, arialnarrow12_part24_data, ARIALNARROW12_PART24_WIDTH, ARIALNARROW12_PART24_HEIGHT, ARIALNARROW12_PART24_GRAPHICS_FORMAT, arialnarrow12_part24_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART25_FIRST_CHAR,ARIALNARROW12_PART25_LAST_CHAR, arialnarrow12_part25_data, ARIALNARROW12_PART25_WIDTH, ARIALNARROW12_PART25_HEIGHT, ARIALNARROW12_PART25_GRAPHICS_FORMAT, arialnarrow12_part25_descrs),
+	make_font_bitmap_descrs(ARIALNARROW12_PART26_FIRST_CHAR,ARIALNARROW12_PART26_LAST_CHAR, arialnarrow12_part26_data, ARIALNARROW12_PART26_WIDTH, ARIALNARROW12_PART26_HEIGHT, ARIALNARROW12_PART26_GRAPHICS_FORMAT, arialnarrow12_part26_descrs),
 };
-//! Шрифт 5x8.
-static font_t font5x8 = make_font(font_5x8_utf8_bitmaps, 3, 5, 8, 1, 0);
-//! Битмапы шрифта 10x16.
-const font_bitmap_t font_10x16_utf8_bitmaps[] = {
-    make_font_bitmap(32, 127, font_10x16_utf8_part0_data, FONT_10X16_UTF8_PART0_WIDTH, FONT_10X16_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0xb0, 0xb0, font_10x16_utf8_part1_data, FONT_10X16_UTF8_PART1_WIDTH, FONT_10X16_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0x400, 0x451, font_10x16_utf8_part2_data, FONT_10X16_UTF8_PART2_WIDTH, FONT_10X16_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
+
+static font_t font_arialnarrow12 = make_font_defchar(font_arialnarrow12_bitmaps, ARIALNARROW12_BITMAPS_COUNT, ARIALNARROW12_CHAR_WIDTH, ARIALNARROW12_CHAR_HEIGHT, 0, ARIALNARROW12_DEF_VSPACE, ARIALNARROW12_DEF_CHAR);
+
+// средний шрифт
+static const font_bitmap_t font_arialnarrow18_bitmaps[] = {
+	make_font_bitmap_descrs(ARIALNARROW18_PART0_FIRST_CHAR,ARIALNARROW18_PART0_LAST_CHAR, arialnarrow18_part0_data, ARIALNARROW18_PART0_WIDTH, ARIALNARROW18_PART0_HEIGHT, ARIALNARROW18_PART0_GRAPHICS_FORMAT, arialnarrow18_part0_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART1_FIRST_CHAR,ARIALNARROW18_PART1_LAST_CHAR, arialnarrow18_part1_data, ARIALNARROW18_PART1_WIDTH, ARIALNARROW18_PART1_HEIGHT, ARIALNARROW18_PART1_GRAPHICS_FORMAT, arialnarrow18_part1_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART2_FIRST_CHAR,ARIALNARROW18_PART2_LAST_CHAR, arialnarrow18_part2_data, ARIALNARROW18_PART2_WIDTH, ARIALNARROW18_PART2_HEIGHT, ARIALNARROW18_PART2_GRAPHICS_FORMAT, arialnarrow18_part2_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART3_FIRST_CHAR,ARIALNARROW18_PART3_LAST_CHAR, arialnarrow18_part3_data, ARIALNARROW18_PART3_WIDTH, ARIALNARROW18_PART3_HEIGHT, ARIALNARROW18_PART3_GRAPHICS_FORMAT, arialnarrow18_part3_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART4_FIRST_CHAR,ARIALNARROW18_PART4_LAST_CHAR, arialnarrow18_part4_data, ARIALNARROW18_PART4_WIDTH, ARIALNARROW18_PART4_HEIGHT, ARIALNARROW18_PART4_GRAPHICS_FORMAT, arialnarrow18_part4_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART5_FIRST_CHAR,ARIALNARROW18_PART5_LAST_CHAR, arialnarrow18_part5_data, ARIALNARROW18_PART5_WIDTH, ARIALNARROW18_PART5_HEIGHT, ARIALNARROW18_PART5_GRAPHICS_FORMAT, arialnarrow18_part5_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART6_FIRST_CHAR,ARIALNARROW18_PART6_LAST_CHAR, arialnarrow18_part6_data, ARIALNARROW18_PART6_WIDTH, ARIALNARROW18_PART6_HEIGHT, ARIALNARROW18_PART6_GRAPHICS_FORMAT, arialnarrow18_part6_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART7_FIRST_CHAR,ARIALNARROW18_PART7_LAST_CHAR, arialnarrow18_part7_data, ARIALNARROW18_PART7_WIDTH, ARIALNARROW18_PART7_HEIGHT, ARIALNARROW18_PART7_GRAPHICS_FORMAT, arialnarrow18_part7_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART8_FIRST_CHAR,ARIALNARROW18_PART8_LAST_CHAR, arialnarrow18_part8_data, ARIALNARROW18_PART8_WIDTH, ARIALNARROW18_PART8_HEIGHT, ARIALNARROW18_PART8_GRAPHICS_FORMAT, arialnarrow18_part8_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART9_FIRST_CHAR,ARIALNARROW18_PART9_LAST_CHAR, arialnarrow18_part9_data, ARIALNARROW18_PART9_WIDTH, ARIALNARROW18_PART9_HEIGHT, ARIALNARROW18_PART9_GRAPHICS_FORMAT, arialnarrow18_part9_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART10_FIRST_CHAR,ARIALNARROW18_PART10_LAST_CHAR, arialnarrow18_part10_data, ARIALNARROW18_PART10_WIDTH, ARIALNARROW18_PART10_HEIGHT, ARIALNARROW18_PART10_GRAPHICS_FORMAT, arialnarrow18_part10_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART11_FIRST_CHAR,ARIALNARROW18_PART11_LAST_CHAR, arialnarrow18_part11_data, ARIALNARROW18_PART11_WIDTH, ARIALNARROW18_PART11_HEIGHT, ARIALNARROW18_PART11_GRAPHICS_FORMAT, arialnarrow18_part11_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART12_FIRST_CHAR,ARIALNARROW18_PART12_LAST_CHAR, arialnarrow18_part12_data, ARIALNARROW18_PART12_WIDTH, ARIALNARROW18_PART12_HEIGHT, ARIALNARROW18_PART12_GRAPHICS_FORMAT, arialnarrow18_part12_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART13_FIRST_CHAR,ARIALNARROW18_PART13_LAST_CHAR, arialnarrow18_part13_data, ARIALNARROW18_PART13_WIDTH, ARIALNARROW18_PART13_HEIGHT, ARIALNARROW18_PART13_GRAPHICS_FORMAT, arialnarrow18_part13_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART14_FIRST_CHAR,ARIALNARROW18_PART14_LAST_CHAR, arialnarrow18_part14_data, ARIALNARROW18_PART14_WIDTH, ARIALNARROW18_PART14_HEIGHT, ARIALNARROW18_PART14_GRAPHICS_FORMAT, arialnarrow18_part14_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART15_FIRST_CHAR,ARIALNARROW18_PART15_LAST_CHAR, arialnarrow18_part15_data, ARIALNARROW18_PART15_WIDTH, ARIALNARROW18_PART15_HEIGHT, ARIALNARROW18_PART15_GRAPHICS_FORMAT, arialnarrow18_part15_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART16_FIRST_CHAR,ARIALNARROW18_PART16_LAST_CHAR, arialnarrow18_part16_data, ARIALNARROW18_PART16_WIDTH, ARIALNARROW18_PART16_HEIGHT, ARIALNARROW18_PART16_GRAPHICS_FORMAT, arialnarrow18_part16_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART17_FIRST_CHAR,ARIALNARROW18_PART17_LAST_CHAR, arialnarrow18_part17_data, ARIALNARROW18_PART17_WIDTH, ARIALNARROW18_PART17_HEIGHT, ARIALNARROW18_PART17_GRAPHICS_FORMAT, arialnarrow18_part17_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART18_FIRST_CHAR,ARIALNARROW18_PART18_LAST_CHAR, arialnarrow18_part18_data, ARIALNARROW18_PART18_WIDTH, ARIALNARROW18_PART18_HEIGHT, ARIALNARROW18_PART18_GRAPHICS_FORMAT, arialnarrow18_part18_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART19_FIRST_CHAR,ARIALNARROW18_PART19_LAST_CHAR, arialnarrow18_part19_data, ARIALNARROW18_PART19_WIDTH, ARIALNARROW18_PART19_HEIGHT, ARIALNARROW18_PART19_GRAPHICS_FORMAT, arialnarrow18_part19_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART20_FIRST_CHAR,ARIALNARROW18_PART20_LAST_CHAR, arialnarrow18_part20_data, ARIALNARROW18_PART20_WIDTH, ARIALNARROW18_PART20_HEIGHT, ARIALNARROW18_PART20_GRAPHICS_FORMAT, arialnarrow18_part20_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART21_FIRST_CHAR,ARIALNARROW18_PART21_LAST_CHAR, arialnarrow18_part21_data, ARIALNARROW18_PART21_WIDTH, ARIALNARROW18_PART21_HEIGHT, ARIALNARROW18_PART21_GRAPHICS_FORMAT, arialnarrow18_part21_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART22_FIRST_CHAR,ARIALNARROW18_PART22_LAST_CHAR, arialnarrow18_part22_data, ARIALNARROW18_PART22_WIDTH, ARIALNARROW18_PART22_HEIGHT, ARIALNARROW18_PART22_GRAPHICS_FORMAT, arialnarrow18_part22_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART23_FIRST_CHAR,ARIALNARROW18_PART23_LAST_CHAR, arialnarrow18_part23_data, ARIALNARROW18_PART23_WIDTH, ARIALNARROW18_PART23_HEIGHT, ARIALNARROW18_PART23_GRAPHICS_FORMAT, arialnarrow18_part23_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART24_FIRST_CHAR,ARIALNARROW18_PART24_LAST_CHAR, arialnarrow18_part24_data, ARIALNARROW18_PART24_WIDTH, ARIALNARROW18_PART24_HEIGHT, ARIALNARROW18_PART24_GRAPHICS_FORMAT, arialnarrow18_part24_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART25_FIRST_CHAR,ARIALNARROW18_PART25_LAST_CHAR, arialnarrow18_part25_data, ARIALNARROW18_PART25_WIDTH, ARIALNARROW18_PART25_HEIGHT, ARIALNARROW18_PART25_GRAPHICS_FORMAT, arialnarrow18_part25_descrs),
+	make_font_bitmap_descrs(ARIALNARROW18_PART26_FIRST_CHAR,ARIALNARROW18_PART26_LAST_CHAR, arialnarrow18_part26_data, ARIALNARROW18_PART26_WIDTH, ARIALNARROW18_PART26_HEIGHT, ARIALNARROW18_PART26_GRAPHICS_FORMAT, arialnarrow18_part26_descrs),
 };
-//! Шрифт 10x16.
-static font_t font10x16 = make_font(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0);
 
-//! Раскладки клавиатуры.
-/*#define KEY_LAYOUTS_COUNT 2
-const key_layout_t* key_layouts[KEY_LAYOUTS_COUNT] = {
-    &key_layout_en, &key_layout_ru
-};*/
+static font_t font_arialnarrow18 = make_font_defchar(font_arialnarrow18_bitmaps, ARIALNARROW18_BITMAPS_COUNT, ARIALNARROW18_CHAR_WIDTH, ARIALNARROW18_CHAR_HEIGHT, ARIALNARROW18_DEF_HSPACE, ARIALNARROW18_DEF_VSPACE, ARIALNARROW18_DEF_CHAR);
 
-#define MAKE_RGB(r, g, b) TFT9341_MAKE_RGB565(r, g, b)
-#define THEME_COLOR_BACK MAKE_RGB(0xff, 0xff, 0xff)
-#define THEME_COLOR_FRONT MAKE_RGB(0x00, 0x00, 0x00)
-#define THEME_COLOR_PANEL MAKE_RGB(0xf8, 0xf8, 0xf8)//0xf0
-#define THEME_COLOR_WIDGET MAKE_RGB(0xe1, 0xe1, 0xe1)
-#define THEME_COLOR_BORDER MAKE_RGB(0xb1, 0xb1, 0xb1)
-#define THEME_COLOR_FONT MAKE_RGB(0x00, 0x00, 0x00)
-#define THEME_COLOR_FOCUS MAKE_RGB(0x00, 0x78, 0xd7)
-#define THEME_COLOR_PRESSED MAKE_RGB(0xcd, 0xe3, 0xf8)
+// крупный шрифт
+static const font_bitmap_t font_arialbold42_bitmaps[] = {
+    make_font_bitmap_descrs(ARIALBOLD42_PART0_FIRST_CHAR,ARIALBOLD42_PART0_LAST_CHAR, arialbold42_part0_data, ARIALBOLD42_PART0_WIDTH, ARIALBOLD42_PART0_HEIGHT, ARIALBOLD42_PART0_GRAPHICS_FORMAT, arialbold42_part0_descrs),
+    make_font_bitmap_descrs(ARIALBOLD42_PART1_FIRST_CHAR,ARIALBOLD42_PART1_LAST_CHAR, arialbold42_part1_data, ARIALBOLD42_PART1_WIDTH, ARIALBOLD42_PART1_HEIGHT, ARIALBOLD42_PART1_GRAPHICS_FORMAT, arialbold42_part1_descrs),
+    make_font_bitmap_descrs(ARIALBOLD42_PART2_FIRST_CHAR,ARIALBOLD42_PART2_LAST_CHAR, arialbold42_part2_data, ARIALBOLD42_PART2_WIDTH, ARIALBOLD42_PART2_HEIGHT, ARIALBOLD42_PART2_GRAPHICS_FORMAT, arialbold42_part2_descrs),
+    make_font_bitmap_descrs(ARIALBOLD42_PART3_FIRST_CHAR,ARIALBOLD42_PART3_LAST_CHAR, arialbold42_part3_data, ARIALBOLD42_PART3_WIDTH, ARIALBOLD42_PART3_HEIGHT, ARIALBOLD42_PART3_GRAPHICS_FORMAT, arialbold42_part3_descrs),
+};
 
-static gui_theme_t theme = MAKE_GUI_THEME(
-                    THEME_COLOR_BACK, THEME_COLOR_FRONT,
-                    THEME_COLOR_PANEL, THEME_COLOR_WIDGET,
-                    THEME_COLOR_BORDER, THEME_COLOR_FONT,
-                    THEME_COLOR_FOCUS, THEME_COLOR_PRESSED,
-                    &font5x8, &font10x16);
+static font_t font_arialbold42 = make_font_defchar(font_arialbold42_bitmaps, ARIALBOLD42_BITMAPS_COUNT, ARIALBOLD42_CHAR_WIDTH, ARIALBOLD42_CHAR_HEIGHT, ARIALBOLD42_DEF_HSPACE, ARIALBOLD42_DEF_VSPACE, ARIALBOLD42_DEF_CHAR);
 
-
-
-
+// тема графического интерфейса
+static gui_metro_theme_t theme = MAKE_GUI_METRO_THEME(
+        THEME_COLOR_GRAY,   //!< Цвет фона.
+        THEME_COLOR_BLACK,  //!< Цвет строки состояния.
+        THEME_COLOR_WHITE,  //!< Цвет шрифта строки состояния.
+        THEME_COLOR_BLUE_D, //!< Цвет плитки.
+        THEME_COLOR_ORANGE, //!< Цвет плитки (предупреждение).
+        THEME_COLOR_RED_L,  //!< Цвет плитки (авария).
+        THEME_COLOR_WHITE,  //!< Цвет шрифта плитки.
+        THEME_COLOR_GRAY_L, //!< Цвет фона меню.
+        THEME_COLOR_GRAY_D, //!< Цвет фона заголовка меню.
+        THEME_COLOR_WHITE,  //!< Цвет шрифта заголовка меню.
+        THEME_COLOR_BLACK,  //!< Цвет шрифта меню.
+        THEME_COLOR_BLUE_D, //!< Цвет фона выбранного элемента меню.
+        THEME_COLOR_WHITE,  //!< Цвет шрифта выбранного элемента меню.
+        THEME_COLOR_BLACK,  //!< Цвет фона редактируемого элемента меню.
+        THEME_COLOR_WHITE,  //!< Цвет символа редактируемого элемента меню.
+        THEME_COLOR_GRAY_D,  //!< Цвет полосы прокрутки.
+        &font_arialbold42,  //!< Крупный шрифт виджета.
+        &font_arialnarrow18,//!< Средний шрифт меню.
+        &font_arialnarrow12 //!< Мелкий шрифт меню.
+);
 
 //! Тип структуры графического интерфейса привода.
 typedef struct _Drive_Gui {
     tft9341_t* tft;
     // GUI.
-    gui_t gui;
+    gui_metro_t gui;
     gui_widget_t root_widget;
-    gui_widget_t parent_widget;
-    gui_label_t label_time;
-    gui_label_t label_time_val;
-    gui_label_t label_val;
-    gui_label_t label_errs;
-    gui_label_t label_pwr_errs;
-    gui_label_t label_state;
-    gui_label_t label_ref;
-    gui_label_t label_last_pwr_errs;
-    gui_spinbox_t spinbox_ref;
-    gui_button_t button_start;
-    gui_button_t button_stop;
-    gui_label_t lbl_adc1_in1;
-    gui_label_t lbl_adc1_in2;
-    gui_label_t lbl_adc1_in3;
-    gui_label_t lbl_adc1_in4;
-    gui_label_t lbl_adc2_in1;
-    gui_label_t lbl_adc2_in2;
-    gui_label_t lbl_adc2_in3;
-    gui_label_t lbl_adc2_in4;
-    gui_label_t lbl_adc3_in1;
-    gui_label_t lbl_adc3_in2;
-    gui_label_t lbl_adc3_in3;
-    gui_number_label_t label_num;
-    gui_number_label_t label_num_errs;
-    gui_number_label_t label_num_pwr_errs;
-    gui_number_label_t label_num_state;
-    gui_number_label_t label_num_last_pwr_errs;
-    gui_number_label_t lbl_num_adc1_in1;
-    gui_number_label_t lbl_num_adc1_in2;
-    gui_number_label_t lbl_num_adc1_in3;
-    gui_number_label_t lbl_num_adc1_in4;
-    gui_number_label_t lbl_num_adc2_in1;
-    gui_number_label_t lbl_num_adc2_in2;
-    gui_number_label_t lbl_num_adc2_in3;
-    gui_number_label_t lbl_num_adc2_in4;
-    gui_number_label_t lbl_num_adc3_in1;
-    gui_number_label_t lbl_num_adc3_in2;
-    gui_number_label_t lbl_num_adc3_in3;
-    //
+    
+    gui_home_t home;
+    
+    // cтрока состояния
+    gui_statusbar_t statusbar;
+    // иконки строки состояния
+    gui_icon_t icons[GUI_STATUSBAR_ICONS_COUNT];
+    
+    // главный экран
+    gui_tile_t tiles[GUI_HOME_TILES_COUNT];
+    
+    // меню 
+    gui_menu_t menu;
+    
     drive_event_t last_event;
 } drive_gui_t;
 
 //! Графический интерфейс привода.
 static drive_gui_t gui;
-
-
-#define GUI_NUMBER_LABEL_DECIMALS 2
-
-#define GUI_LABEL_HEIGHT 15
-#define GUI_LABEL_TOP(N) (5 + GUI_LABEL_HEIGHT * N)
-
-
-
 
 static err_t drive_gui_tft_reset(void)
 {
@@ -197,365 +225,100 @@ static err_t drive_gui_init_tft(void)
     return E_NO_ERROR;
 }
 
-
-static void spinbox_reference_on_value_changed(gui_spinbox_t* spinbox, int value)
-{
-    drive_set_reference(CLAMP(value, 0, 100));
-}
-
-static void button_start_on_clicked(gui_button_t* button)
-{
-    drive_start();
-}
-
-static void button_stop_on_clicked(gui_button_t* button)
-{
-    drive_stop();
-}
-
-static void make_gui_adc(void)
-{
-    gui_label_init_parent(&gui.lbl_adc1_in1, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc1_in1, "Ua:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc1_in1), 120, GUI_LABEL_TOP(0));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc1_in1), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc1_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc1_in1), true);
-    
-    gui_label_init_parent(&gui.lbl_adc1_in2, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc1_in2, "Ub:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc1_in2), 120, GUI_LABEL_TOP(1));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc1_in2), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc1_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc1_in2), true); 
-    
-    gui_label_init_parent(&gui.lbl_adc1_in3, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc1_in3, "Uc:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc1_in3), 120, GUI_LABEL_TOP(2));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc1_in3), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc1_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc1_in3), true);
-
-    gui_label_init_parent(&gui.lbl_adc1_in4, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc1_in4, "Urot:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc1_in4), 120, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc1_in4), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc1_in4), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc1_in4), true);
-    
-    gui_label_init_parent(&gui.lbl_adc2_in1, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc2_in1, "Ia:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc2_in1), 120, GUI_LABEL_TOP(4));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc2_in1), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc2_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc2_in1), true);
-    
-    gui_label_init_parent(&gui.lbl_adc2_in2, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc2_in2, "Ib:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc2_in2), 120, GUI_LABEL_TOP(5));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc2_in2), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc2_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc2_in2), true);
-    
-    gui_label_init_parent(&gui.lbl_adc2_in3, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc2_in3, "Ic:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc2_in3), 120, GUI_LABEL_TOP(6));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc2_in3), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc2_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc2_in3), true);
-
-    gui_label_init_parent(&gui.lbl_adc2_in4, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc2_in4, "Irot:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc2_in4), 120, GUI_LABEL_TOP(7));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc2_in4), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc2_in4), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc2_in4), true);
-    
-    gui_label_init_parent(&gui.lbl_adc3_in1, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc3_in1, "Iexc:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc3_in1), 120, GUI_LABEL_TOP(8));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc3_in1), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc3_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc3_in1), true);
-    
-    gui_label_init_parent(&gui.lbl_adc3_in2, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc3_in2, "Iref:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc3_in2), 120, GUI_LABEL_TOP(9));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc3_in2), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc3_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc3_in2), true); 
-    
-    gui_label_init_parent(&gui.lbl_adc3_in3, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.lbl_adc3_in3, "Ifan:");
-    gui_widget_move(GUI_WIDGET(&gui.lbl_adc3_in3), 120, GUI_LABEL_TOP(10));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_adc3_in3), 60, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_adc3_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_adc3_in3), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc1_in1, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc1_in1, 1);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc1_in1, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc1_in1, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc1_in1), 180, GUI_LABEL_TOP(0));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc1_in1), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc1_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc1_in1), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc1_in2, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc1_in2, 2);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc1_in2, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc1_in2, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc1_in2), 180, GUI_LABEL_TOP(1));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc1_in2), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc1_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc1_in2), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc1_in3, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc1_in3, 3);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc1_in3, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc1_in3, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc1_in3), 180, GUI_LABEL_TOP(2));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc1_in3), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc1_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc1_in3), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc1_in4, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc1_in4, 3);//0x1234
-    //gui_number_label_set_format(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_DEC);
-    gui_number_label_set_format(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc1_in4, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc1_in4), 180, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc1_in4), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc1_in4), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc1_in4), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc2_in1, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc2_in1, 4);//0x1234
-    //gui_number_label_set_format(&gui.lbl_num_adc2_in1, GUI_NUMBER_LABEL_DEC);
-    gui_number_label_set_format(&gui.lbl_num_adc2_in1, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc2_in1, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc2_in1), 180, GUI_LABEL_TOP(4));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc2_in1), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc2_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc2_in1), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc2_in2, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc2_in2, 5);//0x1234
-    //gui_number_label_set_format(&gui.lbl_num_adc2_in2, GUI_NUMBER_LABEL_DEC);
-    gui_number_label_set_format(&gui.lbl_num_adc2_in2, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc2_in2, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc2_in2), 180, GUI_LABEL_TOP(5));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc2_in2), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc2_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc2_in2), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc2_in3, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc2_in3, 6);//0x1234
-    //gui_number_label_set_format(&gui.lbl_num_adc2_in3, GUI_NUMBER_LABEL_DEC);
-    gui_number_label_set_format(&gui.lbl_num_adc2_in3, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc2_in3, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc2_in3), 180, GUI_LABEL_TOP(6));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc2_in3), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc2_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc2_in3), true);
- 
-    gui_number_label_init_parent(&gui.lbl_num_adc2_in4, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc2_in4, 6);//0x1234
-    //gui_number_label_set_format(&gui.lbl_num_adc2_in4, GUI_NUMBER_LABEL_DEC);
-    gui_number_label_set_format(&gui.lbl_num_adc2_in4, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc2_in4, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc2_in4), 180, GUI_LABEL_TOP(7));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc2_in4), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc2_in4), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc2_in4), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc3_in1, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc3_in1, 1);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc3_in1, GUI_NUMBER_LABEL_FIX);
-    gui_number_label_set_decimals(&gui.lbl_num_adc3_in1, GUI_NUMBER_LABEL_DECIMALS);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc3_in1), 180, GUI_LABEL_TOP(8));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc3_in1), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc3_in1), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc3_in1), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc3_in2, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc3_in2, 2);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc3_in2, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc3_in2), 180, GUI_LABEL_TOP(9));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc3_in2), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc3_in2), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc3_in2), true);
-    
-    gui_number_label_init_parent(&gui.lbl_num_adc3_in3, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.lbl_num_adc3_in3, 3);//0x1234
-    gui_number_label_set_format(&gui.lbl_num_adc3_in3, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.lbl_num_adc3_in3), 180, GUI_LABEL_TOP(10));
-    gui_widget_resize(GUI_WIDGET(&gui.lbl_num_adc3_in3), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.lbl_num_adc3_in3), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.lbl_num_adc3_in3), true);
-}
-
-static void make_err_gui(void)
-{
-    gui_label_init_parent(&gui.label_last_pwr_errs, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_last_pwr_errs, "Псл ошп:");
-    gui_widget_move(GUI_WIDGET(&gui.label_last_pwr_errs), 5, GUI_LABEL_TOP(7));
-    gui_widget_resize(GUI_WIDGET(&gui.label_last_pwr_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_last_pwr_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_last_pwr_errs), true);
-    
-    gui_number_label_init_parent(&gui.label_num_last_pwr_errs, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.label_num_last_pwr_errs, 0);//0x1234
-    gui_number_label_set_format(&gui.label_num_last_pwr_errs, GUI_NUMBER_LABEL_HEX);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_last_pwr_errs), 60, GUI_LABEL_TOP(7));
-    gui_widget_resize(GUI_WIDGET(&gui.label_num_last_pwr_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_num_last_pwr_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_num_last_pwr_errs), true);
-}
-
-static void make_gui(void)
-{
+static void make_gui_struct(void) {
+            
     gui_widget_init(&gui.root_widget, &gui.gui);
     gui_widget_move(&gui.root_widget, 0, 0);
     gui_widget_resize(&gui.root_widget, TFT_WIDTH, TFT_HEIGHT);
+        
+    gui_statusbar_init_parent(&gui.statusbar, &gui.gui, &gui.root_widget);
+    gui_statusbar_set_graphics(&gui.statusbar, &icon_statusbar_graphics, ICONS_STATUSBAR_COUNT);
+    gui_widget_move(GUI_WIDGET(&gui.statusbar), 0, 0);
+    gui_widget_resize(GUI_WIDGET(&gui.statusbar), TFT_WIDTH, GUI_STATUSBAR_HEIGHT);
+    gui_widget_set_back_color(GUI_WIDGET(&gui.statusbar), theme.color_statusbar);
+    gui_widget_set_visible(GUI_WIDGET(&gui.statusbar), true);
     
-    gui_widget_init_parent(&gui.parent_widget, &gui.gui, &gui.root_widget);
-    gui_widget_move(&gui.parent_widget, 5, 5);
-    gui_widget_resize(&gui.parent_widget, 310, 230);
-    gui_widget_set_border(&gui.parent_widget, GUI_BORDER_SOLID);
-    gui_widget_set_visible(&gui.parent_widget, true);
+    gui_home_init_parent(&gui.home, &gui.gui, &gui.root_widget);
+    gui_widget_move(GUI_WIDGET(&gui.home), 0, GUI_STATUSBAR_HEIGHT);
+    gui_widget_resize(GUI_WIDGET(&gui.home), TFT_WIDTH, TFT_HEIGHT - GUI_STATUSBAR_HEIGHT);
+    gui_widget_set_back_color(GUI_WIDGET(&gui.home), theme.color_back);
+    gui_widget_set_visible(GUI_WIDGET(&gui.home), true);
+    gui_home_set_on_enter(&gui.home, GUI_HOME_ON_ENTER_PROC(drive_gui_home_on_enter));
     
+    int i;
+    graphics_pos_t x = GUI_TILE_SEP;
+    graphics_pos_t y = 0;
+    for (i = 0; i < GUI_HOME_TILES_WIDTH; i++) {
+        int j;
+        y = GUI_TILE_SEP;
+        for (j = 0; j < GUI_HOME_TILES_HEIGHT; j++) {
+            int k = i * GUI_HOME_TILES_WIDTH + j;
+            gui_tile_t* tile = &gui.tiles[k];
+            gui_tile_init_parent(tile, &gui.gui, GUI_WIDGET(&gui.home));
+            gui_tile_set_caption(tile, home_tiles_text[k][HOME_TILE_CAPTION]);
+            gui_tile_set_unit(tile, home_tiles_text[k][HOME_TILE_UNIT]);
+            gui_widget_move(GUI_WIDGET(tile), x, y);
+            gui_widget_resize(GUI_WIDGET(tile), GUI_TILE_WIDTH, GUI_TILE_HEIGHT);
+            gui_widget_set_border(GUI_WIDGET(tile), GUI_BORDER_NONE);
+            gui_widget_set_back_color(GUI_WIDGET(tile), THEME_COLOR_BLUE_D);
+            gui_widget_set_visible(GUI_WIDGET(tile), true);
+            y += (GUI_TILE_HEIGHT + GUI_TILE_SEP);
+        }
+        x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
+    }
+    
+    /*
+    for (i = 0; i < GUI_STATUSBAR_ICONS_COUNT; i++) {
+        gui_icon_t* icon = &gui.icons[i];
+        icon->value = rand() % ICONS_STATUSBAR_VAL_READY + ICONS_STATUSBAR_VAL_CNTRL_BUS;
+        icon->count = 0;
+        icon->current = ICONS_STATUSBAR_VAL_NOTHING;
+        icon->list = NULL;
+        icon->color = rand() % 65535;
+    }
+    */
+    
+    gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
+    
+    gui_menu_init_parent(&gui.menu, &gui.gui, &gui.root_widget);
+    gui_widget_move(GUI_WIDGET(&gui.menu), 0, GUI_STATUSBAR_HEIGHT);
+    gui_widget_resize(GUI_WIDGET(&gui.menu), TFT_WIDTH, TFT_HEIGHT - GUI_STATUSBAR_HEIGHT);
+    gui_widget_set_border(GUI_WIDGET(&gui.menu), GUI_BORDER_NONE);
+    gui_widget_set_back_color(GUI_WIDGET(&gui.menu), THEME_COLOR_GRAY_L);
+    gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
+    gui_menu_set_on_home(&gui.menu, GUI_MENU_ON_HOME_PROC(drive_gui_menu_on_home));
+    
+    /*
     gui_label_init_parent(&gui.label_time, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_time, "Время:");
-    gui_widget_move(GUI_WIDGET(&gui.label_time), 5, GUI_LABEL_TOP(0));
-    gui_widget_resize(GUI_WIDGET(&gui.label_time), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_time), GUI_BORDER_SOLID);
+    gui_widget_move(GUI_WIDGET(&gui.label_time), 4, 28);
+    gui_widget_resize(GUI_WIDGET(&gui.label_time), 154, 102);
+    gui_widget_set_border(GUI_WIDGET(&gui.label_time), GUI_BORDER_NONE);
+    gui_widget_set_back_color(GUI_WIDGET(&gui.label_time), THEME_COLOR_BLUE_D);
     gui_widget_set_visible(GUI_WIDGET(&gui.label_time), true);
-    
-    gui_label_init_parent(&gui.label_time_val, &gui.gui, &gui.parent_widget);
-    //gui_label_set_text(&gui.label_time_val, ":");
-    gui_widget_move(GUI_WIDGET(&gui.label_time_val), 60, GUI_LABEL_TOP(0));
-    gui_widget_resize(GUI_WIDGET(&gui.label_time_val), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_time_val), GUI_BORDER_SOLID);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_time_val), true);
-    
-    gui_label_init_parent(&gui.label_val, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_val, "Знач:");
-    gui_widget_move(GUI_WIDGET(&gui.label_val), 5, GUI_LABEL_TOP(1));
-    gui_widget_resize(GUI_WIDGET(&gui.label_val), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_val), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_val), true);
-    
-    gui_number_label_init_parent(&gui.label_num, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.label_num, 0);//0x1234
-    gui_number_label_set_format(&gui.label_num, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num), 60, GUI_LABEL_TOP(1));
-    gui_widget_resize(GUI_WIDGET(&gui.label_num), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_num), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_num), true);
-    
-    gui_label_init_parent(&gui.label_errs, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_errs, "Ошибки:");
-    gui_widget_move(GUI_WIDGET(&gui.label_errs), 5, GUI_LABEL_TOP(2));
-    gui_widget_resize(GUI_WIDGET(&gui.label_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_errs), true);
-    
-    gui_number_label_init_parent(&gui.label_num_errs, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.label_num_errs, 0);//0x1234
-    gui_number_label_set_format(&gui.label_num_errs, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_errs), 60, GUI_LABEL_TOP(2));
-    gui_widget_resize(GUI_WIDGET(&gui.label_num_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_num_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_num_errs), true);
-    
-    gui_label_init_parent(&gui.label_pwr_errs, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_pwr_errs, "Ош пит:");
-    gui_widget_move(GUI_WIDGET(&gui.label_pwr_errs), 5, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&gui.label_pwr_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_pwr_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_pwr_errs), true);
-    
-    gui_number_label_init_parent(&gui.label_num_pwr_errs, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.label_num_pwr_errs, 0);//0x1234
-    gui_number_label_set_format(&gui.label_num_pwr_errs, GUI_NUMBER_LABEL_HEX);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_pwr_errs), 60, GUI_LABEL_TOP(3));
-    gui_widget_resize(GUI_WIDGET(&gui.label_num_pwr_errs), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_num_pwr_errs), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_num_pwr_errs), true);
-    
-    gui_label_init_parent(&gui.label_state, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_state, "Сост.:");
-    gui_widget_move(GUI_WIDGET(&gui.label_state), 5, GUI_LABEL_TOP(4));
-    gui_widget_resize(GUI_WIDGET(&gui.label_state), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_state), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_state), true);
-    
-    gui_number_label_init_parent(&gui.label_num_state, &gui.gui, &gui.parent_widget);
-    gui_number_label_set_number(&gui.label_num_state, 0);//0x1234
-    gui_number_label_set_format(&gui.label_num_state, GUI_NUMBER_LABEL_DEC);
-    gui_widget_move(GUI_WIDGET(&gui.label_num_state), 60, GUI_LABEL_TOP(4));
-    gui_widget_resize(GUI_WIDGET(&gui.label_num_state), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_num_state), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label3), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_num_state), true);
-    
-    gui_button_init_parent(&gui.button_start, &gui.gui, &gui.parent_widget);
-    gui_button_set_text(&gui.button_start, "Старт");
-    gui_button_set_on_clicked(&gui.button_start, button_start_on_clicked);
-    gui_widget_move(GUI_WIDGET(&gui.button_start), 5, GUI_LABEL_TOP(5));
-    gui_widget_resize(GUI_WIDGET(&gui.button_start), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.button_start), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.button2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.button_start), true);
-    
-    gui_button_init_parent(&gui.button_stop, &gui.gui, &gui.parent_widget);
-    gui_button_set_text(&gui.button_stop, "Стоп");
-    gui_button_set_on_clicked(&gui.button_stop, button_stop_on_clicked);
-    gui_widget_move(GUI_WIDGET(&gui.button_stop), 60, GUI_LABEL_TOP(5));
-    gui_widget_resize(GUI_WIDGET(&gui.button_stop), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.button_stop), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.button2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.button_stop), true);
-    
-    gui_label_init_parent(&gui.label_ref, &gui.gui, &gui.parent_widget);
-    gui_label_set_text(&gui.label_ref, "Задание:");
-    gui_widget_move(GUI_WIDGET(&gui.label_ref), 5, GUI_LABEL_TOP(6));
-    gui_widget_resize(GUI_WIDGET(&gui.label_ref), 50, GUI_LABEL_HEIGHT);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_ref), GUI_BORDER_SOLID);
-    //gui_widget_set_back_color(GUI_WIDGET(&gui.label2), THEME_COLOR_WIDGET);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_ref), true);
-    
-    gui_spinbox_init_parent(&gui.spinbox_ref, &gui.gui, &gui.parent_widget);
-    gui_spinbox_set_value(&gui.spinbox_ref, drive_reference());
-    gui_spinbox_set_format(&gui.spinbox_ref, GUI_NUMBER_LABEL_DEC);
-    gui_spinbox_set_range(&gui.spinbox_ref, 0, 100);
-    gui_spinbox_set_on_value_changed(&gui.spinbox_ref, spinbox_reference_on_value_changed);
-    gui_widget_move(GUI_WIDGET(&gui.spinbox_ref), 60, GUI_LABEL_TOP(6));
-    gui_widget_resize(GUI_WIDGET(&gui.spinbox_ref), 50, 20);
-    gui_widget_set_visible(GUI_WIDGET(&gui.spinbox_ref), true);
-    
-    make_gui_adc();
-    make_err_gui();
-    
-    gui_set_root_widget(&gui.gui, &gui.root_widget);
-    gui_set_focus_widget(&gui.gui, GUI_WIDGET(&gui.spinbox_ref));
+    */
+}
 
+static void make_gui(void)
+{    
+    // инициализация локализации
+    localization_init(trs_main, TRANSLATIONS_COUNT(trs_main));
+    localization_set_default_lang(TR_LANG_ID_RU);
+    localization_set_default_text("No translation");
+    localization_set_lang(TR_LANG_ID_EN);
+    
+    // инициализация графического интерфейча
+    make_gui_struct();
+    
+    gui_metro_set_root_widget(&gui.gui, &gui.root_widget);
+    gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
+    
     gui_widget_set_visible(&gui.root_widget, true);
 }
 
+// перерисовка графич. интерфейса
 void drive_gui_repaint(void)
 {
-    gui_repaint(&gui.gui, NULL);
+    gui_metro_repaint(&gui.gui, NULL);
 }
 
 static bool drive_gui_read_last_err(void)
@@ -575,44 +338,47 @@ static bool drive_gui_read_last_err(void)
 
 void drive_gui_update(void)
 {
-    //gui_number_label_set_number(&gui.label_num, drive_keypad_state());
-    gui_number_label_set_number(&gui.label_num, drive_init_state());
-    gui_number_label_set_number(&gui.label_num_state, drive_state());
-    gui_number_label_set_number(&gui.label_num_errs, drive_errors());
-    gui_number_label_set_number(&gui.label_num_pwr_errs, drive_power_errors());
-    gui_spinbox_set_value(&gui.spinbox_ref, drive_reference());
-    
-    static char time_str[9];
-    time_t t = time(NULL);
-    struct tm* ts = localtime(&t);
-    snprintf(time_str, 9, "%02d:%02d:%02d", ts->tm_hour, ts->tm_min, ts->tm_sec);
-    gui_label_set_text(&gui.label_time_val, time_str);
+    static char pos = 0;
     
     if(drive_gui_read_last_err()){
-        gui_number_label_set_number(&gui.label_num_last_pwr_errs, gui.last_event.power_errors);
+        //gui_number_label_set_number(&gui.label_num_last_pwr_errs, gui.last_event.power_errors);
     }
-
-    if(drive_power_data_avail(DRIVE_POWER_CHANNELS)){
-
-        gui_number_label_set_number(&gui.lbl_num_adc1_in1, (drive_power_channel_real_value(0)));
-        gui_number_label_set_number(&gui.lbl_num_adc1_in2, (drive_power_channel_real_value(2)));
-        gui_number_label_set_number(&gui.lbl_num_adc1_in3, (drive_power_channel_real_value(4)));
-        gui_number_label_set_number(&gui.lbl_num_adc1_in4, (drive_power_channel_real_value(6)));
-        //gui_number_label_set_number(&gui.lbl_num_adc1_in4, (drive_power_channel_raw_value(6)));
-
-        gui_number_label_set_number(&gui.lbl_num_adc2_in1, drive_power_channel_real_value(1));
-        gui_number_label_set_number(&gui.lbl_num_adc2_in2, drive_power_channel_real_value(3));
-        gui_number_label_set_number(&gui.lbl_num_adc2_in3, drive_power_channel_real_value(5));
-        gui_number_label_set_number(&gui.lbl_num_adc2_in4, drive_power_channel_real_value(7));
-
-        gui_number_label_set_number(&gui.lbl_num_adc3_in1, drive_power_channel_real_value(8));
+    
+    gui_statusbar_update_icons(&gui.statusbar, false);
+    gui_statusbar_update(&gui.statusbar, NULL);
+    
+    int i;
+    for (i = 0; i < GUI_HOME_TILES_WIDTH; i++) {
+        int j;
+        for (j = 0; j < GUI_HOME_TILES_HEIGHT; j++) {
+            int k = i * GUI_HOME_TILES_WIDTH + j;
+            gui_tile_t* tile = &gui.tiles[k];
+            drive_gui_update_tile(tile, home_tiles_values[k]);
+        }
+    }
         
-        //gui_number_label_set_number(&gui.lbl_num_adc3_in1, fixed32_get_int(drive_power_channel_real_value(8)));
-        gui_number_label_set_number(&gui.lbl_num_adc3_in2, fixed32_get_int(drive_power_channel_real_value(9)));
-        gui_number_label_set_number(&gui.lbl_num_adc3_in3, fixed32_get_int(drive_power_channel_real_value(10)));
+    gui_menu_on_timer_home_action(&gui.menu);
+    
+    pos++;
+    static bool rev;
+    if (pos > ICONS_STATUSBAR_COUNT) {
+        pos = 0;
+        if (rev) {
+            //gui_widget_set_visible(GUI_WIDGET(&gui.home), true);
+            localization_set_lang(TR_LANG_ID_EN);
+            //gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
+            gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
+            rev = false;
+        }
+        else {
+            //gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
+            localization_set_lang(TR_LANG_ID_RU);
+            //gui_widget_set_visible(GUI_WIDGET(&gui.home), false);
+            gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
+            rev = true;
+        }
     }
 }
-
 
 err_t drive_gui_init(drive_gui_init_t* gui_is)
 {
@@ -622,7 +388,7 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
     gui.tft = gui_is->tft;
     
     RETURN_ERR_IF_FAIL(drive_gui_init_tft());
-    RETURN_ERR_IF_FAIL(gui_init(&gui.gui, &graphics, &theme));
+    RETURN_ERR_IF_FAIL(gui_metro_init(&gui.gui, &graphics, &theme));
     
     make_gui();
     
@@ -633,23 +399,34 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
 
 void drive_gui_on_key_pressed(keycode_t key)
 {
-    switch(key){
-        case KEY_LEFT:
-        case KEY_MINUS:
-            gui_focus_prev_widget(&gui.gui);
-            return;
-        case KEY_RIGHT:
-        case KEY_PLUS:
-            gui_focus_next_widget(&gui.gui);
-            return;
+    switch (key) {
+        //case KEY_LEFT:
+        //case KEY_MINUS:
+        case KEY_DOWN:
+            //gui_focus_prev_widget(&gui.gui);
+            //menu_explorer_next(&explorer);
+            break;
+        //case KEY_RIGHT:
+        //case KEY_PLUS:
+        case KEY_UP:
+            //gui_focus_next_widget(&gui.gui);
+            //menu_explorer_prev(&explorer);
+            break;
+        case KEY_ENTER:
+            //
+            break;
+        case KEY_ESC:
+            //menu_explorer_out(&explorer);
+            break;
         default:
             break;
     }
-    gui_key_pressed(&gui.gui, key);
+    gui_metro_key_pressed(&gui.gui, key);
 }
 
 void drive_gui_on_key_released(keycode_t key)
 {
+    /**
     switch(key){
         case KEY_LEFT:
         case KEY_MINUS:
@@ -659,6 +436,59 @@ void drive_gui_on_key_released(keycode_t key)
         default:
             break;
     }
-    gui_key_released(&gui.gui, key);
+     */
+    gui_metro_key_released(&gui.gui, key);
 }
 
+void drive_gui_home_on_enter(gui_home_t* home)
+{
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[0]), false);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[1]), false);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[2]), false);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[3]), false);
+
+    gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
+    gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.menu));
+    gui_menu_init_counters(&gui.menu, &(gui.gui));
+}
+
+void drive_gui_menu_on_home(gui_menu_t* menu)
+{
+    gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
+    gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
+    
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[0]), true);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[1]), true);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[2]), true);
+    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[3]), true);
+}
+
+void drive_gui_update_tile(gui_tile_t* tile, size_t value) 
+{
+    if(drive_power_data_avail(DRIVE_POWER_CHANNELS)) {
+        char str[9];
+        uint32_t int_part = fixed32_get_int(drive_power_channel_real_value(value));
+        //fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(drive_power_channel_real_value(DRIVE_POWER_Urot)), 10);
+        snprintf(str, 9, "% 4d", (int)int_part);
+        gui_tile_set_value(tile, str);
+        /**
+        gui_tile_status_t new_tile_status = GUI_TILE_STATUS_OK;
+        
+        if (cur3 > 150) {
+            new_tile_status = GUI_TILE_STATUS_ALARM;
+        } else if (cur3 > 70) {
+            new_tile_status = GUI_TILE_STATUS_WARNING;
+        }
+        
+        if (new_tile_status != gui_tile_status(&gui.tiles[3])) {
+            gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), false);
+            gui_tile_set_value(&gui.tiles[3], time_str);
+            gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), true);
+            gui_tile_set_status(&gui.tiles[3], new_tile_status);
+        }
+        else {
+            gui_tile_set_value(&gui.tiles[3], time_str);
+        }
+        */
+    }
+}
