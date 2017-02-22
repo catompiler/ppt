@@ -18,6 +18,7 @@ TEXT_TR(TR_ID_UNITS_S, "с")
 TEXT_TR(TR_ID_UNITS_MS, "мс")
 TEXT_TR(TR_ID_UNITS_US, "мкс")
 TEXT_TR(TR_ID_UNITS_PERCENT, "%")
+TEXT_TR(TR_ID_UNITS_DEGREE_CELSIUS, "°C")     
 TEXT_TR(TR_ID_ENUM_PHASE_UNK, "Не задано")
 TEXT_TR(TR_ID_ENUM_PHASE_A, "Фаза A")
 TEXT_TR(TR_ID_ENUM_PHASE_B, "Фаза B")
@@ -144,7 +145,15 @@ TEXT_TR(TR_ID_MENU_CALIBRATION_DATA_Ifan, "Значение калибровки
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")
-TEXT_TRS_END()
+        
+// главный экран
+TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Напряжение\nякоря")
+TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Ток\nякоря")
+TEXT_TR(TR_ID_HOME_EXCITATION_CURRENT, "Ток\nвозбуждения")
+TEXT_TR(TR_ID_HOME_RADIATOR_TEMPERATURE, "Температура\nрадиатора")
+// меню
+TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Меню")
 
+TEXT_TRS_END()
 
 #endif /* TRANSLATION_RU_H */
