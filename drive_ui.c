@@ -35,7 +35,6 @@ static err_t drive_ui_init_gui(drive_ui_init_t* ui_is)
 
 static void drive_ui_on_key_pressed(keycode_t key)
 {
-    reference_t reference;
     switch(key){
         case KEY_START:
             drive_start();
@@ -43,18 +42,6 @@ static void drive_ui_on_key_pressed(keycode_t key)
             break;
         case KEY_STOP:
             drive_stop();
-            ui.need_update = true;
-            break;
-        case KEY_PLUS:
-            reference = drive_reference();
-            if(reference < REFERENCE_MAX) reference ++;
-            drive_set_reference(reference);
-            ui.need_update = true;
-            break;
-        case KEY_MINUS:
-            reference = drive_reference();
-            if(reference > 0) reference --;
-            drive_set_reference(reference);
             ui.need_update = true;
             break;
         default:

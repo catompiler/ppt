@@ -396,22 +396,22 @@ void gui_menu_on_key_release(gui_menu_t* menu, keycode_t key)
         //case KEY_MINUS:
         case KEY_DOWN:
             menu->key_down_press = false;
-            return;
+            break;
         //case KEY_RIGHT:
         //case KEY_PLUS:
         case KEY_UP:
             menu->key_up_press = false;
-            return;
+            break;
         case KEY_ENTER:
             //
-            return;
+            break;
         case KEY_ESC:
             if (menu->long_esc_press_cnt > 0) menu->long_esc_press_cnt--;
             if (!menu_explorer_out(&(menu->explorer))) {
                 gui_menu_on_home_action(menu, key);
             }
             gui_menu_on_repaint(menu, NULL);
-            return;
+            break;
         default:
             break;
     }

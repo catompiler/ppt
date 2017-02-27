@@ -589,4 +589,26 @@ ALWAYS_INLINE static err_t drive_process_power_accumulated_data(power_channels_t
  */
 bool drive_calculate_power(void);
 
+/**
+ * Инкрементирует значение задания.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_inc_reference()
+{
+    reference_t reference = drive_reference();
+    if(reference < REFERENCE_MAX) reference ++;
+    return drive_set_reference(reference);
+}
+
+/**
+ * Декрементирует значение задания.
+ * @return Код ошибки.
+ */
+ALWAYS_INLINE static err_t drive_dec_reference()
+{
+    reference_t reference = drive_reference();
+    if(reference > 0) reference --;
+    return drive_set_reference(reference);
+}
+
 #endif	/* DRIVE_H */
