@@ -13,6 +13,7 @@
 #include "drive.h"
 #include "gui/resources/resources_colors.h"
 #include "gui/bitmaps/icons_statusbar.h"
+#include <stdint.h>
 
 typedef struct _Gui_Statusbar gui_statusbar_t;
 typedef struct _Gui_Icon gui_icon_t;
@@ -29,9 +30,14 @@ typedef bool (*gui_icon_condition_callback_t)();
 typedef struct _Gui_Icon_Condition {
     gui_icon_condition_callback_t callback; // функция-условие отображения иконки
     uint32_t param; // параметр функции условия
-    char icon;             // идентификатор статической иконки
+    // char всё же обычно используется для символов.
+    // лучше использовать в таких случаях
+    // либо typedef (что лучше, чтобы не менять по коду в случае необходимости),
+    // либо что-то стандартное, например uint8_t
+    // (вроде нет нигде явно требующегося знакового типа).
+    uint8_t icon;             // идентификатор статической иконки
     graphics_color_t color;   // цвет иконки
-    char* list;               // список идентификаторов иконок в анимации
+    uint8_t* list;               // список идентификаторов иконок в анимации
 } gui_icon_condition_t;
 
 //! Начинает список условий отображения иконок.
@@ -40,7 +46,7 @@ typedef struct _Gui_Icon_Condition {
 
 //! Описывает дескриптор условия отображения иконки.
 #define GUI_ICON_CONDITION(arg_callback, arg_param, arg_icon, arg_color, arg_list)\
-        { .callback = (gui_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color, .list = (char*)arg_list}
+        { .callback = (gui_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color, .list = (uint8_t*)arg_list}
 
 #define GUI_ICON_CONDITIONS_COUNT 7
 
@@ -56,10 +62,10 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
 };
 
 struct _Gui_Icon {
-    const char* list; //!< Выбранный значок или последовательность значков
-    char count; //!< Кол-во значков в последовательности
-    char current; //!< Позиция текущего значка последовательности
-    char value; //!< Новая позиция значка последовательности
+    const uint8_t* list; //!< Выбранный значок или последовательность значков
+    uint8_t count; //!< Кол-во значков в последовательности
+    uint8_t current; //!< Позиция текущего значка последовательности
+    uint8_t value; //!< Новая позиция значка последовательности
     graphics_color_t color; //!< Цвет значка
 };
 
@@ -98,7 +104,7 @@ ALWAYS_INLINE static const graphics_t* gui_statusbar_graphics(gui_statusbar_t* s
  * @param statusbar Статусбар.
  * @param graphics Структура графических данныех изображения.
  */
-EXTERN void gui_statusbar_set_graphics(gui_statusbar_t* statusbar, graphics_t* graphics, char count);
+EXTERN void gui_statusbar_set_graphics(gui_statusbar_t* statusbar, graphics_t* graphics, uint8_t count);
 
 /**
  * Устанавливает иконки.
@@ -147,7 +153,7 @@ EXTERN void gui_statusbar_update(gui_statusbar_t* statusbar, const rect_t* rect)
  * @param pos Позиция иконки
  * @param icon Иконка
  */
-EXTERN void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, const gui_metro_theme_t* theme, const graphics_pos_t left, const graphics_pos_t right, const char pos, gui_icon_t* icon);
+EXTERN void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, const gui_metro_theme_t* theme, graphics_pos_t left, graphics_pos_t right, uint8_t pos, gui_icon_t* icon);
 
 /**
  * Обновление состояния иконок статусбара
@@ -159,6 +165,6 @@ EXTERN void gui_statusbar_update_icons(gui_statusbar_t* statusbar, bool repaint)
 /**
  * Проверка условий отображения иконки в соответствии с таблицей условий GUI_ICON_CONDITIONS
  */
-EXTERN void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, const bool repaint);
+EXTERN void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, bool repaint);
 
 #endif	/* GUI_STATUSBAR_H */

@@ -183,8 +183,6 @@ typedef struct _Drive_Gui {
     
     // меню 
     gui_menu_t menu;
-    
-    drive_event_t last_event;
 } drive_gui_t;
 
 //! Графический интерфейс привода.
@@ -321,32 +319,15 @@ void drive_gui_repaint(void)
     gui_metro_repaint(&gui.gui, NULL);
 }
 
-static bool drive_gui_read_last_err(void)
-{
-    static drive_event_index_t last_index = 0;
-    static bool readed = false;
-    
-    if(drive_events_count() == 0) return false;
-    
-    if(last_index == drive_events_last_index() && readed) return false;
-    
-    last_index = drive_events_last_index();
-    readed = (drive_events_read_event(&gui.last_event, last_index) == E_NO_ERROR);
-    
-    return readed;
-}
-
 void drive_gui_update(void)
 {
     static char pos = 0;
     
-    if(drive_gui_read_last_err()){
-        //gui_number_label_set_number(&gui.label_num_last_pwr_errs, gui.last_event.power_errors);
-    }
-    
     gui_statusbar_update_icons(&gui.statusbar, false);
     gui_statusbar_update(&gui.statusbar, NULL);
     
+    // Хоче предложить вместо двух вложенных циклов
+    // один цикл от 0 до GUI_HOME_TILES_COUNT.
     int i;
     for (i = 0; i < GUI_HOME_TILES_WIDTH; i++) {
         int j;
@@ -360,6 +341,7 @@ void drive_gui_update(void)
     gui_menu_on_timer_home_action(&gui.menu);
     
     pos++;
+    // Не, круче rev = (bool)(rand() % 2); // :)
     static bool rev;
     if (pos > ICONS_STATUSBAR_COUNT) {
         pos = 0;
@@ -391,8 +373,6 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
     RETURN_ERR_IF_FAIL(gui_metro_init(&gui.gui, &graphics, &theme));
     
     make_gui();
-    
-    memset(&gui.last_event, 0x0, sizeof(drive_event_t));
     
     return E_NO_ERROR;
 }

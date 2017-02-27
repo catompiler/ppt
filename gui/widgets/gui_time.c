@@ -47,10 +47,11 @@ void gui_time_repaint_value(gui_time_t* time_w, const rect_t* rect)
     painter_set_font(&painter, theme->middle_font);
     painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
     
-    static char time_str[6];    
-    time_t t = time(NULL);   
+    // По возможности лучше всёже делать константы.
+    static char time_str[GUI_TIME_STR_MAX_LEN];
+    time_t t = time(NULL);
     struct tm* ts = localtime(&t);
-    snprintf(time_str, 6, GUI_TIME_STR_FORMAT, ts->tm_hour, ts->tm_min);
+    snprintf(time_str, GUI_TIME_STR_MAX_LEN, GUI_TIME_STR_FORMAT, ts->tm_hour, ts->tm_min);
     graphics_pos_t text_x, text_y;
     painter_string_size(&painter, time_str, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
     text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(time_w)) - text_x) / 2;

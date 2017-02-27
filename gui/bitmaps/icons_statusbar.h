@@ -50,7 +50,7 @@
 
 // анимированные иконки (последовательность иконок)
 // работа привода
-static const char icons_statusbar_anim_work[4] =
+static const uint8_t icons_statusbar_anim_work[4] =
 {
     ICONS_STATUSBAR_VAL_WORK_1,
     ICONS_STATUSBAR_VAL_WORK_2,
@@ -58,7 +58,7 @@ static const char icons_statusbar_anim_work[4] =
     ICONS_STATUSBAR_VAL_WORK_4,
 };
 // готовность привода
-static const char icons_statusbar_anim_ready[4] =
+static const uint8_t icons_statusbar_anim_ready[4] =
 {
     ICONS_STATUSBAR_VAL_NOTHING,
     ICONS_STATUSBAR_VAL_READY,
@@ -66,7 +66,7 @@ static const char icons_statusbar_anim_ready[4] =
     ICONS_STATUSBAR_VAL_READY,
 };
 
-static const char icons_statusbar_data[2088] =
+static const uint8_t icons_statusbar_data[2088] =
 {
 /* Image data for monochrome displays organized
    as rows of vertical bytes */

@@ -335,6 +335,8 @@ void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t*
         painter_draw_fillrect(painter, 0, y1, width, height);
         
         if (note) {
+            // воу воу, аж 200 байт со стека?
+            // а как насчёт вывода построчно?
             char dest[200];
             painter_set_font(painter, theme->small_font);
             gui_menu_string_line_wrapping(painter, TR(note), &dest[0], 200, width - 10, height);

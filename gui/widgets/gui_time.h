@@ -10,6 +10,7 @@
 #include "errors/errors.h"
 #include "defs/defs.h"
 
+#define GUI_TIME_STR_MAX_LEN 6
 #define GUI_TIME_STR_FORMAT "%02d:%02d"
 
 typedef struct _Gui_Time gui_time_t;

@@ -91,29 +91,39 @@ void gui_statusbar_update(gui_statusbar_t* statusbar, const rect_t* rect)
     }
 }
 
-void gui_statusbar_set_graphics(gui_statusbar_t* statusbar, graphics_t* graphics, char count)
+void gui_statusbar_set_graphics(gui_statusbar_t* statusbar, graphics_t* graphics, uint8_t count)
 {
     statusbar->icon_graphics = graphics;
     statusbar->icon_count = count;
     gui_widget_repaint(GUI_WIDGET(statusbar), NULL);
 }
 
-void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, const gui_metro_theme_t* theme, const graphics_pos_t left, const graphics_pos_t right, const char pos, gui_icon_t* icon)
+// Нет смысла делать константным параметр, передаваемый по значению.
+void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, const gui_metro_theme_t* theme, graphics_pos_t left, graphics_pos_t right, uint8_t pos, gui_icon_t* icon)
 {
     if (icon->count > 0) {
+        // Если оставить знаковый тип, то
+        // при value == 127 будет переполнение знакового типа в -1.
         icon->value++;
         if (icon->value >= icon->count) icon->value = 0;
     }
     if (icon->value != icon->current) {
         icon->current = icon->value;
-        char* item = &(icon->current);
+        const uint8_t* item = &(icon->current);
         if (icon->count > 0) {
             if (icon->current >= icon->count) icon->current = 0;
-            item = (char*)icon->list;
-            int i;
-            for (i = 0; i < icon->current; i++) {
-                item++;
-            }
+            // вместо всего этого //{
+            
+            // const_cast можно и не делать
+            // а сделать константным указатель.
+            //item = icon->list;
+            //int i;
+            //for (i = 0; i < icon->current; i++) {
+            //    item++;
+            //}
+            // //}
+            // можно сделать проще.
+            item = &icon->list[icon->current];
         }
         size_t icon_width = (statusbar->icon_graphics->width / statusbar->icon_count);
         size_t icon_height = statusbar->icon_graphics->height;
@@ -128,7 +138,7 @@ void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, 
         painter_set_brush_color(painter, theme->color_statusbar);
         painter_set_source_image_mode(painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
         
-        char val = (*item);
+        uint8_t val = (*item);
         if (val != ICONS_STATUSBAR_VAL_NOTHING) {
             painter_set_pen_color(painter, icon->color);
             painter_bitblt(painter, x, y, statusbar->icon_graphics, icon_width * val, 0, icon_width, icon_height);
@@ -153,12 +163,17 @@ void gui_statusbar_update_icons(gui_statusbar_t* statusbar, bool repaint)
     }
 }
 
-void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, const bool repaint)
+void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, bool repaint)
 {
     if (*index >= GUI_STATUSBAR_ICONS_COUNT) return;
     if (condition->callback(condition->param)) {
         gui_icon_t* icon = &statusbar->icons[*index];
         if (condition->list != NULL) {
+            // count всегда будет равен 4. (sizeof(ptr*) == 4 для 32 битных систем).
+            // ASM:
+            // ldrb	r3, [r0, #4]	@ zero_extendqisi2
+            // cmp	r3, #4 ; <-- тот самый count равный 4.
+            // beq	.L41
             char count = sizeof(condition->list)/sizeof(char);
             if (icon->list != condition->list || icon->count != count)
             {
