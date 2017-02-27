@@ -48,17 +48,113 @@ typedef struct _Gui_Icon_Condition {
 #define GUI_ICON_CONDITION(arg_callback, arg_param, arg_icon, arg_color, arg_list)\
         { .callback = (gui_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color, .list = (uint8_t*)arg_list}
 
-#define GUI_ICON_CONDITIONS_COUNT 7
+// другие ошибки
+#define DRIVE_ERROR_ETC     DRIVE_ERROR_ROT_BREAK |\
+                            DRIVE_ERROR_POWER_DATA_NOT_AVAIL |\
+                            DRIVE_ERROR_PHASE
+
+//другие предупреждения
+#define DRIVE_WARNING_ETC 0xffffff
+
+// ошибка по току возбуждения
+#define DRIVE_POWER_ERROR_Iexc  DRIVE_POWER_ERROR_UNDERFLOW_Iexc |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Iexc |\
+                                DRIVE_POWER_ERROR_IDLE_Iexc
+
+// предупреждение по току возбуждения
+#define DRIVE_POWER_WARNING_Iexc  DRIVE_POWER_WARNING_UNDERFLOW_Iexc |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Iexc |\
+                                DRIVE_POWER_WARNING_IDLE_Iexc
+
+// ошибка по напряжению
+#define DRIVE_POWER_ERROR_U DRIVE_POWER_ERROR_UNDERFLOW_Ua |\
+                            DRIVE_POWER_ERROR_UNDERFLOW_Ub |\
+                            DRIVE_POWER_ERROR_UNDERFLOW_Uc |\
+                            DRIVE_POWER_ERROR_UNDERFLOW_Urot |\
+                            DRIVE_POWER_ERROR_OVERFLOW_Ua |\
+                            DRIVE_POWER_ERROR_OVERFLOW_Ub |\
+                            DRIVE_POWER_ERROR_OVERFLOW_Uc |\
+                            DRIVE_POWER_ERROR_OVERFLOW_Urot |\
+                            DRIVE_POWER_ERROR_IDLE_Urot
+
+// предупреждение по напряжению
+#define DRIVE_POWER_WARNING_U   DRIVE_POWER_WARNING_UNDERFLOW_Ua |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Ub |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Uc |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Urot |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Ua |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Ub |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Uc |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Urot |\
+                                DRIVE_POWER_WARNING_IDLE_Urot
+// ошибка по току
+#define DRIVE_POWER_ERROR_I     DRIVE_POWER_ERROR_IDLE_Ia |\
+                                DRIVE_POWER_ERROR_IDLE_Ib |\
+                                DRIVE_POWER_ERROR_IDLE_Ic |\
+                                DRIVE_POWER_ERROR_IDLE_Irot |\
+                                DRIVE_POWER_ERROR_UNDERFLOW_Ia |\
+                                DRIVE_POWER_ERROR_UNDERFLOW_Ib |\
+                                DRIVE_POWER_ERROR_UNDERFLOW_Ic |\
+                                DRIVE_POWER_ERROR_UNDERFLOW_Irot |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Ia |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Ib |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Ic |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Irot
+
+// предупреждение по току
+#define DRIVE_POWER_WARNING_I   DRIVE_POWER_WARNING_IDLE_Ia |\
+                                DRIVE_POWER_WARNING_IDLE_Ib |\
+                                DRIVE_POWER_WARNING_IDLE_Ic |\
+                                DRIVE_POWER_WARNING_IDLE_Irot |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Ia |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Ib |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Ic |\
+                                DRIVE_POWER_WARNING_UNDERFLOW_Irot |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Ia |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Ib |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Ic |\
+                                DRIVE_POWER_WARNING_OVERFLOW_Irot
+
+// ошибка по току вентилятора
+#define DRIVE_POWER_ERROR_Ifan  DRIVE_POWER_ERROR_UNDERFLOW_Ifan |\
+                                DRIVE_POWER_ERROR_OVERFLOW_Ifan
+
+// предупреждение по току вентилятора
+#define DRIVE_POWER_WARNING_Ifan  DRIVE_POWER_WARNING_UNDERFLOW_Ifan |\
+                                  DRIVE_POWER_WARNING_OVERFLOW_Ifan
+
+// ошибка по току 4-20
+#define DRIVE_POWER_ERROR_Iref    DRIVE_POWER_ERROR_UNDERFLOW_Iref |\
+                                    DRIVE_POWER_ERROR_OVERFLOW_Iref
+// предупреждение по току 4-20
+#define DRIVE_POWER_WARNING_Iref    DRIVE_POWER_WARNING_UNDERFLOW_Iref |\
+                                    DRIVE_POWER_WARNING_OVERFLOW_Iref
 
 //! Таблица отображения иконок в зависимости от условий
+#define GUI_ICON_CONDITIONS_COUNT 17
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
-    GUI_ICON_CONDITION(drive_ready, NULL, 0, THEME_COLOR_GREEN_L, &icons_statusbar_anim_ready),
-    GUI_ICON_CONDITION(drive_running, NULL, 0, THEME_COLOR_GREEN_L, &icons_statusbar_anim_work),
-    GUI_ICON_CONDITION(drive_error, DRIVE_ERROR_ROT_BREAK | DRIVE_ERROR_POWER_DATA_NOT_AVAIL | DRIVE_ERROR_PHASE, ICONS_STATUSBAR_VAL_WARNING, THEME_COLOR_RED_L, NULL),
-    GUI_ICON_CONDITION(drive_error, DRIVE_ERROR_EMERGENCY_STOP, ICONS_STATUSBAR_VAL_EMERGENCY, THEME_COLOR_RED_L, NULL),
-    GUI_ICON_CONDITION(drive_error, DRIVE_ERROR_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT, THEME_COLOR_RED_L, NULL),
-    GUI_ICON_CONDITION(drive_warning, 0xffffff, ICONS_STATUSBAR_VAL_WARNING, THEME_COLOR_YELLOW, NULL),
-    GUI_ICON_CONDITION(drive_warning, DRIVE_WARNING_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT, THEME_COLOR_YELLOW, NULL),
+    // состояние
+    GUI_ICON_CONDITION(drive_ready,     NULL,   0,  THEME_COLOR_GREEN_L,    &icons_statusbar_anim_ready),
+    GUI_ICON_CONDITION(drive_running,   NULL,   0,  THEME_COLOR_GREEN_L,    &icons_statusbar_anim_work),
+    // ошибки
+    GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_ETC,            ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_EMERGENCY_STOP, ICONS_STATUSBAR_VAL_EMERGENCY,  THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_Iexc,     ICONS_STATUSBAR_VAL_FAULT_F,    THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_U,        ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_I,        ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_Ifan,     ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT, THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_Iref,     ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_RED_L, NULL),
+    
+    // предупреждения
+    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_ETC,              ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iexc,       ICONS_STATUSBAR_VAL_FAULT_F,    THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_U,          ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_I,          ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Ifan,       ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_YELLOW, NULL),
+    
 };
 
 struct _Gui_Icon {
