@@ -16,8 +16,6 @@
 
 #include "gui/gui_metro.h"
 #include "gui/gui_widget.h"
-#include "../../../lib/errors/errors.h"
-#include "../../../lib/defs/defs.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
 #include "../resources/resources_params.h"

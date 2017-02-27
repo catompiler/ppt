@@ -7,8 +7,6 @@
 
 #include "../gui_metro.h"
 #include "../gui_widget.h"
-#include "../../../lib/errors/errors.h"
-#include "../../../lib/defs/defs.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
 

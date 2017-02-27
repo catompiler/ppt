@@ -2,7 +2,7 @@
 #ifndef RESOURCES_COLORS_H
 #define RESOURCES_COLORS_H
 
-#include "../../../lib/tft9341/tft9341.h"
+#include "tft9341/tft9341.h"
 
 #define MAKE_RGB(r, g, b) TFT9341_MAKE_RGB565(r, g, b)
 

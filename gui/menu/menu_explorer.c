@@ -1,8 +1,8 @@
 #include "menu_explorer.h"
-#include "../../../lib/utils/utils.h"
+#include "utils/utils.h"
 #include <stdlib.h>
-#include "../../../lib/menu/menu.h"
-#include "../../parameters_ids.h"
+#include "menu/menu.h"
+#include "parameters_ids.h"
 
 err_t menu_explorer_init(menu_explorer_t* explorer, menu_t* menu)
 {

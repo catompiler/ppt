@@ -8,11 +8,9 @@
 #include "../gui_metro.h"
 #include "../gui_widget.h"
 #include "gui_tile.h"
-#include "../../../lib/errors/errors.h"
-#include "../../../lib/defs/defs.h"
-#include "../../../lib/errors/errors.h"
-#include "../../../lib/defs/defs.h"
-#include "../../translations_ids.h"
+#include "errors/errors.h"
+#include "defs/defs.h"
+#include "translations_ids.h"
 #include "localization/localization.h"
 
 //! Зеначение идентификатора типа главного экрана.

@@ -5,8 +5,8 @@
 #include "tft9341/tft9341.h"
 
 #include "../resources/resources_menu.h"
-#include "../../parameters_menu.h"
-#include "../../parameters_ids.h"
+#include "parameters_menu.h"
+#include "parameters_ids.h"
 #include "settings.h"
 #include "gui/resources/resources_colors.h"
 
