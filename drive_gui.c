@@ -326,16 +326,9 @@ void drive_gui_update(void)
     gui_statusbar_update_icons(&gui.statusbar, false);
     gui_statusbar_update(&gui.statusbar, NULL);
     
-    // Хоче предложить вместо двух вложенных циклов
-    // один цикл от 0 до GUI_HOME_TILES_COUNT.
     int i;
-    for (i = 0; i < GUI_HOME_TILES_WIDTH; i++) {
-        int j;
-        for (j = 0; j < GUI_HOME_TILES_HEIGHT; j++) {
-            int k = i * GUI_HOME_TILES_WIDTH + j;
-            gui_tile_t* tile = &gui.tiles[k];
-            drive_gui_update_tile(tile, home_tiles_values[k]);
-        }
+    for (i = 0; i < GUI_HOME_TILES_COUNT; i++) {
+        drive_gui_update_tile(&gui.tiles[i], home_tiles_values[i]);
     }
         
     gui_menu_on_timer_home_action(&gui.menu);
@@ -422,10 +415,7 @@ void drive_gui_on_key_released(keycode_t key)
 
 void drive_gui_home_on_enter(gui_home_t* home)
 {
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[0]), false);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[1]), false);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[2]), false);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[3]), false);
+    gui_home_tiles_set_visible(&gui.tiles[0], false);
 
     gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.menu));
@@ -437,10 +427,7 @@ void drive_gui_menu_on_home(gui_menu_t* menu)
     gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
     
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[0]), true);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[1]), true);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[2]), true);
-    gui_widget_set_visible(GUI_WIDGET(&gui.tiles[3]), true);
+    gui_home_tiles_set_visible(&gui.tiles[0], true);
 }
 
 void drive_gui_update_tile(gui_tile_t* tile, size_t value) 

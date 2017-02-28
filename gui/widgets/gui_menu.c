@@ -335,12 +335,8 @@ void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t*
         painter_draw_fillrect(painter, 0, y1, width, height);
         
         if (note) {
-            // воу воу, аж 200 байт со стека?
-            // а как насчёт вывода построчно?
-            char dest[200];
             painter_set_font(painter, theme->small_font);
-            gui_menu_string_line_wrapping(painter, TR(note), &dest[0], 200, width - 10, height);
-            painter_draw_string(painter, 5, y1 + 2, dest);
+            gui_menu_string_line_wrapping(painter, TR(note), 5, y1 + 2, width - 10, height);
             painter_set_font(painter, theme->middle_font);
         }
     }
@@ -419,13 +415,16 @@ void gui_menu_on_key_release(gui_menu_t* menu, keycode_t key)
     }
 }
 
-void gui_menu_string_line_wrapping(painter_t* painter, const char* source, char* dest, uint16_t count, graphics_size_t width, graphics_size_t height)
+void gui_menu_string_line_wrapping(painter_t* painter, const char* source, graphics_size_t sx, graphics_size_t sy, graphics_size_t width, graphics_size_t height)
 {
+    uint8_t count = 70; // размер буфера строки
+    char buf[count]; // буфер строки
+    char* dest= &buf[0];
     if (painter->font == NULL || source == NULL) return;
     
     char* s = (char*)source;
-    graphics_size_t cur_x = 0;
-    graphics_size_t y = 0;
+    graphics_size_t cur_x = sx;
+    graphics_size_t y = sy;
     font_char_t c = 0;
     graphics_size_t orig_x = cur_x;
     size_t c_size = 0;
@@ -468,19 +467,19 @@ void gui_menu_string_line_wrapping(painter_t* painter, const char* source, char*
                 }
                 break;
         }
-        if (cur_x > width) {
+        if (cur_x > width || (dest - start_dest) > count) {
             if (last_space_pos_change != last_space_pos) {
                 dest -= (s - last_space_pos);
-                s = last_space_pos + 1;;
+                s = last_space_pos + 1;
                 last_space_pos_change = last_space_pos;
             }
+            *dest = '\0'; 
+            dest = start_dest;
+            painter_draw_string(painter, orig_x, y, dest);
             if (font_get_char_position(painter->font, 0x20, &char_rect, &char_offset)) { 
                 cur_x = orig_x;
                 y += rect_height(&char_rect) + point_y(&char_offset) + font_vspace(painter->font);
             }
-            *dest = '\n';
-            dest++;
-            if ((dest - start_dest) > count) return;
         }
         else {
             int i;
@@ -490,9 +489,11 @@ void gui_menu_string_line_wrapping(painter_t* painter, const char* source, char*
                 dest++;
             }
         }
-        *dest = 0x00;
         if(font_get_char_position(painter->font, 0x20, &char_rect, &char_offset)){ 
             if ((cur_x > 0) && ((y + rect_height(&char_rect) + point_y(&char_offset)) > height))  return;
         }
     }
+    *dest = '\0';
+    dest = start_dest;
+    painter_draw_string(painter, orig_x, y, dest);
 }

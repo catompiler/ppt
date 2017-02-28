@@ -64,3 +64,11 @@ void gui_home_on_key_release(gui_home_t* home, keycode_t key)
 {
     
 }
+
+void gui_home_tiles_set_visible(gui_tile_t* tiles, bool visible)
+{
+    int i;
+    for (i = 0; i < GUI_HOME_TILES_COUNT; i++) {
+        gui_widget_set_visible(GUI_WIDGET(&tiles[i]), visible);
+    }
+}

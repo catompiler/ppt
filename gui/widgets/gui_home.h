@@ -127,5 +127,11 @@ ALWAYS_INLINE static void gui_home_set_on_enter(gui_home_t* home, gui_home_on_en
     home->on_enter = on_enter;
 }
 
+/**
+ * Устанавливает видимость плиток главного экрана
+ * @param tiles Плитки главного экрана
+ * @param visible Статус видимости
+ */
+EXTERN void gui_home_tiles_set_visible(gui_tile_t* tiles, bool visible);
 
 #endif	/* GUI_HOME_H */
