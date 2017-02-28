@@ -46,7 +46,7 @@ void gui_time_repaint_value(gui_time_t* time_w, const rect_t* rect)
     painter_set_brush_color(&painter, theme->color_statusbar);
     painter_set_font(&painter, theme->middle_font);
     painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
-    
+
     // По возможности лучше всёже делать константы.
     static char time_str[GUI_TIME_STR_MAX_LEN];
     time_t t = time(NULL);

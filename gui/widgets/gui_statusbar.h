@@ -155,6 +155,7 @@ EXTERN void gui_statusbar_update(gui_statusbar_t* statusbar, const rect_t* rect)
  */
 EXTERN void gui_statusbar_icon_repaint(gui_statusbar_t* statusbar, painter_t* painter, const gui_metro_theme_t* theme, graphics_pos_t left, graphics_pos_t right, uint8_t pos, gui_icon_t* icon);
 
+
 /**
  * Обновление состояния иконок статусбара
  * @param statusbar Статусбар

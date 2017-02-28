@@ -5,6 +5,8 @@
 #include "tft9341/tft9341.h"
 #include "../resources/resources_colors.h"
 #include "../resources/resources_params.h"
+#include "drive_keypad.h"
+#include "drive.h"
 
 err_t gui_home_init(gui_home_t* home, gui_metro_t* gui)
 {
@@ -41,22 +43,18 @@ void gui_home_on_repaint(gui_home_t* home, const rect_t* rect)
 void gui_home_on_key_press(gui_home_t* home, keycode_t key)
 {
     switch (key) {
-        //case KEY_LEFT:
-        //case KEY_MINUS:
-        case KEY_DOWN:
-            //
-            return;
-        //case KEY_RIGHT:
-        //case KEY_PLUS:
-        case KEY_UP:
-            //
-            return;
+        case KEY_MINUS:
+            drive_dec_reference();
+            break;
+        case KEY_PLUS:
+            drive_inc_reference();
+            break;
         case KEY_ENTER:
             home->on_enter(home);
-            return;
+            break;
         case KEY_ESC:
             //
-            return;
+            break;
         default:
             break;
     }

@@ -264,7 +264,7 @@ static void make_gui_struct(void) {
         }
         x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
     }
-    
+
     /*
     for (i = 0; i < GUI_STATUSBAR_ICONS_COUNT; i++) {
         gui_icon_t* icon = &gui.icons[i];

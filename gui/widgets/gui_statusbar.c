@@ -174,7 +174,7 @@ void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* in
             // ldrb	r3, [r0, #4]	@ zero_extendqisi2
             // cmp	r3, #4 ; <-- тот самый count равный 4.
             // beq	.L41
-            char count = sizeof(condition->list)/sizeof(char);
+            char count = sizeof(condition->list)/sizeof(uint8_t);
             if (icon->list != condition->list || icon->count != count)
             {
                 icon->list = condition->list;

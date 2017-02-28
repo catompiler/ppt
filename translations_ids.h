@@ -314,6 +314,21 @@
 // //! .
 // #define TR_ID_MENU_
 
+//! Питание.
+#define TR_ID_HELP_POWER            550
+//! Сеть.
+#define TR_ID_HELP_POWER_IN         551
+//! Ном. U сети.
+#define TR_ID_HELP_U_NOM            552
+//! Ном. I сети.
+#define TR_ID_HELP_I_NOM            553
+//! Якорь.
+#define TR_ID_HELP_ROTOR            560
+//! Ном. U якоря.
+#define TR_ID_HELP_U_ROT_NOM        561
+//! Ном. I якоря.
+#define TR_ID_HELP_I_ROT_NOM        562
+
 // /**
 //  * .
 //  */
