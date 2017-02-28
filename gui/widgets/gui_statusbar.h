@@ -35,6 +35,7 @@ typedef struct _Gui_Icon_Condition {
     // либо typedef (что лучше, чтобы не менять по коду в случае необходимости),
     // либо что-то стандартное, например uint8_t
     // (вроде нет нигде явно требующегося знакового типа).
+    uint8_t count;              // кол-во иконок в анимации
     uint8_t icon;             // идентификатор статической иконки
     graphics_color_t color;   // цвет иконки
     uint8_t* list;               // список идентификаторов иконок в анимации
@@ -46,7 +47,7 @@ typedef struct _Gui_Icon_Condition {
 
 //! Описывает дескриптор условия отображения иконки.
 #define GUI_ICON_CONDITION(arg_callback, arg_param, arg_icon, arg_color, arg_list)\
-        { .callback = (gui_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color, .list = (uint8_t*)arg_list}
+        { .callback = (gui_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color, .list = (uint8_t*)(arg_list), .count = sizeof(*arg_list)/sizeof(uint8_t)}
 
 // другие ошибки
 #define DRIVE_ERROR_ETC     DRIVE_ERROR_ROT_BREAK |\
