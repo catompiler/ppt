@@ -85,7 +85,7 @@ typedef int16_t osc_value_t;
 #define DRIVE_POWER_OSC_CHANNEL_Iexc 8
 
 //! Длина канала осциллограммы (1.75 периода до и после аварии).
-#define DRIVE_POWER_OSC_CHANNEL_LEN (224) // (128 / 2) * (1.75 * 2) * 9 * 2 == 4032
+#define DRIVE_POWER_OSC_CHANNEL_LEN (225) // 0.07 / (0.00015625 * 2) + 1
 
 //! Размер в байтах канала осциллограммы.
 #define DRIVE_POWER_OSC_CHANNEL_SIZE (DRIVE_POWER_OSC_CHANNEL_LEN * sizeof(osc_value_t))
