@@ -33,7 +33,7 @@
 
 
 //! Буфер записи USART.
-#define USART_WRITE_BUFFER_SIZE 1024
+#define USART_WRITE_BUFFER_SIZE 128
 static uint8_t usart_write_buffer[USART_WRITE_BUFFER_SIZE];
 //! Буфер чтения USART.
 #define USART_READ_BUFFER_SIZE 32
