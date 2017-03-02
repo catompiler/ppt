@@ -142,13 +142,13 @@
  * Тепловая защита.
  */
 /**
- * Время срабатывания тепловой защиты при шестикратном перегрузе по току.
- */
-#define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 100
-/**
  * Разрешение тепловой защиты по току.
  */
-#define PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE 101
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE 100
+/**
+ * Время срабатывания тепловой защиты при шестикратном перегрузе по току.
+ */
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 101
 /**
  * Действие при срабатывании тепловой защиты по току.
  */
@@ -169,6 +169,15 @@
  * Сеть.
  */
 /*
+ * Чередование фаз.
+ */
+//! Разрешение.
+#define PARAM_ID_PHASES_PROT_ENABLED 180
+//! Время отклонения, мс.
+#define PARAM_ID_PHASES_PROT_TIME_MS 181
+//! Действие.
+#define PARAM_ID_PHASES_PROT_ACTION 182
+/*
  * Напряжение.
  */
 /*
@@ -178,33 +187,33 @@
  * Отсечка.
  */
 //! Уровень, %.
-#define PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE 109
+#define PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE 209
 /*
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE 110
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE 210
 //! Уровень, %.
-#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE 111
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE 211
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS 112
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS 212
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE 113
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE 213
 //! Действие.
-#define PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION 115
+#define PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION 215
 /*
  * Понижение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE 120
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE 220
 //! Уровень, %.
-#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE 121
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE 221
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS 122
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS 222
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE 123
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE 223
 //! Действие.
-#define PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION 125
+#define PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION 225
 /*
  * Предупреждения.
  */
@@ -212,28 +221,28 @@
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE 130
+#define PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE 230
 //! Уровень, %.
-#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE 131
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE 231
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS 132
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS 232
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE 133
+#define PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE 233
 //! Действие.
-#define PARAM_ID_PROT_U_IN_OVF_WARN_ACTION 135
+#define PARAM_ID_PROT_U_IN_OVF_WARN_ACTION 235
 /*
  * Понижение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE 140
+#define PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE 240
 //! Уровень, %.
-#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE 141
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE 241
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS 142
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS 242
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE 143
+#define PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE 243
 //! Действие.
-#define PARAM_ID_PROT_U_IN_UDF_WARN_ACTION 145
+#define PARAM_ID_PROT_U_IN_UDF_WARN_ACTION 245
 /*
  * Ток.
  */
@@ -244,20 +253,20 @@
  * Отсечка.
  */
 //! Уровень, %.
-#define PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE 149
+#define PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE 249
 /*
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE 150
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE 250
 //! Уровень, %.
-#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE 151
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE 251
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS 152
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS 252
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE 153
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE 253
 //! Действие.
-#define PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION 155
+#define PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION 255
 /*
  * Предупреждения.
  */
@@ -265,15 +274,15 @@
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE 160
+#define PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE 260
 //! Уровень, %.
-#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE 161
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE 261
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS 162
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS 262
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE 163
+#define PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE 263
 //! Действие.
-#define PARAM_ID_PROT_I_IN_OVF_WARN_ACTION 165
+#define PARAM_ID_PROT_I_IN_OVF_WARN_ACTION 265
 /*
  * Якорь.
  */
@@ -287,20 +296,20 @@
  * Отсечка.
  */
 //! Уровень, %.
-#define PARAM_ID_PROT_U_ROT_CUTOFF_LEVEL_VALUE 169
+#define PARAM_ID_PROT_U_ROT_CUTOFF_LEVEL_VALUE 269
 /*
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ENABLE 170
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ENABLE 270
 //! Уровень, %.
-#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_VALUE 171
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_VALUE 271
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_TIME_MS 172
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_TIME_MS 272
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LATCH_ENABLE 173
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_LATCH_ENABLE 273
 //! Действие.
-#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ACTION 175
+#define PARAM_ID_PROT_U_ROT_OVF_FAULT_ACTION 275
 /*
  * Предупреждения.
  */
@@ -308,15 +317,15 @@
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_ROT_OVF_WARN_ENABLE 180
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_ENABLE 280
 //! Уровень, %.
-#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_VALUE 181
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_VALUE 281
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_TIME_MS 182
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_TIME_MS 282
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_ROT_OVF_WARN_LATCH_ENABLE 183
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_LATCH_ENABLE 283
 //! Действие.
-#define PARAM_ID_PROT_U_ROT_OVF_WARN_ACTION 185
+#define PARAM_ID_PROT_U_ROT_OVF_WARN_ACTION 285
 /*
  * Ток.
  */
@@ -327,20 +336,20 @@
  * Отсечка.
  */
 //! Уровень, %.
-#define PARAM_ID_PROT_I_ROT_CUTOFF_LEVEL_VALUE 189
+#define PARAM_ID_PROT_I_ROT_CUTOFF_LEVEL_VALUE 289
 /*
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ENABLE 190
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ENABLE 290
 //! Уровень, %.
-#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_VALUE 191
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_VALUE 291
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_TIME_MS 192
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_TIME_MS 292
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LATCH_ENABLE 193
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_LATCH_ENABLE 293
 //! Действие.
-#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ACTION 195
+#define PARAM_ID_PROT_I_ROT_OVF_FAULT_ACTION 295
 /*
  * Предупреждения.
  */
@@ -348,15 +357,15 @@
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_ROT_OVF_WARN_ENABLE 200
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_ENABLE 300
 //! Уровень, %.
-#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_VALUE 201
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_VALUE 301
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_TIME_MS 202
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_TIME_MS 302
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_ROT_OVF_WARN_LATCH_ENABLE 203
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_LATCH_ENABLE 303
 //! Действие.
-#define PARAM_ID_PROT_I_ROT_OVF_WARN_ACTION 205
+#define PARAM_ID_PROT_I_ROT_OVF_WARN_ACTION 305
 /*
  * Возбуждение.
  */
@@ -367,33 +376,33 @@
  * Отсечка.
  */
 //! Уровень, %.
-#define PARAM_ID_PROT_I_EXC_CUTOFF_LEVEL_VALUE 209
+#define PARAM_ID_PROT_I_EXC_CUTOFF_LEVEL_VALUE 309
 /*
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ENABLE 210
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ENABLE 310
 //! Уровень, %.
-#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_VALUE 211
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_VALUE 311
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_TIME_MS 212
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_TIME_MS 312
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LATCH_ENABLE 213
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_LATCH_ENABLE 313
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ACTION 215
+#define PARAM_ID_PROT_I_EXC_OVF_FAULT_ACTION 315
 /*
  * Понижение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ENABLE 220
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ENABLE 320
 //! Уровень, %.
-#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_VALUE 221
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_VALUE 321
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_TIME_MS 222
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_TIME_MS 322
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LATCH_ENABLE 223
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_LATCH_ENABLE 323
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ACTION 225
+#define PARAM_ID_PROT_I_EXC_UDF_FAULT_ACTION 325
 /*
  * Предупреждения.
  */
@@ -401,28 +410,28 @@
  * Превышение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_OVF_WARN_ENABLE 230
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_ENABLE 330
 //! Уровень, %.
-#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_VALUE 231
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_VALUE 331
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_TIME_MS 232
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_TIME_MS 332
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_OVF_WARN_LATCH_ENABLE 233
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_LATCH_ENABLE 333
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_OVF_WARN_ACTION 235
+#define PARAM_ID_PROT_I_EXC_OVF_WARN_ACTION 335
 /*
  * Понижение.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_UDF_WARN_ENABLE 240
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_ENABLE 340
 //! Уровень, %.
-#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_VALUE 241
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_VALUE 341
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_TIME_MS 242
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_TIME_MS 342
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_UDF_WARN_LATCH_ENABLE 243
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_LATCH_ENABLE 343
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_UDF_WARN_ACTION 245
+#define PARAM_ID_PROT_I_EXC_UDF_WARN_ACTION 345
 /*
  * Отклонения нулей (допустимые значения в простое).
  */
@@ -433,28 +442,28 @@
  * Ошибки.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE 250
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE 350
 //! Уровень, А.
-#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE 251
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE 351
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS 252
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS 352
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE 253
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE 353
 //! Действие.
-#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION 254
+#define PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION 354
 /*
  * Предупреждения.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE 260
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE 360
 //! Уровень, А.
-#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE 261
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE 361
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS 262
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS 362
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE 263
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE 363
 //! Действие.
-#define PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION 264
+#define PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION 364
 /*
  * Напряжение якоря.
  */
@@ -462,28 +471,28 @@
  * Ошибки.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ENABLE 270
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ENABLE 370
 //! Уровень, В.
-#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE 271
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE 371
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_TIME_MS 272
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_TIME_MS 372
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LATCH_ENABLE 273
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_LATCH_ENABLE 373
 //! Действие.
-#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ACTION 274
+#define PARAM_ID_PROT_U_ROT_IDLE_FAULT_ACTION 374
 /*
  * Предупреждения.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ENABLE 280
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ENABLE 380
 //! Уровень, В.
-#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_VALUE 281
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_VALUE 381
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_TIME_MS 282
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_TIME_MS 382
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LATCH_ENABLE 283
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_LATCH_ENABLE 383
 //! Действие.
-#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ACTION 284
+#define PARAM_ID_PROT_U_ROT_IDLE_WARN_ACTION 384
 /*
  * Ток якоря.
  */
@@ -491,28 +500,28 @@
  * Ошибки.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ENABLE 290
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ENABLE 390
 //! Уровень, А.
-#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE 291
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE 391
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_TIME_MS 292
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_TIME_MS 392
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LATCH_ENABLE 293
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_LATCH_ENABLE 393
 //! Действие.
-#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ACTION 294
+#define PARAM_ID_PROT_I_ROT_IDLE_FAULT_ACTION 394
 /*
  * Предупреждения.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ENABLE 300
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ENABLE 400
 //! Уровень, А.
-#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_VALUE 301
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_VALUE 401
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_TIME_MS 302
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_TIME_MS 402
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LATCH_ENABLE 303
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_LATCH_ENABLE 403
 //! Действие.
-#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ACTION 304
+#define PARAM_ID_PROT_I_ROT_IDLE_WARN_ACTION 404
 /*
  * Ток возбуждения.
  */
@@ -520,28 +529,28 @@
  * Ошибки.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ENABLE 310
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ENABLE 410
 //! Уровень, А.
-#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_VALUE 311
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_VALUE 411
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_TIME_MS 312
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_TIME_MS 412
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LATCH_ENABLE 313
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_LATCH_ENABLE 413
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ACTION 314
+#define PARAM_ID_PROT_I_EXC_IDLE_FAULT_ACTION 414
 /*
  * Предупреждения.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ENABLE 320
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ENABLE 420
 //! Уровень, А.
-#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_VALUE 321
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_VALUE 421
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_TIME_MS 322
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_TIME_MS 422
 //! Разрешение защёлки.
-#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LATCH_ENABLE 323
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_LATCH_ENABLE 423
 //! Действие.
-#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ACTION 324
+#define PARAM_ID_PROT_I_EXC_IDLE_WARN_ACTION 424
 
 /*
  * АЦП.

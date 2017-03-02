@@ -291,6 +291,12 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     if(!(start_to_stop || stop_to_start)){
         drive_set_prot_masks(state_to);
     }
+    
+    if(state_to == DRIVE_STATE_INIT){
+        drive_protection_phases_set_masked(true);
+    }else{
+        drive_protection_phases_set_masked(false);
+    }
 }
 
 /**
@@ -736,7 +742,7 @@ static drive_prot_action_t drive_prot_get_hard_action(drive_prot_action_t lact, 
 /**
  * Проверяет значение входов питания.
  */
-static void drive_check_power(void)
+static void drive_check_prots(void)
 {
     // Предупреждения и ошибки элемента защиты.
     drive_power_warnings_t item_warnings;
@@ -788,16 +794,25 @@ static void drive_check_power(void)
     switch(top_check){
         case DRIVE_TOP_CHECK_NORMAL:
             drive_clear_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
+            drive_clear_error(DRIVE_ERROR_THERMAL_OVERLOAD);
             break;
         case DRIVE_TOP_CHECK_HEATING:
             drive_set_warning(DRIVE_WARNING_THERMAL_OVERLOAD);
             break;
         case DRIVE_TOP_CHECK_OVERHEAT:
-        case DRIVE_TOP_CHECK_COOLING:
             res_action = drive_prot_get_hard_action(res_action,
                                     drive_protection_top_action());
+        case DRIVE_TOP_CHECK_COOLING:
             drive_set_error(DRIVE_ERROR_THERMAL_OVERLOAD);
             break;
+    }
+    
+    if(drive_protection_phases_check()){
+        res_action = drive_prot_get_hard_action(res_action,
+                        drive_protection_phases_action());
+        drive_set_error(DRIVE_ERROR_PHASE);
+    }else if(!drive_protection_phases_active()){
+        drive_clear_error(DRIVE_ERROR_PHASE);
     }
     
     // Если требуется действие.
@@ -964,7 +979,7 @@ static void drive_process_top(void)
  */
 static bool drive_regulate(void)
 {
-    if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS)){
+    if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS) && drive_phase_state_errors() == PHASE_NO_ERROR){
         fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
         fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
 
@@ -1628,7 +1643,7 @@ void drive_clear_errors(void)
     drive.errors = DRIVE_ERROR_NONE;
     drive.power_errors = DRIVE_POWER_ERROR_NONE;
     drive_protection_clear_power_errors();
-    drive_phase_state_clear_errors();
+    drive_protection_clear_phases_errors();
     
     if(drive.state == DRIVE_STATE_ERROR){
         drive_set_state(DRIVE_STATE_INIT);
@@ -1694,6 +1709,7 @@ static err_t drive_process_null_sensor_impl(phase_t phase, phase_time_t sensor_t
     if(drive_phase_state_errors() == PHASE_NO_ERROR){
         drive_setup_triacs_open(phase, sensor_time);
     }
+    
     return E_NO_ERROR;
 }
 
@@ -1735,7 +1751,7 @@ void drive_null_timer_irq_handler(void)
     
     if(drive_calculate_power() && drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
         drive_process_top();
-        drive_check_power();
+        drive_check_prots();
     }
     
     drive_states_process();

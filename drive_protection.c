@@ -3,6 +3,7 @@
 #include "utils/utils.h"
 #include "settings.h"
 #include "drive_power.h"
+#include "drive_phase_state.h"
 #include "drive.h"
 //#include "defs/defs.h"
 
@@ -17,6 +18,18 @@ typedef struct _Drive_TOP {
     bool overheat; //!< Флаг перегрева.
     drive_prot_action_t action; //!< Действие при срабатывании.
 } drive_top_t;
+
+
+//! Структура защиты фаз.
+typedef struct _Drive_Protection_Phases {
+    bool enabled; //!< Разрешение элемента защиты.
+    fixed32_t pie_inc; //!< Изменение накопления за итерацию.
+    fixed32_t pie; //!< Текущее значение накопления срабатывания защиты.
+    bool active; //!< Флаг активации элемента защиты (недопустимое значение элемента защиты).
+    drive_prot_action_t action; //!< Действие.
+    bool masked; //!< Замаскированность.
+} drive_protection_phases_t;
+
 
 //! Тип сравнения значений защиты.
 typedef enum _Drive_Prot_Type {
@@ -287,6 +300,7 @@ typedef struct _Drive_Protection {
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
+    drive_protection_phases_t prot_phases; //!< Защита фаз.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
 } drive_protection_t;
 
@@ -392,12 +406,63 @@ static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
     item->action = settings_valueu(descr->param_action);
 }
 
+/**
+ * Обновляет настройки элементов защиты.
+ */
 static void drive_prot_update_prot_items_settings(void)
 {
     drive_prot_index_t i;
     for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
         drive_prot_update_prot_item_settings(i);
     }
+}
+
+/**
+ * Обновляет настройки тепловой защиты.
+ */
+static void drive_protection_update_top_settings(void)
+{
+    drive_prot.top.k_pie_max =
+            (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1)
+            * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I);
+    
+    drive_prot.top.enabled = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE);
+    
+    // Если нет разрешения,
+    // сбросим защиту.
+    if(!drive_prot.top.enabled){
+        drive_prot.top.cur_pie = 0;
+        drive_prot.top.overheat = false;
+    }
+    
+    drive_prot.top.action = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION);
+}
+
+/**
+ * Обновляет настройки защиты фаз.
+ */
+static void drive_protection_update_phases_prot_settings(void)
+{
+    // Разрешение.
+    drive_prot.prot_phases.enabled = (bool)settings_valueu(PARAM_ID_PHASES_PROT_ENABLED);
+    
+    // Если элемент запрещён.
+    if(drive_prot.prot_phases.enabled){
+        // Сбросим накопление.
+        drive_prot.prot_phases.pie = 0;
+    }
+    
+    // Допустимое время в мс.
+    uint32_t avail_time = settings_valueu(PARAM_ID_PHASES_PROT_TIME_MS);
+    // Если оно равно нулю - то будем реагировать сразу (максимальный инкремент), иначе вычислим приращение.
+    if(avail_time != 0){
+        drive_prot.prot_phases.pie_inc = DRIVE_PROT_CALC_PIE_INC(avail_time);
+    }else{
+        drive_prot.prot_phases.pie_inc = DRIVE_PROT_PIE_MAX;
+    }
+    
+    // Действие.
+    drive_prot.prot_phases.action = settings_valueu(PARAM_ID_PHASES_PROT_ACTION);
 }
 
 void drive_protection_update_settings(void)
@@ -407,12 +472,9 @@ void drive_protection_update_settings(void)
     drive_prot.I_rot = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive_prot.I_exc = settings_valuef(PARAM_ID_I_EXC);
     
-    drive_prot.top.k_pie_max =
-            (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1)
-            * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I);
+    drive_protection_update_top_settings();
     
-    drive_prot.top.enabled = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE);
-    drive_prot.top.action = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION);
+    drive_protection_update_phases_prot_settings();
     
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     
@@ -497,6 +559,38 @@ void drive_protection_set_cutoff_warn_mask_flags(drive_power_warnings_t warn_fla
 void drive_protection_reset_cutoff_warn_mask_flags(drive_power_warnings_t warn_flags)
 {
     drive_prot.prot_cutoff_warn_mask &= ~warn_flags;
+}
+
+/**
+ * Выполняет проверку защиты фаз.
+ * @param item Элемент.
+ * @param descr Дескриптор.
+ * @param warnings Предупреждения.
+ * @param errors Ошибки.
+ * @return Флаг нахождения элемента защиты в допустимом диапазоне.
+ */
+static bool drive_protection_check_phases_errors(void)
+{
+    if(!drive_prot.prot_phases.enabled || drive_prot.prot_phases.masked) return false;
+    
+    if(drive_phase_state_errors() != PHASE_NO_ERROR){
+        drive_prot.prot_phases.pie += drive_prot.prot_phases.pie_inc;
+        
+        if(drive_prot.prot_phases.pie >= DRIVE_PROT_PIE_MAX){
+            drive_prot.prot_phases.pie = DRIVE_PROT_PIE_MAX;
+
+            drive_prot.prot_phases.active = true;
+        }
+        
+    }else{ // no error
+        drive_prot.prot_phases.pie -= drive_prot.prot_phases.pie_inc;
+        
+        if(drive_prot.prot_phases.pie < 0) drive_prot.prot_phases.pie = 0;
+        
+        drive_prot.prot_phases.active = false;
+    }
+    
+    return drive_prot.prot_phases.active;
 }
 
 /**
@@ -636,11 +730,11 @@ static bool drive_protection_check_item_inst(drive_protection_item_t* item, cons
 
 bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return true;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
     
     drive_protection_item_t* item = drive_protection_get_prot_item(index);
     
-    if(!item->enabled) return true;
+    if(!item->enabled) return false;
     
     const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
     
@@ -749,7 +843,8 @@ bool drive_protection_item_active(drive_prot_index_t index)
 
 void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt)
 {
-    if(drive_prot.top.enabled && I_rot > drive_prot.I_rot){
+    if(!drive_prot.top.enabled) return;
+    if(I_rot > drive_prot.I_rot){
         // Q_heat = (i^2 - 1) * dt
         fixed32_t i = fixed32_div((int64_t)I_rot, drive_prot.I_rot);
         fixed32_t q = fixed32_mul((int64_t)i, i);
@@ -800,6 +895,49 @@ drive_prot_action_t drive_protection_emergency_stop_action(void)
 {
     return drive_prot.emergency_stop_action;
 }
+
+
+bool drive_protection_phases_check(void)
+{
+    bool prev_active = drive_prot.prot_phases.active;
+    bool new_active = drive_protection_check_phases_errors();
+    
+    return (prev_active == false) && new_active;
+}
+
+bool drive_protection_phases_allow(void)
+{
+    return drive_phase_state_errors() == PHASE_NO_ERROR;
+}
+
+bool drive_protection_phases_active(void)
+{
+    return drive_prot.prot_phases.active;
+}
+
+drive_prot_action_t drive_protection_phases_action(void)
+{
+    return drive_prot.prot_phases.action;
+}
+
+void drive_protection_clear_phases_errors(void)
+{
+    drive_phase_state_clear_errors();
+    
+    drive_prot.prot_phases.action = false;
+    drive_prot.prot_phases.pie = 0;
+}
+
+bool drive_protection_phases_masked(void)
+{
+    return drive_prot.prot_phases.masked;
+}
+
+void drive_protection_phases_set_masked(bool masked)
+{
+    drive_prot.prot_phases.masked = masked;
+}
+
 
 bool drive_protection_is_normal(drive_pwr_check_res_t check_res)
 {
