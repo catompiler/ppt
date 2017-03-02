@@ -22,7 +22,7 @@
 
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE (20 + 1)
+#define POWER_FILTER_SIZE (15 + 1)
 
 /**
  * Перечисление каналов АЦП.

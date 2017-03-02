@@ -7,9 +7,9 @@
 
 
 //! Число отбрасываемых минимальных значений.
-#define POWER_FILTER_SKIP_MIN 2
+#define POWER_FILTER_SKIP_MIN 1
 //! Число отбрасываемых максимальных значений.
-#define POWER_FILTER_SKIP_MAX 2
+#define POWER_FILTER_SKIP_MAX 1
 
 
 static void power_filter_reset(power_filter_t* filter)
@@ -197,7 +197,7 @@ ALWAYS_INLINE static void power_channel_process_adc_value(power_value_t* channel
  * @param adc_value Значение АЦП.
  * @return Код ошибки.
  */
-ALWAYS_INLINE err_t power_process_adc_value(power_t* power, size_t channel, uint16_t adc_value)
+ALWAYS_INLINE static err_t power_process_adc_value(power_t* power, size_t channel, uint16_t adc_value)
 {
     if(power->channels_count <= channel) return E_OUT_OF_RANGE;
     

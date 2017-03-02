@@ -372,6 +372,52 @@ extern drive_prot_action_t drive_protection_top_action(void);
  */
 extern drive_prot_action_t drive_protection_emergency_stop_action(void);
 
+/*
+ * Чередование фаз.
+ */
+
+/**
+ * Выполняет проверку последовательности фаз.
+ * @return Флаг активации элемента защиты.
+ */
+extern bool drive_protection_phases_check(void);
+
+/**
+ * Получает флаг допустимости значения защиты фаз.
+ * @return Флаг допустимости значения защиты фаз.
+ */
+extern bool drive_protection_phases_allow(void);
+
+/**
+ * Получает флаг активности(срабатывания) защиты фаз.
+ * @return Флаг активности(срабатывания) защиты фаз.
+ */
+extern bool drive_protection_phases_active(void);
+
+/**
+ * Получает действие при срабатывании защиты фаз.
+ * @return Действие при срабатывании защиты фаз.
+ */
+extern drive_prot_action_t drive_protection_phases_action(void);
+
+/**
+ * Очищает ошибки фаз.
+ */
+extern void drive_protection_clear_phases_errors(void);
+
+/**
+ * Получает замаскированность (запрещение) проверки фаз.
+ */
+extern bool drive_protection_phases_masked(void);
+
+/**
+ * Устанавливает замаскированность (запрещение) проверки фаз.
+ */
+extern void drive_protection_phases_set_masked(bool masked);
+
+/*
+ * Прочие проверки.
+ */
 /**
  * Получает флаг отсутствия отклонения (предупреждения и ошибки).
  * @param check_res Результат проверки,
