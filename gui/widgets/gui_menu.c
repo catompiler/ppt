@@ -9,7 +9,7 @@
 #include "parameters_ids.h"
 #include "settings.h"
 #include "gui/resources/resources_colors.h"
-
+#include "drive_keypad.h"
 #include <stdio.h>
 
 MENU_ITEMS(menu_items, menu_descrs);
@@ -391,12 +391,16 @@ void gui_menu_on_key_release(gui_menu_t* menu, keycode_t key)
 {
     switch (key) {
         //case KEY_LEFT:
-        //case KEY_MINUS:
+        case KEY_MINUS:
+            //
+            break;
         case KEY_DOWN:
             menu->key_down_press = false;
             break;
         //case KEY_RIGHT:
-        //case KEY_PLUS:
+        case KEY_PLUS:
+            //
+            break;
         case KEY_UP:
             menu->key_up_press = false;
             break;

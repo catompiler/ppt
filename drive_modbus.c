@@ -12,6 +12,8 @@
 #include <sys/time.h>
 #include "stm32f10x.h"
 
+#define DRIVE_MODBUS_GUI_ICON_WORK_SEC 4
+#define DRIVE_MODBUS_GUI_ICON_IDLE_SEC 30
 
 #define DRIVE_ID_NAME_MAX 20
 
@@ -40,6 +42,7 @@ typedef struct _Drive_modbus {
     drive_event_t event_buf;
     future_t event_future;
     future_t osc_future;
+    uint32_t last_time; // последнее время обработки callback
 } drive_modbus_t;
 
 //! Интерфейс привода.
@@ -238,6 +241,7 @@ ALWAYS_INLINE static int16_t pack_f32_f10_6(fixed32_t value)
 
 static modbus_rtu_error_t drive_modbus_on_read_din(uint16_t address, modbus_rtu_din_value_t* value)
 {
+    drive_modbus_set_last_time();
     switch(address){
         default:
             return MODBUS_RTU_ERROR_INVALID_ADDRESS;
@@ -247,6 +251,7 @@ static modbus_rtu_error_t drive_modbus_on_read_din(uint16_t address, modbus_rtu_
 
 static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_t* value)
 {
+    drive_modbus_set_last_time();
     param_t* param = NULL;
     switch(address){
         default:
@@ -295,6 +300,7 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
 
 static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16_t* value)
 {
+    drive_modbus_set_last_time();
     param_t* param = NULL;
     time_t tm;
     switch(address){
@@ -338,6 +344,7 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
 
 static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t value)
 {
+    drive_modbus_set_last_time();
     param_t* param = NULL;
     
     struct tm* ts;
@@ -403,6 +410,7 @@ static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t v
 
 static modbus_rtu_error_t drive_modbus_on_read_coil(uint16_t address, modbus_rtu_coil_value_t* value)
 {
+    drive_modbus_set_last_time();
     switch(address){
         default:
             return MODBUS_RTU_ERROR_INVALID_ADDRESS;
@@ -418,6 +426,7 @@ static modbus_rtu_error_t drive_modbus_on_read_coil(uint16_t address, modbus_rtu
 
 static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rtu_coil_value_t value)
 {
+    drive_modbus_set_last_time();
     switch(address){
         default:
             return MODBUS_RTU_ERROR_INVALID_ADDRESS;
@@ -466,6 +475,7 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
 
 static modbus_rtu_error_t drive_modbus_on_report_slave_id(modbus_rtu_slave_id_t* slave_id)
 {
+    drive_modbus_set_last_time();
     slave_id->status = MODBUS_RTU_RUN_STATUS_ON;
     slave_id->id = DRIVE_ID;
     slave_id->data = &drive_modbus.id;
@@ -670,6 +680,7 @@ modbus_rtu_error_t drive_modbus_osc_access(const void* rx_data, size_t rx_size, 
 
 modbus_rtu_error_t drive_modbus_on_custom_func(modbus_rtu_func_t func, const void* rx_data, size_t rx_size, void* tx_data, size_t* tx_size)
 {
+    drive_modbus_set_last_time();
     switch(func){
         case DRIVE_MODBUS_FUNC_EVENTS_ACCESS:
             return drive_modbus_events_access(rx_data, rx_size, tx_data, tx_size);
@@ -695,6 +706,8 @@ err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_
     drive_modbus.apply_settings_callback = drive_modbus_is->apply_settings_callback;
     drive_modbus.save_settings_callback = drive_modbus_is->save_settings_callback;
     
+    drive_modbus_set_last_time();
+    
     modbus_rtu_set_read_coil_callback(drive_modbus.modbus, drive_modbus_on_read_coil);
     modbus_rtu_set_read_din_callback(drive_modbus.modbus, drive_modbus_on_read_din);
     modbus_rtu_set_read_holding_reg_callback(drive_modbus.modbus, drive_modbus_on_read_hold_reg);
@@ -705,4 +718,25 @@ err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_
     modbus_rtu_set_custom_function_callback(drive_modbus.modbus, drive_modbus_on_custom_func);
     
     return E_NO_ERROR;
+}
+
+void drive_modbus_set_last_time()
+{
+    drive_modbus.last_time = (uint32_t)time(NULL);
+}
+
+bool drive_modbus_status_work()
+{
+    uint32_t cur = (uint32_t)time(NULL);
+    // Если были прием/передача N секунд - статус WORK
+    return ((cur - drive_modbus.last_time) < DRIVE_MODBUS_GUI_ICON_WORK_SEC);
+}
+
+bool drive_modbus_status_idle()
+{
+    uint32_t cur = (uint32_t)time(NULL);
+    // Если не было приема/передачи N секунд 
+    // и при этом последний прием/передача была N2 сек. назад - статус IDLE
+    return ((cur - drive_modbus.last_time) >= DRIVE_MODBUS_GUI_ICON_WORK_SEC)\
+            && ((cur - drive_modbus.last_time) < DRIVE_MODBUS_GUI_ICON_IDLE_SEC);
 }

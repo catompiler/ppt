@@ -35,6 +35,22 @@ menu_item_t* menu_explorer_sel(menu_explorer_t* explorer)
 
 menu_item_t* menu_explorer_in(menu_explorer_t* explorer)
 {
+    switch(explorer->state)   
+    {  
+        case MENU_EXPLORER_STATE_NAVI:  
+            return menu_explorer_navi_in(explorer);
+            break;  
+        case MENU_EXPLORER_STATE_EDIT: 
+            menu_explorer_edit_enter(explorer);
+            break;  
+        default: 
+            break;  
+    }
+    return explorer->sel_object;
+}
+
+menu_item_t* menu_explorer_navi_in(menu_explorer_t* explorer)
+{
     if (explorer->sel_object->child == NULL) {
         // переходим в режим редактирования
         explorer->state = MENU_EXPLORER_STATE_EDIT;
@@ -68,7 +84,35 @@ menu_item_t* menu_explorer_in(menu_explorer_t* explorer)
     return explorer->sel_object;
 }
 
+bool menu_explorer_edit_enter(menu_explorer_t* explorer)
+{
+    explorer->state = MENU_EXPLORER_STATE_NAVI;
+    return true;
+}
+
+bool menu_explorer_edit_esc(menu_explorer_t* explorer)
+{
+    explorer->state = MENU_EXPLORER_STATE_NAVI;
+    return true;
+}
+
 bool menu_explorer_out(menu_explorer_t* explorer) 
+{
+    switch(explorer->state)   
+    {  
+        case MENU_EXPLORER_STATE_NAVI:  
+            return menu_explorer_navi_out(explorer);
+            break;  
+        case MENU_EXPLORER_STATE_EDIT: 
+            return menu_explorer_edit_esc(explorer);
+            break;  
+        default: 
+            break;  
+    }
+    return false;
+}
+
+bool menu_explorer_navi_out(menu_explorer_t* explorer) 
 {
     bool is_not_root = !(explorer->sel_object->parent == NULL);
     if (is_not_root) {

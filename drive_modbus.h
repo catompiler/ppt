@@ -26,5 +26,20 @@ typedef struct _Drive_Modbus_Init {
  */
 extern err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_is);
 
+/**
+ * Устанавливает последнее время обработки callback для отображения статуса в GUI
+ */
+void drive_modbus_set_last_time();
+
+/**
+ * Статус обмена сообщениями по Modbus для GUI
+ */
+extern bool drive_modbus_status_work(void);
+
+/**
+ * Статус простоя (ожидания) по Modbus для GUI
+ */
+extern bool drive_modbus_status_idle(void);
+
 #endif /* DRIVE_MODBUS_H */
 

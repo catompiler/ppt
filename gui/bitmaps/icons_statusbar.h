@@ -68,6 +68,13 @@ static const uint8_t icons_statusbar_anim_ready[ICONS_STATUSBAR_ANIM_READY_CNT] 
     ICONS_STATUSBAR_VAL_READY,
     ICONS_STATUSBAR_VAL_READY,
 };
+// прием/передача сообщений по Modbus
+#define ICONS_STATUSBAR_ANIM_MODBUS_WORK 2
+static const uint8_t icons_statusbar_anim_modbus_work[ICONS_STATUSBAR_ANIM_MODBUS_WORK] =
+{
+    ICONS_STATUSBAR_VAL_MODBUS_RX,
+    ICONS_STATUSBAR_VAL_MODBUS_TX,
+};
 
 static const uint8_t icons_statusbar_data[2088] =
 {

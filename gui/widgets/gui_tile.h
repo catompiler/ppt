@@ -10,6 +10,9 @@
 #include "errors/errors.h"
 #include "defs/defs.h"
 
+#define GUI_TILE_VALUE_FONT_WIDTH 24
+#define GUI_TILE_VALUE_FONT_SPACE 2
+
 //! Статус плитки.
 typedef enum _Gui_Tile_Status {
     GUI_TILE_STATUS_OK = 0, //!< Нормальный режим.
@@ -135,5 +138,7 @@ EXTERN void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect);
  * @param tile Плитка.
  */
 EXTERN void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect);
+
+size_t gui_tile_draw_value_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s);
 
 #endif	/* GUI_TILE_H */

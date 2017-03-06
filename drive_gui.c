@@ -340,16 +340,16 @@ void drive_gui_update(void)
         pos = 0;
         if (rev) {
             //gui_widget_set_visible(GUI_WIDGET(&gui.home), true);
-            localization_set_lang(TR_LANG_ID_EN);
+            //localization_set_lang(TR_LANG_ID_EN);
             //gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
-            gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
+            //gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
             rev = false;
         }
         else {
             //gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
-            localization_set_lang(TR_LANG_ID_RU);
+            //localization_set_lang(TR_LANG_ID_RU);
             //gui_widget_set_visible(GUI_WIDGET(&gui.home), false);
-            gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
+            //gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
             rev = true;
         }
     }

@@ -150,6 +150,9 @@ void gui_statusbar_update_icons(gui_statusbar_t* statusbar, bool repaint)
     for (i = 0; i < GUI_ICON_CONDITIONS_COUNT; i++) {
         gui_statusbar_update_icons_set_icon(statusbar, &j, &gui_icon_conditions[i], repaint);
     }
+    for (i = j; i < GUI_STATUSBAR_ICONS_COUNT; i++) {
+        gui_statusbar_update_icons_unset_icon(statusbar, i);
+    }
 }
 
 void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, bool repaint)
@@ -179,5 +182,16 @@ void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* in
             icon->current = ICONS_STATUSBAR_VAL_NOTHING;
         }
         (*index)++;
+    }
+}
+
+void gui_statusbar_update_icons_unset_icon(gui_statusbar_t* statusbar, uint8_t index)
+{
+    gui_icon_t* icon = &statusbar->icons[index];
+    if (icon->current != ICONS_STATUSBAR_VAL_NOTHING) {
+        icon->list = NULL;
+        icon->count = 0;
+        icon->value = ICONS_STATUSBAR_VAL_NOTHING;
+        icon->current = 0;
     }
 }

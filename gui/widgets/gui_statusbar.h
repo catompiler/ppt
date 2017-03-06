@@ -11,6 +11,7 @@
 #include "defs/defs.h"
 #include "gui_time.h"
 #include "drive.h"
+#include "drive_modbus.h"
 #include "gui/resources/resources_colors.h"
 #include "gui/bitmaps/icons_statusbar.h"
 #include <stdint.h>
@@ -132,7 +133,7 @@ typedef struct _Gui_Icon_Condition {
                                     DRIVE_POWER_WARNING_OVERFLOW_Iref
 
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_ICON_CONDITIONS_COUNT 17
+#define GUI_ICON_CONDITIONS_COUNT 19
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // состояние
     GUI_ICON_CONDITION(drive_ready,     NULL,   0,  THEME_COLOR_GREEN_L,    &icons_statusbar_anim_ready),
@@ -156,6 +157,10 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_YELLOW, NULL),
     
+    // информация
+    GUI_ICON_CONDITION(drive_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
+    GUI_ICON_CONDITION(drive_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),
+         
 };
 
 struct _Gui_Icon {
@@ -264,5 +269,10 @@ EXTERN void gui_statusbar_update_icons(gui_statusbar_t* statusbar, bool repaint)
  * Проверка условий отображения иконки в соответствии с таблицей условий GUI_ICON_CONDITIONS
  */
 EXTERN void gui_statusbar_update_icons_set_icon(gui_statusbar_t* statusbar, uint8_t* index, const gui_icon_condition_t* condition, bool repaint);
+
+/**
+ * Сброс значений иконки
+ */
+EXTERN void gui_statusbar_update_icons_unset_icon(gui_statusbar_t* statusbar, uint8_t index);
 
 #endif	/* GUI_STATUSBAR_H */

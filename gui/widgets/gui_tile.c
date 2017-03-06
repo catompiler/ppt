@@ -4,6 +4,8 @@
 #include "graphics/graphics_inlines.h"
 #include "tft9341/tft9341.h"
 #include "localization/localization.h"
+#include "graphics/graphics.h"
+#include "../fonts/arialbold42.h"
 
 err_t gui_tile_init(gui_tile_t* tile, gui_metro_t* gui)
 {
@@ -102,10 +104,9 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
 
             painter_draw_string(&painter, text_x, text_y, TR(tile->unit));
         //}
-
-        gui_tile_repaint_value(tile, rect);
-
         gui_widget_end_paint(GUI_WIDGET(tile), &painter);
+        
+        //gui_tile_repaint_value(tile, rect);
     }
 }
 
@@ -130,8 +131,35 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             painter_string_size(&painter, TR(tile->unit), (graphics_size_t*)&dx, (graphics_size_t*)&dy);
             text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(tile)) - dx - text_x - 5);
             //painter_draw_fillrect(&painter, text_x, text_y, text_x + dx, text_y + dy);
-            painter_draw_string(&painter, text_x, text_y, tile->value);
+            gui_tile_draw_value_string(&painter, text_x, text_y, tile->value);
         }
         gui_widget_end_paint(GUI_WIDGET(tile), &painter);
     }
+}
+
+size_t gui_tile_draw_value_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s)
+{
+    if(painter->font == NULL || s == NULL) return 0;
+    
+    if(x >= (graphics_pos_t)graphics_width(painter->graphics) ||
+       y >= (graphics_pos_t)graphics_height(painter->graphics)) return 0;
+
+    font_char_t c = 0;
+    size_t c_size = 0;
+    size_t count = 0;
+
+    while(*s){
+        c = font_utf8_decode(s, &c_size);
+        if (c < 44 && c > 57) return count;
+        s += c_size;
+        if(painter_draw_char(painter, x, y, c)){
+            x += GUI_TILE_VALUE_FONT_WIDTH;
+            count ++;
+        }
+        painter_draw_fillrect(painter, x, y, x + GUI_TILE_VALUE_FONT_SPACE, y + ARIALBOLD42_CHAR_HEIGHT);
+        x += GUI_TILE_VALUE_FONT_SPACE;
+        if(y >= (graphics_pos_t)graphics_width(painter->graphics)) break;
+    }
+    
+    return count;
 }

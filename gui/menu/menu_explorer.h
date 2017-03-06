@@ -58,12 +58,42 @@ EXTERN menu_item_t* menu_explorer_sel(menu_explorer_t* explorer);
  * @return Выбранный элемент меню
  */
 EXTERN menu_item_t* menu_explorer_in(menu_explorer_t* explorer);
+
 /**
- * Выход на уровень выше меню или выход из редактирования
+ * Вход в подменю
  * @param explorer Проводник меню
  * @return Выбранный элемент меню
  */
+menu_item_t* menu_explorer_navi_in(menu_explorer_t* explorer);
+
+/**
+ * Обработка нажатия Enter в режиме редактирования
+ * @param explorer Проводник меню
+ * @return Статус
+ */
+bool menu_explorer_edit_enter(menu_explorer_t* explorer);
+
+/**
+ * Обработка нажатия Esc в режиме редактирования
+ * @param explorer Проводник меню
+ * @return Статус
+ */
+bool menu_explorer_edit_esc(menu_explorer_t* explorer);
+
+/**
+ * Выход на уровень выше меню или выход из редактирования
+ * @param explorer Проводник меню
+ * @return Статус
+ */
 EXTERN bool menu_explorer_out(menu_explorer_t* explorer);
+
+/**
+ * Выход на уровень выше меню
+ * @param explorer Проводник меню
+ * @return Статус
+ */
+bool menu_explorer_navi_out(menu_explorer_t* explorer);
+
 /**
  * Выбрать следующий элемент меню
  * @param explorer Проводник меню
