@@ -410,20 +410,34 @@ void drive_triacs_exc_timer_irq_handler(void)
     }
 }
 
+ALWAYS_INLINE static uint16_t timer_triacs_clamp(int32_t ticks)
+{
+    if(ticks < 0) return 0;
+    if(ticks > TRIACS_TIM_TICKS) return TRIACS_TIM_TICKS;
+    return (uint16_t)ticks;
+}
+
+ALWAYS_INLINE static uint16_t timer_exc_clamp(int32_t ticks)
+{
+    if(ticks < 0) return 0;
+    if(ticks > TRIAC_EXC_TIM_TICKS) return TRIAC_EXC_TIM_TICKS;
+    return (uint16_t)ticks;
+}
+
 /**
  * Инициализирует таймер для открытия пар тиристоров.
  * @param triacs_a Номер первой пары тиристоров.
  * @param triacs_b Номер второй пары тиристоров.
  * @param offset_ticks Компенсация времени до запуска открытия тиристоров в тиках таймера.
  */
-static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_number_t triacs_b, uint16_t offset_ticks)
+static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_number_t triacs_b, int16_t offset_ticks)
 {
     // Получим следующий свободный таймер тиристоров.
     timer_triacs_t* tim_trcs = timer_triacs_next();
     // Остановим таймер.
     TIM_Cmd(tim_trcs->timer, DISABLE);
     // Сбросим счётчик.
-    TIM_SetCounter(tim_trcs->timer, offset_ticks);
+    TIM_SetCounter(tim_trcs->timer, 0);
     // Установим тиристорные пары таймера.
     // Первая пара тиристоров.
     tim_trcs->triacs_a = triacs_a;
@@ -431,18 +445,23 @@ static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_num
     tim_trcs->triacs_b = triacs_b;
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
-    TIM_SetCompare1(tim_trcs->timer, (TRIACS_TIM_MAX_TICKS) - drive_triacs.triacs_pairs_angle_ticks);
+    TIM_SetCompare1(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS) -
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(tim_trcs->timer, (TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) - drive_triacs.triacs_pairs_angle_ticks);
+    TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
     // Открытие второй пары тиристоров.
-    TIM_SetCompare3(tim_trcs->timer, (TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET) - drive_triacs.triacs_pairs_angle_ticks);
+    TIM_SetCompare3(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET) -
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
     // Закрытие второй пары тиристоров.
-    TIM_SetCompare4(tim_trcs->timer, (TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET + drive_triacs.triacs_pairs_open_ticks) - drive_triacs.triacs_pairs_angle_ticks);
+    TIM_SetCompare4(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET +
+                                     drive_triacs.triacs_pairs_open_ticks) -
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
     //! Запустим таймер.
     TIM_Cmd(tim_trcs->timer, ENABLE);
 }
 
-err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset)
+err_t drive_triacs_setup_next_pairs(phase_t phase, int16_t offset)
 {
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
@@ -456,7 +475,7 @@ err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset)
         return E_NO_ERROR;
     }
     
-    uint16_t offset_ticks = TIME_TO_TICKS(offset);
+    int16_t offset_ticks = TIME_TO_TICKS(offset);
     
     // Нужен угол открытия не меньше смещения.
     if(drive_triacs.triacs_pairs_angle_ticks <= offset_ticks) return E_NO_ERROR;
@@ -506,26 +525,28 @@ err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset)
  * Инициализирует таймер для открытия симистора возбуждения.
  * @param offset_ticks Компенсация времени до запуска открытия симистора в тиках таймера.
  */
-static void timer_triac_exc_setup(uint16_t offset_ticks)
+static void timer_triac_exc_setup(int16_t offset_ticks)
 {
     // Остановим таймер.
     TIM_Cmd(drive_triacs.timer_exc, DISABLE);
     // Сбросим счётчик.
-    TIM_SetCounter(drive_triacs.timer_exc, offset_ticks);
+    TIM_SetCounter(drive_triacs.timer_exc, 0);
     // Закроем симистор возбуждения.
     triac_close(&drive_triacs.triac_exc);
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
-    TIM_SetCompare1(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET) - drive_triacs.triac_exc_angle_ticks);
+    TIM_SetCompare1(drive_triacs.timer_exc, timer_exc_clamp((int32_t)(TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET) -
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + drive_triacs.triac_exc_open_ticks) -
-                                            drive_triacs.triac_exc_angle_ticks);
+    TIM_SetCompare2(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + drive_triacs.triac_exc_open_ticks) -
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
     // Открытие второй пары тиристоров.
-    TIM_SetCompare3(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
-                                            drive_triacs.triac_exc_angle_ticks);
+    TIM_SetCompare3(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
     // Закрытие второй пары тиристоров.
-    TIM_SetCompare4(drive_triacs.timer_exc, (TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
-                                            drive_triacs.triac_exc_open_ticks) - drive_triacs.triac_exc_angle_ticks);
+    TIM_SetCompare4(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
+                                            drive_triacs.triac_exc_open_ticks) -
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
     //! Запустим таймер.
     TIM_Cmd(drive_triacs.timer_exc, ENABLE);
 }
@@ -535,7 +556,7 @@ static void timer_triac_exc_setup(uint16_t offset_ticks)
  * @param phase Текущая фаза.
  * @return Код ошибки.
  */
-err_t drive_triacs_setup_exc(phase_t phase, phase_time_t offset)
+err_t drive_triacs_setup_exc(phase_t phase, int16_t offset)
 {
     // Нужен режим регулирования.
     if(drive_triacs.exc_mode != DRIVE_TRIACS_EXC_REGULATED) return E_NO_ERROR;
@@ -551,7 +572,7 @@ err_t drive_triacs_setup_exc(phase_t phase, phase_time_t offset)
         return E_NO_ERROR;
     }
     
-    uint16_t offset_ticks = TIME_TO_TICKS(offset);
+    int16_t offset_ticks = TIME_TO_TICKS(offset);
     
     // Нужен угол открытия не меньше смещения.
     if(drive_triacs.triac_exc_angle_ticks <= offset_ticks) return E_NO_ERROR;
