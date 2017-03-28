@@ -78,7 +78,7 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
     */
     
-    power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS);
+    power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
     
     return E_NO_ERROR;
 }

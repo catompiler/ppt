@@ -7,7 +7,7 @@
 //! dt PID-регулятора.
 #define DRIVE_PID_DT 0x1b5//0x51f
 
-//! dt PID-регулятора.
+//! dt рампы.
 #define DRIVE_RAMP_DT 0x1b5//0x51f
 
 

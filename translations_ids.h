@@ -20,6 +20,8 @@
 #define TR_ID_UNITS_US 112
 //! Проценты.
 #define TR_ID_UNITS_PERCENT 120
+//! Градусы.
+#define TR_ID_UNITS_DEGREE 125
 //! Градусы цельсия.
 #define TR_ID_UNITS_DEGREE_CELSIUS 130
 
@@ -313,6 +315,13 @@
 #define TR_ID_MENU_CALIBRATION_DATA_Ifan  431
 // //! .
 // #define TR_ID_MENU_
+
+//! Меню синхронизации с фазами.
+#define TR_ID_MENU_PHASE_SYNC           450
+//! Точность синхронизации с фазами.
+#define TR_ID_MENU_PHASE_SYNC_ACCURACY  451
+//! Меню ПИД синхронизации с фазами.
+#define TR_ID_MENU_PHASE_SYNC_PID       452
 
 //! Питание.
 #define TR_ID_HELP_POWER            550

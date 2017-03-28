@@ -26,7 +26,7 @@
 //! Адрес региона.
 #define STORAGE_RGN_OSC_ADDRESS 0x1000
 //! Размер региона.
-#define STORAGE_RGN_OSC_SIZE 0xf000
+#define STORAGE_RGN_OSC_SIZE 0xf000//0x3000
 
 /*
 //! Адрес региона.

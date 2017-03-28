@@ -18,17 +18,17 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
-#include <gui/bitmaps/icons_statusbar.h>
-#include <gui/fonts/arialnarrow12.h>
-#include <gui/fonts/arialnarrow18.h>
-#include <gui/fonts/arialbold42.h>
-#include <gui/widgets/gui_tile.h>
-#include <gui/widgets/gui_statusbar.h>
-#include <gui/widgets/gui_menu.h>
+#include "gui/bitmaps/icons_statusbar.h"
+#include "gui/fonts/arialnarrow12.h"
+#include "gui/fonts/arialnarrow18.h"
+#include "gui/fonts/arialbold42.h"
+#include "gui/widgets/gui_tile.h"
+#include "gui/widgets/gui_statusbar.h"
+#include "gui/widgets/gui_menu.h"
 #include "gui/widgets/gui_home.h"
 #include <stdlib.h>
 #include <locale.h>
-#include "../lib/list/list.h"
+#include "list/list.h"
 #include "gui/resources/resources_menu.h"
 #include "gui/resources/resources_colors.h"
 #include "gui/resources/resources_params.h"
@@ -43,6 +43,7 @@ HOME_TILES_TEXT(home_tiles_text)
 
 // отображаемые значения плиток
 HOME_TILES_VALUES(home_tiles_values)
+
 
 //! Первый буфер кэша TFT.
 static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
@@ -306,7 +307,6 @@ static void make_gui(void)
     
     // инициализация графического интерфейча
     make_gui_struct();
-    
     gui_metro_set_root_widget(&gui.gui, &gui.root_widget);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
     

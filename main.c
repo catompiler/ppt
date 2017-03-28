@@ -113,6 +113,12 @@ static tft9341_t tft;
 #define EXTI_PHASE_B_LINE EXTI_Line14
 //! Линия фазы C.
 #define EXTI_PHASE_C_LINE EXTI_Line15
+//! GPIO PCA9555.
+#define EXTI_PCA9555_GPIO GPIOD
+//! Пин PCA95555.
+#define EXTI_PCA9555_Pin GPIO_Pin_7
+//! Линия PCA9555.
+#define EXTI_PCA9555_LINE EXTI_Line7
 
 
 //! Длина буфера ADC 1 и 2 в трансферах 32 бит.
@@ -138,14 +144,14 @@ static unsigned int adc_data_measured = 0;
 #define DIGITAL_IO_IN_MODE GPIO_Mode_IN_FLOATING
 #define DIGITAL_IO_OUT_MODE GPIO_Mode_Out_PP
 // Цифровые выхода.
-#define DIGITAL_IO_OUT_1_GPIO GPIOC
-#define DIGITAL_IO_OUT_1_PIN GPIO_Pin_13
+#define DIGITAL_IO_OUT_1_GPIO GPIOE
+#define DIGITAL_IO_OUT_1_PIN GPIO_Pin_6
 #define DIGITAL_IO_OUT_2_GPIO GPIOE
-#define DIGITAL_IO_OUT_2_PIN GPIO_Pin_6
+#define DIGITAL_IO_OUT_2_PIN GPIO_Pin_5
 #define DIGITAL_IO_OUT_3_GPIO GPIOE
-#define DIGITAL_IO_OUT_3_PIN GPIO_Pin_5
-#define DIGITAL_IO_OUT_4_GPIO GPIOE
-#define DIGITAL_IO_OUT_4_PIN GPIO_Pin_4
+#define DIGITAL_IO_OUT_3_PIN GPIO_Pin_4
+#define DIGITAL_IO_OUT_4_GPIO GPIOC
+#define DIGITAL_IO_OUT_4_PIN GPIO_Pin_13
 // Цифровые входа.
 #define DIGITAL_IO_IN_1_GPIO GPIOB
 #define DIGITAL_IO_IN_1_PIN GPIO_Pin_9
@@ -185,83 +191,121 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_RTC_ALARM 6
 
 
+//! Атрибуты обработчиков прерываний.
+#define IRQ_ATTRIBS __attribute__ ((interrupt ("IRQ")))
+
+
+/*
+ * Обработчики исключений.
+ */
+
+IRQ_ATTRIBS void HardFault_Handler(void)
+{
+    for(;;);
+}
+
+IRQ_ATTRIBS void MemManage_Handler(void)
+{
+    for(;;);
+}
+
+IRQ_ATTRIBS void BusFault_Handler(void)
+{
+    for(;;);
+}
+
+IRQ_ATTRIBS void UsageFault_Handler(void)
+{
+    for(;;);
+}
+
+IRQ_ATTRIBS void SVC_Handler(void)
+{
+    for(;;);
+}
+
+IRQ_ATTRIBS void PendSV_Handler(void)
+{
+    for(;;);
+}
+
 /*
  * Обработчики прерываний.
  */
 
-void USART1_IRQHandler(void)
+IRQ_ATTRIBS void USART1_IRQHandler(void)
 {
     usart_bus_irq_handler(&usart_bus);
 }
 
-void USART3_IRQHandler(void)
+IRQ_ATTRIBS void USART3_IRQHandler(void)
 {
     usart_buf_irq_handler(&usart_buf);
 }
 
-void SysTick_Handler(void)
+IRQ_ATTRIBS void SysTick_Handler(void)
 {
     system_counter_tick();
 }
 
-void SPI1_IRQHandler(void)
+IRQ_ATTRIBS void SPI1_IRQHandler(void)
 {
     spi_bus_irq_handler(&spi);
 }
 
-void SPI2_IRQHandler(void)
+IRQ_ATTRIBS void SPI2_IRQHandler(void)
 {
     spi_bus_irq_handler(&spi2);
 }
 
-void DMA1_Channel2_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel2_IRQHandler(void)
 {
     spi_bus_dma_rx_channel_irq_handler(&spi);
 }
 
-void DMA1_Channel3_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel3_IRQHandler(void)
 {
     spi_bus_dma_tx_channel_irq_handler(&spi);
 }
 
-void DMA1_Channel4_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
 {
     usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_rx_channel_irq_handler(&spi2);
 }
 
-void DMA1_Channel5_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
     usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2);
 }
 
-void DMA1_Channel6_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel6_IRQHandler(void)
 {
     i2c_bus_dma_tx_channel_irq_handler(&i2c);
 }
 
-void DMA1_Channel7_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel7_IRQHandler(void)
 {
     i2c_bus_dma_rx_channel_irq_handler(&i2c);
 }
 
-void I2C1_EV_IRQHandler(void)
+IRQ_ATTRIBS void I2C1_EV_IRQHandler(void)
 {
     i2c_bus_event_irq_handler(&i2c);
 }
 
-void I2C1_ER_IRQHandler(void)
+IRQ_ATTRIBS void I2C1_ER_IRQHandler(void)
 {
     i2c_bus_error_irq_handler(&i2c);
 }
 
-void RTCAlarm_IRQHandler(void)
+IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
 {
     rtc_alarm_interrupt_handler();
 }
 
-void RTC_IRQHandler(void)
+IRQ_ATTRIBS void RTC_IRQHandler(void)
 {
     counter_ms_gtod = system_counter_ticks();
     rtc_interrupt_handler();
@@ -310,7 +354,7 @@ int settimeofday(const struct timeval *tv, const struct timezone *tz)
 /**
  * Обработчик окончания передачи данных от ADC.
  */
-void DMA1_Channel1_IRQHandler(void)
+IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
 {
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
@@ -328,7 +372,7 @@ void DMA1_Channel1_IRQHandler(void)
 /**
  * Прерывание от регистра PCA9555 по изменению состояния кнопок.
  */
-void EXTI9_5_IRQHandler(void)
+IRQ_ATTRIBS void EXTI9_5_IRQHandler(void)
 {
     if (EXTI_GetITStatus(EXTI_Line7) != RESET)
     {
@@ -417,7 +461,7 @@ ALWAYS_INLINE static null_sensor_edge_t exti_gpio_edge(GPIO_TypeDef* GPIO, uint1
 /**
  * Прерывание по датчикам нуля.
  */
-void EXTI15_10_IRQHandler(void)
+IRQ_ATTRIBS void EXTI15_10_IRQHandler(void)
 {
     uint32_t imr = EXTI->IMR;
     // Датчик нуля фазы A.
@@ -454,27 +498,27 @@ void EXTI15_10_IRQHandler(void)
     }
 }
 
-void TIM2_IRQHandler(void)
+IRQ_ATTRIBS void TIM2_IRQHandler(void)
 {
     drive_triac_pairs_timer0_irq_handler();
 }
 
-void TIM3_IRQHandler(void)
+IRQ_ATTRIBS void TIM3_IRQHandler(void)
 {
     drive_triac_pairs_timer1_irq_handler();
 }
 
-void TIM4_IRQHandler(void)
+IRQ_ATTRIBS void TIM4_IRQHandler(void)
 {
     drive_triac_exc_timer_irq_handler();
 }
 
-void TIM6_IRQHandler(void)
+IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
     drive_phases_timer_irq_handler();
 }
 
-void TIM7_IRQHandler(void)
+IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
     drive_null_timer_irq_handler();
 }
@@ -899,7 +943,7 @@ static void init_i2c_periph(void)
     i2c_is.I2C_Ack = I2C_Ack_Disable;
     i2c_is.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
     i2c_is.I2C_OwnAddress1 = 0x11;
-    i2c_is.I2C_ClockSpeed = 400000;
+    i2c_is.I2C_ClockSpeed = 10000;
     i2c_is.I2C_DutyCycle = I2C_DutyCycle_2;
     i2c_is.I2C_Mode = I2C_Mode_I2C;
     
@@ -1334,49 +1378,65 @@ static void init_triacs_timers(void)
     NVIC_EnableIRQ (TIM4_IRQn);         // Разрешаем прерывания по Таймеру4
 }
 
-static void init_exti(void)
+static void init_exti_pca9555(void)
 {
     /*
      * PCA9555 Interrupt.
      */
     GPIO_InitTypeDef GPIO_InitStructure;
     /* GPIOB Configuration: 95 (PD7 - Int_PCA9555) as input pull-down */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+        GPIO_InitStructure.GPIO_Pin = EXTI_PCA9555_Pin;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
-    GPIO_Init(GPIOD, &GPIO_InitStructure);
-        
-        
-    /*
-     * Zero sensor
-     */
-    /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
-        GPIO_InitStructure.GPIO_Pin = EXTI_PHASE_A_Pin | EXTI_PHASE_B_Pin | EXTI_PHASE_C_Pin;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(EXTI_PHASE_GPIO, &GPIO_InitStructure);
-        
-        
+    GPIO_Init(EXTI_PCA9555_GPIO, &GPIO_InitStructure);
+    
     /*
      * Привязка Прерывания к портам МК.
      */       
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOD, GPIO_PinSource7);
+    
+    
+    EXTI_InitTypeDef EXTI_InitStructure;
+    EXTI_InitStructure.EXTI_Line = EXTI_PCA9555_LINE;
+    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&EXTI_InitStructure);
+    
+    NVIC_SetPriority(EXTI9_5_IRQn, IRQ_PRIOR_KEYPAD);
+ 
+    NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
+}
+
+static void init_exti_zero_sensors(void)
+{
+    /*
+     * Zero sensor
+     */
+    /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
+    GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.GPIO_Pin = EXTI_PHASE_A_Pin | EXTI_PHASE_B_Pin | EXTI_PHASE_C_Pin;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(EXTI_PHASE_GPIO, &GPIO_InitStructure);
+    
+    /*
+     * Привязка Прерывания к портам МК.
+     */
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource13);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource14);
     GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource15);
     
     
     EXTI_InitTypeDef EXTI_InitStructure;
-    EXTI_InitStructure.EXTI_Line = EXTI_Line7 | EXTI_PHASE_A_LINE | EXTI_PHASE_B_LINE | EXTI_PHASE_C_LINE;
+    EXTI_InitStructure.EXTI_Line = EXTI_PHASE_A_LINE | EXTI_PHASE_B_LINE | EXTI_PHASE_C_LINE;
     EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
     EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
     EXTI_InitStructure.EXTI_LineCmd = ENABLE;
     EXTI_Init(&EXTI_InitStructure);
     
-    NVIC_SetPriority(EXTI9_5_IRQn, IRQ_PRIOR_KEYPAD);
     NVIC_SetPriority(EXTI15_10_IRQn, IRQ_PRIOR_NULL_SENSORS);
  
-    NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
     NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
 }
 
@@ -1411,6 +1471,12 @@ static void init_gpio (void)
         gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(RS485_IFACE_CTL_GPIO, &gpio_is);
         
+    /* GPIOC Configuration: 64 (PC7 - FAN) as output pp */
+        gpio_is.GPIO_Pin = GPIO_Pin_7;
+        gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
+        gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOC, &gpio_is);
+    //GPIO_SetBits(GPIOC, GPIO_Pin_7);
 }
 
 static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
@@ -1471,6 +1537,9 @@ static void* main_task(void* arg)
 
 int main(void)
 {
+    // ACTLR
+    //*((unsigned int*)0xE000E008) = 0x7;
+    
     NVIC_SetPriorityGrouping(0x3);
     
     init_sys_counter();
@@ -1521,7 +1590,7 @@ int main(void)
     init_phases_timer();
     init_null_timer();
     
-    init_exti();
+    init_exti_zero_sensors();
     
     init_modbus_usart();
     init_modbus();
@@ -1529,12 +1598,15 @@ int main(void)
     
     init_drive_ui();
     
+    init_exti_pca9555();
+    
     //drive_set_reference(REFERENCE_MAX);
     
     scheduler_add_task(main_task, 0, NULL, 0, NULL);
     
     for(;;){
-        if(!scheduler_process()) __WFI();
+        scheduler_process();
+        //if(!scheduler_process()) __WFI();
     }
     return 0;
 }

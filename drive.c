@@ -4,22 +4,32 @@
 #include "pid_controller/pid_controller.h"
 #include "drive_regulator.h"
 #include "drive_protection.h"
+#include "drive_phase_sync.h"
 #include <string.h>
 #include <stdio.h>
 
 
 //! Максимальное значение PID-регулятора напряжения якоря.
-#define DRIVE_ROT_PID_VALUE_MAX 0x780000 // 120.0
+#define DRIVE_ROT_PID_VALUE_MAX TRIACS_PAIRS_ANGLE_MAX_F // 120.0
 //! Минимальное значение PID-регулятора напряжения якоря.
-#define DRIVE_ROT_PID_VALUE_MIN 0
+#define DRIVE_ROT_PID_VALUE_MIN TRIACS_PAIRS_ANGLE_MIN_F
 
 //! Максимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MAX 0x960000 // 180.0 - 30.0
+#define DRIVE_EXC_PID_VALUE_MAX (TRIAC_EXC_ANGLE_MAX_F - TRIAC_EXC_ANGLE_MIN_F) // 180.0 - 30.0
 //! Минимальное значение PID-регулятора тока возбуждения.
 #define DRIVE_EXC_PID_VALUE_MIN 0
 //! Добавочный угол открытия тиристора возбуждения.
-#define DRIVE_EXC_PID_VALUE_DELTA 0x1E0000 // 30.0
+#define DRIVE_EXC_PID_VALUE_DELTA TRIAC_EXC_ANGLE_MIN_F // 30.0
 
+//! Коэффициент П-звена ПИД-регулятора синхронизации с фазами.
+//#define DRIVE_PHASE_SYNC_PLL_PIC_Kp (fixed32_make_from_fract(18, 1))
+//! Коэффициент И-звена ПИД-регулятора синхронизации с фазами.
+//#define DRIVE_PHASE_SYNC_PLL_PIC_Ki (fixed32_make_from_fract(15, 10))
+
+//! Точность синхронизации с фазами.
+//#define DRIVE_PHASE_SYNC_ACCURACY (fixed32_make_from_fract(3, 1))
+
+//#define DRIVE_PHASE_SYNC_DEBUG
 
 //! Число периодов калибровки питания.
 #define DRIVE_POWER_CALIBRATION_ITERS 15
@@ -989,6 +999,7 @@ static bool drive_regulate(void)
         fixed32_t exc_pid_val = drive_regulator_exc_pid_value() + DRIVE_EXC_PID_VALUE_DELTA;
 
         drive_triacs_set_pairs_open_angle(rot_pid_val);
+        //drive_triacs_set_pairs_open_angle(fixed32_make_from_int(30));
         drive_triacs_set_exc_open_angle(exc_pid_val);
         //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
 
@@ -996,7 +1007,8 @@ static bool drive_regulate(void)
 
         //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
 
-        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), rot_pid_val);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
@@ -1273,6 +1285,7 @@ static err_t drive_state_process_init(void)
             break;
         case DRIVE_INIT_BEGIN:
             drive_phase_state_reset();
+            drive_phase_sync_reset();
             //drive_power_reset();
             //drive_power_reset_channels(DRIVE_POWER_CHANNELS);
             drive_clear_flag(DRIVE_READY_FLAGS);
@@ -1289,6 +1302,11 @@ static err_t drive_state_process_init(void)
             }
             
             if(drive_phase_state_direction() == DRIVE_DIR_UNK){
+                drive.iters_counter = 0;
+                break;
+            }
+            
+            if(!drive_phase_sync_synchronized()){
                 drive.iters_counter = 0;
                 break;
             }
@@ -1354,6 +1372,34 @@ static err_t drive_states_process(void)
     return E_NO_ERROR;
 }
 
+static fixed32_t drive_get_null_timer_angle(void)
+{
+    if(!drive.tim_null) return 0;
+    
+    uint32_t tim_null_ticks = TIM_GetCounter(drive.tim_null);
+    
+    // time [0...40000) -> [0...120).
+    // 40000:120 == 1000:3
+    
+    fixed32_t res = (fixed32_t)fixed32_make_from_fract((uint64_t)(tim_null_ticks * 3), 1000);
+    
+    return res;
+}
+
+static int16_t drive_get_null_timer_time(void)
+{
+    if(!drive.tim_null) return 0;
+    
+    uint16_t tim_null_time = TIM_GetCounter(drive.tim_null);
+    
+    // time [0...40000) -> [0...6666.(6)).
+    // 40000:6666.(6) == 6:1
+    
+    int16_t res = (int16_t)(tim_null_time / 6);
+    
+    return res;
+}
+
 
 /*
  * Интерфейсный функции.
@@ -1363,6 +1409,9 @@ static err_t drive_states_process(void)
 err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
+    
+    drive_phase_sync_init();
+    drive_phase_sync_set_angle_callback(drive_get_null_timer_angle);
     
     drive_phase_state_init();
     drive_phase_state_set_error_callback(drive_on_phase_error_occured);
@@ -1380,6 +1429,11 @@ err_t drive_init(void)
     
     drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
     drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
+    
+    drive_phase_sync_pll_pid_clamp(
+            -fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX),
+            fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX)
+            );
     
     drive_update_settings();
     drive_update_prot_masks();
@@ -1432,6 +1486,11 @@ err_t drive_update_settings(void)
     drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
                                 settings_valuef(PARAM_ID_EXC_PID_K_I),
                                 settings_valuef(PARAM_ID_EXC_PID_K_D));
+    
+    drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
+    drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
     
     drive_power_set_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ua));
     drive_power_set_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ub));
@@ -1702,7 +1761,7 @@ void drive_triac_exc_timer_irq_handler(void)
  * @param phase Фаза.
  * @return Код ошибки.
  */
-static err_t drive_process_null_sensor_impl(phase_t phase, phase_time_t sensor_time)
+static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
 {
     drive_phase_state_handle(phase);
 
@@ -1712,6 +1771,10 @@ static err_t drive_process_null_sensor_impl(phase_t phase, phase_time_t sensor_t
     
     return E_NO_ERROR;
 }
+
+#ifdef DRIVE_PHASE_SYNC_DEBUG
+static int32_t zero_sens = 0;
+#endif
 
 err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
 {
@@ -1727,14 +1790,18 @@ err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
     if(edge == NULL_SENSOR_EDGE_TRAILING && prev_edge != edge){
         
         if(!drive_phase_state_has_time()){
-            return drive_process_null_sensor_impl(phase, 0);
+            return E_NO_ERROR;
+            //return drive_process_null_sensor_impl(phase, 0);
         }
         
         if(time >= prev_time){
             phase_time_t diff_time = time - prev_time;
-            
+#ifdef DRIVE_PHASE_SYNC_DEBUG
+            zero_sens = diff_time;
+#endif
             if(diff_time >= drive.settings.zero_sensor_time){
-                return drive_process_null_sensor_impl(phase, diff_time);
+                return E_NO_ERROR;
+                //return drive_process_null_sensor_impl(phase, diff_time);
             }
         }
     }
@@ -1745,9 +1812,49 @@ err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
     return E_NO_ERROR;
 }
 
+#ifdef DRIVE_PHASE_SYNC_DEBUG
+static int32_t angle_phA = 0;
+static int32_t angle_phB = 0;
+static int32_t angle_phC = 0;
+static int32_t angle_pid_val = 0;
+#endif
+
 void drive_null_timer_irq_handler(void)
 {
-    TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
+    if(drive.tim_null) TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
+    
+    phase_t phase = drive_phase_sync_next_phase();
+    if(phase != PHASE_UNK){
+        
+        int16_t offset = 0;
+        
+        offset += drive_phase_sync_offset(phase);
+        offset += drive_get_null_timer_time();
+        
+        drive_process_null_sensor_impl(phase, offset);
+    }
+    
+    if(drive_phase_sync_process()){
+    
+        if(drive.tim_null){
+
+            fixed32_t period_deltaf = drive_phase_sync_pll_pid_value();
+            int16_t period_delta = (int16_t)fixed32_get_int(period_deltaf);
+
+            drive.tim_null->ARR = DRIVE_NULL_TIMER_CNT_PERIOD - period_delta;
+            
+#ifdef DRIVE_PHASE_SYNC_DEBUG
+            angle_pid_val = period_delta;
+#endif
+        }
+    }
+    
+#ifdef DRIVE_PHASE_SYNC_DEBUG
+    fixed32_t tmp_val = 0;
+    drive_phase_sync_angle(PHASE_A, &tmp_val); angle_phA = (tmp_val);//fixed32_get_int
+    drive_phase_sync_angle(PHASE_B, &tmp_val); angle_phB = (tmp_val);//fixed32_get_int
+    drive_phase_sync_angle(PHASE_C, &tmp_val); angle_phC = (tmp_val);//fixed32_get_int
+#endif
     
     if(drive_calculate_power() && drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
         drive_process_top();
@@ -1762,6 +1869,8 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
     err_t err = drive_power_process_adc_values(channels, adc_values);
     
     drive_check_power_inst();
+    
+    drive_phase_sync_append_data();
     
     return err;
 }

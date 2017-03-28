@@ -33,6 +33,12 @@
 #define DRIVE_NULL_TIMER_CNT_PRESCALER (12 - 1)
 //! Частота срабатывания таймера нуля.
 #define DRIVE_NULL_TIMER_FREQ (DRIVE_POWER_FREQ * 3)
+//! Угол таймера нуля.
+#define DRIVE_NULL_TIMER_ANGLE (120)
+//! Отклонение таймера нуля для синхронизации.
+#define DRIVE_NULL_TIMER_OFFSET_TICKS_MAX (750) // 125 мкс
+//! Коэффициент тик/градус отклонения.
+#define DRIVE_NULL_TIMER_TICKS_PER_DEG 333//400
 
 
 
@@ -553,10 +559,13 @@ extern void drive_triac_exc_timer_irq_handler(void);
 
 /**
  * Обрабатывает событие датчика нуля по заданной фазе.
+ * Устаревшая функция, датчики нуля теперь
+ * не используются для определения нуля.
  * @param phase Фаза.
+ * @param edge Фронт сигнала датчика нуля.
  * @return Код ошибки.
  */
-extern err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge);
+extern __attribute__ ((deprecated)) err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge);
 
 /**
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.

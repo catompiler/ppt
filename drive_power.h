@@ -49,6 +49,9 @@
                               POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
                               POWER_CHANNEL_9 | POWER_CHANNEL_10)
 
+//! Частота измерений АЦП.
+#define DRIVE_POWER_ADC_FREQ 6400
+
 //! Частота сети.
 #define DRIVE_POWER_FREQ 50
 
