@@ -807,6 +807,8 @@ bool drive_protection_item_allow(drive_prot_index_t index)
     
     drive_protection_item_t* item = drive_protection_get_prot_item(index);
     
+    if(!item->enabled) return true;
+    
     return item->allow;
 }
 
