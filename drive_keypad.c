@@ -64,7 +64,7 @@ static err_t drive_keypad_wait_safe(void)
 {
     counter_t counter = system_counter_ticks();
     
-    while(pca9555_busy(keypad.ioport)){
+    while(i2c_bus_busy(pca9555_i2c_bus(keypad.ioport)) || pca9555_busy(keypad.ioport)){
         if(system_counter_diff(&counter) >= drive_keypad_io_timeout()){
             drive_keypad_async_io_reset();
             return E_BUSY;
