@@ -126,7 +126,7 @@ typedef size_t triac_pair_number_t;
 
 
 //! Максимальный угол открытия тиристоров.
-#define TRIACS_PAIRS_ANGLE_MAX (120)
+#define TRIACS_PAIRS_ANGLE_MAX (115)
 //! Максимальный угол открытия тиристоров в fixed32.
 #define TRIACS_PAIRS_ANGLE_MAX_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MAX))
 //! Минимальный угол открытия тиристоров.
@@ -134,7 +134,7 @@ typedef size_t triac_pair_number_t;
 //! Минимальный угол открытия тиристоров в fixed32.
 #define TRIACS_PAIRS_ANGLE_MIN_F (fixed32_make_from_int(TRIACS_PAIRS_ANGLE_MIN))
 //! Максимальный угол включения симистора возбуждения.
-#define TRIAC_EXC_ANGLE_MAX (180)
+#define TRIAC_EXC_ANGLE_MAX (175)
 //! Максимальный угол включения симистора возбуждения в fixed32.
 #define TRIAC_EXC_ANGLE_MAX_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MAX))
 //! Минимальный угол включения симистора возбуждения.
@@ -143,9 +143,9 @@ typedef size_t triac_pair_number_t;
 #define TRIAC_EXC_ANGLE_MIN_F (fixed32_make_from_int(TRIAC_EXC_ANGLE_MIN))
 
 //! Перевод времени открытия в тики таймера.
-#define TIME_TO_TICKS(T) (((uint32_t)T * 18) / 10) // 72M / 40 тиков : 1M мкс
+#define TIME_TO_TICKS(T) (((int32_t)T * 18) / 10) // 72M / 40 тиков : 1M мкс
 //! Перевод тиков таймера в время открытия.
-#define TICKS_TO_TIME(T) (((uint32_t)T * 10) / 18) // 1M мкс : 72M / 40 тиков
+#define TICKS_TO_TIME(T) (((int32_t)T * 10) / 18) // 1M мкс : 72M / 40 тиков
 
 
 //! Режим возбуждения.
@@ -309,7 +309,7 @@ extern void drive_triacs_exc_timer_irq_handler(void);
  * @param offset Компенсация времени до запуска открытия тиристоров.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset);
+extern err_t drive_triacs_setup_next_pairs(phase_t phase, int16_t offset);
 
 /**
  * Настраивает таймер открытия симистора возбуждения.
@@ -318,6 +318,6 @@ extern err_t drive_triacs_setup_next_pairs(phase_t phase, phase_time_t offset);
  * @param offset Компенсация времени до запуска открытия симистора.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_exc(phase_t phase, phase_time_t offset);
+extern err_t drive_triacs_setup_exc(phase_t phase, int16_t offset);
 
 #endif /* DRIVE_TRIACS_H */
