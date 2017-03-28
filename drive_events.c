@@ -89,8 +89,8 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->direction = (uint8_t)drive_direction();
     event->init_state = (uint8_t)drive_init_state();
     event->calibration_state = (uint8_t)drive_power_calibration();
-    event->starting_state = (uint8_t)drive_stopping();
-    event->stopping_state = (uint8_t)drive_starting();
+    event->starting_state = (uint8_t)drive_starting();
+    event->stopping_state = (uint8_t)drive_stopping();
     event->err_stopping_state = (uint8_t)drive_err_stopping();
     event->reference = drive_reference();
     event->flags = drive_flags();
