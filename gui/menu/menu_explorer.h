@@ -14,7 +14,8 @@
 
 // Тип состояния меню
 typedef enum _Menu_Explorer_State {
-    MENU_EXPLORER_STATE_NAVI = 0,
+    MENU_EXPLORER_STATE_HOME = 0,
+    MENU_EXPLORER_STATE_NAVI,
     MENU_EXPLORER_STATE_EDIT,
 } menu_explorer_state_t;
 
@@ -81,6 +82,13 @@ bool menu_explorer_edit_enter(menu_explorer_t* explorer);
 bool menu_explorer_edit_esc(menu_explorer_t* explorer);
 
 /**
+ * Обработка длительного нажатия Esc в режиме редактирования
+ * @param explorer Проводник меню
+ * @return Статус
+ */
+bool menu_explorer_long_esc(menu_explorer_t* explorer);
+
+/**
  * Выход на уровень выше меню или выход из редактирования
  * @param explorer Проводник меню
  * @return Статус
@@ -93,6 +101,19 @@ EXTERN bool menu_explorer_out(menu_explorer_t* explorer);
  * @return Статус
  */
 bool menu_explorer_navi_out(menu_explorer_t* explorer);
+
+/**
+ * Обработка нажатия UP
+ * @param explorer Проводник меню
+ * @return Выбранный элемент меню
+ */
+EXTERN menu_item_t* menu_explorer_up(menu_explorer_t* explorer);
+/**
+ * Обработка нажатия DOWN
+ * @param explorer Проводник меню
+ * @return Выбранный элемент меню
+ */
+EXTERN menu_item_t* menu_explorer_down(menu_explorer_t* explorer);
 
 /**
  * Выбрать следующий элемент меню
@@ -148,6 +169,34 @@ EXTERN uint8_t menu_explorer_center_pos(menu_explorer_t* explorer);
  * @return Статус элемента меню (выбран - не выбран)
  */
 EXTERN bool menu_explorer_is_selected(menu_explorer_t* explorer, menu_item_t* item);
+
+/**
+ * Возвращает статус состояния меню
+ * @param explorer Проводник меню
+ * @return Состояние меню
+ */
+EXTERN menu_explorer_state_t menu_explorer_state(menu_explorer_t* explorer);
+
+/**
+ * Возвращает флаг состояния меню Навигация
+ * @param explorer Проводник меню
+ * @return Состояние меню в режиме навигации
+ */
+EXTERN bool menu_explorer_state_navi(menu_explorer_t* explorer);
+
+/**
+ * Возвращает флаг состояния меню Редактирование
+ * @param explorer Проводник меню
+ * @return Состояние меню в режиме редактирования элемента
+ */
+EXTERN bool menu_explorer_state_edit(menu_explorer_t* explorer);
+
+/**
+ * Возвращает флаг состояния меню Главный экран
+ * @param explorer Проводник меню
+ * @return Состояние меню в режиме главного экрана
+ */
+EXTERN bool menu_explorer_state_home(menu_explorer_t* explorer);
 
 #endif	/* MENU_EXPLORER */
 

@@ -170,151 +170,122 @@ void gui_menu_draw_scrollbar(gui_menu_t* menu, painter_t* painter, gui_metro_the
 
 void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height, graphics_pos_t x, graphics_pos_t y)
 {
+    param_t* param = NULL;
+    bool item_not_null = (menu_item != NULL);
+    bool item_is_null = !item_not_null;
+    bool item_is_selected = false;
+    bool item_is_submenu = false;
+    bool item_is_param = false;
+    if (item_not_null) {
+        item_is_selected = menu_explorer_is_selected(&menu->explorer, menu_item);
+        item_is_submenu = menu_item_childs_count(menu_item) > 0;
+        item_is_param = !item_is_submenu;
+        if (item_is_param) {
+            param = settings_param_by_id(menu_item->id);
+            item_is_param = (param != NULL);
+        } 
+    }
+    
+    graphics_color_t color_menu_font = theme->color_menu_font;
+    graphics_color_t color_menu_back = theme->color_menu;
+    graphics_color_t color_value_font = theme->color_menu_font;
+    graphics_color_t color_value_back = theme->color_menu;
     graphics_pos_t text_x = x;
     graphics_pos_t text_y = y;
     graphics_pos_t text_unit;
     text_unit = 0;
-    if (menu_item == NULL) {
-        painter_set_pen_color(painter, theme->color_menu_font);
-        painter_set_brush_color(painter, theme->color_menu);
-        painter_draw_fillrect(painter, 0, text_y, width, text_y + MENU_ITEM_HEIGHT);
+    
+    if (item_is_selected) {
+        color_menu_font = theme->color_menu_active_font;
+        color_menu_back = theme->color_menu_active;
+        color_value_font = theme->color_menu_active_font;
+        color_value_back = theme->color_menu_active;
+        if (menu_explorer_state_edit(&menu->explorer)) {
+            color_value_font = theme->color_menu_edit_active;
+            color_value_back = theme->color_menu_edit;
+        }
+    }
+    // фон элемента меню
+    painter_set_pen_color(painter, color_menu_font);
+    painter_set_brush_color(painter, color_menu_back);
+    painter_draw_fillrect(painter, 0, text_y, width, text_y + MENU_ITEM_HEIGHT);
+    // пустой элемент меню
+    if (item_is_null) { 
         painter_draw_string(painter, text_x, text_y, " ");
     }
-    else {
-        if (menu_explorer_is_selected(&menu->explorer, menu_item)) {
-            painter_set_pen_color(painter, theme->color_menu_active_font);
-            painter_set_brush_color(painter, theme->color_menu_active);
-            painter_draw_fillrect(painter, 0, text_y, width, text_y + MENU_ITEM_HEIGHT);
-        }
-        else {
-            painter_set_pen_color(painter, theme->color_menu_font);
-            painter_set_brush_color(painter, theme->color_menu);
-            painter_draw_fillrect(painter, 0, text_y, width, text_y + MENU_ITEM_HEIGHT);
-        }
-        if (menu_item_childs_count(menu_item) > 0) {
-            // подменю
-            painter_draw_string(painter, text_x, text_y, "►");
-            text_x = GUI_MENU_ICON_LEFT_PAD;
-        }
+    // префикс подменю
+    if (item_is_submenu) { 
+        painter_draw_string(painter, text_x, text_y, GUI_MENU_SUBMENU_PREFIX);
+        text_x = GUI_MENU_ICON_LEFT_PAD;
+    }
+    // текст меню
+    if (item_not_null) {
         painter_draw_string(painter, text_x, text_y, TR(menu_item->text));
-        if (menu_item_childs_count(menu_item) == 0) {
-            // параметр
-            param_t* param = settings_param_by_id(menu_item->id);
-            if (menu_item->value == NULL) {
-                param_units_t unit = settings_param_units(param);
-                text_x = width - 8;
-                if (unit != NULL) {
-                    text_x = text_x - 40;
-                    text_unit = text_x;
-                }
-                int32_t value_int = 0;
-                uint32_t value_uint = 0;
-                fixed32_t value_fix = 0;
-                char str[9];
-                char mask[9];
-                int max = (int)settings_param_max(param).int_value;
-                int32_t den = 1;
-                int decim = 0;
-                while (den < max) {
-                    decim++;
-                    den *= 10;
-                }
-                switch (settings_param_type(param)) {
-                    case PARAM_TYPE_INT:
-                        value_int = settings_param_valuei(param);
-                        snprintf(mask, 9, "%%0%dd", decim);
-                        snprintf(str, 9, mask, (int)value_int);
-                        break;
-                    case PARAM_TYPE_UINT:
-                        value_uint = settings_param_valueu(param);
-                        snprintf(mask, 9, "%%0%dd", decim);
-                        snprintf(str, 9, mask, (int)value_uint);
-                        break;
-                    case PARAM_TYPE_FRACT_10:
-                        value_fix = settings_param_valuef(param);
-                        snprintf(str, 9, "%d.%01d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 1));
-                        break;
-                    case PARAM_TYPE_FRACT_100:
-                        value_fix = settings_param_valuef(param);
-                        snprintf(str, 9, "%d.%02d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 2));
-                        break;
-                    case PARAM_TYPE_FRACT_1000:
-                        value_fix = settings_param_valuef(param);
-                        snprintf(str, 9, "%d.%03d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 3));
-                        break;
-                    case PARAM_TYPE_FRACT_10000:
-                        value_fix = settings_param_valuef(param);
-                        snprintf(str, 9, "%d.%04d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 4));
-                        break;
-                    default:
-                        value_fix = settings_param_valuef(param);
-                        snprintf(str, 9, "%d", (int)value_fix);
-                        break;
-                }
-
-                if (unit != NULL) {
-                    const char* unit_text = TR(unit);
-                    painter_draw_fillrect(painter, text_unit - 3, text_y, width , text_y + MENU_ITEM_HEIGHT);
-                    painter_draw_string(painter, text_unit, text_y, unit_text);
-                }
-
-                graphics_size_t wid;
-                painter_string_size(painter, str, &wid, NULL);
-                text_x = text_x - wid - 6;
-
-                //
-                if (menu_explorer_is_selected(&menu->explorer, menu_item) && menu->explorer.state == MENU_EXPLORER_STATE_EDIT) {
-                    painter_set_pen_color(painter, theme->color_menu_edit_active);
-                    painter_set_brush_color(painter, theme->color_menu_edit);
-                }
-                //
-                painter_draw_fillrect(painter, text_x - 12, text_y, text_unit - 3, text_y + MENU_ITEM_HEIGHT);
-                painter_draw_string(painter, text_x, text_y, str);
-
+    }
+    // параметр
+    if (item_is_param) { 
+        if (menu_item->value == NULL) {
+            param_units_t unit = settings_param_units(param);
+            text_x = width - 8;
+            if (unit != NULL) {
+                text_x = text_x - 40;
             }
-            else {
-                size_t val_cnt = menu_value_enum_count(menu_item->value);
-                menu_value_t* values = menu_value_enum_values(menu_item->value);
+            text_unit = text_x;
+            
+            char str[9];
+            gui_menu_param_value_to_string(param, str);
+            
+            if (unit != NULL) {
+                const char* unit_text = TR(unit);
+                painter_draw_fillrect(painter, text_unit - 3, text_y, width , text_y + MENU_ITEM_HEIGHT);
+                painter_draw_string(painter, text_unit, text_y, unit_text);
+            }
 
-                menu_value_t* val = menu_value_enum_current_value(menu_item->value);
+            graphics_size_t wid;
+            painter_string_size(painter, str, &wid, NULL);
+            text_x = text_x - wid - 6;
 
-                text_x = width - 25;
+            painter_set_pen_color(painter, color_value_font);
+            painter_set_brush_color(painter, color_value_back);
+            painter_draw_fillrect(painter, text_x - 12, text_y, text_unit - 3, text_y + MENU_ITEM_HEIGHT);
+            painter_draw_string(painter, text_x, text_y, str);
+        }
+        else { // перечисление
+            size_t val_cnt = menu_value_enum_count(menu_item->value);
+            menu_value_t* values = menu_value_enum_values(menu_item->value);
 
-                graphics_size_t wid = 0;
-                int j;
-                for (j = 0; j < val_cnt; j++) {
-                    graphics_size_t w;
-                    const char* str = TR(values[j].value_string);
-                    painter_string_size(painter, str, &w, NULL);
-                    if (w > wid) wid = w;
-                }
+            menu_value_t* val = menu_value_enum_current_value(menu_item->value);
 
-                const char* str = TR(val->value_string);
+            text_x = width - 25;
+
+            graphics_size_t wid = 0;
+            int j;
+            for (j = 0; j < val_cnt; j++) {
                 graphics_size_t w;
+                const char* str = TR(values[j].value_string);
                 painter_string_size(painter, str, &w, NULL);
-
-                text_x = text_x - wid;
-
-                //painter_set_brush_color(&painter, THEME_COLOR_WHITE);
-                painter_draw_fillrect(painter, text_x - 12, text_y, text_x + wid + 6, text_y + MENU_ITEM_HEIGHT);
-
-                text_x = width - 22;
-                if (menu_explorer_is_selected(&menu->explorer, menu_item)) {
-                    painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
-                }
-                else {
-                    painter_set_pen_color(painter, THEME_COLOR_GRAY);
-                }
-                painter_draw_string(painter, text_x, text_y, "↕");
-                text_x = width - 25 - w;
-                if (menu_explorer_is_selected(&menu->explorer, menu_item)) {
-                    painter_set_pen_color(painter, theme->color_menu_active_font);
-                }
-                else {
-                    painter_set_pen_color(painter, theme->color_menu_font);
-                }
-                painter_draw_string(painter, text_x, text_y, str);
+                if (w > wid) wid = w;
             }
+
+            const char* str = TR(val->value_string);
+            graphics_size_t w;
+            painter_string_size(painter, str, &w, NULL);
+
+            text_x = text_x - wid;
+
+            painter_set_pen_color(painter, color_value_font);
+            painter_set_brush_color(painter, color_value_back);
+            painter_draw_fillrect(painter, text_x - 12, text_y, text_x + wid + 18, text_y + MENU_ITEM_HEIGHT);
+
+            text_x = width - 22;
+            
+            if (item_is_selected) {
+                painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
+                painter_draw_string(painter, text_x, text_y, "↕");
+                painter_set_pen_color(painter, color_value_font);
+            }
+            text_x = width - 25 - w;
+            painter_draw_string(painter, text_x, text_y, str);
         }
     }
 }
@@ -350,11 +321,11 @@ void gui_menu_on_key_press(gui_menu_t* menu, keycode_t key)
         //case KEY_MINUS:
         case KEY_DOWN:
             menu->key_down_press = true;
-            if (menu->key_up_press) {
+            if (menu->key_up_press) { // одновременное нажатие UP + DOWN
                 menu_explorer_help_toggle(&menu->explorer);
             }
-            else {
-                menu_explorer_next(&(menu->explorer));
+            else { // нажатие DOWN
+                menu_explorer_down(&(menu->explorer));
             }
             gui_menu_on_repaint(menu, NULL);
             return;
@@ -362,11 +333,11 @@ void gui_menu_on_key_press(gui_menu_t* menu, keycode_t key)
         //case KEY_PLUS:
         case KEY_UP:
             menu->key_up_press = true;
-            if (menu->key_down_press) {
+            if (menu->key_down_press) { // одновременное нажатие UP + DOWN
                 menu_explorer_help_toggle(&menu->explorer);
             }
-            else {
-                menu_explorer_prev(&(menu->explorer));
+            else { // нажатие UP
+                menu_explorer_up(&(menu->explorer));
             }
             gui_menu_on_repaint(menu, NULL);
             return;
@@ -378,8 +349,16 @@ void gui_menu_on_key_press(gui_menu_t* menu, keycode_t key)
             menu->long_esc_press_cnt++;
             // длительное нажание на кнопку Esc (переход на Home)
             if (menu->long_esc_press_cnt > MENU_HOME_ON_LONG_ESC_CNT) {
-                gui_menu_on_home_action(menu, key);
-                gui_menu_on_repaint(menu, NULL);
+                if (menu_explorer_long_esc(&(menu->explorer))) {
+                    if (menu_explorer_state(&(menu->explorer)) == MENU_EXPLORER_STATE_HOME) {
+                        // переход к главному экрану
+                        gui_menu_on_home_action(menu, key);
+                        gui_menu_on_repaint(menu, NULL);
+                    }
+                    else if (menu_explorer_state(&(menu->explorer)) == MENU_EXPLORER_STATE_NAVI) {
+                        // переход в режим навигации
+                    }
+                }
             }
             return;
         default:
@@ -500,4 +479,50 @@ void gui_menu_string_line_wrapping(painter_t* painter, const char* source, graph
     *dest = '\0';
     dest = start_dest;
     painter_draw_string(painter, orig_x, y, dest);
+}
+
+void gui_menu_param_value_to_string(param_t* param, char* str) {
+    int32_t value_int = 0;
+    uint32_t value_uint = 0;
+    fixed32_t value_fix = 0;
+    char mask[9];
+    int max = (int)settings_param_max(param).int_value;
+    int32_t den = 1;
+    int decim = 0;
+    while (den < max) {
+        decim++;
+        den *= 10;
+    }
+    switch (settings_param_type(param)) {
+        case PARAM_TYPE_INT:
+            value_int = settings_param_valuei(param);
+            snprintf(mask, 9, "%%0%dd", decim);
+            snprintf(str, 9, mask, (int)value_int);
+            break;
+        case PARAM_TYPE_UINT:
+            value_uint = settings_param_valueu(param);
+            snprintf(mask, 9, "%%0%dd", decim);
+            snprintf(str, 9, mask, (int)value_uint);
+            break;
+        case PARAM_TYPE_FRACT_10:
+            value_fix = settings_param_valuef(param);
+            snprintf(str, 9, "%d.%01d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 1));
+            break;
+        case PARAM_TYPE_FRACT_100:
+            value_fix = settings_param_valuef(param);
+            snprintf(str, 9, "%d.%02d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 2));
+            break;
+        case PARAM_TYPE_FRACT_1000:
+            value_fix = settings_param_valuef(param);
+            snprintf(str, 9, "%d.%03d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 3));
+            break;
+        case PARAM_TYPE_FRACT_10000:
+            value_fix = settings_param_valuef(param);
+            snprintf(str, 9, "%d.%04d", (int)fixed32_get_int(value_fix), gui_menu_get_f32_fract(value_fix, 4));
+            break;
+        default:
+            value_fix = settings_param_valuef(param);
+            snprintf(str, 9, "%d", (int)value_fix);
+            break;
+    }
 }

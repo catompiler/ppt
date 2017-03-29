@@ -706,7 +706,7 @@ err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_
     drive_modbus.apply_settings_callback = drive_modbus_is->apply_settings_callback;
     drive_modbus.save_settings_callback = drive_modbus_is->save_settings_callback;
     
-    drive_modbus_set_last_time();
+    drive_modbus.last_time = (uint32_t)time(NULL) - DRIVE_MODBUS_GUI_ICON_IDLE_SEC;
     
     modbus_rtu_set_read_coil_callback(drive_modbus.modbus, drive_modbus_on_read_coil);
     modbus_rtu_set_read_din_callback(drive_modbus.modbus, drive_modbus_on_read_din);

@@ -20,6 +20,7 @@
 #include "defs/defs.h"
 #include "../resources/resources_params.h"
 #include "../menu/menu_explorer.h"
+#include "../../settings.h"
 
 typedef struct _Gui_Menu gui_menu_t;
 
@@ -33,6 +34,8 @@ typedef struct _Gui_Menu gui_menu_t;
 #define GUI_MENU_TEXT_TOP_PAD 3
 #define GUI_MENU_TEXT_BOTTOM_PAD 3
 #define GUI_MENU_SCROLL_WIDTH 6
+
+#define GUI_MENU_SUBMENU_PREFIX "►"
 
 struct _Gui_Menu {
     gui_widget_t super; //!< Суперкласс.
@@ -126,5 +129,9 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
 void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height);
 
 void gui_menu_string_line_wrapping(painter_t* painter, const char* source, graphics_size_t sx, graphics_size_t sy, graphics_size_t width, graphics_size_t height);
+
+void gui_menu_value_to_str(param_t* param, char* str, size_t len);
+
+void gui_menu_param_value_to_string(param_t* param, char* str);
 
 #endif	/* GUI_MENU_H */

@@ -36,7 +36,7 @@ menu_item_t* menu_explorer_sel(menu_explorer_t* explorer)
 menu_item_t* menu_explorer_in(menu_explorer_t* explorer)
 {
     switch(explorer->state)   
-    {  
+    {
         case MENU_EXPLORER_STATE_NAVI:  
             return menu_explorer_navi_in(explorer);
             break;  
@@ -272,4 +272,66 @@ bool menu_explorer_is_selected(menu_explorer_t* explorer, menu_item_t* item)
 void menu_explorer_help_toggle(menu_explorer_t* explorer) 
 {
     menu_explorer_set_help_visible(explorer, !menu_explorer_help_visible(explorer));
+}
+
+menu_explorer_state_t menu_explorer_state(menu_explorer_t* explorer)
+{
+    return explorer->state;
+}
+
+bool menu_explorer_long_esc(menu_explorer_t* explorer)
+{
+    if (explorer->state == MENU_EXPLORER_STATE_EDIT) {
+        explorer->state = MENU_EXPLORER_STATE_NAVI;
+        return true;
+    }
+    else if (explorer->state == MENU_EXPLORER_STATE_NAVI) {
+        explorer->state = MENU_EXPLORER_STATE_HOME;
+        return true;
+    }
+    return false;
+}
+
+menu_item_t* menu_explorer_up(menu_explorer_t* explorer)
+{
+    switch(explorer->state)   
+    {  
+        case MENU_EXPLORER_STATE_NAVI:  
+            return menu_explorer_prev(explorer);
+            break;  
+        case MENU_EXPLORER_STATE_EDIT: 
+            //
+            break;  
+        default: 
+            break;  
+    }
+    return explorer->sel_object;
+}
+
+menu_item_t* menu_explorer_down(menu_explorer_t* explorer)
+{
+    switch(explorer->state)   
+    {  
+        case MENU_EXPLORER_STATE_NAVI:  
+            return menu_explorer_next(explorer);
+            break;  
+        case MENU_EXPLORER_STATE_EDIT: 
+            //
+            break;  
+        default: 
+            break;  
+    }
+    return explorer->sel_object;
+}
+
+bool menu_explorer_state_navi(menu_explorer_t* explorer) {
+    return explorer->state == MENU_EXPLORER_STATE_NAVI;
+}
+
+bool menu_explorer_state_edit(menu_explorer_t* explorer) {
+    return explorer->state == MENU_EXPLORER_STATE_EDIT;
+}
+
+bool menu_explorer_state_home(menu_explorer_t* explorer) {
+    return explorer->state == MENU_EXPLORER_STATE_HOME;
 }
