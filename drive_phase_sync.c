@@ -48,10 +48,10 @@
 #define PLL_PID_MAX_ANGLE 0xAA0000 // 170
 
 //! Число микросекунд в электрическом градусе.
-#define US_PER_GRAD (0x378E38) // 55.(5)
+#define US_PER_DEGREE (0x378E38) // 55.(5)
 
 //! Преобразование агла в микросекунды.
-#define ANGLE_TO_US(A) (fixed32_mul((int64_t)(A), US_PER_GRAD))
+#define ANGLE_TO_US(A) (fixed32_mul((int64_t)(A), US_PER_DEGREE))
 
 //! Угол в 120 градусов.
 #define ANGLE_120 (0x780000)

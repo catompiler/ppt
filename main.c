@@ -580,10 +580,12 @@ static void modbus_on_msg_recv(void)
     if(modbus_rtu_dispatch(&modbus) != E_NO_ERROR){
         modbus_rs485_set_input();
     }
+    drive_gui_modbus_set_last_time();
 }
 
 static void modbus_on_msg_sent(void)
 {
+    drive_gui_modbus_set_last_time();
 }
 
 /*

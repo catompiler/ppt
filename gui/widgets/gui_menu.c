@@ -307,6 +307,8 @@ void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t*
         
         if (note) {
             painter_set_font(painter, theme->small_font);
+            // painter_draw_string_wrap(painter, 5, y1 + 2, TR(note), width - 10);
+            // построчный вывод с разделением по словам
             gui_menu_string_line_wrapping(painter, TR(note), 5, y1 + 2, width - 10, height);
             painter_set_font(painter, theme->middle_font);
         }

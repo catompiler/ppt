@@ -65,4 +65,19 @@ extern void drive_gui_menu_on_home(gui_menu_t* menu);
  */
 extern void drive_gui_update_tile(gui_tile_t* tile, size_t value);
 
+/**
+ * Устанавливает последнее время обработки callback для отображения статуса в GUI
+ */
+extern void drive_gui_modbus_set_last_time();
+
+/**
+ * Статус обмена сообщениями по Modbus для GUI
+ */
+extern bool drive_gui_modbus_status_work(void);
+
+/**
+ * Статус простоя (ожидания) по Modbus для GUI
+ */
+extern bool drive_gui_modbus_status_idle(void);
+
 #endif /* DRIVE_GUI_H */

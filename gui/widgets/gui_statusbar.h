@@ -11,7 +11,7 @@
 #include "defs/defs.h"
 #include "gui_time.h"
 #include "drive.h"
-#include "drive_modbus.h"
+#include "drive_gui.h"
 #include "gui/resources/resources_colors.h"
 #include "gui/bitmaps/icons_statusbar.h"
 #include <stdint.h>
@@ -158,8 +158,8 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_YELLOW, NULL),
     
     // информация
-    GUI_ICON_CONDITION(drive_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
-    GUI_ICON_CONDITION(drive_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),
+    GUI_ICON_CONDITION(drive_gui_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
+    GUI_ICON_CONDITION(drive_gui_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),
          
 };
 
