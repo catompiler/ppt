@@ -17,6 +17,7 @@ typedef enum _Drive_Kpd_Upd_KbdState {
 //! Тип кейпада привода.
 typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
+    counter_t last_update_time; //!< Последнее время обновления клавиатуры.
     counter_t last_async_io_time; //!< Последнее время обмена данными с PCA9555.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
     drive_kpd_kbd_upd_state_t kbd_upd_state; //!< Состояние обновления клавиатуры.
@@ -39,6 +40,13 @@ static counter_t drive_keypad_io_timeout(void)
     return timeout;
 }
 
+static counter_t drive_keypad_update_timeout(void)
+{
+    static counter_t timeout = 0;
+    if(timeout == 0) timeout = system_counter_ticks_per_sec() >> 3; // 15 мс.
+    return timeout;
+}
+
 ALWAYS_INLINE static bool drive_keypad_async_io_done(void)
 {
     return pca9555_done(keypad.ioport);
@@ -52,6 +60,11 @@ ALWAYS_INLINE static err_t drive_keypad_async_io_error(void)
 ALWAYS_INLINE static bool drive_keypad_async_io_timeout(void)
 {
     return system_counter_diff(&keypad.last_async_io_time) >= drive_keypad_io_timeout();
+}
+
+ALWAYS_INLINE static bool drive_keypad_kbd_update_timeout(void)
+{
+    return system_counter_diff(&keypad.last_update_time) >= drive_keypad_update_timeout();
 }
 
 ALWAYS_INLINE static void drive_keypad_async_io_reset(void)
@@ -134,6 +147,7 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
     
     keypad.ioport = keypad_is->ioport;
     keypad.last_async_io_time = 0;
+    keypad.last_update_time = 0;
     keypad.kbd_need_update = true;
     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NONE;
     keypad.last_key_pressed_time = 0;
@@ -337,14 +351,15 @@ void drive_keypad_repeat(void)
     drive_keypad_update_repeat_time();
 }
 
-bool drive_keypad_update(void)
+/*
+static bool drive_keypad_update_async(void)
 {
     switch(keypad.kbd_upd_state){
         case DRIVE_KPD_KBD_UPD_NONE:
         case DRIVE_KPD_KBD_UPD_UPDATED:
             if(keypad.kbd_need_update == false) break;
             keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
-            keypad.kbd_need_update = false;
+            //keypad.kbd_need_update = false;
         case DRIVE_KPD_KBD_UPD_NEED_UPDATE:
             if(drive_keypad_try_safe_async(pca9555_read_pins_state) == E_NO_ERROR){
                 keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATING;
@@ -354,6 +369,7 @@ bool drive_keypad_update(void)
             if(drive_keypad_async_io_done()){
                 if(drive_keypad_async_io_error() == E_NO_ERROR){
                     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
+                    keypad.kbd_need_update = false;
                     return true;
                 }else{
                     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
@@ -366,4 +382,37 @@ bool drive_keypad_update(void)
     }
     
     return false;
+}
+*/
+
+static bool drive_keypad_update_sync(void)
+{
+    switch(keypad.kbd_upd_state){
+        case DRIVE_KPD_KBD_UPD_NONE:
+        case DRIVE_KPD_KBD_UPD_UPDATED:
+            if(drive_keypad_kbd_update_timeout()){
+                keypad.kbd_need_update = true;
+            }
+            if(keypad.kbd_need_update == false) break;
+            keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
+            //keypad.kbd_need_update = false;
+        case DRIVE_KPD_KBD_UPD_NEED_UPDATE:
+            if(drive_keypad_try_safe_sync(pca9555_read_pins_state) == E_NO_ERROR){
+                keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATING;
+            }else{
+                break;
+            }
+        case DRIVE_KPD_KBD_UPD_UPDATING:
+            keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
+            keypad.kbd_need_update = false;
+            keypad.last_update_time = system_counter_ticks();
+            return true;
+    }
+    
+    return false;
+}
+
+bool drive_keypad_update(void)
+{
+    return drive_keypad_update_sync();
 }
