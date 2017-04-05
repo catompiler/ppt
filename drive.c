@@ -1264,7 +1264,9 @@ static err_t drive_state_process_stop_error(void)
  */
 static err_t drive_state_process_start(void)
 {
-    drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
+    bool wait_exc_done = false;
+    
+    //drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
     
     drive_regulate();
     
@@ -1282,32 +1284,44 @@ static err_t drive_state_process_start(void)
             drive.iters_counter = 0;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            check_res = drive_protection_check_exc();
+            //check_res = drive_protection_check_exc();
             
-            if(drive_protection_is_normal(check_res) ||
-                    ( drive.iters_counter >= drive.settings.start_exc_iters &&
-                      drive_protection_is_allow(check_res) )){
+            //if(drive_protection_is_normal(check_res)){
+            if(drive_protection_item_allow(DRIVE_PROT_ITEM_WARN_UDF_Iexc) &&
+               drive_protection_power_item_stable(DRIVE_PROT_ITEM_WARN_UDF_Iexc)){
+                wait_exc_done = true;
+            }else{
+                if(drive.iters_counter >= drive.settings.start_exc_iters){
+                    //if(drive_protection_is_allow(check_res)){
+                    if(drive_protection_item_allow(DRIVE_PROT_ITEM_FAULT_UDF_Iexc) &&
+                       drive_protection_power_item_stable(DRIVE_PROT_ITEM_FAULT_UDF_Iexc)){
+                        wait_exc_done = true;
+                    }else{
+                        drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                        drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+                    }
+                }else{
+                    drive.iters_counter ++;
+                }
+            }
+            
+            if(wait_exc_done){
+                drive_protection_clear_power_item_error(DRIVE_PROT_ITEM_FAULT_UDF_Iexc);
+                drive_protection_clear_power_item_error(DRIVE_PROT_ITEM_WARN_UDF_Iexc);
                 drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
                 drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 drive_triacs_set_pairs_enabled(true);
                 drive_regulator_set_rot_enabled(true);
                 drive.starting_state = DRIVE_STARTING_RAMP;
                 drive.iters_counter = 0;
-            }else{
-                if(drive.iters_counter >= drive.settings.start_exc_iters){
-                        drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
-                        drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
-                }else{
-                    drive.iters_counter ++;
-                }
             }
             
             break;
         case DRIVE_STARTING_RAMP:
-            if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
+            //if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
                 drive.starting_state = DRIVE_STARTING_DONE;
                 drive_set_state(DRIVE_STATE_RUN);
-            }
+            //}
             break;
         case DRIVE_STARTING_DONE:
             drive_set_state(DRIVE_STATE_RUN);
