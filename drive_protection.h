@@ -281,6 +281,15 @@ extern bool drive_protection_check_item(drive_prot_index_t index, drive_power_wa
 extern bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors);
 
 /**
+ * Получает флаг стабильности состояния
+ * элемента защиты за время изменения состояния
+ * при выходе из допустимого диапазона.
+ * @param index Индекс элемента защиты.
+ * @return Флаг стабильности элемента защиты.
+ */
+extern bool drive_protection_power_item_stable(drive_prot_index_t index);
+
+/**
  * Очищает ошибки элементов защиты.
  * @param index Индекс элемента защиты.
  */
@@ -333,6 +342,7 @@ extern drive_power_warnings_t drive_protection_item_warning(drive_prot_index_t i
  */
 extern drive_power_errors_t drive_protection_item_error(drive_prot_index_t index);
 
+
 /*
  * Тепловая защита.
  * (Thermal Overload Protection).
@@ -363,6 +373,7 @@ extern bool drive_protection_top_ready(void);
  */
 extern drive_prot_action_t drive_protection_top_action(void);
 
+
 /*
  * Грибок.
  */
@@ -372,48 +383,214 @@ extern drive_prot_action_t drive_protection_top_action(void);
  */
 extern drive_prot_action_t drive_protection_emergency_stop_action(void);
 
+
 /*
- * Чередование фаз.
+ * Фазы.
+ */
+
+/*
+ * Время между срабатываниями датчиков нуля.
  */
 
 /**
- * Выполняет проверку последовательности фаз.
- * @return Флаг активации элемента защиты.
+ * Выполняет проверку последовательности фаз по времени между фазами.
+ * @return Флаг активации элемента защиты фаз по времени между фазами.
  */
-extern bool drive_protection_phases_check(void);
+extern bool drive_protection_phases_time_check(void);
 
 /**
- * Получает флаг допустимости значения защиты фаз.
- * @return Флаг допустимости значения защиты фаз.
+ * Получает флаг допустимости значения защиты фаз по времени между фазами.
+ * @return Флаг допустимости значения защиты фаз по времени между фазами.
  */
-extern bool drive_protection_phases_allow(void);
+extern bool drive_protection_phases_time_allow(void);
 
 /**
- * Получает флаг активности(срабатывания) защиты фаз.
- * @return Флаг активности(срабатывания) защиты фаз.
+ * Получает флаг активности(срабатывания) защиты фаз по времени между фазами.
+ * @return Флаг активности(срабатывания) защиты фаз по времени между фазами.
  */
-extern bool drive_protection_phases_active(void);
+extern bool drive_protection_phases_time_active(void);
 
 /**
- * Получает действие при срабатывании защиты фаз.
- * @return Действие при срабатывании защиты фаз.
+ * Получает действие при срабатывании защиты фаз по времени между фазами.
+ * @return Действие при срабатывании защиты фаз по времени между фазами.
  */
-extern drive_prot_action_t drive_protection_phases_action(void);
+extern drive_prot_action_t drive_protection_phases_time_action(void);
 
 /**
- * Очищает ошибки фаз.
+ * Очищает ошибки фаз по времени между фазами.
  */
-extern void drive_protection_clear_phases_errors(void);
+extern void drive_protection_clear_phases_time_errors(void);
 
 /**
- * Получает замаскированность (запрещение) проверки фаз.
+ * Получает замаскированность (запрещение) проверки фаз по времени между фазами.
  */
-extern bool drive_protection_phases_masked(void);
+extern bool drive_protection_phases_time_masked(void);
 
 /**
- * Устанавливает замаскированность (запрещение) проверки фаз.
+ * Устанавливает замаскированность (запрещение) проверки фаз по времени между фазами.
  */
-extern void drive_protection_phases_set_masked(bool masked);
+extern void drive_protection_phases_time_set_masked(bool masked);
+
+
+/*
+ * Угол между фазами.
+ */
+
+/*
+ * Ошибки.
+ */
+
+/**
+ * Выполняет проверку последовательности фаз по углу между фазами.
+ * @return Флаг активации элемента защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_fault_check(void);
+
+/**
+ * Получает флаг допустимости значения защиты фаз по углу между фазами.
+ * @return Флаг допустимости значения защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_fault_allow(void);
+
+/**
+ * Получает флаг активности(срабатывания) защиты фаз по углу между фазами.
+ * @return Флаг активности(срабатывания) защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_fault_active(void);
+
+/**
+ * Получает действие при срабатывании защиты фаз по углу между фазами.
+ * @return Действие при срабатывании защиты фаз по углу между фазами.
+ */
+extern drive_prot_action_t drive_protection_phases_angles_fault_action(void);
+
+/*
+ * Предупреждения.
+ */
+
+/**
+ * Выполняет проверку последовательности фаз по углу между фазами.
+ * @return Флаг активации элемента защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_warn_check(void);
+
+/**
+ * Получает флаг допустимости значения защиты фаз по углу между фазами.
+ * @return Флаг допустимости значения защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_warn_allow(void);
+
+/**
+ * Получает флаг активности(срабатывания) защиты фаз по углу между фазами.
+ * @return Флаг активности(срабатывания) защиты фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_warn_active(void);
+
+/**
+ * Получает действие при срабатывании защиты фаз по углу между фазами.
+ * @return Действие при срабатывании защиты фаз по углу между фазами.
+ */
+extern drive_prot_action_t drive_protection_phases_angles_warn_action(void);
+
+/*
+ * Сброс и маска.
+ */
+
+/**
+ * Очищает ошибки фаз по углу между фазами.
+ */
+extern void drive_protection_clear_phases_angles_errors(void);
+
+/**
+ * Получает замаскированность (запрещение) проверки фаз по углу между фазами.
+ */
+extern bool drive_protection_phases_angles_masked(void);
+
+/**
+ * Устанавливает замаскированность (запрещение) проверки фаз по углу между фазами.
+ */
+extern void drive_protection_phases_angles_set_masked(bool masked);
+
+
+/*
+ * Синхронизация с фазами.
+ */
+
+/*
+ * Ошибки.
+ */
+
+/**
+ * Выполняет проверку последовательности фаз по синхронизации с фазами.
+ * @return Флаг активации элемента защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_fault_check(void);
+
+/**
+ * Получает флаг допустимости значения защиты фаз по синхронизации с фазами.
+ * @return Флаг допустимости значения защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_fault_allow(void);
+
+/**
+ * Получает флаг активности(срабатывания) защиты фаз по синхронизации с фазами.
+ * @return Флаг активности(срабатывания) защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_fault_active(void);
+
+/**
+ * Получает действие при срабатывании защиты фаз по синхронизации с фазами.
+ * @return Действие при срабатывании защиты фаз по синхронизации с фазами.
+ */
+extern drive_prot_action_t drive_protection_phases_sync_fault_action(void);
+
+/*
+ * Предупреждения.
+ */
+
+/**
+ * Выполняет проверку последовательности фаз по синхронизации с фазами.
+ * @return Флаг активации элемента защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_warn_check(void);
+
+/**
+ * Получает флаг допустимости значения защиты фаз по синхронизации с фазами.
+ * @return Флаг допустимости значения защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_warn_allow(void);
+
+/**
+ * Получает флаг активности(срабатывания) защиты фаз по синхронизации с фазами.
+ * @return Флаг активности(срабатывания) защиты фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_warn_active(void);
+
+/**
+ * Получает действие при срабатывании защиты фаз по синхронизации с фазами.
+ * @return Действие при срабатывании защиты фаз по синхронизации с фазами.
+ */
+extern drive_prot_action_t drive_protection_phases_sync_warn_action(void);
+
+/*
+ * Сброс и маска.
+ */
+
+/**
+ * Очищает ошибки фаз по синхронизации с фазами.
+ */
+extern void drive_protection_clear_phases_sync_errors(void);
+
+/**
+ * Получает замаскированность (запрещение) проверки фаз по синхронизации с фазами.
+ */
+extern bool drive_protection_phases_sync_masked(void);
+
+/**
+ * Устанавливает замаскированность (запрещение) проверки фаз по синхронизации с фазами.
+ */
+extern void drive_protection_phases_sync_set_masked(bool masked);
+
 
 /*
  * Прочие проверки.

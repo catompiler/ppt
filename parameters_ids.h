@@ -191,12 +191,69 @@
 /*
  * Чередование фаз.
  */
+/*
+ * Время между фазами.
+ */
 //! Разрешение.
-#define PARAM_ID_PHASES_PROT_ENABLED 180
+#define PARAM_ID_PROT_PHASES_TIME_ENABLED 150
 //! Время отклонения, мс.
-#define PARAM_ID_PHASES_PROT_TIME_MS 181
+#define PARAM_ID_PROT_PHASES_TIME_TIME_MS 151
 //! Действие.
-#define PARAM_ID_PHASES_PROT_ACTION 182
+#define PARAM_ID_PROT_PHASES_TIME_ACTION 152
+/*
+ * Углы между фазами.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED 160
+//! Значение.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE 161
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS 162
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE 163
+//! Действие.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION 164
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED 170
+//! Значение.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE 171
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS 172
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE 173
+//! Действие.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION 174
+/*
+ * Синхронизация с фазами.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED 180
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS 182
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE 183
+//! Действие.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION 184
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED 190
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS 192
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE 193
+//! Действие.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION 194
 /*
  * Напряжение.
  */

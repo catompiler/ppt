@@ -82,6 +82,8 @@ typedef struct _Drive {
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
     drive_power_warnings_t power_warnings; //!< Предупреждения питания.
+    //drive_phase_angle_errors_t phase_angle_errors; //!< Ошибки углов между фазами.
+    //drive_phase_angle_warnings_t phase_angle_warnings; //!< Предупреждения углов между фазами.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
@@ -303,9 +305,13 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     }
     
     if(state_to == DRIVE_STATE_INIT){
-        drive_protection_phases_set_masked(true);
+        drive_protection_phases_time_set_masked(false);
+        drive_protection_phases_angles_set_masked(false);
+        drive_protection_phases_sync_set_masked(false);
     }else{
-        drive_protection_phases_set_masked(false);
+        drive_protection_phases_time_set_masked(true);
+        drive_protection_phases_angles_set_masked(true);
+        drive_protection_phases_sync_set_masked(true);
     }
 }
 
@@ -500,6 +506,47 @@ ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warni
 {
     return (drive.power_warnings & warning) == 0;
 }
+
+
+/**
+ * Установка ошибки углов между фазами.
+ * @param error Ошибка.
+ */
+/*static void drive_set_phase_angle_error(drive_phase_angle_errors_t error)
+{
+    drive.phase_angle_errors |= error;
+    drive_set_error(DRIVE_ERROR_PHASE_ANGLE);
+}*/
+
+/**
+ * Снятие ошибки углов между фазами.
+ * @param error Ошибка.
+ */
+/*static void drive_clear_phase_angle_error(drive_phase_angle_errors_t error)
+{
+    drive.phase_angle_errors &= ~error;
+    if(drive.phase_angle_errors == DRIVE_PHASE_ANGLE_NO_ERROR) drive_clear_error(DRIVE_ERROR_PHASE_ANGLE);
+}*/
+
+/**
+ * Установка предупреждения углов между фазами.
+ * @param warning Предупреждение.
+ */
+/*static void drive_set_phase_angle_warning(drive_phase_angle_warnings_t warning)
+{
+    drive.phase_angle_warnings |= warning;
+    drive_set_warning(DRIVE_WARNING_PHASE_ANGLE);
+}*/
+
+/**
+ * Снятие предупреждения углов между фазами.
+ * @param warning Предупреждение.
+ */
+/*static void drive_clear_phase_angle_warning(drive_phase_angle_warnings_t warning)
+{
+    drive.phase_angle_warnings &= ~warning;
+    if(drive.phase_angle_warnings == DRIVE_PHASE_ANGLE_NO_WARNING) drive_clear_warning(DRIVE_WARNING_PHASE_ANGLE);
+}*/
 
 /*
  * Обработка возникновения ошибки.
@@ -749,6 +796,7 @@ static drive_prot_action_t drive_prot_get_hard_action(drive_prot_action_t lact, 
     return ract;
 }
 
+
 /**
  * Проверяет значение входов питания.
  */
@@ -817,13 +865,51 @@ static void drive_check_prots(void)
             break;
     }
     
-    if(drive_protection_phases_check()){
+    // Время между фазами.
+    if(drive_protection_phases_time_check()){
         res_action = drive_prot_get_hard_action(res_action,
-                        drive_protection_phases_action());
+                        drive_protection_phases_time_action());
         drive_set_error(DRIVE_ERROR_PHASE);
-    }else if(!drive_protection_phases_active()){
+    }else if(!drive_protection_phases_time_active()){
         drive_clear_error(DRIVE_ERROR_PHASE);
     }
+    
+    // Ошибка углов между фазами.
+    if(drive_protection_phases_angles_fault_check()){
+        res_action = drive_prot_get_hard_action(res_action,
+                        drive_protection_phases_angles_fault_action());
+        drive_set_error(DRIVE_ERROR_PHASE_ANGLE);
+    }else if(!drive_protection_phases_angles_fault_active()){
+        drive_clear_error(DRIVE_ERROR_PHASE_ANGLE);
+    }
+    
+    // Предупреждение углов между фазами.
+    if(drive_protection_phases_angles_warn_check()){
+        res_action = drive_prot_get_hard_action(res_action,
+                        drive_protection_phases_angles_warn_action());
+        drive_set_warning(DRIVE_WARNING_PHASE_ANGLE);
+    }else if(!drive_protection_phases_angles_warn_active()){
+        drive_clear_warning(DRIVE_WARNING_PHASE_ANGLE);
+    }
+    
+    // Ошибка синхронизации с фазами.
+    if(drive_protection_phases_sync_fault_check()){
+        res_action = drive_prot_get_hard_action(res_action,
+                        drive_protection_phases_sync_fault_action());
+        drive_set_error(DRIVE_ERROR_PHASE_SYNC);
+    }else if(!drive_protection_phases_sync_fault_active()){
+        drive_clear_error(DRIVE_ERROR_PHASE_SYNC);
+    }
+    
+    // Предупреждение синхронизации с фазами.
+    if(drive_protection_phases_sync_warn_check()){
+        res_action = drive_prot_get_hard_action(res_action,
+                        drive_protection_phases_sync_warn_action());
+        drive_set_warning(DRIVE_WARNING_PHASE_SYNC);
+    }else if(!drive_protection_phases_sync_warn_active()){
+        drive_clear_warning(DRIVE_WARNING_PHASE_SYNC);
+    }
+    
     
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
@@ -1209,8 +1295,8 @@ static err_t drive_state_process_start(void)
                 drive.iters_counter = 0;
             }else{
                 if(drive.iters_counter >= drive.settings.start_exc_iters){
-                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
-                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+                        drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                        drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 }else{
                     drive.iters_counter ++;
                 }
@@ -1601,6 +1687,16 @@ drive_power_warnings_t drive_power_warnings(void)
     return drive.power_warnings;
 }
 
+/*drive_phase_angle_errors_t drive_phase_angle_errors(void)
+{
+    return drive.phase_angle_errors;
+}
+
+drive_phase_angle_warnings_t drive_phase_angle_warnings(void)
+{
+    return drive.phase_angle_warnings;
+}*/
+
 drive_init_state_t drive_init_state(void)
 {
     return drive.init_state;
@@ -1701,15 +1797,21 @@ void drive_clear_errors(void)
 {
     drive.errors = DRIVE_ERROR_NONE;
     drive.power_errors = DRIVE_POWER_ERROR_NONE;
+    drive.warnings = DRIVE_WARNING_NONE;
+    drive.power_warnings = DRIVE_POWER_WARNING_NONE;
+    
+    //drive.phase_angle_errors = DRIVE_PHASE_ANGLE_NO_ERROR;
+    //drive.phase_angle_warnings = DRIVE_PHASE_ANGLE_NO_WARNING;
+    
     drive_protection_clear_power_errors();
-    drive_protection_clear_phases_errors();
+    drive_phase_state_clear_errors();
+    drive_protection_clear_phases_time_errors();
+    drive_protection_clear_phases_angles_errors();
+    drive_protection_clear_phases_sync_errors();
     
     if(drive.state == DRIVE_STATE_ERROR){
         drive_set_state(DRIVE_STATE_INIT);
     }
-    
-    drive.warnings = DRIVE_WARNING_NONE;
-    drive.power_warnings = DRIVE_POWER_WARNING_NONE;
 }
 
 drive_error_callback_t drive_error_callback(void)

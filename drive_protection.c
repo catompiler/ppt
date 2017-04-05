@@ -5,7 +5,23 @@
 #include "drive_power.h"
 #include "drive_phase_state.h"
 #include "drive.h"
+#include "drive_phase_sync.h"
 //#include "defs/defs.h"
+
+
+
+//! Тип базового элемента защиты.
+typedef struct _Drive_Prot_Base_Item {
+    bool enabled; //!< Разрешение элемента защиты.
+    fixed32_t pie_inc; //!< Изменение накопления за итерацию.
+    fixed32_t pie; //!< Текущее значение накопления срабатывания защиты.
+    bool allow; //!< Флаг допустимого значение питания элемента защиты.
+    bool active; //!< Флаг активации элемента защиты (недопустимое значение элемента защиты).
+    bool latch_enabled; //!< Разрешение защёлки.
+    bool hold_value; //!< Значение защёлки.
+    drive_prot_action_t action; //!< Действие.
+} drive_prot_base_item_t;
+
 
 //! Перегруз по току, при котором задано время срабатывания.
 #define DRIVE_TOP_NOMINAL_OVERCURRENT 6
@@ -20,15 +36,29 @@ typedef struct _Drive_TOP {
 } drive_top_t;
 
 
-//! Структура защиты фаз.
-typedef struct _Drive_Protection_Phases {
-    bool enabled; //!< Разрешение элемента защиты.
-    fixed32_t pie_inc; //!< Изменение накопления за итерацию.
-    fixed32_t pie; //!< Текущее значение накопления срабатывания защиты.
-    bool active; //!< Флаг активации элемента защиты (недопустимое значение элемента защиты).
-    drive_prot_action_t action; //!< Действие.
+//! Структура защиты фаз по времени между датчиками нуля.
+typedef struct _Drive_Protection_Phases_Time {
+    drive_prot_base_item_t base_item; //!< Базовый элемент.
     bool masked; //!< Замаскированность.
-} drive_protection_phases_t;
+} drive_protection_phases_time_t;
+
+
+//! Структура защиты фаз по углу между фазами.
+typedef struct _Drive_Protection_Phases_Angle {
+    drive_prot_base_item_t fault_base_item; //!< Базовый элемент ошибки.
+    drive_prot_base_item_t warn_base_item; //!< Базовый элемент предупреждения.
+    fixed32_t fault_value; //!< Уровень срабатывания ошибки.
+    fixed32_t warn_value; //!< Уровень срабатывания предупреждения.
+    bool masked; //!< Замаскированность.
+} drive_protection_phases_angle_t;
+
+
+//! Структура защиты фаз по синхронизации с фазами.
+typedef struct _Drive_Protection_Phases_Sync {
+    drive_prot_base_item_t fault_base_item; //!< Базовый элемент ошибки.
+    drive_prot_base_item_t warn_base_item; //!< Базовый элемент предупреждения.
+    bool masked; //!< Замаскированность.
+} drive_protection_phases_sync_t;
 
 
 //! Тип сравнения значений защиты.
@@ -73,18 +103,11 @@ typedef struct _Drive_Prot_Descr {
 #define DRIVE_PROT_PIE_MAX 0x10000
 #define DRIVE_PROT_CALC_PIE_INC(time) (0x6aac1 / time) //6.667 * f32(1.0) / t_avail
 
-//! Тип элемента защиты.
-typedef struct _Drive_Prot_Item {
-    bool enabled; //!< Разрешение элемента защиты.
+//! Тип элемента защиты питания.
+typedef struct _Drive_Prot_Power_Item {
+    drive_prot_base_item_t base_item; //!< Базовый элемент защиты.
     fixed32_t value_level; //!< Значение уровня срабатывания защиты.
-    fixed32_t pie_inc; //!< Изменение накопления за итерацию.
-    fixed32_t pie; //!< Текущее значение накопления срабатывания защиты.
-    bool allow; //!< Флаг допустимого значение питания элемента защиты.
-    bool active; //!< Флаг активации элемента защиты (недопустимое значение элемента защиты).
-    bool latch_enabled; //!< Разрешение защёлки.
-    bool hold_value; //!< Значение защёлки.
-    drive_prot_action_t action; //!< Действие.
-} drive_protection_item_t;
+} drive_protection_power_item_t;
 
 
 #define DRIVE_PROT_ITEM_ALLOW_DEFAULT false
@@ -294,18 +317,126 @@ typedef struct _Drive_Protection {
     fixed32_t U_rot; //!< Номинальное напряжение якоря.
     fixed32_t I_rot; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
-    drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
+    drive_protection_power_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
     drive_power_errors_t prot_errs_mask; //!< Маска ошибок защиты.
     drive_power_warnings_t prot_warn_mask; //!< Маска предупреждений защиты.
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
-    drive_protection_phases_t prot_phases; //!< Защита фаз.
+    drive_protection_phases_time_t prot_phases_time; //!< Защита фаз по времени между датчиками нуля.
+    drive_protection_phases_angle_t prot_phases_angles; //!< Защита фаз по углу между фазами.
+    drive_protection_phases_sync_t prot_phases_sync; //!< Защита фаз по синхронизации с фазами.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
 } drive_protection_t;
 
 //! Структура защиты привода.
 static drive_protection_t drive_prot;
+
+
+/*
+ * Функционал базовых элементов защиты.
+ */
+
+static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
+                        param_id_t param_ena, param_id_t param_time, param_id_t param_latch_ena, param_id_t param_action)
+{
+    // Если отсутствует элемент - возврат.
+    if(item == NULL) return;
+    
+    // Разрешение элемента защиты.
+    if(param_ena != 0){
+        item->enabled = (bool)settings_valueu(param_ena);
+    }else{
+        item->enabled = false;
+    }
+    
+    // Если элемент запрещён.
+    if(!item->enabled){
+        // Сбросим накопление.
+        item->pie = 0;
+    }
+    // Если задан параметр допустимого времени отклонения.
+    if(param_time != 0){
+        // Допустимое время в мс.
+        uint32_t avail_time = settings_valueu(param_time);
+        // Если оно равно нулю - то будем реагировать сразу (максимальный инкремент), иначе вычислим приращение.
+        if(avail_time != 0){
+            item->pie_inc = DRIVE_PROT_CALC_PIE_INC(avail_time);
+        }else{
+            item->pie_inc = DRIVE_PROT_PIE_MAX;
+        }
+    }else{
+        // По-умолчанию - максимальное приращение.
+        item->pie_inc = DRIVE_PROT_PIE_MAX;
+    }
+    // Разрешение защёлки.
+    if(param_latch_ena != 0){
+        item->latch_enabled = (bool)settings_valueu(param_latch_ena);
+    }else{
+        item->latch_enabled = false;
+    }
+    // Если запрещён элемент или защёлка.
+    if(!item->enabled || !item->latch_enabled){
+        // Сбросим значение защёлки.
+        item->hold_value = false;
+    }
+    // Действие при срабатывании элемента защиты.
+    if(param_action != 0){
+        item->action = settings_valueu(param_action);
+    }else{
+        item->action = DRIVE_PROT_ACTION_IGNORE;
+    }
+}
+
+static bool drive_prot_check_base_item(drive_prot_base_item_t* item, bool masked, bool valid)
+{
+    if(!valid){
+        item->pie += item->pie_inc;
+        
+        if(item->pie >= DRIVE_PROT_PIE_MAX){
+            item->pie = DRIVE_PROT_PIE_MAX;
+            
+            if(masked){
+                item->active = true;
+
+                if(item->latch_enabled){
+                    item->hold_value = true;
+                }
+            }else{
+                if(item->latch_enabled){
+                    item->active = item->hold_value;
+                }else{
+                    item->active = false;
+                }
+            }
+        }
+        
+        item->allow = false;
+        
+    }else{ // value is normal
+        item->pie -= item->pie_inc;
+        
+        if(item->pie < 0) item->pie = 0;
+        
+        if(item->latch_enabled){
+            item->active = item->hold_value;
+        }else{
+            item->active = false;
+        }
+        
+        item->allow = true;
+    }
+    
+    return item->active;
+}
+
+static void drive_prot_base_item_reset(drive_prot_base_item_t* base_item)
+{
+    base_item->active = DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
+    base_item->allow = DRIVE_PROT_ITEM_ALLOW_DEFAULT;
+    base_item->hold_value = false;
+    base_item->pie = 0;
+}
 
 
 bool drive_protection_init(void)
@@ -315,7 +446,7 @@ bool drive_protection_init(void)
     return true;
 }
 
-ALWAYS_INLINE static drive_protection_item_t* drive_protection_get_prot_item(drive_prot_index_t index)
+ALWAYS_INLINE static drive_protection_power_item_t* drive_protection_get_prot_item(drive_prot_index_t index)
 {
     return &drive_prot.prot_items[index];
 }
@@ -346,12 +477,13 @@ static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
     if(index >= DRIVE_PROT_ITEMS_COUNT) return;
     
     // Элемент защиты.
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     // Дескриптор элемента защиты.
     const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
     
-    // Разрешение элемента защиты.
-    item->enabled = (bool)settings_valueu(descr->param_ena);
+    drive_prot_update_base_item_settings(&item->base_item,
+            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action);
+    
     // Значение уровня элемента защиты.
     fixed32_t ref_val = 0;
     // Если задано опорное значение.
@@ -376,34 +508,6 @@ static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
             item->value_level = settings_valuef(descr->param_level);
             break;
     }
-    // Если элемент запрещён.
-    if(!item->enabled){
-        // Сбросим накопление.
-        item->pie = 0;
-    }
-    // Если задан параметр допустимого времени отклонения.
-    if(descr->param_time != 0){
-        // Допустимое время в мс.
-        uint32_t avail_time = settings_valueu(descr->param_time);
-        // Если оно равно нулю - то будем реагировать сразу (максимальный инкремент), иначе вычислим приращение.
-        if(avail_time != 0){
-            item->pie_inc = DRIVE_PROT_CALC_PIE_INC(avail_time);
-        }else{
-            item->pie_inc = DRIVE_PROT_PIE_MAX;
-        }
-    }else{
-        // По-умолчанию - максимальное приращение.
-        item->pie_inc = DRIVE_PROT_PIE_MAX;
-    }
-    // Разрешение защёлки.
-    item->latch_enabled = (bool)settings_valueu(descr->param_latch_ena);
-    // Если запрещён элемент или защёлка.
-    if(!item->enabled || !item->latch_enabled){
-        // Сбросим значение защёлки.
-        item->hold_value = false;
-    }
-    // Действие при срабатывании элемента защиты.
-    item->action = settings_valueu(descr->param_action);
 }
 
 /**
@@ -439,30 +543,41 @@ static void drive_protection_update_top_settings(void)
 }
 
 /**
- * Обновляет настройки защиты фаз.
+ * Обновляет настройки защиты фаз по времени между фазами.
  */
-static void drive_protection_update_phases_prot_settings(void)
+static void drive_protection_update_phases_time_prot_settings(void)
 {
-    // Разрешение.
-    drive_prot.prot_phases.enabled = (bool)settings_valueu(PARAM_ID_PHASES_PROT_ENABLED);
+    drive_prot_update_base_item_settings(&drive_prot.prot_phases_time.base_item,
+            PARAM_ID_PROT_PHASES_TIME_ENABLED, PARAM_ID_PROT_PHASES_TIME_TIME_MS, 0, PARAM_ID_PROT_PHASES_TIME_ACTION);
+}
+
+/**
+ * Обновляет настройки защиты фаз по углу между фазами.
+ */
+static void drive_protection_update_phases_angles_prot_settings(void)
+{
+    drive_prot_update_base_item_settings(&drive_prot.prot_phases_angles.fault_base_item,
+            PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS,
+            PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION);
+    drive_prot_update_base_item_settings(&drive_prot.prot_phases_angles.warn_base_item,
+            PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS,
+            PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION);
     
-    // Если элемент запрещён.
-    if(drive_prot.prot_phases.enabled){
-        // Сбросим накопление.
-        drive_prot.prot_phases.pie = 0;
-    }
-    
-    // Допустимое время в мс.
-    uint32_t avail_time = settings_valueu(PARAM_ID_PHASES_PROT_TIME_MS);
-    // Если оно равно нулю - то будем реагировать сразу (максимальный инкремент), иначе вычислим приращение.
-    if(avail_time != 0){
-        drive_prot.prot_phases.pie_inc = DRIVE_PROT_CALC_PIE_INC(avail_time);
-    }else{
-        drive_prot.prot_phases.pie_inc = DRIVE_PROT_PIE_MAX;
-    }
-    
-    // Действие.
-    drive_prot.prot_phases.action = settings_valueu(PARAM_ID_PHASES_PROT_ACTION);
+    drive_prot.prot_phases_angles.fault_value = settings_valuef(PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE);
+    drive_prot.prot_phases_angles.warn_value = settings_valuef(PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE);
+}
+
+/**
+ * Обновляет настройки защиты фаз по синхронизации с фазами.
+ */
+static void drive_protection_update_phases_sync_prot_settings(void)
+{
+    drive_prot_update_base_item_settings(&drive_prot.prot_phases_sync.fault_base_item,
+            PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS,
+            PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION);
+    drive_prot_update_base_item_settings(&drive_prot.prot_phases_sync.warn_base_item,
+            PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS,
+            PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION);
 }
 
 void drive_protection_update_settings(void)
@@ -474,7 +589,11 @@ void drive_protection_update_settings(void)
     
     drive_protection_update_top_settings();
     
-    drive_protection_update_phases_prot_settings();
+    drive_protection_update_phases_time_prot_settings();
+    
+    drive_protection_update_phases_angles_prot_settings();
+    
+    drive_protection_update_phases_sync_prot_settings();
     
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     
@@ -562,35 +681,99 @@ void drive_protection_reset_cutoff_warn_mask_flags(drive_power_warnings_t warn_f
 }
 
 /**
- * Выполняет проверку защиты фаз.
- * @param item Элемент.
- * @param descr Дескриптор.
- * @param warnings Предупреждения.
- * @param errors Ошибки.
- * @return Флаг нахождения элемента защиты в допустимом диапазоне.
+ * Выполняет проверку защиты фаз по времени между фазами.
+ * @return Флаг срабатывания элемента защиты.
  */
 static bool drive_protection_check_phases_errors(void)
 {
-    if(!drive_prot.prot_phases.enabled || drive_prot.prot_phases.masked) return false;
+    if(!drive_prot.prot_phases_time.base_item.enabled) return false;
     
-    if(drive_phase_state_errors() != PHASE_NO_ERROR){
-        drive_prot.prot_phases.pie += drive_prot.prot_phases.pie_inc;
-        
-        if(drive_prot.prot_phases.pie >= DRIVE_PROT_PIE_MAX){
-            drive_prot.prot_phases.pie = DRIVE_PROT_PIE_MAX;
+    drive_prot_check_base_item(&drive_prot.prot_phases_time.base_item,
+                drive_prot.prot_phases_time.masked, drive_phase_state_errors() == PHASE_NO_ERROR);
+    
+    return drive_prot.prot_phases_time.base_item.active;
+}
 
-            drive_prot.prot_phases.active = true;
-        }
-        
-    }else{ // no error
-        drive_prot.prot_phases.pie -= drive_prot.prot_phases.pie_inc;
-        
-        if(drive_prot.prot_phases.pie < 0) drive_prot.prot_phases.pie = 0;
-        
-        drive_prot.prot_phases.active = false;
-    }
+/**
+ * Выполняет проверку уровня ошибки защиты фаз по углу между фазами.
+ * @return Флаг срабатывания элемента защиты.
+ */
+static bool drive_protection_check_phases_angles_fault(void)
+{
+    if(!drive_prot.prot_phases_angles.fault_base_item.enabled) return false;
     
-    return drive_prot.prot_phases.active;
+    fixed32_t angle = 0;
+    
+    bool valid = true;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_A); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_B); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_C); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
+    
+    drive_prot_check_base_item(&drive_prot.prot_phases_angles.fault_base_item,
+                drive_prot.prot_phases_angles.masked, valid);
+    
+    return drive_prot.prot_phases_angles.fault_base_item.active;
+}
+
+/**
+ * Выполняет проверку уровня предупреждения защиты фаз по углу между фазами.
+ * @return Флаг срабатывания элемента защиты.
+ */
+static bool drive_protection_check_phases_angles_warning(void)
+{
+    if(!drive_prot.prot_phases_angles.warn_base_item.enabled) return false;
+    
+    fixed32_t angle = 0;
+    
+    bool valid = true;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_A); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_B); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_C); angle = fixed_abs(angle);
+    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
+    
+    drive_prot_check_base_item(&drive_prot.prot_phases_angles.warn_base_item,
+                drive_prot.prot_phases_angles.masked, valid);
+    
+    return drive_prot.prot_phases_angles.warn_base_item.active;
+}
+
+/**
+ * Выполняет проверку уровня ошибки защиты фаз по синхронизации с фазами.
+ * @return Флаг срабатывания элемента защиты.
+ */
+static bool drive_protection_check_phases_sync_fault(void)
+{
+    if(!drive_prot.prot_phases_sync.fault_base_item.enabled) return false;
+    
+    drive_prot_check_base_item(&drive_prot.prot_phases_sync.fault_base_item,
+                drive_prot.prot_phases_sync.masked, drive_phase_sync_synchronized());
+    
+    return drive_prot.prot_phases_sync.fault_base_item.active;
+}
+
+/**
+ * Выполняет проверку уровня предупреждения защиты фаз по синхронизации с фазами.
+ * @return Флаг срабатывания элемента защиты.
+ */
+static bool drive_protection_check_phases_sync_warning(void)
+{
+    if(!drive_prot.prot_phases_sync.warn_base_item.enabled) return false;
+    
+    drive_prot_check_base_item(&drive_prot.prot_phases_sync.warn_base_item,
+                drive_prot.prot_phases_sync.masked, drive_phase_sync_synchronized());
+    
+    return drive_prot.prot_phases_sync.warn_base_item.active;
 }
 
 /**
@@ -598,14 +781,14 @@ static bool drive_protection_check_phases_errors(void)
  * @param type Тип элемента защиты.
  * @param value Значение элемента защиты.
  * @param level Уровень элемента защиты.
- * @return Флаг выхода значения элемента защиты за допустимые пределы.
+ * @return Флаг нахождения значения элемента защиты в допустимом диапазоне.
  */
 ALWAYS_INLINE static bool drive_protection_check_item_value(drive_protection_type_t type, fixed32_t value, fixed32_t level)
 {
     if(type != DRIVE_PROT_TYPE_UDF){
-        return value > level;
+        return value <= level;
     }else{
-        return value < level;
+        return value >= level;
     }
 }
 
@@ -638,50 +821,17 @@ static bool drive_protection_item_masked_impl(const drive_protection_descr_t* de
  * @param errors Ошибки.
  * @return Флаг нахождения элемента защиты в допустимом диапазоне.
  */
-static bool drive_protection_check_item_real(drive_protection_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+static bool drive_protection_check_power_item_real(drive_protection_power_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     bool masked = drive_protection_item_masked_impl(descr);
     
     fixed32_t value = drive_power_channel_real_value(descr->power_channel);
     
-    if(drive_protection_check_item_value(descr->type, value, item->value_level)){
-        item->pie += item->pie_inc;
-        
-        if(item->pie >= DRIVE_PROT_PIE_MAX){
-            item->pie = DRIVE_PROT_PIE_MAX;
-            
-            if(masked){
-                item->active = true;
-
-                if(item->latch_enabled){
-                    item->hold_value = true;
-                }
-            }else{
-                if(item->latch_enabled){
-                    item->active = item->hold_value;
-                }else{
-                    item->active = false;
-                }
-            }
-        }
-        
-        item->allow = false;
-        
-    }else{ // value is normal
-        item->pie -= item->pie_inc;
-        
-        if(item->pie < 0) item->pie = 0;
-        
-        if(item->latch_enabled){
-            item->active = item->hold_value;
-        }else{
-            item->active = false;
-        }
-        
-        item->allow = true;
-    }
+    bool valid = drive_protection_check_item_value(descr->type, value, item->value_level);
     
-    if(item->active){
+    drive_prot_check_base_item(&item->base_item, masked, valid);
+    
+    if(item->base_item.active){
         if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
             if(warnings) (*warnings) |= descr->flag;
         }else{ // DRIVE_PROT_TYPE_ERR
@@ -689,7 +839,7 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
         }
     }
     
-    return item->active;
+    return item->base_item.active;
 }
 
 /**
@@ -700,15 +850,15 @@ static bool drive_protection_check_item_real(drive_protection_item_t* item, cons
  * @param errors Ошибки.
  * @return Флаг нахождения элемента защиты в допустимом диапазоне.
  */
-static bool drive_protection_check_item_inst(drive_protection_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+static bool drive_protection_check_power_item_inst(drive_protection_power_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     bool masked = drive_protection_item_masked_impl(descr);
     
     fixed32_t value = drive_power_channel_real_value_inst(descr->power_channel);
     
-    if(drive_protection_check_item_value(descr->type, value, item->value_level)){
+    if(!drive_protection_check_item_value(descr->type, value, item->value_level)){
         
-        item->allow = false;
+        item->base_item.allow = false;
         
         if(masked){
             if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
@@ -716,35 +866,35 @@ static bool drive_protection_check_item_inst(drive_protection_item_t* item, cons
             }else{ // DRIVE_PROT_TYPE_ERR
                 if(errors) (*errors) |= descr->flag;
             }
-            item->active = true;
+            item->base_item.active = true;
         }else{
-            item->active = false;
+            item->base_item.active = false;
         }
     }else{
-        item->allow = true;
-        item->active = false;
+        item->base_item.allow = true;
+        item->base_item.active = false;
     }
     
-    return item->active;
+    return item->base_item.active;
 }
 
 bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
     
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     
-    if(!item->enabled) return false;
+    if(!item->base_item.enabled) return false;
     
     const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
     
-    bool prev_active = item->active;
+    bool prev_active = item->base_item.active;
     bool new_active = false;
     
     if(descr->type != DRIVE_PROT_TYPE_CUT){//fault || warn
-        new_active = drive_protection_check_item_real(item, descr, warnings, errors);
+        new_active = drive_protection_check_power_item_real(item, descr, warnings, errors);
     }else{//cutoff
-        new_active = drive_protection_check_item_inst(item, descr, warnings, errors);
+        new_active = drive_protection_check_power_item_inst(item, descr, warnings, errors);
     }
     
     return (prev_active == false) && new_active;
@@ -764,15 +914,26 @@ bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t 
     return res;
 }
 
+bool drive_protection_power_item_stable(drive_prot_index_t index)
+{
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+    
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    
+    if(item->base_item.allow && item->base_item.pie == 0) return true;
+    
+    if(!item->base_item.allow && item->base_item.pie == DRIVE_PROT_PIE_MAX) return true;
+    
+    return false;
+}
+
 void drive_protection_clear_power_item_error(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return;
     
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     
-    item->active = DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
-    item->allow = DRIVE_PROT_ITEM_ALLOW_DEFAULT;
-    item->hold_value = false;
+    drive_prot_base_item_reset(&item->base_item);
 }
 
 void drive_protection_clear_power_errors(void)
@@ -787,9 +948,9 @@ drive_prot_action_t drive_protection_item_action(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ACTION_IGNORE;
     
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     
-    return item->action;
+    return item->base_item.action;
 }
 
 bool drive_protection_item_masked(drive_prot_index_t index)
@@ -805,20 +966,20 @@ bool drive_protection_item_allow(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ALLOW_DEFAULT;
     
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     
-    if(!item->enabled) return true;
+    if(!item->base_item.enabled) return true;
     
-    return item->allow;
+    return item->base_item.allow;
 }
 
 bool drive_protection_item_active(drive_prot_index_t index)
 {
     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
     
-    drive_protection_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
     
-    return item->active;
+    return item->base_item.active;
 }
 
  drive_power_warnings_t drive_protection_item_warning(drive_prot_index_t index)
@@ -899,52 +1060,175 @@ drive_prot_action_t drive_protection_emergency_stop_action(void)
 }
 
 
-bool drive_protection_phases_check(void)
+bool drive_protection_phases_time_check(void)
 {
-    bool prev_active = drive_prot.prot_phases.active;
+    bool prev_active = drive_prot.prot_phases_time.base_item.active;
     bool new_active = drive_protection_check_phases_errors();
     
     return (prev_active == false) && new_active;
 }
 
-bool drive_protection_phases_allow(void)
+bool drive_protection_phases_time_allow(void)
 {
-    return drive_phase_state_errors() == PHASE_NO_ERROR;
+    return drive_prot.prot_phases_time.base_item.allow;
 }
 
-bool drive_protection_phases_active(void)
+bool drive_protection_phases_time_active(void)
 {
-    return drive_prot.prot_phases.active;
+    return drive_prot.prot_phases_time.base_item.active;
 }
 
-drive_prot_action_t drive_protection_phases_action(void)
+drive_prot_action_t drive_protection_phases_time_action(void)
 {
-    return drive_prot.prot_phases.action;
+    return drive_prot.prot_phases_time.base_item.action;
 }
 
-void drive_protection_clear_phases_errors(void)
+void drive_protection_clear_phases_time_errors(void)
 {
-    drive_phase_state_clear_errors();
+    drive_prot_base_item_reset(&drive_prot.prot_phases_time.base_item);
+}
+
+bool drive_protection_phases_time_masked(void)
+{
+    return drive_prot.prot_phases_time.masked;
+}
+
+void drive_protection_phases_time_set_masked(bool masked)
+{
+    drive_prot.prot_phases_time.masked = masked;
+}
+
+
+bool drive_protection_phases_angles_fault_check(void)
+{
+    bool prev_active = drive_prot.prot_phases_angles.fault_base_item.active;
+    bool new_active = drive_protection_check_phases_angles_fault();
     
-    drive_prot.prot_phases.action = false;
-    drive_prot.prot_phases.pie = 0;
+    return (prev_active == false) && new_active;
 }
 
-bool drive_protection_phases_masked(void)
+bool drive_protection_phases_angles_fault_allow(void)
 {
-    return drive_prot.prot_phases.masked;
+    return drive_prot.prot_phases_angles.fault_base_item.allow;
 }
 
-void drive_protection_phases_set_masked(bool masked)
+bool drive_protection_phases_angles_fault_active(void)
 {
-    drive_prot.prot_phases.masked = masked;
+    return drive_prot.prot_phases_angles.fault_base_item.active;
+}
+
+drive_prot_action_t drive_protection_phases_angles_fault_action(void)
+{
+    return drive_prot.prot_phases_angles.fault_base_item.action;
+}
+
+bool drive_protection_phases_angles_warn_check(void)
+{
+    bool prev_active = drive_prot.prot_phases_angles.warn_base_item.active;
+    bool new_active = drive_protection_check_phases_angles_warning();
+    
+    return (prev_active == false) && new_active;
+}
+
+bool drive_protection_phases_angles_warn_allow(void)
+{
+    return drive_prot.prot_phases_angles.warn_base_item.allow;
+}
+
+bool drive_protection_phases_angles_warn_active(void)
+{
+    return drive_prot.prot_phases_angles.warn_base_item.active;
+}
+
+drive_prot_action_t drive_protection_phases_angles_warn_action(void)
+{
+    return drive_prot.prot_phases_angles.warn_base_item.action;
+}
+
+void drive_protection_clear_phases_angles_errors(void)
+{
+    drive_prot_base_item_reset(&drive_prot.prot_phases_angles.fault_base_item);
+    drive_prot_base_item_reset(&drive_prot.prot_phases_angles.warn_base_item);
+}
+
+bool drive_protection_phases_angles_masked(void)
+{
+    return drive_prot.prot_phases_angles.masked;
+}
+
+void drive_protection_phases_angles_set_masked(bool masked)
+{
+    drive_prot.prot_phases_angles.masked = masked;
+}
+
+
+bool drive_protection_phases_sync_fault_check(void)
+{
+    bool prev_active = drive_prot.prot_phases_sync.fault_base_item.active;
+    bool new_active = drive_protection_check_phases_sync_fault();
+    
+    return (prev_active == false) && new_active;
+}
+
+bool drive_protection_phases_sync_fault_allow(void)
+{
+    return drive_prot.prot_phases_sync.fault_base_item.allow;
+}
+
+bool drive_protection_phases_sync_fault_active(void)
+{
+    return drive_prot.prot_phases_sync.fault_base_item.active;
+}
+
+drive_prot_action_t drive_protection_phases_sync_fault_action(void)
+{
+    return drive_prot.prot_phases_sync.fault_base_item.action;
+}
+
+bool drive_protection_phases_sync_warn_check(void)
+{
+    bool prev_active = drive_prot.prot_phases_sync.warn_base_item.active;
+    bool new_active = drive_protection_check_phases_sync_warning();
+    
+    return (prev_active == false) && new_active;
+}
+
+bool drive_protection_phases_sync_warn_allow(void)
+{
+    return drive_prot.prot_phases_sync.warn_base_item.allow;
+}
+
+bool drive_protection_phases_sync_warn_active(void)
+{
+    return drive_prot.prot_phases_sync.warn_base_item.active;
+}
+
+drive_prot_action_t drive_protection_phases_sync_warn_action(void)
+{
+    return drive_prot.prot_phases_sync.warn_base_item.action;
+}
+
+void drive_protection_clear_phases_sync_errors(void)
+{
+    drive_prot_base_item_reset(&drive_prot.prot_phases_sync.fault_base_item);
+    drive_prot_base_item_reset(&drive_prot.prot_phases_sync.warn_base_item);
+}
+
+bool drive_protection_phases_sync_masked(void)
+{
+    return drive_prot.prot_phases_sync.masked;
+}
+
+void drive_protection_phases_sync_set_masked(bool masked)
+{
+    drive_prot.prot_phases_sync.masked = masked;
 }
 
 
 bool drive_protection_is_normal(drive_pwr_check_res_t check_res)
 {
-    if(check_res != DRIVE_PWR_CHECK_NORMAL) return false;
-    return true;
+    if(check_res == DRIVE_PWR_CHECK_NORMAL) return true;
+    return false;
 }
 
 bool drive_protection_is_allow(drive_pwr_check_res_t check_res)
