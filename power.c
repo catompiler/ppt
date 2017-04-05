@@ -93,7 +93,7 @@ err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_
     memset(value, 0x0, sizeof(power_value_t));
     
     value->type = type;
-    value->k = k;
+    value->adc_mult = k;
     
     return E_NO_ERROR;
 }
@@ -181,7 +181,7 @@ static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc
         // Мгновенное сырое значение канала АЦП.
         channel->raw_value_inst = value;
         // Мгновенное реальное значение канала АЦП.
-        channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->k;
+        channel->real_value_inst = (fixed32_t)channel->raw_value_inst * channel->adc_mult;
 
         // Увеличим число измерений значений.
         channel->count ++;
@@ -282,11 +282,15 @@ static void power_channel_calc(power_value_t* channel)
         channel->raw_value = value;
     }
     
+    fixed32_t real_val = 0;
+    
     if(!channel->is_soft){
-        channel->real_value = (fixed32_t)channel->raw_value * channel->k;
+        real_val = (fixed32_t)channel->raw_value * channel->adc_mult;
     }else{
-        channel->real_value = power_value_raw_to_soft(channel->raw_value);
+        real_val = power_value_raw_to_soft(channel->raw_value);
     }
+    
+    channel->real_value = fixed32_mul((int64_t)real_val, channel->value_mult);
     
     channel->data_avail = true;
 }

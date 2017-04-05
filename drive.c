@@ -617,11 +617,11 @@ static void drive_power_warning_occured(drive_power_warnings_t warning)
 /**
  * Обработчик возникновения ошибки фаз.
  */
-static void drive_on_phase_error_occured(void)
+/*static void drive_on_phase_error_occured(void)
 {
     if(drive.state != DRIVE_STATE_INIT)
         drive_error_occured(DRIVE_ERROR_PHASE);
-}
+}*/
 
 /**
  * Прекращает подачу питания на двигатель.
@@ -1000,17 +1000,17 @@ static void drive_update_power_parameters(void)
  */
 static void drive_update_clibration_parameters(void)
 {
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ua, DRIVE_POWER_Ua);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ub, DRIVE_POWER_Ub);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Uc, DRIVE_POWER_Uc);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Urot, DRIVE_POWER_Urot);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ia, DRIVE_POWER_Ia);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ib, DRIVE_POWER_Ib);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ic, DRIVE_POWER_Ic);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Irot, DRIVE_POWER_Irot);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iexc, DRIVE_POWER_Iexc);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iref, DRIVE_POWER_Iref);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ifan, DRIVE_POWER_Ifan);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ua, DRIVE_POWER_Ua);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ub, DRIVE_POWER_Ub);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Uc, DRIVE_POWER_Uc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Urot, DRIVE_POWER_Urot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ia, DRIVE_POWER_Ia);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ib, DRIVE_POWER_Ib);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ic, DRIVE_POWER_Ic);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Irot, DRIVE_POWER_Irot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Iexc, DRIVE_POWER_Iexc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Iref, DRIVE_POWER_Iref);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ifan, DRIVE_POWER_Ifan);
 }
 
 /**
@@ -1498,7 +1498,7 @@ err_t drive_init(void)
     drive_phase_sync_set_angle_callback(drive_get_null_timer_angle);
     
     drive_phase_state_init();
-    drive_phase_state_set_error_callback(drive_on_phase_error_occured);
+    //drive_phase_state_set_error_callback(drive_on_phase_error_occured);
     
     drive_regulator_init();
     
@@ -1576,6 +1576,30 @@ err_t drive_update_settings(void)
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
     
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ua));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ub));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Uc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Urot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ia));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ib));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ic));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Irot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iref));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan));
+    
+    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ua));
+    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ub));
+    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Uc));
+    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Urot));
+    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ia));
+    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ib));
+    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ic));
+    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Irot));
+    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iexc));
+    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iref));
+    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ifan));
+    
     drive_power_set_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ua));
     drive_power_set_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ub));
     drive_power_set_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Uc));
@@ -1587,18 +1611,6 @@ err_t drive_update_settings(void)
     drive_power_set_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iexc));
     drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
     drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
-    
-    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ua));
-    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ub));
-    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Uc));
-    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Urot));
-    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ia));
-    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ib));
-    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ic));
-    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Irot));
-    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iexc));
-    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iref));
-    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ifan));
     
     drive_dio_input_setup(DRIVE_DIO_INPUT_1, settings_valueu(PARAM_ID_DIGITAL_IN_1_TYPE),
                                              settings_valueu(PARAM_ID_DIGITAL_IN_1_INVERSION));

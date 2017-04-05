@@ -282,14 +282,14 @@ extern err_t drive_power_calibrate(power_channels_t channels);
  * @param channel Номер канала АЦП.
  * @return Множитель значения канала АЦП.
  */
-extern fixed32_t drive_power_value_multiplier(size_t channel);
+extern fixed32_t drive_power_adc_value_multiplier(size_t channel);
 
 /**
  * Устанавливает множитель значения канала АЦП.
  * @param channel Номер канала АЦП.
  * @param data Множитель значения канала АЦП.
  */
-extern void drive_power_set_value_multiplier(size_t channel, fixed32_t mult);
+extern void drive_power_set_adc_value_multiplier(size_t channel, fixed32_t mult);
 
 /**
  * Получает калибровочные данные канала АЦП.
@@ -304,6 +304,20 @@ extern uint16_t drive_power_calibration_data(size_t channel);
  * @param data Калибровочные данные канала АЦП.
  */
 extern void drive_power_set_calibration_data(size_t channel, uint16_t data);
+
+/**
+ * Получает множитель значения канала.
+ * @param channel Номер канала.
+ * @return Множитель значения канала.
+ */
+extern fixed32_t drive_power_value_multiplier(size_t channel);
+
+/**
+ * Устанавливает множитель значения канала.
+ * @param channel Номер канала.
+ * @param data Множитель значения канала.
+ */
+extern void drive_power_set_value_multiplier(size_t channel, fixed32_t mult);
 
 /**
  * Получает тип канала питания.

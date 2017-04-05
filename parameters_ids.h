@@ -633,100 +633,147 @@
  * АЦП.
  */
 /*
- * Коэффициенты.
+ * Коэффициенты АЦП.
  */
 /**
  * Множитель данных канала АЦП Ua.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ua 500
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ua 500
 /**
  * Множитель данных канала АЦП Ub.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ub 501
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ub 501
 /**
  * Множитель данных канала АЦП Uc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Uc 502
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Uc 502
 /**
  * Множитель данных канала АЦП Urot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Urot 503
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Urot 503
 /**
  * Множитель данных канала АЦП Ia.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ia 504
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ia 504
 /**
  * Множитель данных канала АЦП Ib.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ib 505
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ib 505
 /**
  * Множитель данных канала АЦП Ic.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ic 506
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ic 506
 /**
  * Множитель данных канала АЦП Irot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Irot 507
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Irot 507
 /**
  * Множитель данных канала АЦП Iexc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iexc 508
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc 508
 /**
  * Множитель данных канала АЦП Iref.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iref 509
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Iref 509
 /**
  * Множитель данных канала АЦП Ifan.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ifan 510
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan 510
 
 /*
- * Данные калибровки нуля.
+ * Данные калибровки нуля АЦП.
  */
 /**
  * Данные калибровки канала АЦП Ua.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ua 520
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ua 520
 /**
  * Данные калибровки канала АЦП Ub.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ub 521
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ub 521
 /**
  * Данные калибровки канала АЦП Uc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Uc 522
+#define PARAM_ID_ADC_CALIBRATION_DATA_Uc 522
 /**
  * Данные калибровки канала АЦП Urot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Urot 523
+#define PARAM_ID_ADC_CALIBRATION_DATA_Urot 523
 /**
  * Данные калибровки канала АЦП Ia.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ia 524
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ia 524
 /**
  * Данные калибровки канала АЦП Ib.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ib 525
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ib 525
 /**
  * Данные калибровки канала АЦП Ic.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ic 526
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ic 526
 /**
  * Данные калибровки канала АЦП Irot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Irot 527
+#define PARAM_ID_ADC_CALIBRATION_DATA_Irot 527
 /**
  * Данные калибровки канала АЦП Iexc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iexc 528
+#define PARAM_ID_ADC_CALIBRATION_DATA_Iexc 528
 /**
  * Данные калибровки канала АЦП Iref.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iref 529
+#define PARAM_ID_ADC_CALIBRATION_DATA_Iref 529
 /**
  * Данные калибровки канала АЦП Ifan.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ifan 530
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ifan 530
+/*
+ * Коэффициенты действующих значений.
+ */
+/**
+ * Множитель данных канала Ua.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ua 531
+/**
+ * Множитель данных канала Ub.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ub 532
+/**
+ * Множитель данных канала Uc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Uc 533
+/**
+ * Множитель данных канала Urot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Urot 534
+/**
+ * Множитель данных канала Ia.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ia 535
+/**
+ * Множитель данных канала Ib.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ib 536
+/**
+ * Множитель данных канала Ic.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ic 537
+/**
+ * Множитель данных канала Irot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Irot 538
+/**
+ * Множитель данных канала Iexc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iexc 539
+/**
+ * Множитель данных канала Iref.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iref 540
+/**
+ * Множитель данных канала Ifan.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ifan 541
 
 /*
  * Цифровые входа и выхода.

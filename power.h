@@ -78,7 +78,8 @@ typedef struct _Power_Filter {
  */
 typedef struct _Power_Value {
     power_channel_type_t type; //!< Тип канала.
-    fixed32_t k; //!< Коэффициент пропорциональности.
+    fixed32_t adc_mult; //!< Коэффициент пропорциональности АЦП.
+    fixed32_t value_mult; //!< Коэффициент пропорциональности значений.
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
@@ -194,9 +195,9 @@ extern err_t power_calibrate(power_t* power, power_channels_t channels);
  * @param channel Номер канала АЦП.
  * @return Множитель значения канала АЦП.
  */
-ALWAYS_INLINE static fixed32_t power_value_multiplier(power_t* power, size_t channel)
+ALWAYS_INLINE static fixed32_t power_adc_value_multiplier(power_t* power, size_t channel)
 {
-    return power->channels[channel].k;
+    return power->channels[channel].adc_mult;
 }
 
 /**
@@ -205,9 +206,9 @@ ALWAYS_INLINE static fixed32_t power_value_multiplier(power_t* power, size_t cha
  * @param channel Номер канала АЦП.
  * @param data Множитель значения канала АЦП.
  */
-ALWAYS_INLINE static void power_set_value_multiplier(power_t* power, size_t channel, fixed32_t mult)
+ALWAYS_INLINE static void power_set_adc_value_multiplier(power_t* power, size_t channel, fixed32_t mult)
 {
-    power->channels[channel].k = mult;
+    power->channels[channel].adc_mult = mult;
 }
 
 /**
@@ -216,7 +217,7 @@ ALWAYS_INLINE static void power_set_value_multiplier(power_t* power, size_t chan
  * @param channel Номер канала АЦП.
  * @return Калибровочные данные канала АЦП.
  */
-ALWAYS_INLINE static uint16_t power_calibration_data(power_t* power, size_t channel)
+ALWAYS_INLINE static uint16_t power_adc_calibration_data(power_t* power, size_t channel)
 {
     return (uint16_t)power->channels[channel].raw_zero_cal;
 }
@@ -227,9 +228,31 @@ ALWAYS_INLINE static uint16_t power_calibration_data(power_t* power, size_t chan
  * @param channel Номер канала АЦП.
  * @param data Калибровочные данные канала АЦП.
  */
-ALWAYS_INLINE static void power_set_calibration_data(power_t* power, size_t channel, uint16_t data)
+ALWAYS_INLINE static void power_set_adc_calibration_data(power_t* power, size_t channel, uint16_t data)
 {
     power->channels[channel].raw_zero_cal = (int16_t)data;
+}
+
+/**
+ * Получает множитель значения канала.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Множитель значения канала.
+ */
+ALWAYS_INLINE static fixed32_t power_value_multiplier(power_t* power, size_t channel)
+{
+    return power->channels[channel].value_mult;
+}
+
+/**
+ * Устанавливает множитель значения канала.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @param data Множитель значения канала.
+ */
+ALWAYS_INLINE static void power_set_value_multiplier(power_t* power, size_t channel, fixed32_t mult)
+{
+    power->channels[channel].value_mult = mult;
 }
 
 /**
