@@ -16,6 +16,7 @@
 typedef struct _Drive_Ui_Init {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     tft9341_t* tft; //!< TFT.
+    reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_ui_init_t;
 
 

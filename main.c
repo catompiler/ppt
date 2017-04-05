@@ -955,6 +955,14 @@ static void init_i2c_periph(void)
     I2C_Cmd(I2C1, ENABLE);
 }
 
+static void reset_i2c(void)
+{
+    i2c_bus_reset(&i2c);
+    i2c_device_reset(I2C1);
+    
+    init_i2c_periph();
+}
+
 static void init_i2c(void)
 {
     GPIO_InitTypeDef gpio_i2c =
@@ -1181,6 +1189,7 @@ static void init_drive_ui(void)
     
     ui_is.ioport = &ioport;
     ui_is.tft = &tft;
+    ui_is.reset_i2c_bus_proc = reset_i2c;
     
     drive_ui_init(&ui_is);
 }
