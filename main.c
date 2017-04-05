@@ -134,7 +134,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 //! Число измерений ADC.
 #define ADC_MEASUREMENTS_PER_PERIOD 128
 //! Число измерений ADC для вычисления питания.
-#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 4)
+#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 2)
 //! Число выполненных измерений ADC.
 static unsigned int adc_data_measured = 0;
 
