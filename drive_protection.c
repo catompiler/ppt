@@ -23,6 +23,14 @@ typedef struct _Drive_Prot_Base_Item {
 } drive_prot_base_item_t;
 
 
+#define DRIVE_PROT_ITEM_ALLOW_DEFAULT false
+#define DRIVE_PROT_ITEM_ACTIVE_DEFAULT false
+
+
+#define DRIVE_PROT_PIE_MAX 0x10000
+#define DRIVE_PROT_CALC_PIE_INC(time) (0x6aac1 / time) //6.667 * f32(1.0) / t_avail
+
+
 //! Перегруз по току, при котором задано время срабатывания.
 #define DRIVE_TOP_NOMINAL_OVERCURRENT 6
 
@@ -35,31 +43,9 @@ typedef struct _Drive_TOP {
     drive_prot_action_t action; //!< Действие при срабатывании.
 } drive_top_t;
 
-
-//! Структура защиты фаз по времени между датчиками нуля.
-typedef struct _Drive_Protection_Phases_Time {
-    drive_prot_base_item_t base_item; //!< Базовый элемент.
-    bool masked; //!< Замаскированность.
-} drive_protection_phases_time_t;
-
-
-//! Структура защиты фаз по углу между фазами.
-typedef struct _Drive_Protection_Phases_Angle {
-    drive_prot_base_item_t fault_base_item; //!< Базовый элемент ошибки.
-    drive_prot_base_item_t warn_base_item; //!< Базовый элемент предупреждения.
-    fixed32_t fault_value; //!< Уровень срабатывания ошибки.
-    fixed32_t warn_value; //!< Уровень срабатывания предупреждения.
-    bool masked; //!< Замаскированность.
-} drive_protection_phases_angle_t;
-
-
-//! Структура защиты фаз по синхронизации с фазами.
-typedef struct _Drive_Protection_Phases_Sync {
-    drive_prot_base_item_t fault_base_item; //!< Базовый элемент ошибки.
-    drive_prot_base_item_t warn_base_item; //!< Базовый элемент предупреждения.
-    bool masked; //!< Замаскированность.
-} drive_protection_phases_sync_t;
-
+/*
+ * Защита питания.
+ */
 
 //! Тип сравнения значений защиты.
 typedef enum _Drive_Prot_Type {
@@ -75,8 +61,8 @@ typedef enum _Drive_Prot_Flag {
     DRIVE_PROT_FLAG_ERR = 1 //!< Ошибка.
 } drive_protection_flag_t;
 
-//! Тип элемента защиты.
-typedef struct _Drive_Prot_Descr {
+//! Тип элемента защиты питания.
+typedef struct _Drive_Prot_Power_Descr {
     size_t power_channel; //!< Номер канала питания.
     drive_protection_type_t type; //!< Тип защиты.
     drive_protection_flag_t flag_type; //!< Тип флага.
@@ -87,21 +73,7 @@ typedef struct _Drive_Prot_Descr {
     param_id_t param_time; //!< Параметр времени срабатывания защиты.
     param_id_t param_latch_ena; //!< Параметр разрешения защёлки.
     param_id_t param_action; //!< Параметр действия.
-} drive_protection_descr_t;
-
-
-#define PROT_DESCR(arg_pwr_ch, arg_type, arg_flag_type, arg_flag,\
-                   arg_par_ref, arg_par_ena, arg_par_lvl, arg_par_time,\
-                   arg_par_lch_ena, arg_par_act)\
-    {\
-        .power_channel = arg_pwr_ch, .type = arg_type, .flag_type = arg_flag_type, .flag = arg_flag,\
-        .param_ref = arg_par_ref, .param_ena = arg_par_ena, .param_level = arg_par_lvl, .param_time = arg_par_time,\
-        .param_latch_ena = arg_par_lch_ena, .param_action = arg_par_act\
-    }
-
-
-#define DRIVE_PROT_PIE_MAX 0x10000
-#define DRIVE_PROT_CALC_PIE_INC(time) (0x6aac1 / time) //6.667 * f32(1.0) / t_avail
+} drive_protection_power_descr_t;
 
 //! Тип элемента защиты питания.
 typedef struct _Drive_Prot_Power_Item {
@@ -109,206 +81,274 @@ typedef struct _Drive_Prot_Power_Item {
     fixed32_t value_level; //!< Значение уровня срабатывания защиты.
 } drive_protection_power_item_t;
 
+#define PROT_PWR_DESCR(arg_pwr_ch, arg_type, arg_flag_type, arg_flag,\
+                       arg_par_ref, arg_par_ena, arg_par_lvl, arg_par_time,\
+                       arg_par_lch_ena, arg_par_act)\
+    {\
+        .power_channel = arg_pwr_ch, .type = arg_type, .flag_type = arg_flag_type, .flag = arg_flag,\
+        .param_ref = arg_par_ref, .param_ena = arg_par_ena, .param_level = arg_par_lvl, .param_time = arg_par_time,\
+        .param_latch_ena = arg_par_lch_ena, .param_action = arg_par_act\
+    }
 
-#define DRIVE_PROT_ITEM_ALLOW_DEFAULT false
-#define DRIVE_PROT_ITEM_ACTIVE_DEFAULT false
 
-
-static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_COUNT] = {
-    PROT_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ua, PARAM_ID_U_NOM,\
+static const drive_protection_power_descr_t drive_prot_power_items_descrs[DRIVE_PROT_PWR_ITEMS_COUNT] = {
+    PROT_PWR_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ua, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Ua, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Ua, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ua, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ua, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_ACTION),
-    PROT_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Ua, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Ua, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ub, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ub, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Ub, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Ub, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ub, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ub, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_ACTION),
-    PROT_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Ub, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Ub, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Uc, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Uc, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Uc, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Uc, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Uc, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Uc, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_OVF_WARN_ACTION),
-    PROT_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Uc, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Uc, PARAM_ID_U_NOM,\
         PARAM_ID_PROT_U_IN_UDF_WARN_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_IN_UDF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_IN_UDF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_IN_UDF_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ia, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ia, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ia, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ia, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ib, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ib, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ib, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ib, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ic, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ic, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ic, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Ic, PARAM_ID_I_NOM,\
         PARAM_ID_PROT_I_IN_OVF_WARN_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_OVF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
         PARAM_ID_PROT_U_ROT_OVF_FAULT_ENABLE, PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_ROT_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_ROT_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_ROT_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
         PARAM_ID_PROT_U_ROT_OVF_WARN_ENABLE, PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_ROT_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_ROT_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_ROT_OVF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
         PARAM_ID_PROT_I_ROT_OVF_FAULT_ENABLE, PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_ROT_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_ROT_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_ROT_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
         PARAM_ID_PROT_I_ROT_OVF_WARN_ENABLE, PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_ROT_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_ROT_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_ROT_OVF_WARN_ACTION),
     
     
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
         PARAM_ID_PROT_I_EXC_OVF_FAULT_ENABLE, PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_OVF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_OVF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_OVF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_UNDERFLOW_Iexc, PARAM_ID_I_EXC,\
         PARAM_ID_PROT_I_EXC_UDF_FAULT_ENABLE, PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_UDF_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_UDF_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_UDF_FAULT_ACTION),
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_OVF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
         PARAM_ID_PROT_I_EXC_OVF_WARN_ENABLE, PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_OVF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_OVF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_OVF_WARN_ACTION),
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_UDF, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_UNDERFLOW_Iexc, PARAM_ID_I_EXC,\
         PARAM_ID_PROT_I_EXC_UDF_WARN_ENABLE, PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_UDF_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_UDF_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_UDF_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ia, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ia, 0,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ia, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ia, 0,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ib, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ib, 0,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ib, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ib, 0,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ic, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Ic, 0,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ic, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Ic, 0,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_IN_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_IN_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_IN_IDLE_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Urot, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Urot, 0,\
         PARAM_ID_PROT_U_ROT_IDLE_FAULT_ENABLE, PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_ROT_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_U_ROT_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Urot, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Urot, 0,\
         PARAM_ID_PROT_U_ROT_IDLE_WARN_ENABLE, PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_U_ROT_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_U_ROT_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_U_ROT_IDLE_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Irot, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Irot, 0,\
         PARAM_ID_PROT_I_ROT_IDLE_FAULT_ENABLE, PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_ROT_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_ROT_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Irot, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Irot, 0,\
         PARAM_ID_PROT_I_ROT_IDLE_WARN_ENABLE, PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_ROT_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_ROT_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_ROT_IDLE_WARN_ACTION),
     
      
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Iexc, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_IDLE_Iexc, 0,\
         PARAM_ID_PROT_I_EXC_IDLE_FAULT_ENABLE, PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_IDLE_FAULT_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_IDLE_FAULT_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_IDLE_FAULT_ACTION),
     
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Iexc, 0,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_ZERO, DRIVE_PROT_FLAG_WRN, DRIVE_POWER_WARNING_IDLE_Iexc, 0,\
         PARAM_ID_PROT_I_EXC_IDLE_WARN_ENABLE, PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_VALUE, PARAM_ID_PROT_I_EXC_IDLE_WARN_LEVEL_TIME_MS,\
         PARAM_ID_PROT_I_EXC_IDLE_WARN_LATCH_ENABLE, PARAM_ID_PROT_I_EXC_IDLE_WARN_ACTION),
 
     
-    PROT_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ua, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ua, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ua, PARAM_ID_U_NOM,\
         0, PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ub, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ub, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ub, PARAM_ID_U_NOM,\
         0, PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Uc, PARAM_ID_U_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Uc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Uc, PARAM_ID_U_NOM,\
         0, PARAM_ID_PROT_U_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
      
-    PROT_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ia, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ia, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ia, PARAM_ID_I_NOM,\
         0, PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ib, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ib, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ib, PARAM_ID_I_NOM,\
         0, PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ic, PARAM_ID_I_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Ic, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Ic, PARAM_ID_I_NOM,\
         0, PARAM_ID_PROT_I_IN_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Urot, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Urot, PARAM_ID_U_ROT_NOM,\
         0, PARAM_ID_PROT_U_ROT_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
+    PROT_PWR_DESCR(DRIVE_POWER_Irot, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Irot, PARAM_ID_I_ROT_NOM,\
         0, PARAM_ID_PROT_I_ROT_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
         0, PARAM_ID_PROT_I_EXC_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
 };
 
 //#define DRIVE_PROT_ITEMS_COUNT (sizeof(drive_prot_items_descrs) / sizeof(drive_protection_descr_t))
+
+
+/*
+ * Общая защита.
+ */
+
+// Предварительное объявление структуры.
+struct _Drive_Prot_Item;
+
+/**
+ * Тип функции проверки элемента защиты.
+ * Должна возвращать допустимости
+ * значения элемента защиты.
+ */
+typedef bool (*drive_prot_item_check_proc_t)(struct _Drive_Prot_Item* item);
+
+//! Тип элемента защиты.
+typedef struct _Drive_Prot_Descr {
+    drive_prot_item_check_proc_t check_proc;
+    param_id_t param_ena; //!< Параметр разрешения защиты.
+    param_id_t param_level; //!< Параметр уровня срабатывания защиты.
+    param_id_t param_time; //!< Параметр времени срабатывания защиты.
+    param_id_t param_latch_ena; //!< Параметр разрешения защёлки.
+    param_id_t param_action; //!< Параметр действия.
+} drive_protection_descr_t;
+
+//! Тип элемента защиты.
+typedef struct _Drive_Prot_Item {
+    drive_prot_base_item_t base_item; //!< Базовый элемент защиты.
+    bool masked; //!< Маска (разрешение срабатывания) элемента защиты.
+    fixed32_t value_level; //!< Значение уровня срабатывания защиты.
+} drive_protection_item_t;
+
+/*
+ * Прототипы функций проверки элементов защиты.
+ */
+// Проверка фаз.
+static bool drive_prot_check_phase_state(drive_protection_item_t* item);
+// Проверка углов фаз.
+static bool drive_prot_check_phases_angles(drive_protection_item_t* item);
+// Проверка синхронизации с фазами.
+static bool drive_prot_check_phases_sync(drive_protection_item_t* item);
+
+#define PROT_DESCR(arg_check_proc, arg_par_ena, arg_par_lvl, arg_par_time,\
+                   arg_par_lch_ena, arg_par_act)\
+    {\
+        .check_proc = arg_check_proc, .param_ena = arg_par_ena, .param_level = arg_par_lvl, .param_time = arg_par_time,\
+        .param_latch_ena = arg_par_lch_ena, .param_action = arg_par_act\
+    }
+
+
+static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_COUNT] = {
+    PROT_DESCR(drive_prot_check_phase_state, PARAM_ID_PROT_PHASES_STATE_ENABLED, 0,
+               PARAM_ID_PROT_PHASES_STATE_TIME_MS, 0, PARAM_ID_PROT_PHASES_STATE_ACTION),
+    PROT_DESCR(drive_prot_check_phases_angles, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE,
+               PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION),
+    PROT_DESCR(drive_prot_check_phases_angles, PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE,
+               PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION),
+    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, 0,
+               PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION),
+    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, 0,
+               PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION),
+};
 
 
 //! Тип структуры защиты привода.
@@ -317,16 +357,14 @@ typedef struct _Drive_Protection {
     fixed32_t U_rot; //!< Номинальное напряжение якоря.
     fixed32_t I_rot; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
-    drive_protection_power_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
+    drive_protection_power_item_t prot_pwr_items[DRIVE_PROT_PWR_ITEMS_COUNT];
     drive_power_errors_t prot_errs_mask; //!< Маска ошибок защиты.
     drive_power_warnings_t prot_warn_mask; //!< Маска предупреждений защиты.
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
-    drive_protection_phases_time_t prot_phases_time; //!< Защита фаз по времени между датчиками нуля.
-    drive_protection_phases_angle_t prot_phases_angles; //!< Защита фаз по углу между фазами.
-    drive_protection_phases_sync_t prot_phases_sync; //!< Защита фаз по синхронизации с фазами.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
+    drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
 } drive_protection_t;
 
 //! Структура защиты привода.
@@ -334,7 +372,7 @@ static drive_protection_t drive_prot;
 
 
 /*
- * Функционал базовых элементов защиты.
+ * Функции базового элемента защиты.
  */
 
 static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
@@ -438,22 +476,53 @@ static void drive_prot_base_item_reset(drive_prot_base_item_t* base_item)
     base_item->pie = 0;
 }
 
-
-bool drive_protection_init(void)
+ALWAYS_INLINE static bool drive_prot_base_item_enabled(drive_prot_base_item_t* base_item)
 {
-    memset(&drive_prot, 0x0, sizeof(drive_protection_t));
+    return base_item->enabled;
+}
+
+ALWAYS_INLINE static bool drive_prot_base_item_active(drive_prot_base_item_t* base_item)
+{
+    return base_item->active;
+}
+
+ALWAYS_INLINE static bool drive_prot_base_item_allow(drive_prot_base_item_t* base_item)
+{
+    return base_item->allow;
+}
+
+ALWAYS_INLINE static fixed32_t drive_prot_base_item_pie(drive_prot_base_item_t* base_item)
+{
+    return base_item->pie;
+}
+
+ALWAYS_INLINE static drive_prot_action_t drive_prot_base_item_action(drive_prot_base_item_t* base_item)
+{
+    return base_item->action;
+}
+
+static bool drive_prot_base_item_stable(drive_prot_base_item_t* base_item)
+{
+    if(base_item->allow && base_item->pie == 0) return true;
     
-    return true;
+    if(!base_item->allow && base_item->pie == DRIVE_PROT_PIE_MAX) return true;
+    
+    return false;
 }
 
-ALWAYS_INLINE static drive_protection_power_item_t* drive_protection_get_prot_item(drive_prot_index_t index)
+
+/*
+ * Функции элементов защиты питания.
+ */
+
+ALWAYS_INLINE static drive_protection_power_item_t* drive_protection_power_get_item(drive_prot_index_t index)
 {
-    return &drive_prot.prot_items[index];
+    return &drive_prot.prot_pwr_items[index];
 }
 
-ALWAYS_INLINE static const drive_protection_descr_t* drive_protection_get_prot_item_descr(drive_prot_index_t index)
+ALWAYS_INLINE static const drive_protection_power_descr_t* drive_protection_power_get_item_descr(drive_prot_index_t index)
 {
-    return &drive_prot_items_descrs[index];
+    return &drive_prot_power_items_descrs[index];
 }
 
 ALWAYS_INLINE static fixed32_t drive_protection_get_part(fixed32_t value, uint32_t percents)
@@ -471,15 +540,19 @@ ALWAYS_INLINE static fixed32_t drive_protection_get_udf_level(fixed32_t value, u
     return value - drive_protection_get_part(value, percents);
 }
 
-static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
+/**
+ * Обновляет настройки элемента защиты питания.
+ * @param index Индекс элемента защиты питания.
+ */
+static void drive_prot_power_update_item_settings(drive_prot_index_t index)
 {
     // Если превышен индекс - возврат.
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return;
     
     // Элемент защиты.
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     // Дескриптор элемента защиты.
-    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
+    const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
     
     drive_prot_update_base_item_settings(&item->base_item,
             descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action);
@@ -511,15 +584,66 @@ static void drive_prot_update_prot_item_settings(drive_prot_index_t index)
 }
 
 /**
- * Обновляет настройки элементов защиты.
+ * Обновляет настройки элементов защиты питания.
  */
-static void drive_prot_update_prot_items_settings(void)
+static void drive_prot_power_update_items_settings(void)
+{
+    drive_prot_index_t i;
+    for(i = 0; i < DRIVE_PROT_PWR_ITEMS_COUNT; i ++){
+        drive_prot_power_update_item_settings(i);
+    }
+}
+
+
+/*
+ * Функции общих элементов защиты.
+ */
+
+ALWAYS_INLINE static drive_protection_item_t* drive_protection_get_item(drive_prot_index_t index)
+{
+    return &drive_prot.prot_items[index];
+}
+
+ALWAYS_INLINE static const drive_protection_descr_t* drive_protection_get_item_descr(drive_prot_index_t index)
+{
+    return &drive_prot_items_descrs[index];
+}
+
+/**
+ * Обновляет настройки элемента защиты.
+ * @param index Индекс элемента защиты.
+ */
+static void drive_prot_update_item_settings(drive_prot_index_t index)
+{
+    // Если превышен индекс - возврат.
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return;
+    
+    // Элемент защиты.
+    drive_protection_item_t* item = drive_protection_get_item(index);
+    // Дескриптор элемента защиты.
+    const drive_protection_descr_t* descr = drive_protection_get_item_descr(index);
+    
+    drive_prot_update_base_item_settings(&item->base_item,
+            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action);
+    
+    // Значение уровня элемента защиты.
+    item->value_level = settings_valuef(descr->param_level);
+}
+
+/**
+ * Обновляет настройки элементов защиты питания.
+ */
+static void drive_prot_update_items_settings(void)
 {
     drive_prot_index_t i;
     for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
-        drive_prot_update_prot_item_settings(i);
+        drive_prot_update_item_settings(i);
     }
 }
+
+/*
+ * Функции обновления настроек элементов защиты.
+ */
 
 /**
  * Обновляет настройки тепловой защиты.
@@ -542,42 +666,60 @@ static void drive_protection_update_top_settings(void)
     drive_prot.top.action = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION);
 }
 
-/**
- * Обновляет настройки защиты фаз по времени между фазами.
+/*
+ * Функции проверки элементов защиты.
  */
-static void drive_protection_update_phases_time_prot_settings(void)
+
+/**
+ * Выполняет проверку состояния фаз.
+ * @param item Элемент защиты.
+ * @return Флаг нормального состояния фаз.
+ */
+static bool drive_prot_check_phase_state(drive_protection_item_t* item)
 {
-    drive_prot_update_base_item_settings(&drive_prot.prot_phases_time.base_item,
-            PARAM_ID_PROT_PHASES_TIME_ENABLED, PARAM_ID_PROT_PHASES_TIME_TIME_MS, 0, PARAM_ID_PROT_PHASES_TIME_ACTION);
+    return drive_phase_state_errors() == PHASE_NO_ERROR;
 }
 
 /**
- * Обновляет настройки защиты фаз по углу между фазами.
+ * Выполняет проверку уровня ошибки защиты фаз по углу между фазами.
+ * @return Флаг срабатывания элемента защиты.
  */
-static void drive_protection_update_phases_angles_prot_settings(void)
+static bool drive_prot_check_phases_angles(drive_protection_item_t* item)
 {
-    drive_prot_update_base_item_settings(&drive_prot.prot_phases_angles.fault_base_item,
-            PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS,
-            PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION);
-    drive_prot_update_base_item_settings(&drive_prot.prot_phases_angles.warn_base_item,
-            PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS,
-            PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION);
+    fixed32_t angle = 0;
     
-    drive_prot.prot_phases_angles.fault_value = settings_valuef(PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE);
-    drive_prot.prot_phases_angles.warn_value = settings_valuef(PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE);
+    bool valid = true;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_A); angle = fixed_abs(angle);
+    valid &= angle <= item->value_level;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_B); angle = fixed_abs(angle);
+    valid &= angle <= item->value_level;
+    
+    angle = drive_phase_sync_diff_delta_angle(PHASE_C); angle = fixed_abs(angle);
+    valid &= angle <= item->value_level;
+    
+    return valid;
 }
 
 /**
- * Обновляет настройки защиты фаз по синхронизации с фазами.
+ * Выполняет проверку защиты фаз по синхронизации с фазами.
+ * @return Флаг срабатывания элемента защиты.
  */
-static void drive_protection_update_phases_sync_prot_settings(void)
+static bool drive_prot_check_phases_sync(drive_protection_item_t* item)
 {
-    drive_prot_update_base_item_settings(&drive_prot.prot_phases_sync.fault_base_item,
-            PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS,
-            PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION);
-    drive_prot_update_base_item_settings(&drive_prot.prot_phases_sync.warn_base_item,
-            PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS,
-            PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION);
+    return drive_phase_sync_synchronized();
+}
+
+/*
+ * Основные функции защиты.
+ */
+
+bool drive_protection_init(void)
+{
+    memset(&drive_prot, 0x0, sizeof(drive_protection_t));
+    
+    return true;
 }
 
 void drive_protection_update_settings(void)
@@ -589,191 +731,91 @@ void drive_protection_update_settings(void)
     
     drive_protection_update_top_settings();
     
-    drive_protection_update_phases_time_prot_settings();
-    
-    drive_protection_update_phases_angles_prot_settings();
-    
-    drive_protection_update_phases_sync_prot_settings();
-    
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     
-    drive_prot_update_prot_items_settings();
+    drive_prot_power_update_items_settings();
+    
+    drive_prot_update_items_settings();
 }
 
-drive_power_errors_t drive_protection_errs_mask(void)
+drive_power_errors_t drive_protection_power_errs_mask(void)
 {
     return drive_prot.prot_errs_mask;
 }
 
-void drive_protection_set_errs_mask(drive_power_errors_t errs_mask)
+void drive_protection_power_set_errs_mask(drive_power_errors_t errs_mask)
 {
     drive_prot.prot_errs_mask = errs_mask;
 }
 
-void drive_protection_set_errs_mask_flags(drive_power_errors_t errs_flags)
+void drive_protection_power_set_errs_mask_flags(drive_power_errors_t errs_flags)
 {
     drive_prot.prot_errs_mask |= errs_flags;
 }
 
-void drive_protection_reset_errs_mask_flags(drive_power_errors_t errs_flags)
+void drive_protection_power_reset_errs_mask_flags(drive_power_errors_t errs_flags)
 {
     drive_prot.prot_errs_mask &= ~errs_flags;
 }
 
-drive_power_warnings_t drive_protection_warn_mask(void)
+drive_power_warnings_t drive_protection_power_warn_mask(void)
 {
     return drive_prot.prot_warn_mask;
 }
 
-void drive_protection_set_warn_mask(drive_power_warnings_t warn_mask)
+void drive_protection_power_set_warn_mask(drive_power_warnings_t warn_mask)
 {
     drive_prot.prot_warn_mask = warn_mask;
 }
 
-void drive_protection_set_warn_mask_flags(drive_power_warnings_t warn_flags)
+void drive_protection_power_set_warn_mask_flags(drive_power_warnings_t warn_flags)
 {
     drive_prot.prot_warn_mask |= warn_flags;
 }
 
-void drive_protection_reset_warn_mask_flags(drive_power_warnings_t warn_flags)
+void drive_protection_power_reset_warn_mask_flags(drive_power_warnings_t warn_flags)
 {
     drive_prot.prot_warn_mask &= ~warn_flags;
 }
 
-drive_power_errors_t drive_protection_cutoff_errs_mask(void)
+drive_power_errors_t drive_protection_power_cutoff_errs_mask(void)
 {
     return drive_prot.prot_cutoff_errs_mask;
 }
 
-void drive_protection_set_cutoff_errs_mask(drive_power_errors_t errs_mask)
+void drive_protection_power_set_cutoff_errs_mask(drive_power_errors_t errs_mask)
 {
     drive_prot.prot_cutoff_errs_mask = errs_mask;
 }
 
-void drive_protection_set_cutoff_errs_mask_flags(drive_power_errors_t errs_flags)
+void drive_protection_power_set_cutoff_errs_mask_flags(drive_power_errors_t errs_flags)
 {
     drive_prot.prot_cutoff_errs_mask |= errs_flags;
 }
 
-void drive_protection_reset_cutoff_errs_mask_flags(drive_power_errors_t errs_flags)
+void drive_protection_power_reset_cutoff_errs_mask_flags(drive_power_errors_t errs_flags)
 {
     drive_prot.prot_cutoff_errs_mask &= ~errs_flags;
 }
 
-drive_power_warnings_t drive_protection_cutoff_warn_mask(void)
+drive_power_warnings_t drive_protection_power_cutoff_warn_mask(void)
 {
     return drive_prot.prot_cutoff_warn_mask;
 }
 
-void drive_protection_set_cutoff_warn_mask(drive_power_warnings_t warn_mask)
+void drive_protection_power_set_cutoff_warn_mask(drive_power_warnings_t warn_mask)
 {
     drive_prot.prot_cutoff_warn_mask = warn_mask;
 }
 
-void drive_protection_set_cutoff_warn_mask_flags(drive_power_warnings_t warn_flags)
+void drive_protection_power_set_cutoff_warn_mask_flags(drive_power_warnings_t warn_flags)
 {
     drive_prot.prot_cutoff_warn_mask |= warn_flags;
 }
 
-void drive_protection_reset_cutoff_warn_mask_flags(drive_power_warnings_t warn_flags)
+void drive_protection_power_reset_cutoff_warn_mask_flags(drive_power_warnings_t warn_flags)
 {
     drive_prot.prot_cutoff_warn_mask &= ~warn_flags;
-}
-
-/**
- * Выполняет проверку защиты фаз по времени между фазами.
- * @return Флаг срабатывания элемента защиты.
- */
-static bool drive_protection_check_phases_errors(void)
-{
-    if(!drive_prot.prot_phases_time.base_item.enabled) return false;
-    
-    drive_prot_check_base_item(&drive_prot.prot_phases_time.base_item,
-                drive_prot.prot_phases_time.masked, drive_phase_state_errors() == PHASE_NO_ERROR);
-    
-    return drive_prot.prot_phases_time.base_item.active;
-}
-
-/**
- * Выполняет проверку уровня ошибки защиты фаз по углу между фазами.
- * @return Флаг срабатывания элемента защиты.
- */
-static bool drive_protection_check_phases_angles_fault(void)
-{
-    if(!drive_prot.prot_phases_angles.fault_base_item.enabled) return false;
-    
-    fixed32_t angle = 0;
-    
-    bool valid = true;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_A); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_B); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_C); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.fault_value;
-    
-    drive_prot_check_base_item(&drive_prot.prot_phases_angles.fault_base_item,
-                drive_prot.prot_phases_angles.masked, valid);
-    
-    return drive_prot.prot_phases_angles.fault_base_item.active;
-}
-
-/**
- * Выполняет проверку уровня предупреждения защиты фаз по углу между фазами.
- * @return Флаг срабатывания элемента защиты.
- */
-static bool drive_protection_check_phases_angles_warning(void)
-{
-    if(!drive_prot.prot_phases_angles.warn_base_item.enabled) return false;
-    
-    fixed32_t angle = 0;
-    
-    bool valid = true;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_A); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_B); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
-    
-    angle = drive_phase_sync_diff_delta_angle(PHASE_C); angle = fixed_abs(angle);
-    valid &= angle <= drive_prot.prot_phases_angles.warn_value;
-    
-    drive_prot_check_base_item(&drive_prot.prot_phases_angles.warn_base_item,
-                drive_prot.prot_phases_angles.masked, valid);
-    
-    return drive_prot.prot_phases_angles.warn_base_item.active;
-}
-
-/**
- * Выполняет проверку уровня ошибки защиты фаз по синхронизации с фазами.
- * @return Флаг срабатывания элемента защиты.
- */
-static bool drive_protection_check_phases_sync_fault(void)
-{
-    if(!drive_prot.prot_phases_sync.fault_base_item.enabled) return false;
-    
-    drive_prot_check_base_item(&drive_prot.prot_phases_sync.fault_base_item,
-                drive_prot.prot_phases_sync.masked, drive_phase_sync_synchronized());
-    
-    return drive_prot.prot_phases_sync.fault_base_item.active;
-}
-
-/**
- * Выполняет проверку уровня предупреждения защиты фаз по синхронизации с фазами.
- * @return Флаг срабатывания элемента защиты.
- */
-static bool drive_protection_check_phases_sync_warning(void)
-{
-    if(!drive_prot.prot_phases_sync.warn_base_item.enabled) return false;
-    
-    drive_prot_check_base_item(&drive_prot.prot_phases_sync.warn_base_item,
-                drive_prot.prot_phases_sync.masked, drive_phase_sync_synchronized());
-    
-    return drive_prot.prot_phases_sync.warn_base_item.active;
 }
 
 /**
@@ -798,7 +840,7 @@ ALWAYS_INLINE static bool drive_protection_check_item_value(drive_protection_typ
  * @param descr Дескриптор элемента защиты.
  * @return Флаг наличия элемента защиты в маске ошибок или предупреждений.
  */
-static bool drive_protection_item_masked_impl(const drive_protection_descr_t* descr)
+static bool drive_protection_item_masked_impl(const drive_protection_power_descr_t* descr)
 {
     if(descr->flag_type == DRIVE_PROT_FLAG_ERR){
         if(descr->type != DRIVE_PROT_TYPE_CUT)
@@ -821,7 +863,7 @@ static bool drive_protection_item_masked_impl(const drive_protection_descr_t* de
  * @param errors Ошибки.
  * @return Флаг нахождения элемента защиты в допустимом диапазоне.
  */
-static bool drive_protection_check_power_item_real(drive_protection_power_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+static bool drive_protection_check_power_item_real(drive_protection_power_item_t* item, const drive_protection_power_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     bool masked = drive_protection_item_masked_impl(descr);
     
@@ -831,7 +873,7 @@ static bool drive_protection_check_power_item_real(drive_protection_power_item_t
     
     drive_prot_check_base_item(&item->base_item, masked, valid);
     
-    if(item->base_item.active){
+    if(drive_prot_base_item_active(&item->base_item)){
         if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
             if(warnings) (*warnings) |= descr->flag;
         }else{ // DRIVE_PROT_TYPE_ERR
@@ -850,7 +892,7 @@ static bool drive_protection_check_power_item_real(drive_protection_power_item_t
  * @param errors Ошибки.
  * @return Флаг нахождения элемента защиты в допустимом диапазоне.
  */
-static bool drive_protection_check_power_item_inst(drive_protection_power_item_t* item, const drive_protection_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+static bool drive_protection_check_power_item_inst(drive_protection_power_item_t* item, const drive_protection_power_descr_t* descr, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     bool masked = drive_protection_item_masked_impl(descr);
     
@@ -878,17 +920,17 @@ static bool drive_protection_check_power_item_inst(drive_protection_power_item_t
     return item->base_item.active;
 }
 
-bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+bool drive_protection_power_check_item(drive_prot_index_t index, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return false;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
-    if(!item->base_item.enabled) return false;
+    if(!drive_prot_base_item_enabled(&item->base_item)) return false;
     
-    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
+    const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
     
-    bool prev_active = item->base_item.active;
+    bool prev_active = drive_prot_base_item_active(&item->base_item);
     bool new_active = false;
     
     if(descr->type != DRIVE_PROT_TYPE_CUT){//fault || warn
@@ -900,7 +942,7 @@ bool drive_protection_check_item(drive_prot_index_t index, drive_power_warnings_
     return (prev_active == false) && new_active;
 }
 
-bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
+bool drive_protection_power_check_items(const drive_prot_index_t* items, size_t items_count, drive_power_warnings_t* warnings, drive_power_errors_t* errors)
 {
     if(items == NULL || items_count == 0) return true;
     
@@ -908,7 +950,7 @@ bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t 
     
     drive_prot_index_t i;
     for(i = 0; i < items_count; i ++){
-        res |= drive_protection_check_item(items[i], warnings, errors);
+        res |= drive_protection_power_check_item(items[i], warnings, errors);
     }
     
     return res;
@@ -916,94 +958,95 @@ bool drive_protection_check_power_items(const drive_prot_index_t* items, size_t 
 
 bool drive_protection_power_item_stable(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return false;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
-    if(item->base_item.allow && item->base_item.pie == 0) return true;
-    
-    if(!item->base_item.allow && item->base_item.pie == DRIVE_PROT_PIE_MAX) return true;
-    
-    return false;
+    return drive_prot_base_item_stable(&item->base_item);
 }
 
-void drive_protection_clear_power_item_error(drive_prot_index_t index)
+void drive_protection_power_clear_item_error(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
     drive_prot_base_item_reset(&item->base_item);
 }
 
-void drive_protection_clear_power_errors(void)
+void drive_protection_power_clear_errors(void)
 {
     drive_prot_index_t i;
-    for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
-        drive_protection_clear_power_item_error(i);
+    for(i = 0; i < DRIVE_PROT_PWR_ITEMS_COUNT; i ++){
+        drive_protection_power_clear_item_error(i);
     }
 }
 
-drive_prot_action_t drive_protection_item_action(drive_prot_index_t index)
+drive_prot_action_t drive_protection_power_item_action(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ACTION_IGNORE;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return DRIVE_PROT_ACTION_IGNORE;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
-    return item->base_item.action;
+    return drive_prot_base_item_action(&item->base_item);
 }
 
-bool drive_protection_item_masked(drive_prot_index_t index)
+bool drive_protection_power_item_masked(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return false;
     
-    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
+    const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
     
     return drive_protection_item_masked_impl(descr);
 }
 
-bool drive_protection_item_allow(drive_prot_index_t index)
+bool drive_protection_power_item_allow(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ALLOW_DEFAULT;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return DRIVE_PROT_ITEM_ALLOW_DEFAULT;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
-    if(!item->base_item.enabled) return true;
+    if(!drive_prot_base_item_enabled(&item->base_item)) return true;
     
-    return item->base_item.allow;
+    return drive_prot_base_item_allow(&item->base_item);
 }
 
-bool drive_protection_item_active(drive_prot_index_t index)
+bool drive_protection_power_item_active(drive_prot_index_t index)
 {
-    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
     
-    drive_protection_power_item_t* item = drive_protection_get_prot_item(index);
+    drive_protection_power_item_t* item = drive_protection_power_get_item(index);
     
-    return item->base_item.active;
+    return drive_prot_base_item_active(&item->base_item);
 }
 
- drive_power_warnings_t drive_protection_item_warning(drive_prot_index_t index)
- {
-     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_POWER_WARNING_NONE;
-    
-    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
-    
+drive_power_warnings_t drive_protection_power_item_warning(drive_prot_index_t index)
+{
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return DRIVE_POWER_WARNING_NONE;
+
+    const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
+
     if(descr->flag_type == DRIVE_PROT_FLAG_WRN) return descr->flag;
-    
+
     return DRIVE_POWER_WARNING_NONE;
- }
+}
 
- drive_power_errors_t drive_protection_item_error(drive_prot_index_t index)
- {
-     if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_POWER_ERROR_NONE;
-    
-    const drive_protection_descr_t* descr = drive_protection_get_prot_item_descr(index);
-    
+drive_power_errors_t drive_protection_power_item_error(drive_prot_index_t index)
+{
+    if(index >= DRIVE_PROT_PWR_ITEMS_COUNT) return DRIVE_POWER_ERROR_NONE;
+
+    const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
+
     if(descr->flag_type == DRIVE_PROT_FLAG_ERR) return descr->flag;
-    
-    return DRIVE_POWER_ERROR_NONE;
- }
 
+    return DRIVE_POWER_ERROR_NONE;
+}
+
+ 
+ /*
+  * Тепловая защита.
+  */
+ 
 void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt)
 {
     if(!drive_prot.top.enabled) return;
@@ -1060,170 +1103,127 @@ drive_prot_action_t drive_protection_emergency_stop_action(void)
 }
 
 
-bool drive_protection_phases_time_check(void)
+/*
+ * Общие элементы защиты.
+ */
+
+bool drive_protection_check_item(drive_prot_index_t index)
 {
-    bool prev_active = drive_prot.prot_phases_time.base_item.active;
-    bool new_active = drive_protection_check_phases_errors();
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    if(!drive_prot_base_item_enabled(&item->base_item)) return false;
+
+    const drive_protection_descr_t* descr = drive_protection_get_item_descr(index);
     
+    drive_prot_item_check_proc_t check_proc = descr->check_proc;
+    
+    if(!check_proc) return false;
+    
+    bool prev_active = drive_prot_base_item_active(&item->base_item);
+    bool new_active = false;
+    
+    bool masked = item->masked;
+    
+    bool valid = check_proc(item);
+    
+    new_active = drive_prot_check_base_item(&item->base_item, masked, valid);
+
     return (prev_active == false) && new_active;
 }
 
-bool drive_protection_phases_time_allow(void)
+bool drive_protection_check_items(const drive_prot_index_t* items, size_t items_count)
 {
-    return drive_prot.prot_phases_time.base_item.allow;
+    if(items == NULL || items_count == 0) return true;
+
+    bool res = false;
+
+    drive_prot_index_t i;
+    for(i = 0; i < items_count; i ++){
+        res |= drive_protection_check_item(items[i]);
+    }
+
+    return res;
 }
 
-bool drive_protection_phases_time_active(void)
+bool drive_protection_item_stable(drive_prot_index_t index)
 {
-    return drive_prot.prot_phases_time.base_item.active;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    return drive_prot_base_item_stable(&item->base_item);
 }
 
-drive_prot_action_t drive_protection_phases_time_action(void)
+void drive_protection_clear_item_error(drive_prot_index_t index)
 {
-    return drive_prot.prot_phases_time.base_item.action;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    drive_prot_base_item_reset(&item->base_item);
 }
 
-void drive_protection_clear_phases_time_errors(void)
+void drive_protection_clear_errors(void)
 {
-    drive_prot_base_item_reset(&drive_prot.prot_phases_time.base_item);
+    drive_prot_index_t i;
+    for(i = 0; i < DRIVE_PROT_ITEMS_COUNT; i ++){
+        drive_protection_clear_item_error(i);
+    }
 }
 
-bool drive_protection_phases_time_masked(void)
+drive_prot_action_t drive_protection_item_action(drive_prot_index_t index)
 {
-    return drive_prot.prot_phases_time.masked;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ACTION_IGNORE;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    return drive_prot_base_item_action(&item->base_item);
 }
 
-void drive_protection_phases_time_set_masked(bool masked)
+bool drive_protection_item_masked(drive_prot_index_t index)
 {
-    drive_prot.prot_phases_time.masked = masked;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return false;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    return item->masked;
 }
 
-
-bool drive_protection_phases_angles_fault_check(void)
+void drive_protection_item_set_masked(drive_prot_index_t index, bool masked)
 {
-    bool prev_active = drive_prot.prot_phases_angles.fault_base_item.active;
-    bool new_active = drive_protection_check_phases_angles_fault();
-    
-    return (prev_active == false) && new_active;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    item->masked = masked;
 }
 
-bool drive_protection_phases_angles_fault_allow(void)
+bool drive_protection_item_allow(drive_prot_index_t index)
 {
-    return drive_prot.prot_phases_angles.fault_base_item.allow;
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ALLOW_DEFAULT;
+
+    drive_protection_item_t* item = drive_protection_get_item(index);
+
+    if(!drive_prot_base_item_enabled(&item->base_item)) return true;
+
+    return drive_prot_base_item_allow(&item->base_item);
 }
 
-bool drive_protection_phases_angles_fault_active(void)
+bool drive_protection_item_active(drive_prot_index_t index)
 {
-    return drive_prot.prot_phases_angles.fault_base_item.active;
-}
+    if(index >= DRIVE_PROT_ITEMS_COUNT) return DRIVE_PROT_ITEM_ACTIVE_DEFAULT;
 
-drive_prot_action_t drive_protection_phases_angles_fault_action(void)
-{
-    return drive_prot.prot_phases_angles.fault_base_item.action;
-}
+    drive_protection_item_t* item = drive_protection_get_item(index);
 
-bool drive_protection_phases_angles_warn_check(void)
-{
-    bool prev_active = drive_prot.prot_phases_angles.warn_base_item.active;
-    bool new_active = drive_protection_check_phases_angles_warning();
-    
-    return (prev_active == false) && new_active;
-}
-
-bool drive_protection_phases_angles_warn_allow(void)
-{
-    return drive_prot.prot_phases_angles.warn_base_item.allow;
-}
-
-bool drive_protection_phases_angles_warn_active(void)
-{
-    return drive_prot.prot_phases_angles.warn_base_item.active;
-}
-
-drive_prot_action_t drive_protection_phases_angles_warn_action(void)
-{
-    return drive_prot.prot_phases_angles.warn_base_item.action;
-}
-
-void drive_protection_clear_phases_angles_errors(void)
-{
-    drive_prot_base_item_reset(&drive_prot.prot_phases_angles.fault_base_item);
-    drive_prot_base_item_reset(&drive_prot.prot_phases_angles.warn_base_item);
-}
-
-bool drive_protection_phases_angles_masked(void)
-{
-    return drive_prot.prot_phases_angles.masked;
-}
-
-void drive_protection_phases_angles_set_masked(bool masked)
-{
-    drive_prot.prot_phases_angles.masked = masked;
+    return drive_prot_base_item_active(&item->base_item);
 }
 
 
-bool drive_protection_phases_sync_fault_check(void)
-{
-    bool prev_active = drive_prot.prot_phases_sync.fault_base_item.active;
-    bool new_active = drive_protection_check_phases_sync_fault();
-    
-    return (prev_active == false) && new_active;
-}
-
-bool drive_protection_phases_sync_fault_allow(void)
-{
-    return drive_prot.prot_phases_sync.fault_base_item.allow;
-}
-
-bool drive_protection_phases_sync_fault_active(void)
-{
-    return drive_prot.prot_phases_sync.fault_base_item.active;
-}
-
-drive_prot_action_t drive_protection_phases_sync_fault_action(void)
-{
-    return drive_prot.prot_phases_sync.fault_base_item.action;
-}
-
-bool drive_protection_phases_sync_warn_check(void)
-{
-    bool prev_active = drive_prot.prot_phases_sync.warn_base_item.active;
-    bool new_active = drive_protection_check_phases_sync_warning();
-    
-    return (prev_active == false) && new_active;
-}
-
-bool drive_protection_phases_sync_warn_allow(void)
-{
-    return drive_prot.prot_phases_sync.warn_base_item.allow;
-}
-
-bool drive_protection_phases_sync_warn_active(void)
-{
-    return drive_prot.prot_phases_sync.warn_base_item.active;
-}
-
-drive_prot_action_t drive_protection_phases_sync_warn_action(void)
-{
-    return drive_prot.prot_phases_sync.warn_base_item.action;
-}
-
-void drive_protection_clear_phases_sync_errors(void)
-{
-    drive_prot_base_item_reset(&drive_prot.prot_phases_sync.fault_base_item);
-    drive_prot_base_item_reset(&drive_prot.prot_phases_sync.warn_base_item);
-}
-
-bool drive_protection_phases_sync_masked(void)
-{
-    return drive_prot.prot_phases_sync.masked;
-}
-
-void drive_protection_phases_sync_set_masked(bool masked)
-{
-    drive_prot.prot_phases_sync.masked = masked;
-}
-
+/*
+ * Прочие проверки.
+ */
 
 bool drive_protection_is_normal(drive_pwr_check_res_t check_res)
 {
@@ -1262,23 +1262,23 @@ static bool drive_protection_check_zero(fixed32_t value, fixed32_t delta)
 
 drive_pwr_check_res_t drive_protection_check_rot_zero_voltage(void)
 {
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_FAULT_IDLE_Urot)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_WARN_IDLE_Urot)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Urot)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Urot)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
     return DRIVE_PWR_CHECK_NORMAL;
 }
 
 drive_pwr_check_res_t drive_protection_check_exc_zero_current(void)
 {
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_FAULT_IDLE_Iexc)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_WARN_IDLE_Iexc)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Iexc)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Iexc)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
     return DRIVE_PWR_CHECK_NORMAL;
 }
 
 drive_pwr_check_res_t drive_protection_check_exc(void)
 {
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_FAULT_OVF_Iexc)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_FAULT_UDF_Iexc)) return DRIVE_PWR_CHECK_FAULT_UNDERFLOW;
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_WARN_OVF_Iexc)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
-    if(!drive_protection_item_allow(DRIVE_PROT_ITEM_WARN_UDF_Iexc)) return DRIVE_PWR_CHECK_WARN_UNDERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_OVF_Iexc)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_UDF_Iexc)) return DRIVE_PWR_CHECK_FAULT_UNDERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_OVF_Iexc)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_UDF_Iexc)) return DRIVE_PWR_CHECK_WARN_UNDERFLOW;
     return DRIVE_PWR_CHECK_NORMAL;
 }

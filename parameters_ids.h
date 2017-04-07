@@ -195,11 +195,11 @@
  * Время между фазами.
  */
 //! Разрешение.
-#define PARAM_ID_PROT_PHASES_TIME_ENABLED 150
+#define PARAM_ID_PROT_PHASES_STATE_ENABLED 150
 //! Время отклонения, мс.
-#define PARAM_ID_PROT_PHASES_TIME_TIME_MS 151
+#define PARAM_ID_PROT_PHASES_STATE_TIME_MS 151
 //! Действие.
-#define PARAM_ID_PROT_PHASES_TIME_ACTION 152
+#define PARAM_ID_PROT_PHASES_STATE_ACTION 152
 /*
  * Углы между фазами.
  */
