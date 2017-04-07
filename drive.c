@@ -304,7 +304,8 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
         drive_set_prot_masks(state_to);
     }
     
-    if(state_to == DRIVE_STATE_INIT){
+    if(state_to == DRIVE_STATE_INIT ||
+       state_to == DRIVE_STATE_ERROR){
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, false);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_ANGLES, false);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_SYNC, false);
