@@ -158,8 +158,21 @@ err_t drive_phase_sync_init(void)
 
 void drive_phase_sync_reset(void)
 {
+    CRITICAL_ENTER();
+    
+    memset(&phase_sync.buffers, 0x0, sizeof(phase_sync_fft_buffers_t) * FFT_BUFFERS_COUNT);
+    memset(&phase_sync.values, 0x0, sizeof(phase_sync_fft_values_t));
+    
+    phase_sync.adc_counter = 0;
+    phase_sync.calc_phases_counter = 0;
+    
+    phase_sync.put_buffers = 0;
+    phase_sync.get_buffers = 1;
+    
     phase_sync.calc_state = DRIVE_PHASE_SYNC_CALC_INIT;
     pid_controller_reset(&phase_sync.pll.pid);
+    
+    CRITICAL_EXIT();
 }
 
 void drive_phase_sync_set_angle_callback(drive_phase_sync_angle_callback_t callback)
