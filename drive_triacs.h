@@ -202,6 +202,22 @@ extern void drive_triacs_set_exc_mode(drive_triacs_exc_mode_t mode);
 extern void drive_triacs_stop(void);
 
 /**
+ * Устанавливает интервал углов открытия тиристорных пар.
+ * @param angle_min Минимальный угол открытия.
+ * @param angle_max Максимальный угол открытия.
+ * @return Код ошибки.
+ */
+extern err_t drive_triacs_clamp_pairs_open_angle(fixed32_t angle_min, fixed32_t angle_max);
+
+/**
+ * Устанавливает интервал углов открытия симистора возбуждения.
+ * @param angle_min Минимальный угол открытия.
+ * @param angle_max Максимальный угол открытия.
+ * @return Код ошибки.
+ */
+extern err_t drive_triacs_clamp_exc_open_angle(fixed32_t angle_min, fixed32_t angle_max);
+
+/**
  * Устанавливает угол открытия тиристорных пар.
  * @param angle Угол открытия.
  * @return Код ошибки.
