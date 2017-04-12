@@ -9,17 +9,22 @@
 #include <stdio.h>
 
 
+//! Минимальное значение PID-регулятора скорости.
+#define DRIVE_SPD_PID_VALUE_MIN 0
+
 //! Максимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MAX TRIACS_PAIRS_ANGLE_MAX_F // 120.0
 //! Минимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MIN TRIACS_PAIRS_ANGLE_MIN_F
 
 //! Максимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MAX (TRIAC_EXC_ANGLE_MAX_F - TRIAC_EXC_ANGLE_MIN_F) // 180.0 - 30.0
+//#define DRIVE_EXC_PID_VALUE_MAX (TRIAC_EXC_ANGLE_MAX_F - TRIAC_EXC_ANGLE_MIN_F) // 180.0 - 30.0
+#define DRIVE_EXC_PID_VALUE_MAX TRIAC_EXC_ANGLE_MAX_F
 //! Минимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MIN 0
+//#define DRIVE_EXC_PID_VALUE_MIN 0
+#define DRIVE_EXC_PID_VALUE_MIN TRIAC_EXC_ANGLE_MIN_F
 //! Добавочный угол открытия тиристора возбуждения.
-#define DRIVE_EXC_PID_VALUE_DELTA TRIAC_EXC_ANGLE_MIN_F // 30.0
+//#define DRIVE_EXC_PID_VALUE_DELTA TRIAC_EXC_ANGLE_MIN_F // 30.0
 
 //! Коэффициент П-звена ПИД-регулятора синхронизации с фазами.
 //#define DRIVE_PHASE_SYNC_PLL_PIC_Kp (fixed32_make_from_fract(18, 1))
@@ -206,6 +211,23 @@ static const size_t drive_prot_items[] = {
     DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Iexc, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Iexc
 };
 #define DRIVE_CHECK_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_items)
+
+static const size_t drive_prot_cutoff_items[] = {
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Ua, DRIVE_PROT_PWR_ITEM_CUTOFF_Ub, DRIVE_PROT_PWR_ITEM_CUTOFF_Uc,
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Ia, DRIVE_PROT_PWR_ITEM_CUTOFF_Ib, DRIVE_PROT_PWR_ITEM_CUTOFF_Ic,
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Urot, DRIVE_PROT_PWR_ITEM_CUTOFF_Irot, DRIVE_PROT_PWR_ITEM_CUTOFF_Iexc
+};
+#define DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_cutoff_items)
+
+#define PROT_CUTOFF_ITEMS_ERRORS_MASK\
+    (DRIVE_POWER_ERROR_OVERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Uc |\
+     DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |\
+     DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc)
+
+#define PROT_CUTOFF_ITEMS_WARNINGS_MASK\
+    (DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |\
+     DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |\
+     DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc)
 
 // INIT
 #define PROT_ITEMS_INIT_ERRORS_MASK     PROT_ERRORS_MASK_IN_OVF
@@ -917,31 +939,13 @@ static void drive_check_prots(void)
  */
 static void drive_check_power_inst(void)
 {
-    static const size_t prot_cutoff_items[] = {
-        DRIVE_PROT_PWR_ITEM_CUTOFF_Ua, DRIVE_PROT_PWR_ITEM_CUTOFF_Ub, DRIVE_PROT_PWR_ITEM_CUTOFF_Uc,
-        DRIVE_PROT_PWR_ITEM_CUTOFF_Ia, DRIVE_PROT_PWR_ITEM_CUTOFF_Ib, DRIVE_PROT_PWR_ITEM_CUTOFF_Ic,
-        DRIVE_PROT_PWR_ITEM_CUTOFF_Urot, DRIVE_PROT_PWR_ITEM_CUTOFF_Irot, DRIVE_PROT_PWR_ITEM_CUTOFF_Iexc
-    };
-    
-    static const size_t prot_cutoff_items_count = ARRAY_LEN(prot_cutoff_items);
-    
-    static const drive_power_errors_t prot_cutoff_errs_mask = 
-        DRIVE_POWER_ERROR_OVERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Uc |
-        DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |
-        DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc;
-    
-    static const drive_power_warnings_t prot_cutoff_warn_mask = 
-        DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |
-        DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |
-        DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc;
-    
     drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
     
-    drive_protection_power_set_cutoff_errs_mask(prot_cutoff_errs_mask);
-    drive_protection_power_set_cutoff_warn_mask(prot_cutoff_warn_mask);
+    drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
+    drive_protection_power_set_cutoff_warn_mask(PROT_CUTOFF_ITEMS_WARNINGS_MASK);
     
-    if(drive_protection_power_check_items(prot_cutoff_items, prot_cutoff_items_count, &warnings, &errors)){
+    if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, &warnings, &errors)){
         
         if(errors != DRIVE_POWER_ERROR_NONE){
             drive_error_stop_cutoff();
@@ -1070,24 +1074,24 @@ static bool drive_regulate(void)
 {
     if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS) && drive_phase_state_errors() == PHASE_NO_ERROR){
         fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
         fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
 
-        drive_regulator_regulate(U_rot, I_exc);
+        drive_regulator_regulate(U_rot, I_rot, I_exc);
 
-        fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
-        fixed32_t exc_pid_val = drive_regulator_exc_pid_value() + DRIVE_EXC_PID_VALUE_DELTA;
+        fixed32_t rot_angle = drive_regulator_rot_open_angle();
+        fixed32_t exc_angle = drive_regulator_exc_open_angle();// + DRIVE_EXC_PID_VALUE_DELTA;
 
-        drive_triacs_set_pairs_open_angle(rot_pid_val);
+        drive_triacs_set_pairs_open_angle(rot_angle);
         //drive_triacs_set_pairs_open_angle(fixed32_make_from_int(30));
-        drive_triacs_set_exc_open_angle(exc_pid_val);
+        drive_triacs_set_exc_open_angle(exc_angle);
         //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
 
-        //pid_controller_t* pid = drive_regulator_rot_pid();
+        pid_controller_t* pid_spd = drive_regulator_spd_pid();
+        pid_controller_t* pid_rot = drive_regulator_rot_pid();
 
-        //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
-
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), rot_pid_val);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), pid_spd->value);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_7), pid_rot->value);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
@@ -1504,9 +1508,6 @@ err_t drive_init(void)
     
     drive_dio_init();
     
-    drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
-    drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
-    
     drive_phase_sync_pll_pid_clamp(
             -fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX),
             fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX)
@@ -1563,6 +1564,21 @@ err_t drive_update_settings(void)
     drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
                                 settings_valuef(PARAM_ID_EXC_PID_K_I),
                                 settings_valuef(PARAM_ID_EXC_PID_K_D));
+    drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
+                                settings_valuef(PARAM_ID_SPD_PID_K_I),
+                                settings_valuef(PARAM_ID_SPD_PID_K_D));
+    
+    fixed32_t rot_angle_min = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN);
+    fixed32_t rot_angle_max = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX);
+    fixed32_t exc_angle_min = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN);
+    fixed32_t exc_angle_max = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX);
+    
+    drive_triacs_clamp_pairs_open_angle(rot_angle_min, rot_angle_max);
+    drive_triacs_clamp_exc_open_angle(exc_angle_min, exc_angle_max);
+    
+    drive_regulator_spd_pid_clamp(DRIVE_SPD_PID_VALUE_MIN, settings_valuef(PARAM_ID_I_ROT_NOM));
+    drive_regulator_rot_pid_clamp(rot_angle_min, rot_angle_max);
+    drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
@@ -1868,7 +1884,8 @@ static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
 {
     drive_phase_state_handle(phase);
 
-    if(drive_phase_state_errors() == PHASE_NO_ERROR){
+    if(drive_phase_state_errors() == PHASE_NO_ERROR &&
+       drive_phase_sync_synchronized()){
         drive_setup_triacs_open(phase, sensor_time);
     }
     

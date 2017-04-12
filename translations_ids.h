@@ -159,6 +159,8 @@
 #define TR_ID_MENU_PID_ROT          291
 //! ПИД возбуждения.
 #define TR_ID_MENU_PID_EXC          292
+//! ПИД скорости.
+#define TR_ID_MENU_PID_SPD          293
 //! Коэффициент П.
 #define TR_ID_MENU_PID_K_P          295
 //! Коэффициент И.
@@ -185,6 +187,12 @@
 #define TR_ID_MENU_TRIACS_PAIRS_OPEN_TIME 312
 //! Возбуждения.
 #define TR_ID_MENU_TRIAC_EXC_OPEN_TIME 313
+//! Углы открытия.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLES  314
+//! Минимальный угол.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLE_MIN 315
+//! Максимальный угол.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLE_MAX 316
 //! Защита.
 #define TR_ID_MENU_PROTECTION       320
 //! Отсечка.

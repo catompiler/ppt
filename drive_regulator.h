@@ -35,9 +35,16 @@ typedef ramp_reference_t reference_t;
 extern err_t drive_regulator_init(void);
 
 /**
- * Получает ПИД-регулятор напряжения ротора.
+ * Получает ПИД-регулятор скорости.
  * Для отладки.
- * @return ПИД-регулятор напряжения ротора.
+ * @return ПИД-регулятор скорости.
+ */
+extern pid_controller_t* drive_regulator_spd_pid(void);
+
+/**
+ * Получает ПИД-регулятор тока ротора.
+ * Для отладки.
+ * @return ПИД-регулятор тока ротора.
  */
 extern pid_controller_t* drive_regulator_rot_pid(void);
 
@@ -153,7 +160,22 @@ extern bool drive_regulator_exc_enabled(void);
 extern void drive_regulator_set_exc_enabled(bool enabled);
 
 /**
- * Устанавливает коэффициенты ПИД-регулятора напряжения ротора.
+ * Устанавливает коэффициенты ПИД-регулятора скорости.
+ * @param kp Коэффициент пропорционального звена.
+ * @param ki Коэффициент интегрального звена.
+ * @param kd Коэффициент дифференциального звена.
+ */
+extern void drive_regulator_set_spd_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd);
+
+/**
+ * Устанавливает пределы значений ПИД-регулятора скорости.
+ * @param pid_min Минимальное значение ПИД.
+ * @param pid_max Максимальное значение ПИД.
+ */
+extern void drive_regulator_spd_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
+
+/**
+ * Устанавливает коэффициенты ПИД-регулятора тока ротора.
  * @param kp Коэффициент пропорционального звена.
  * @param ki Коэффициент интегрального звена.
  * @param kd Коэффициент дифференциального звена.
@@ -161,17 +183,11 @@ extern void drive_regulator_set_exc_enabled(bool enabled);
 extern void drive_regulator_set_rot_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd);
 
 /**
- * Устанавливает пределы значений ПИД-регулятора напряжения ротора.
+ * Устанавливает пределы значений ПИД-регулятора тока ротора.
  * @param pid_min Минимальное значение ПИД.
  * @param pid_max Максимальное значение ПИД.
  */
 extern void drive_regulator_rot_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
-
-/**
- * Получает значение ПИД-регулятора напряжения ротора.
- * @return Значение ПИД-регулятора напряжения ротора.
- */
-extern fixed32_t drive_regulator_rot_pid_value(void);
 
 /**
  * Устанавливает коэффициенты ПИД-регулятора тока возбуждения.
@@ -189,12 +205,6 @@ extern void drive_regulator_set_exc_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd
 extern void drive_regulator_exc_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
 
 /**
- * Получает значение ПИД-регулятора тока возбуждения.
- * @return Значение ПИД-регулятора тока возбуждения.
- */
-extern fixed32_t drive_regulator_exc_pid_value(void);
-
-/**
  * Получает значение номинального напряжения якоря.
  * @return Номинальное напряжение якоря.
  */
@@ -205,6 +215,18 @@ extern fixed32_t drive_regulator_rot_nom_voltage(void);
  * @param voltage Номинальное напряжение якоря.
  */
 extern void drive_regulator_set_rot_nom_voltage(fixed32_t voltage);
+
+/**
+ * Получает значение номинального тока якоря.
+ * @return Номинальный ток якоря.
+ */
+extern fixed32_t drive_regulator_rot_nom_current(void);
+
+/**
+ * Устанавливает значение номинального тока якоря.
+ * @param current Номинальный ток якоря.
+ */
+extern void drive_regulator_set_rot_nom_current(fixed32_t current);
 
 /**
  * Получает значение тока возбуждения.
@@ -225,12 +247,24 @@ extern void drive_regulator_set_exc_current(fixed32_t current);
 extern fixed32_t drive_regulator_current_u_ref(void);
 
 /**
+ * Получает угол открытия для ротора.
+ * @return Угол открытия для ротора.
+ */
+extern fixed32_t drive_regulator_rot_open_angle(void);
+
+/**
+ * Получает угол открытия для возбуждения.
+ * @return Угол открытия для возбуждения.
+ */
+extern fixed32_t drive_regulator_exc_open_angle(void);
+
+/**
  * Выполняет ПИД-регулирование.
  * @param dt Интервал времени с прошлого регулирования.
  * @param u_rot_back Напряжения ротора по обратной связи.
  * @param i_exc_back Ток возбуждения по обратной связи.
  * @return Флаг регулировки.
  */
-extern bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_exc_back);
+extern bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_rot_back, fixed32_t i_exc_back);
 
 #endif /* DRIVE_REGULATOR_H */
