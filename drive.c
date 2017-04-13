@@ -87,6 +87,7 @@ typedef struct _Drive {
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
     drive_power_warnings_t power_warnings; //!< Предупреждения питания.
+    drive_power_errors_t power_cutoff_errors; //!< Ошибки отсечки питания.
     //drive_phase_angle_errors_t phase_angle_errors; //!< Ошибки углов между фазами.
     //drive_phase_angle_warnings_t phase_angle_warnings; //!< Предупреждения углов между фазами.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
@@ -224,10 +225,10 @@ static const size_t drive_prot_cutoff_items[] = {
      DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |\
      DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc)
 
-#define PROT_CUTOFF_ITEMS_WARNINGS_MASK\
+/*#define PROT_CUTOFF_ITEMS_WARNINGS_MASK\
     (DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |\
      DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |\
-     DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc)
+     DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc)*/
 
 // INIT
 #define PROT_ITEMS_INIT_ERRORS_MASK     PROT_ERRORS_MASK_IN_OVF
@@ -487,7 +488,10 @@ static void drive_set_power_error(drive_power_errors_t error)
 static void drive_clear_power_error(drive_power_errors_t error)
 {
     drive.power_errors &= ~error;
-    if(drive.power_errors == DRIVE_POWER_ERROR_NONE) drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    if(drive.power_errors == DRIVE_POWER_ERROR_NONE &&
+       drive.power_cutoff_errors == DRIVE_POWER_ERROR_NONE){
+        drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    }
 }
 
 /**
@@ -495,10 +499,10 @@ static void drive_clear_power_error(drive_power_errors_t error)
  * @param error Ошибка питания.
  * @return Флаг возникновения новой ошибки питания.
  */
-ALWAYS_INLINE static bool drive_is_new_power_error(drive_power_error_t error)
+/*ALWAYS_INLINE static bool drive_is_new_power_error(drive_power_error_t error)
 {
     return (drive.power_errors & error) == 0;
-}
+}*/
 
 /**
  * Установка предупреждения питания.
@@ -525,10 +529,33 @@ static void drive_clear_power_warning(drive_power_warnings_t warning)
  * @param warning Предупреждение питания.
  * @return Флаг возникновения нового предупреждения питания.
  */
-ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warning)
+/*ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warning)
 {
     return (drive.power_warnings & warning) == 0;
+}*/
+
+/**
+ * Установка ошибки отсечки питания.
+ * @param error Ошибка.
+ */
+static void drive_set_power_cutoff_error(drive_power_errors_t error)
+{
+    drive.power_cutoff_errors |= error;
+    drive_set_error(DRIVE_ERROR_POWER_INVALID);
 }
+
+/**
+ * Снятие ошибки отсечки питания.
+ * @param error Ошибка.
+ */
+/*static void drive_clear_power_cutoff_error(drive_power_errors_t error)
+{
+    drive.power_cutoff_errors &= ~error;
+    if(drive.power_errors == DRIVE_POWER_ERROR_NONE &&
+       drive.power_cutoff_errors == DRIVE_POWER_ERROR_NONE){
+        drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    }
+}*/
 
 
 /**
@@ -608,34 +635,34 @@ static void drive_on_warning(void)
  * Обработчик возникновения предупреждения.
  * @param error Предупреждение.
  */
-static void drive_warning_occured(drive_warnings_t warning)
+/*static void drive_warning_occured(drive_warnings_t warning)
 {
     drive_set_warning(warning);
 
     if(drive.status != DRIVE_STATUS_ERROR){
         drive_on_warning();
     }
-}
+}*/
 
 /**
  * Обработчик возникновения ошибки питания.
  * @param error Ошибка питания.
  */
-static void drive_power_error_occured(drive_power_errors_t error)
+/*static void drive_power_error_occured(drive_power_errors_t error)
 {
     drive_set_power_error(error);
     drive_error_occured(DRIVE_ERROR_POWER_INVALID);
-}
+}*/
 
 /**
  * Обработчик возникновения предупреждения питания.
  * @param warning Предупреждение питания.
  */
-static void drive_power_warning_occured(drive_power_warnings_t warning)
+/*static void drive_power_warning_occured(drive_power_warnings_t warning)
 {
     drive_set_power_warning(warning);
     drive_warning_occured(DRIVE_WARNING_POWER);
-}
+}*/
 
 /**
  * Обработчик возникновения ошибки фаз.
@@ -939,21 +966,18 @@ static void drive_check_prots(void)
  */
 static void drive_check_power_inst(void)
 {
-    drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
+    //drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     
     drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
-    drive_protection_power_set_cutoff_warn_mask(PROT_CUTOFF_ITEMS_WARNINGS_MASK);
+    //drive_protection_power_set_cutoff_warn_mask(PROT_CUTOFF_ITEMS_WARNINGS_MASK);
     
-    if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, &warnings, &errors)){
+    if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, NULL, &errors)){
         
         if(errors != DRIVE_POWER_ERROR_NONE){
             drive_error_stop_cutoff();
-            drive_power_error_occured(errors);
-        }
-
-        if(warnings != DRIVE_POWER_WARNING_NONE){
-            drive_power_warning_occured(warnings);
+            drive_set_power_cutoff_error(errors);
+            drive_on_error();
         }
     }
 }
@@ -1688,12 +1712,12 @@ drive_warnings_t drive_warnings(void)
 
 bool drive_power_error(drive_power_error_t error)
 {
-    return (drive.power_errors & error) != 0;
+    return ((drive.power_errors | drive.power_cutoff_errors) & error) != 0;
 }
 
 drive_power_errors_t drive_power_errors(void)
 {
-    return drive.power_errors;
+    return drive.power_errors | drive.power_cutoff_errors;
 }
 
 bool drive_power_warning(drive_power_warning_t warning)
@@ -1818,6 +1842,7 @@ void drive_clear_errors(void)
     drive.power_errors = DRIVE_POWER_ERROR_NONE;
     drive.warnings = DRIVE_WARNING_NONE;
     drive.power_warnings = DRIVE_POWER_WARNING_NONE;
+    drive.power_cutoff_errors = DRIVE_POWER_ERROR_NONE;
     
     //drive.phase_angle_errors = DRIVE_PHASE_ANGLE_NO_ERROR;
     //drive.phase_angle_warnings = DRIVE_PHASE_ANGLE_NO_WARNING;
