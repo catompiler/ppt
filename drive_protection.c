@@ -385,7 +385,8 @@ static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
     if(param_ena != 0){
         item->enabled = (bool)settings_valueu(param_ena);
     }else{
-        item->enabled = false;
+        // По-умолчанию - разрешение элемента защиты.
+        item->enabled = true;
     }
     
     // Если элемент запрещён.
@@ -422,7 +423,8 @@ static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
     if(param_action != 0){
         item->action = settings_valueu(param_action);
     }else{
-        item->action = DRIVE_PROT_ACTION_IGNORE;
+        // По-умолчанию - экстренное отключение.
+        item->action = DRIVE_PROT_ACTION_EMERGENCY_STOP;
     }
 }
 
@@ -527,7 +529,7 @@ ALWAYS_INLINE static const drive_protection_power_descr_t* drive_protection_powe
 
 ALWAYS_INLINE static fixed32_t drive_protection_get_part(fixed32_t value, uint32_t percents)
 {
-    return value * percents / 100;
+    return (int64_t)value * percents / 100;
 }
 
 ALWAYS_INLINE static fixed32_t drive_protection_get_ovf_level(fixed32_t value, uint32_t percents)
@@ -827,11 +829,16 @@ void drive_protection_power_reset_cutoff_warn_mask_flags(drive_power_warnings_t 
  */
 ALWAYS_INLINE static bool drive_protection_check_item_value(drive_protection_type_t type, fixed32_t value, fixed32_t level)
 {
-    if(type != DRIVE_PROT_TYPE_UDF){
-        return value <= level;
-    }else{
-        return value >= level;
+    switch(type){
+        default:
+        case DRIVE_PROT_TYPE_CUT:
+        case DRIVE_PROT_TYPE_OVF:
+        case DRIVE_PROT_TYPE_ZERO:
+            break;
+        case DRIVE_PROT_TYPE_UDF:
+            return value >= level;
     }
+    return value <= level;
 }
 
 /**
