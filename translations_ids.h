@@ -355,6 +355,15 @@
 //! Меню ПИД синхронизации с фазами.
 #define TR_ID_MENU_PHASE_SYNC_PID       452
 
+//! Меню защиты фаз.
+#define TR_ID_MENU_PHASES_PROT        460
+//! Защита последовательности фаз.
+#define TR_ID_MENU_PHASE_STATE_PROT   461
+//! Защита по углам между фазами.
+#define TR_ID_MENU_PHASES_ANGLES_PROT 462
+//! Защита по углам между фазами.
+#define TR_ID_MENU_PHASES_SYNC_PROT   463
+
 //! Питание.
 #define TR_ID_HELP_POWER            550
 //! Сеть.
