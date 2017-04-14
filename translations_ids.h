@@ -364,6 +364,9 @@
 //! Защита по углам между фазами.
 #define TR_ID_MENU_PHASES_SYNC_PROT   463
 
+//! Меню защиты от обрыва якоря.
+#define TR_ID_MENU_ROT_BREAK_PROT   470
+
 //! Питание.
 #define TR_ID_HELP_POWER            550
 //! Сеть.

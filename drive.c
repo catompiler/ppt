@@ -337,6 +337,14 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_ANGLES, true);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_SYNC, true);
     }
+    
+    if(state_to == DRIVE_STATE_RUN ||
+       state_to == DRIVE_STATE_START ||
+       state_to == DRIVE_STATE_STOP){
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
+    }else{
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
+    }
 }
 
 /**
@@ -607,7 +615,11 @@ static void drive_set_power_cutoff_error(drive_power_errors_t error)
  */
 static void drive_on_error(void)
 {
-    if(drive.on_error_occured) drive.on_error_occured();
+    if(drive.status != DRIVE_STATUS_ERROR){
+        if(drive.on_error_occured){
+            drive.on_error_occured();
+        }
+    }
 }
 
 /**
@@ -628,7 +640,11 @@ static void drive_error_occured(drive_errors_t error)
  */
 static void drive_on_warning(void)
 {
-    if(drive.on_warning_occured) drive.on_warning_occured();
+    if(drive.status != DRIVE_STATUS_ERROR){
+        if(drive.on_warning_occured){
+            drive.on_warning_occured();
+        }
+    }
 }
 
 /**
@@ -952,6 +968,9 @@ static void drive_check_prots(void)
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_WARN_PHASES_SYNC, DRIVE_ERROR_NONE, DRIVE_WARNING_PHASE_SYNC));
     
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_ROT_BREAK, DRIVE_ERROR_ROT_BREAK, DRIVE_WARNING_NONE));
+    
     
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
@@ -975,9 +994,9 @@ static void drive_check_power_inst(void)
     if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, NULL, &errors)){
         
         if(errors != DRIVE_POWER_ERROR_NONE){
-            drive_error_stop_cutoff();
             drive_set_power_cutoff_error(errors);
             drive_on_error();
+            drive_error_stop_cutoff();
         }
     }
 }

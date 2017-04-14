@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 5
+#define DRIVE_PROT_ITEMS_COUNT 6
 
 /*
  * Индексы элементов защиты питания.
@@ -113,6 +113,8 @@
 
 #define DRIVE_PROT_ITEM_FAULT_PHASES_SYNC    3
 #define DRIVE_PROT_ITEM_WARN_PHASES_SYNC     4
+
+#define DRIVE_PROT_ITEM_ROT_BREAK            5
 
 
 //! Тип индекса элемента защиты.

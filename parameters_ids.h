@@ -218,6 +218,19 @@
  * Защита питания.
  */
 /*
+ * Обрыв якоря.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_ROT_BREAK_ENABLED 130
+//! Значение.
+#define PARAM_ID_PROT_ROT_BREAK_VALUE 131
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_ROT_BREAK_TIME_MS 132
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE 133
+//! Действие.
+#define PARAM_ID_PROT_ROT_BREAK_ACTION 134
+/*
  * Сеть.
  */
 /*
@@ -269,6 +282,8 @@
  */
 //! Разрешение.
 #define PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED 180
+//! Значение.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_VALUE 181
 //! Время отклонения, мс.
 #define PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS 182
 //! Разрешение защёлки.
@@ -280,6 +295,8 @@
  */
 //! Разрешение.
 #define PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED 190
+//! Значение.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_VALUE 191
 //! Время отклонения, мс.
 #define PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS 192
 //! Разрешение защёлки.

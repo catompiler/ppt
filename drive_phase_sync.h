@@ -13,6 +13,8 @@
 #include "drive_phase_state.h"
 
 
+//! Фаза для синхронизации.
+#define DRIVE_PHASE_SYNC_PHASE PHASE_A
 
 
 //! Тип каллбэка получения начального угла.

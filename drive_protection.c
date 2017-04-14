@@ -328,6 +328,8 @@ static bool drive_prot_check_phase_state(drive_protection_item_t* item);
 static bool drive_prot_check_phases_angles(drive_protection_item_t* item);
 // Проверка синхронизации с фазами.
 static bool drive_prot_check_phases_sync(drive_protection_item_t* item);
+// Проверка обрыва якоря.
+static bool drive_prot_check_rot_break(drive_protection_item_t* item);
 
 #define PROT_DESCR(arg_check_proc, arg_par_ena, arg_par_lvl, arg_par_time,\
                    arg_par_lch_ena, arg_par_act)\
@@ -344,10 +346,12 @@ static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_C
                PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION),
     PROT_DESCR(drive_prot_check_phases_angles, PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE,
                PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION),
-    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, 0,
+    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, PARAM_ID_PROT_PHASES_SYNC_FAULT_VALUE,
                PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION),
-    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, 0,
+    PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, PARAM_ID_PROT_PHASES_SYNC_WARN_VALUE,
                PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION),
+    PROT_DESCR(drive_prot_check_rot_break, PARAM_ID_PROT_ROT_BREAK_ENABLED, PARAM_ID_PROT_ROT_BREAK_VALUE,
+               PARAM_ID_PROT_ROT_BREAK_TIME_MS, PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE, PARAM_ID_PROT_ROT_BREAK_ACTION),
 };
 
 
@@ -357,6 +361,8 @@ typedef struct _Drive_Protection {
     fixed32_t U_rot; //!< Номинальное напряжение якоря.
     fixed32_t I_rot; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
+    fixed32_t U_rot_idle; //!< Шум нуля напряжения якоря.
+    fixed32_t I_rot_idle; //!< Шум нуля тока якоря.
     drive_protection_power_item_t prot_pwr_items[DRIVE_PROT_PWR_ITEMS_COUNT];
     drive_power_errors_t prot_errs_mask; //!< Маска ошибок защиты.
     drive_power_warnings_t prot_warn_mask; //!< Маска предупреждений защиты.
@@ -684,7 +690,7 @@ static bool drive_prot_check_phase_state(drive_protection_item_t* item)
 
 /**
  * Выполняет проверку уровня ошибки защиты фаз по углу между фазами.
- * @return Флаг срабатывания элемента защиты.
+ * @return Флаг допустимости элемента защиты.
  */
 static bool drive_prot_check_phases_angles(drive_protection_item_t* item)
 {
@@ -706,11 +712,28 @@ static bool drive_prot_check_phases_angles(drive_protection_item_t* item)
 
 /**
  * Выполняет проверку защиты фаз по синхронизации с фазами.
- * @return Флаг срабатывания элемента защиты.
+ * @return Флаг допустимости элемента защиты.
  */
 static bool drive_prot_check_phases_sync(drive_protection_item_t* item)
 {
-    return drive_phase_sync_synchronized();
+    fixed32_t angle = 0;
+    
+    angle = drive_phase_sync_offset_angle(DRIVE_PHASE_SYNC_PHASE);
+    angle = fixed_abs(angle);
+    
+    return angle <= item->value_level;
+}
+
+/**
+ * Выполняет проверку обрыва якоря.
+ * @return Флаг допустимости элемента защиты.
+ */
+static bool drive_prot_check_rot_break(drive_protection_item_t* item)
+{
+    fixed32_t Urot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+    fixed32_t Irot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+    
+    return Urot <= item->value_level || Irot > drive_prot.I_rot_idle;
 }
 
 /*
@@ -730,6 +753,9 @@ void drive_protection_update_settings(void)
     drive_prot.U_rot = settings_valuef(PARAM_ID_U_ROT_NOM);
     drive_prot.I_rot = settings_valuef(PARAM_ID_I_ROT_NOM);
     drive_prot.I_exc = settings_valuef(PARAM_ID_I_EXC);
+    
+    drive_prot.U_rot_idle = settings_valuef(PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE);
+    drive_prot.I_rot_idle = settings_valuef(PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE);
     
     drive_protection_update_top_settings();
     
