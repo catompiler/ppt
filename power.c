@@ -163,10 +163,6 @@ err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t
 
 static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
-#if POWER_IGNORE_BITS != 0
-    adc_value &= POWER_IGNORE_BITS_MASK;
-#endif
-    
     // Значение нуля АЦП.
     channel->sum_zero += adc_value;
     // Увеличим число измерений значения нуля.
@@ -177,6 +173,14 @@ static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc
         
         // Вычтем значение АЦП при нуле.
         int32_t value = (int32_t)adc_value - channel->raw_zero_cal;
+        
+        #if POWER_IGNORE_BITS != 0
+        if(value >= 0){
+            value &= POWER_IGNORE_BITS_MASK;
+        }else{
+            value = -((-value) & POWER_IGNORE_BITS_MASK);
+        }
+        #endif
 
         // Мгновенное сырое значение канала АЦП.
         channel->raw_value_inst = value;
