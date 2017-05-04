@@ -7,8 +7,8 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    drive_regulator.o drive_protection.o drive_phase_state.o\
 	    drive_keypad.o drive_gui.o drive_ui.o drive_modbus.o\
 	    drive_tasks.o drive_dio.o drive_phase_sync.o\
-        gui/widgets/gui_tile.o gui/gui_metro.o gui/gui_object.o\
-        gui/gui_widget.o gui/widgets/gui_time.o\
+	    gui/widgets/gui_tile.o gui/gui_metro.o gui/gui_object.o\
+	    gui/gui_widget.o gui/widgets/gui_time.o\
 	    gui/widgets/gui_statusbar.o gui/menu/menu_explorer.o\
 	    gui/widgets/gui_menu.o gui/widgets/gui_home.o
 
@@ -19,7 +19,7 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    i2c pca9555 list key_input scheduler\
 	    pid_controller m95x storage menu localization\
 	    crc16_ccitt drive_events bsqrt cordic32\
-        usart_bus modbus_rtu
+	    usart_bus modbus_rtu timers
 
 # Макросы.
 DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
