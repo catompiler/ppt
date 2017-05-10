@@ -3,6 +3,7 @@
 #include "drive_events.h"
 #include "drive_tasks.h"
 #include "drive_dio.h"
+#include "drive_nvdata.h"
 #include "settings.h"
 #include "future/future.h"
 #include "utils/utils.h"
@@ -78,6 +79,10 @@ static drive_modbus_t drive_modbus;
 //! Полуслова ошибок фаз.
 #define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS0 (DRIVE_MODBUS_INPUT_REGS_START + 18)
 #define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 19)
+//! Общее время включения.
+#define DRIVE_MODBUS_INPUT_REG_LIFETIME (DRIVE_MODBUS_INPUT_REGS_START + 30)
+//! Общее время включения.
+#define DRIVE_MODBUS_INPUT_REG_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 31)
 // Регистры хранения.
 //! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
@@ -287,6 +292,12 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
             break;
         case DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS1:
             *value = (drive_phase_errors() >> 16) & 0xffff;
+            break;
+        case DRIVE_MODBUS_INPUT_REG_LIFETIME:
+            *value = drive_nvdata_lifetime() / 3600;
+            break;
+        case DRIVE_MODBUS_INPUT_REG_RUNTIME:
+            *value = drive_nvdata_runtime() / 3600;
             break;
     }
     return MODBUS_RTU_ERROR_NONE;
