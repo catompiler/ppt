@@ -10,15 +10,16 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    gui/widgets/gui_tile.o gui/gui_metro.o gui/gui_object.o\
 	    gui/gui_widget.o gui/widgets/gui_time.o\
 	    gui/widgets/gui_statusbar.o gui/menu/menu_explorer.o\
-	    gui/widgets/gui_menu.o gui/widgets/gui_home.o
+	    gui/widgets/gui_menu.o gui/widgets/gui_home.o\
+	    storage.o nvdata.o drive_nvdata.o drive_events.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    counter spi dma future mutex delay rtc\
 	    tft9341 tft9341_cache graphics painter font\
 	    i2c pca9555 list key_input scheduler\
-	    pid_controller m95x storage menu localization\
-	    crc16_ccitt drive_events bsqrt cordic32\
+	    pid_controller m95x menu localization\
+	    crc16_ccitt bsqrt cordic32\
 	    usart_bus modbus_rtu timers
 
 # Макросы.
@@ -28,7 +29,7 @@ DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
 # Стандартные драйвера периферии.
 # STD_PERIPH_DRIVERS += misc
  STD_PERIPH_DRIVERS += stm32f10x_adc
-# STD_PERIPH_DRIVERS += stm32f10x_bkp
+ STD_PERIPH_DRIVERS += stm32f10x_bkp
 # STD_PERIPH_DRIVERS += stm32f10x_can
 # STD_PERIPH_DRIVERS += stm32f10x_cec
 # STD_PERIPH_DRIVERS += stm32f10x_crc

@@ -29,6 +29,7 @@
 #include "drive_modbus.h"
 #include "drive_tasks.h"
 #include "drive_dio.h"
+#include "drive_nvdata.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -344,6 +345,12 @@ IRQ_ATTRIBS void RTC_IRQHandler(void)
 static void rtc_on_second(void)
 {
     counter_ms_gtod = system_counter_ticks();
+    
+    drive_nvdata_set_lifetime(drive_nvdata_lifetime() + 1);
+    
+    if(drive_running()){
+        drive_nvdata_set_runtime(drive_nvdata_runtime() + 1);
+    }
 }
 
 /*
@@ -732,11 +739,11 @@ static void init_PDR(void)
     PWR->CR |= PWR_CR_PVDE;
 }
 
-static void init_rtc(void)
+static void init_rtc_nvdata(void)
 {
     rtc_init();
     
-    if(rtc_state() == DISABLE){
+    if(rtc_state() == DISABLE || !drive_nvdata_valid()){
         PWR_BackupAccessCmd(ENABLE);
         
         RCC_BackupResetCmd(ENABLE);
@@ -744,6 +751,8 @@ static void init_rtc(void)
         RCC_BackupResetCmd(DISABLE);
         
         PWR_BackupAccessCmd(ENABLE);
+        
+        drive_nvdata_clear();
         
         RCC_LSEConfig(RCC_LSE_ON);
         while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET);
@@ -1538,7 +1547,7 @@ static void init_gpio (void)
         gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
         gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOC, &gpio_is);
-    //GPIO_SetBits(GPIOC, GPIO_Pin_7);
+    //GPIO_SetBits(GPIOC, GPIO_Pin_7); // PWM: TIM8_CH2.
 }
 
 static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
@@ -1681,7 +1690,7 @@ int main(void)
     
     init_usart();
     
-    init_rtc();
+    init_rtc_nvdata();
     
     printf("STM32 MCU\r\n");
     
