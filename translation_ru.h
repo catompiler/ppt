@@ -150,10 +150,20 @@ TEXT_TR(TR_ID_MENU_CALIBRATION_DATA_Ifan, "Значение калибровки
 TEXT_TR(TR_ID_MENU_PHASE_SYNC, "Синхронизация с фазами")
 TEXT_TR(TR_ID_MENU_PHASE_SYNC_ACCURACY, "Точность синхронизации")
 TEXT_TR(TR_ID_MENU_PHASE_SYNC_PID, "ПИД-регулятор ФАПЧ")
+TEXT_TR(TR_ID_MENU_GUI, "Настройки панели (GUI)")
+TEXT_TR(TR_ID_MENU_GUI_BUZZER, "Звуковое оповещение")
+TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ADMIN, "Пароль администратора")
+TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ROOT, "Пароль ROOT")
+TEXT_TR(TR_ID_MENU_COMMANDS, "Команды")
+TEXT_TR(TR_ID_MENU_CMD_START_STOP, "Старт/Стоп")
+TEXT_TR(TR_ID_MENU_CMD_ENABLE_DRIVE, "Enable drive")
+TEXT_TR(TR_ID_MENU_CMD_SETTINGS_SAVE, "Записать параметры в память")
+TEXT_TR(TR_ID_MENU_CMD_STATE_SAVE, "Записать состояние в память")
+TEXT_TR(TR_ID_MENU_CMD_SETTINGS_DEFAULT, "Уст. настр. по умолч.")        
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")
-
+    
 // справка меню
 TEXT_TR(TR_ID_HELP_POWER, "Питание")
 TEXT_TR(TR_ID_HELP_POWER_IN, "Номинальное напряжение и ток сети Номинальное напряжение и ток сети Номинальное напряжение и ток сети Номинальное напряжение и ток сети Номинальное напряжение и ток сети")
@@ -163,6 +173,9 @@ TEXT_TR(TR_ID_HELP_ROTOR, "Напряжение и ток якоря")
 TEXT_TR(TR_ID_HELP_U_ROT_NOM, "Номинальное напряжение якоря в вольтах")
 TEXT_TR(TR_ID_HELP_I_ROT_NOM, "Номинальный ток якоря в амперах")
 
+TEXT_TR(TR_ID_ENUM_BUZZER_ON, "Включено")
+TEXT_TR(TR_ID_ENUM_BUZZER_OFF, "Без звука")
+        
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Напряжение\nякоря")
 TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Ток\nякоря")
@@ -170,7 +183,11 @@ TEXT_TR(TR_ID_HOME_EXCITATION_CURRENT, "Ток\nвозбуждения")
 TEXT_TR(TR_ID_HOME_RADIATOR_TEMPERATURE, "Температура\nрадиатора")
 // меню
 TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Меню")
-
+// запрос пароля
+TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST, "Доступ по паролю:")
+// запрос пароля "Нажмите Esc чтобы выйти"
+TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST_ESC, "Нажмите Esc чтобы выйти") 
+        
 TEXT_TRS_END()
 
 #endif /* TRANSLATION_RU_H */

@@ -271,17 +271,6 @@ static void make_gui_struct(void) {
         x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
     }
 
-    /*
-    for (i = 0; i < GUI_STATUSBAR_ICONS_COUNT; i++) {
-        gui_icon_t* icon = &gui.icons[i];
-        icon->value = rand() % ICONS_STATUSBAR_VAL_READY + ICONS_STATUSBAR_VAL_CNTRL_BUS;
-        icon->count = 0;
-        icon->current = ICONS_STATUSBAR_VAL_NOTHING;
-        icon->list = NULL;
-        icon->color = rand() % 65535;
-    }
-    */
-    
     gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
     
     gui_menu_init_parent(&gui.menu, &gui.gui, &gui.root_widget);
@@ -292,14 +281,6 @@ static void make_gui_struct(void) {
     gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
     gui_menu_set_on_home(&gui.menu, GUI_MENU_ON_HOME_PROC(drive_gui_menu_on_home));
     
-    /*
-    gui_label_init_parent(&gui.label_time, &gui.gui, &gui.parent_widget);
-    gui_widget_move(GUI_WIDGET(&gui.label_time), 4, 28);
-    gui_widget_resize(GUI_WIDGET(&gui.label_time), 154, 102);
-    gui_widget_set_border(GUI_WIDGET(&gui.label_time), GUI_BORDER_NONE);
-    gui_widget_set_back_color(GUI_WIDGET(&gui.label_time), THEME_COLOR_BLUE_D);
-    gui_widget_set_visible(GUI_WIDGET(&gui.label_time), true);
-    */
 }
 
 static void make_gui(void)
@@ -308,9 +289,9 @@ static void make_gui(void)
     localization_init(trs_main, TRANSLATIONS_COUNT(trs_main));
     localization_set_default_lang(TR_LANG_ID_RU);
     localization_set_default_text("No translation");
-    localization_set_lang(TR_LANG_ID_EN);
+    localization_set_lang(TR_LANG_ID_RU);
     
-    // инициализация графического интерфейча
+    // инициализация графического интерфейcа
     make_gui_struct();
     gui_metro_set_root_widget(&gui.gui, &gui.root_widget);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
@@ -325,9 +306,7 @@ void drive_gui_repaint(void)
 }
 
 void drive_gui_update(void)
-{
-    static char pos = 0;
-    
+{    
     gui_statusbar_update_icons(&gui.statusbar, false);
     gui_statusbar_update(&gui.statusbar, NULL);
     
@@ -337,27 +316,6 @@ void drive_gui_update(void)
     }
         
     gui_menu_on_timer_home_action(&gui.menu);
-    
-    pos++;
-    // Не, круче rev = (bool)(rand() % 2); // :)
-    static bool rev;
-    if (pos > ICONS_STATUSBAR_COUNT) {
-        pos = 0;
-        if (rev) {
-            //gui_widget_set_visible(GUI_WIDGET(&gui.home), true);
-            //localization_set_lang(TR_LANG_ID_EN);
-            //gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
-            //gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
-            rev = false;
-        }
-        else {
-            //gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
-            //localization_set_lang(TR_LANG_ID_RU);
-            //gui_widget_set_visible(GUI_WIDGET(&gui.home), false);
-            //gui_widget_repaint(GUI_WIDGET(&gui.root_widget), NULL);
-            rev = true;
-        }
-    }
 }
 
 err_t drive_gui_init(drive_gui_init_t* gui_is)
@@ -379,44 +337,11 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
 
 void drive_gui_on_key_pressed(keycode_t key)
 {
-    switch (key) {
-        //case KEY_LEFT:
-        //case KEY_MINUS:
-        case KEY_DOWN:
-            //gui_focus_prev_widget(&gui.gui);
-            //menu_explorer_next(&explorer);
-            break;
-        //case KEY_RIGHT:
-        //case KEY_PLUS:
-        case KEY_UP:
-            //gui_focus_next_widget(&gui.gui);
-            //menu_explorer_prev(&explorer);
-            break;
-        case KEY_ENTER:
-            //
-            break;
-        case KEY_ESC:
-            //menu_explorer_out(&explorer);
-            break;
-        default:
-            break;
-    }
     gui_metro_key_pressed(&gui.gui, key);
 }
 
 void drive_gui_on_key_released(keycode_t key)
 {
-    /**
-    switch(key){
-        case KEY_LEFT:
-        case KEY_MINUS:
-        case KEY_RIGHT:
-        case KEY_PLUS:
-            return;
-        default:
-            break;
-    }
-     */
     gui_metro_key_released(&gui.gui, key);
 }
 
@@ -424,6 +349,7 @@ void drive_gui_home_on_enter(gui_home_t* home)
 {
     gui_home_tiles_set_visible(&gui.tiles[0], false);
 
+    menu_explorer_init(&gui.menu.explorer, &gui.menu.menu);
     gui_widget_set_visible(GUI_WIDGET(&gui.menu), true);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.menu));
     gui_menu_init_counters(&gui.menu, &(gui.gui));
@@ -486,4 +412,9 @@ bool drive_gui_modbus_status_idle()
     // и при этом последний прием/передача была N2 сек. назад - статус IDLE
     return ((cur - drive_modbus_last_time) >= DRIVE_MODBUS_GUI_ICON_WORK_SEC)\
             && ((cur - drive_modbus_last_time) < DRIVE_MODBUS_GUI_ICON_IDLE_SEC);
+}
+
+bool drive_gui_menu_user_is(menu_user_t user)
+{
+    return gui.menu.explorer.user == user;
 }

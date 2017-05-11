@@ -416,3 +416,19 @@ bool drive_keypad_update(void)
 {
     return drive_keypad_update_sync();
 }
+
+void drive_keypad_buzzer_toggle(void)
+{
+    pca9555_pin_state_t cur = pca9555_pin_output_state(keypad.ioport, DRIVE_KPD_PIN_BUZZ);
+    pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_BUZZ, (cur == PCA9555_PIN_ON) ? PCA9555_PIN_OFF : PCA9555_PIN_ON);
+}
+
+void drive_keypad_buzzer_off(void)
+{
+    pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_BUZZ, PCA9555_PIN_OFF);
+}
+
+void drive_keypad_buzzer_on(void)
+{
+    pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_BUZZ, PCA9555_PIN_ON);
+}

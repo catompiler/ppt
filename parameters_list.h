@@ -18,7 +18,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 194
+#define PARAMETERS_REAL_COUNT 197
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 19
 // Общее число параметров.
@@ -26,7 +26,7 @@
 
 // Дескрипторы параметров.
 PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
-    PARAM_DESCR(PARAM_ID_U_NOM,           PARAM_TYPE_UINT,      0,       1000,      220,        0, TEXT(TR_ID_UNITS_V)),
+    PARAM_DESCR(PARAM_ID_U_NOM,           PARAM_TYPE_UINT,       0,       1000,      220,        0, TEXT(TR_ID_UNITS_V)),
     PARAM_DESCR(PARAM_ID_I_NOM,           PARAM_TYPE_UINT,      0,       1000,      160,        0, TEXT(TR_ID_UNITS_A)),
     PARAM_DESCR(PARAM_ID_CALC_PHASE_CURRENT,  PARAM_TYPE_UINT,  0,          3,        0,        0, NOUNITS),
     PARAM_DESCR(PARAM_ID_U_ROT_NOM,       PARAM_TYPE_UINT,      0,       600,       400,        0, TEXT(TR_ID_UNITS_V)),
@@ -274,6 +274,11 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     
     PARAM_DESCR(PARAM_ID_MODBUS_BAUD,     PARAM_TYPE_UINT,  1200,  57600,  9600,  0, NOUNITS),
     
+    // Настройки интерфейса панели (GUI)
+    PARAM_DESCR(PARAM_ID_GUI_BUZZER,       PARAM_TYPE_UINT, 0,  1,  1,  0,  NOUNITS),
+    PARAM_DESCR(PARAM_ID_GUI_PASSWORD_ADMIN,    PARAM_TYPE_UINT, 0,  9999,  0,  0,  NOUNITS),
+    PARAM_DESCR(PARAM_ID_GUI_PASSWORD_ROOT,     PARAM_TYPE_UINT, 0,  9999,  0,  0,  NOUNITS),
+          
     // Отладка.
     PARAM_DESCR(PARAM_ID_DEBUG_0, PARAM_TYPE_INT,        0, 0, 0, PARAM_FLAG_VIRTUAL, NOUNITS),
     PARAM_DESCR(PARAM_ID_DEBUG_1, PARAM_TYPE_INT,        0, 0, 0, PARAM_FLAG_VIRTUAL, NOUNITS),

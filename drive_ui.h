@@ -11,6 +11,17 @@
 #include "drive_keypad.h"
 #include "drive_gui.h"
 
+// период обновления зуммера
+#define DRIVE_UI_BUZZER_PERIOD 10
+#define DRIVE_UI_BUZZER_SEQUECE_WARNING 10 
+#define DRIVE_UI_BUZZER_SEQUECE_ALARM 5
+
+//! Перечисление светодиодов.
+typedef enum _Drive_Ui_Buzzer_State {
+    GUI_BUZZER_ON = 0, // Звуковое оповещение есть
+    GUI_BUZZER_OFF = 1 // Звуковое оповещение отключено
+} drive_ui_buzzer_state_t;
+
 
 //! Структура инициализации интерфейса привода.
 typedef struct _Drive_Ui_Init {
@@ -30,5 +41,17 @@ extern err_t drive_ui_init(drive_ui_init_t* ui_is);
  * Управляет обновлением интерфейса пользователя.
  */
 extern void drive_ui_process(void);
+
+/**
+ * Возвращает статус разрешено звуковое оповещение
+ * @return 
+ */
+extern bool drive_ui_sound_enabled(void);
+
+/**
+ * Возвращает статус запрещено звуковое оповещение
+ * @return 
+ */
+extern bool drive_ui_sound_disabled(void);
 
 #endif /* DRIVE_UI_H */

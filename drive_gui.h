@@ -80,4 +80,6 @@ extern bool drive_gui_modbus_status_work(void);
  */
 extern bool drive_gui_modbus_status_idle(void);
 
+extern bool drive_gui_menu_user_is(menu_user_t user);
+
 #endif /* DRIVE_GUI_H */

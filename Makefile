@@ -10,7 +10,7 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
         gui/widgets/gui_tile.o gui/gui_metro.o gui/gui_object.o\
         gui/gui_widget.o gui/widgets/gui_time.o\
 	    gui/widgets/gui_statusbar.o gui/menu/menu_explorer.o\
-	    gui/widgets/gui_menu.o gui/widgets/gui_home.o
+	    gui/widgets/gui_menu.o gui/widgets/gui_home.o commands.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\

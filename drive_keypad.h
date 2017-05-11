@@ -48,8 +48,8 @@ typedef enum _Drive_Keypad_Key {
     //DRIVE_KPD_KEY_LEFT  = PCA9555_PIN_15,
     DRIVE_KPD_KEY_UP    = PCA9555_PIN_14,
     DRIVE_KPD_KEY_DOWN  = PCA9555_PIN_13,
-    DRIVE_KPD_KEY_ESC   = PCA9555_PIN_12,
-    DRIVE_KPD_KEY_ENTER = PCA9555_PIN_11,
+    DRIVE_KPD_KEY_ESC   = PCA9555_PIN_11,
+    DRIVE_KPD_KEY_ENTER = PCA9555_PIN_12,
     //DRIVE_KPD_KEY_OK    = PCA9555_PIN_11,
     DRIVE_KPD_KEY_PLUS  = PCA9555_PIN_10,
     //DRIVE_KPD_KEY_RIGHT = PCA9555_PIN_10,
@@ -147,5 +147,9 @@ extern void drive_keypad_repeat(void);
  * @return true, если клавиши обновлены, иначе false.
  */
 extern bool drive_keypad_update(void);
+
+extern void drive_keypad_buzzer_toggle(void);
+extern void drive_keypad_buzzer_on(void);
+extern void drive_keypad_buzzer_off(void);
 
 #endif /* DRIVE_KEYPAD_H */

@@ -265,4 +265,16 @@ extern param_value_t settings_param_max(param_t* param);
  */
 extern param_value_t settings_param_def(param_t* param);
 
+extern param_data_t settings_param_data_from_fixed32(param_t* param, fixed32_t value);
+
+/**
+ * Инкрементируем/декрементирует разряд значения параметра с учетом проверки граничных условий
+ */
+extern void settings_param_inc_dec(param_t* param, int32_t* param_data, uint8_t decimal, bool inc);
+
+/**
+ * Проверка значения на граничные условия
+ */
+extern bool settings_param_check_minmax(param_t* param, int32_t* param_data);
+
 #endif	/* SETTINGS_H */

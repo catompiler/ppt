@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include "drive_ui.h"
 #include "drive.h"
 #include "utils/utils.h"
@@ -8,6 +10,7 @@
 typedef struct _Drive_Ui {
     counter_t update_period;
     counter_t last_update_time;
+    counter_t buzz_update_time;
     bool need_update;
 } drive_ui_t;
 
@@ -68,6 +71,7 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     
     ui.need_update = true;
     ui.last_update_time = 0;
+    ui.buzz_update_time = 0;
     ui.update_period = system_counter_ticks_per_sec() / 4;
     
     return E_NO_ERROR;
@@ -110,19 +114,52 @@ static void drive_ui_update_leds(void)
     /*if(leds != leds_cur)*/ drive_keypad_set_leds(leds);
 }
 
+/**
+ * Обновление звукового оповещения
+ */
+static void drive_ui_update_buzzer(void)
+{
+    static int8_t buzcnt;
+    buzcnt++;
+    counter_diff_t diff = system_counter_diff(&ui.buzz_update_time);
+    if (diff > DRIVE_UI_BUZZER_PERIOD) {
+        bool buzon = (drive_ui_sound_enabled()) \
+                && (((buzcnt % DRIVE_UI_BUZZER_SEQUECE_ALARM == 0) && (drive_errors() != DRIVE_ERROR_NONE)) \
+                    || ((buzcnt % DRIVE_UI_BUZZER_SEQUECE_WARNING == 0) && (drive_warnings() != DRIVE_WARNING_NONE)));
+        if (buzon) {
+            drive_keypad_buzzer_on();
+        }
+        else {
+            drive_keypad_buzzer_off();
+        }
+        ui.buzz_update_time = system_counter_ticks();
+    }
+}
+
 void drive_ui_process(void)
 {
     if(drive_keypad_update()) drive_keypad_process();
     else drive_keypad_repeat();
     
+    // обновление звукового оповещения
+    drive_ui_update_buzzer();
+    
     if(drive_ui_update_timeout()) ui.need_update = true;
     
     if(ui.need_update){
-        drive_gui_update();
-        
+        // приоритет обновления светодиодов
         drive_ui_update_leds();
-        
+        // обновление графического интерфейса
+        drive_gui_update();
         ui.need_update = false;
         drive_ui_update_update_time();
     }
+}
+
+bool drive_ui_sound_enabled(void) {
+    return settings_valueu(PARAM_ID_GUI_BUZZER) == GUI_BUZZER_ON;
+}
+
+bool drive_ui_sound_disabled(void) {
+    return !drive_ui_sound_enabled();
 }

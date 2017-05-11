@@ -287,6 +287,69 @@ static void settings_param_set_fixed32(param_t* param, fixed32_t value)
     }
 }
 
+/**
+ * Возвращает значение параметра как число с фиксированной запятой.
+ * @param param Параметр.
+ * @return Значение параметра.
+ */
+param_data_t settings_param_data_from_fixed32(param_t* param, fixed32_t value)
+{
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    param_data_t data;
+    
+    int32_t int_part = 0;
+    int32_t fract_part = 0;
+    
+    /*
+     * Скопипастченная магия.
+     * Лучше не трогать.
+     */
+    switch(descr->type){
+        default:
+        case PARAM_TYPE_INT:
+        case PARAM_TYPE_UINT:
+            data = fixed32_get_int(value);
+            break;
+        case PARAM_TYPE_FRACT_10:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 100);
+            else
+                value -= fixed32_make_from_fract(5, 100);
+            int_part = fixed32_get_int(value);
+            fract_part = fixed32_get_fract_by_denom(value, 10);
+            data = int_part * 10 + fract_part;
+            break;
+        case PARAM_TYPE_FRACT_100:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 1000);
+            else
+                value -= fixed32_make_from_fract(5, 1000);
+            int_part = fixed32_get_int(value);
+            fract_part = fixed32_get_fract_by_denom(value, 100);
+            data = int_part * 100 + fract_part;
+            break;
+        case PARAM_TYPE_FRACT_1000:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 10000);
+            else
+                value -= fixed32_make_from_fract(5, 10000);
+            int_part = fixed32_get_int(value);
+            fract_part = fixed32_get_fract_by_denom(value, 1000);
+            data = int_part * 1000 + fract_part;
+            break;
+        case PARAM_TYPE_FRACT_10000:
+            if(value >= 0)
+                value += fixed32_make_from_fract(5, 100000);
+            else
+                value -= fixed32_make_from_fract(5, 100000);
+            int_part = fixed32_get_int(value);
+            fract_part = fixed32_get_fract_by_denom(value, 10000);
+            data = int_part * 10000 + fract_part;
+            break;
+    }
+    return data;
+}
+
 err_t settings_init(void)
 {
     size_t i = 0;
@@ -524,4 +587,65 @@ param_value_t settings_param_def(param_t* param) {
     const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
     //if(!descr) return 0;
     return descr->def;
+}
+
+void settings_param_inc_dec(param_t* param, int32_t* param_data, uint8_t decimal, bool inc) {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    int i;
+    int delta = 1;
+    if (!inc) delta *= -1;
+    for (i = 0; i < decimal; i++) {
+        delta *= 10;
+    }
+    int32_t curv = *param_data;
+    int32_t max = 0;
+    int32_t min = 0;
+    curv += delta;
+    switch(descr->type) {
+        default:
+        case PARAM_TYPE_INT:
+            max = descr->max.int_value;
+            min = descr->min.int_value;
+            break;
+        case PARAM_TYPE_UINT:
+            max = (int32_t)descr->max.uint_value;
+            min = (int32_t)descr->min.uint_value;
+            break;
+        case PARAM_TYPE_FRACT_10:
+        case PARAM_TYPE_FRACT_100:
+        case PARAM_TYPE_FRACT_1000:
+        case PARAM_TYPE_FRACT_10000:
+            max = (int32_t)settings_param_data_from_fixed32(param, descr->max.fixed_value);
+            min = (int32_t)settings_param_data_from_fixed32(param, descr->min.fixed_value);
+            break;
+    }
+    if (curv > max) curv = min;
+    if (curv < min) curv = max;
+    *param_data = curv;
+}
+
+bool settings_param_check_minmax(param_t* param, int32_t* param_data) {
+    const param_descr_t* descr = settings_param_descr_by_index(param->descr_index);
+    int32_t curv = *param_data;
+    int32_t max = 0;
+    int32_t min = 0;
+    switch(descr->type) {
+        default:
+        case PARAM_TYPE_INT:
+            max = descr->max.int_value;
+            min = descr->min.int_value;
+            break;
+        case PARAM_TYPE_UINT:
+            max = (int32_t)descr->max.uint_value;
+            min = (int32_t)descr->min.uint_value;
+            break;
+        case PARAM_TYPE_FRACT_10:
+        case PARAM_TYPE_FRACT_100:
+        case PARAM_TYPE_FRACT_1000:
+        case PARAM_TYPE_FRACT_10000:
+            max = (int32_t)settings_param_data_from_fixed32(param, descr->max.fixed_value);
+            min = (int32_t)settings_param_data_from_fixed32(param, descr->min.fixed_value);
+            break;
+    }
+    return (curv <= max) && (curv >= min);
 }

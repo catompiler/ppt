@@ -323,6 +323,28 @@
 //! Меню ПИД синхронизации с фазами.
 #define TR_ID_MENU_PHASE_SYNC_PID       452
 
+//! Меню интерфейса (GUI)
+#define TR_ID_MENU_GUI              470
+//! Работа зуммера (звукового оповещения)
+#define TR_ID_MENU_GUI_BUZZER       475
+//! Работа зуммера (звукового оповещения)
+#define TR_ID_MENU_GUI_PASSWORD_ADMIN       476
+//! Работа зуммера (звукового оповещения)
+#define TR_ID_MENU_GUI_PASSWORD_ROOT       477
+
+//! Меню Команды
+#define TR_ID_MENU_COMMANDS     480
+//! Старт/стоп
+#define TR_ID_MENU_CMD_START_STOP       482
+//! Enable/drive
+#define TR_ID_MENU_CMD_ENABLE_DRIVE     483 
+//! Сохранить настройки
+#define TR_ID_MENU_CMD_SETTINGS_SAVE    484
+//! Сохранить состояние
+#define TR_ID_MENU_CMD_STATE_SAVE       485 
+//! Настройки по умолчанию
+#define TR_ID_MENU_CMD_SETTINGS_DEFAULT 486
+
 //! Питание.
 #define TR_ID_HELP_POWER            550
 //! Сеть.
@@ -337,6 +359,15 @@
 #define TR_ID_HELP_U_ROT_NOM        561
 //! Ном. I якоря.
 #define TR_ID_HELP_I_ROT_NOM        562
+
+
+//! Настройки интерфейса
+
+//! Перечисление работы зуммера
+//! Зуммер включен
+#define TR_ID_ENUM_BUZZER_ON        710
+//! Зуммер отключен
+#define TR_ID_ENUM_BUZZER_OFF       711
 
 // /**
 //  * .
@@ -361,6 +392,11 @@
 
 //! Заголовок меню
 #define TR_ID_MENU_HEADER_TITLE  1010
+
+//! Запрос доступа к элементам меню 
+#define TR_ID_MENU_PASSWORD_REQUEST 1012
+//! Сообщение: Нажмите Esc для выхода
+#define TR_ID_MENU_PASSWORD_REQUEST_ESC 1013
 
 #endif /* TRANSLATIONS_IDS_H */
 

@@ -11,6 +11,7 @@
 #include "defs/defs.h"
 #include "gui_time.h"
 #include "drive.h"
+#include "drive_ui.h"
 #include "drive_gui.h"
 #include "gui/resources/resources_colors.h"
 #include "gui/bitmaps/icons_statusbar.h"
@@ -31,11 +32,6 @@ typedef bool (*gui_icon_condition_callback_t)();
 typedef struct _Gui_Icon_Condition {
     gui_icon_condition_callback_t callback; // функция-условие отображения иконки
     uint32_t param; // параметр функции условия
-    // char всё же обычно используется для символов.
-    // лучше использовать в таких случаях
-    // либо typedef (что лучше, чтобы не менять по коду в случае необходимости),
-    // либо что-то стандартное, например uint8_t
-    // (вроде нет нигде явно требующегося знакового типа).
     uint8_t count;              // кол-во иконок в анимации
     uint8_t icon;             // идентификатор статической иконки
     graphics_color_t color;   // цвет иконки
@@ -132,11 +128,17 @@ typedef struct _Gui_Icon_Condition {
 #define DRIVE_POWER_WARNING_Iref    DRIVE_POWER_WARNING_UNDERFLOW_Iref |\
                                     DRIVE_POWER_WARNING_OVERFLOW_Iref
 
+/**
+ * Возвращает статус готовности привода (до его запуска)
+ * @return 
+ */
+EXTERN bool gui_statusbar_drive_ready();
+
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_ICON_CONDITIONS_COUNT 19
+#define GUI_ICON_CONDITIONS_COUNT 22
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // состояние
-    GUI_ICON_CONDITION(drive_ready,     NULL,   0,  THEME_COLOR_GREEN_L,    &icons_statusbar_anim_ready),
+    GUI_ICON_CONDITION(gui_statusbar_drive_ready,     NULL,   0,  THEME_COLOR_BLUE_L,    &icons_statusbar_anim_ready),
     GUI_ICON_CONDITION(drive_running,   NULL,   0,  THEME_COLOR_GREEN_L,    &icons_statusbar_anim_work),
     // ошибки
     GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_ETC,            ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_RED_L, NULL),
@@ -160,7 +162,11 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // информация
     GUI_ICON_CONDITION(drive_gui_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
     GUI_ICON_CONDITION(drive_gui_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),
-         
+    GUI_ICON_CONDITION(drive_ui_sound_disabled,         NULL,   ICONS_STATUSBAR_VAL_BEEP_OFF,    THEME_COLOR_WHITE, NULL),
+    
+    GUI_ICON_CONDITION(drive_gui_menu_user_is,  MENU_USER_ROOT,     ICONS_STATUSBAR_VAL_ROOT,    THEME_COLOR_WHITE, NULL),
+    GUI_ICON_CONDITION(drive_gui_menu_user_is,  MENU_USER_ADMIN,    ICONS_STATUSBAR_VAL_KEY,    THEME_COLOR_WHITE, NULL),
+    
 };
 
 struct _Gui_Icon {

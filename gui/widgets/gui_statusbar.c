@@ -195,3 +195,8 @@ void gui_statusbar_update_icons_unset_icon(gui_statusbar_t* statusbar, uint8_t i
         icon->current = 0;
     }
 }
+
+bool gui_statusbar_drive_ready()
+{
+    return drive_ready() && !drive_running();
+}

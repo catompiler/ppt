@@ -9,6 +9,8 @@
 #include "localization/localization.h"
 #include "translations_ids.h"
 #include "parameters_ids.h"
+#include "commands_ids.h"
+#include "gui/resources/resources_menu.h"
 
 /*
  * Перечисления типов для выбора в меню.
@@ -64,6 +66,11 @@ MENU_VALUES(menu_enum_dio_out_type,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIO_OUT_WARNING)),
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIO_OUT_USER))
 );
+//! Перечисление типа работы звукового оповещения.
+MENU_VALUES(menu_enum_gui_buzzer,
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_BUZZER_ON)),
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_BUZZER_OFF)),
+);
 
 //! Перечисление .
 //MENU_VALUES(menu_enum_,
@@ -84,6 +91,7 @@ MENU_VALUE_ENUM(menu_val_stop_mode, 0, MENU_ENUM_LEN(menu_enum_stop_mode), menu_
 MENU_VALUE_ENUM(menu_val_prot_action, 0, MENU_ENUM_LEN(menu_enum_prot_action), menu_enum_prot_action);
 MENU_VALUE_ENUM(menu_val_dio_in_type, 0, MENU_ENUM_LEN(menu_enum_dio_in_type), menu_enum_dio_in_type);
 MENU_VALUE_ENUM(menu_val_dio_out_type, 0, MENU_ENUM_LEN(menu_enum_dio_out_type), menu_enum_dio_out_type);
+MENU_VALUE_ENUM(menu_val_gui_buzzer, 0, MENU_ENUM_LEN(menu_enum_gui_buzzer), menu_enum_gui_buzzer);
 
 //MENU_VALUE_ENUM(menu_val_, 0, MENU_ENUM_LEN(menu_enum_), menu_enum_);
 
@@ -94,6 +102,18 @@ MENU_VALUE_ENUM(menu_val_dio_out_type, 0, MENU_ENUM_LEN(menu_enum_dio_out_type),
  * Дескрипторы элементов меню.
  */
 MENU_DESCRS(menu_descrs) {
+    MENU_DESCR(0, 0, TEXT(TR_ID_MENU_COMMANDS), NULL, 0, 0, 0, 0),
+        MENU_DESCR(1, CMD_ID_START_STOP, TEXT(TR_ID_MENU_CMD_START_STOP), NULL, 0, MENU_FLAG_CMD | MENU_FLAG_ADMIN, 0, 0),
+        MENU_DESCR(1, CMD_ID_ENABLE_DRIVE, TEXT(TR_ID_MENU_CMD_ENABLE_DRIVE), NULL, 0, MENU_FLAG_CMD, 0, 0),
+        MENU_DESCR(1, CMD_ID_SETTINGS_SAVE, TEXT(TR_ID_MENU_CMD_SETTINGS_SAVE), NULL, 0, MENU_FLAG_CMD, 0, 0),
+        MENU_DESCR(1, CMD_ID_STATE_SAVE, TEXT(TR_ID_MENU_CMD_STATE_SAVE), NULL, 0, MENU_FLAG_CMD, 0, 0),
+        MENU_DESCR(1, CMD_ID_SETTINGS_DEFAULT, TEXT(TR_ID_MENU_CMD_SETTINGS_DEFAULT), NULL, 0, MENU_FLAG_CMD, 0, 0),
+        
+    // Настройки интерфеса
+    MENU_DESCR(0, 0, TEXT(TR_ID_MENU_GUI), NULL, 0, MENU_FLAG_ROOT, 0, 0),
+        MENU_DESCR(1, PARAM_ID_GUI_BUZZER, TEXT(TR_ID_MENU_GUI_BUZZER), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_buzzer),
+        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ADMIN, TEXT(TR_ID_MENU_GUI_PASSWORD_ADMIN), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, 0),
+        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ROOT, TEXT(TR_ID_MENU_GUI_PASSWORD_ROOT), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ROOT, 0, 0),
     // Питание.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_POWER), TEXT(TR_ID_HELP_POWER), 0, 0, 0, 0),
         // Сеть.

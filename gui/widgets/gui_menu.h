@@ -36,6 +36,7 @@ typedef struct _Gui_Menu gui_menu_t;
 #define GUI_MENU_SCROLL_WIDTH 6
 
 #define GUI_MENU_SUBMENU_PREFIX "►"
+#define GUI_MENU_ENUM_VALUE_POSTFIX "↕"
 
 struct _Gui_Menu {
     gui_widget_t super; //!< Суперкласс.
@@ -120,6 +121,8 @@ EXTERN void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui);
 
 int gui_menu_get_f32_fract(int number, int decimals);
 
+void gui_menu_draw_password_request(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
+
 void gui_menu_draw_title(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
 void gui_menu_draw_scrollbar(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height);
@@ -132,6 +135,8 @@ void gui_menu_string_line_wrapping(painter_t* painter, const char* source, graph
 
 void gui_menu_value_to_str(param_t* param, char* str, size_t len);
 
-void gui_menu_param_value_to_string(param_t* param, char* str);
+void gui_menu_param_value_to_string(param_t* param, char* str, int32_t* edit_data);
+
+size_t gui_menu_edit_draw_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s, uint8_t decim, bool type_fix);
 
 #endif	/* GUI_MENU_H */

@@ -771,6 +771,22 @@
 #define PARAM_ID_MODBUS_BAUD 700
 
 /*
+ * Настройки интерфейса панели (GUI)
+ */
+/**
+ * Работа зуммера (звукового оповещения)
+ */
+#define PARAM_ID_GUI_BUZZER 800
+/**
+ * Пароль администратора
+ */
+#define PARAM_ID_GUI_PASSWORD_ADMIN 804
+/**
+ * Пароль рута
+ */
+#define PARAM_ID_GUI_PASSWORD_ROOT 808
+
+/*
  * Отладочные параметры.
  */
 /**
