@@ -95,15 +95,15 @@
  * ПИД якоря и возбуждения.
  */
 /**
- * Коэффициент пропорционального звена ПИД-регулятора напряжения якоря.
+ * Коэффициент пропорционального звена ПИД-регулятора тока якоря.
  */
 #define PARAM_ID_ROT_PID_K_P 70
 /**
- * Коэффициент интегрального звена ПИД-регулятора напряжения якоря.
+ * Коэффициент интегрального звена ПИД-регулятора тока якоря.
  */
 #define PARAM_ID_ROT_PID_K_I 71
 /**
- * Коэффициент дифференциального звена ПИД-регулятора напряжения якоря.
+ * Коэффициент дифференциального звена ПИД-регулятора тока якоря.
  */
 #define PARAM_ID_ROT_PID_K_D 72
 /**
@@ -118,6 +118,18 @@
  * Коэффициент дифференциального звена ПИД-регулятора тока возбуждения.
  */
 #define PARAM_ID_EXC_PID_K_D 75
+/**
+ * Коэффициент пропорционального звена ПИД-регулятора скорости.
+ */
+#define PARAM_ID_SPD_PID_K_P 76
+/**
+ * Коэффициент интегрального звена ПИД-регулятора скорости.
+ */
+#define PARAM_ID_SPD_PID_K_I 77
+/**
+ * Коэффициент дифференциального звена ПИД-регулятора скорости.
+ */
+#define PARAM_ID_SPD_PID_K_D 78
 
 /*
  * Время ожидания запуска и останова.
@@ -156,6 +168,26 @@
 #define PARAM_ID_TRIAC_EXC_OPEN_TIME 91
 
 /*
+ * Тиристоры - углы открытия.
+ */
+/**
+ * Минимальный угол открытия тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_ANGLE_MIN 92
+/**
+ * Максимальный угол открытия тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_ANGLE_MAX 93
+/**
+ * Минимальный угол открытия симистора возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_ANGLE_MIN 94
+/**
+ * Максимальный угол открытия симистора возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_ANGLE_MAX 95
+
+/*
  * Защита.
  */
 /*
@@ -186,17 +218,91 @@
  * Защита питания.
  */
 /*
+ * Обрыв якоря.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_ROT_BREAK_ENABLED 130
+//! Значение.
+#define PARAM_ID_PROT_ROT_BREAK_VALUE 131
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_ROT_BREAK_TIME_MS 132
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE 133
+//! Действие.
+#define PARAM_ID_PROT_ROT_BREAK_ACTION 134
+/*
  * Сеть.
  */
 /*
  * Чередование фаз.
  */
+/*
+ * Время между фазами.
+ */
 //! Разрешение.
-#define PARAM_ID_PHASES_PROT_ENABLED 180
+#define PARAM_ID_PROT_PHASES_STATE_ENABLED 150
 //! Время отклонения, мс.
-#define PARAM_ID_PHASES_PROT_TIME_MS 181
+#define PARAM_ID_PROT_PHASES_STATE_TIME_MS 151
 //! Действие.
-#define PARAM_ID_PHASES_PROT_ACTION 182
+#define PARAM_ID_PROT_PHASES_STATE_ACTION 152
+/*
+ * Углы между фазами.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED 160
+//! Значение.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE 161
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS 162
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE 163
+//! Действие.
+#define PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION 164
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED 170
+//! Значение.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE 171
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS 172
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE 173
+//! Действие.
+#define PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION 174
+/*
+ * Синхронизация с фазами.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED 180
+//! Значение.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_VALUE 181
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS 182
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE 183
+//! Действие.
+#define PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION 184
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED 190
+//! Значение.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_VALUE 191
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS 192
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE 193
+//! Действие.
+#define PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION 194
 /*
  * Напряжение.
  */
@@ -576,100 +682,147 @@
  * АЦП.
  */
 /*
- * Коэффициенты.
+ * Коэффициенты АЦП.
  */
 /**
  * Множитель данных канала АЦП Ua.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ua 500
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ua 500
 /**
  * Множитель данных канала АЦП Ub.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ub 501
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ub 501
 /**
  * Множитель данных канала АЦП Uc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Uc 502
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Uc 502
 /**
  * Множитель данных канала АЦП Urot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Urot 503
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Urot 503
 /**
  * Множитель данных канала АЦП Ia.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ia 504
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ia 504
 /**
  * Множитель данных канала АЦП Ib.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ib 505
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ib 505
 /**
  * Множитель данных канала АЦП Ic.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ic 506
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ic 506
 /**
  * Множитель данных канала АЦП Irot.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Irot 507
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Irot 507
 /**
  * Множитель данных канала АЦП Iexc.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iexc 508
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc 508
 /**
  * Множитель данных канала АЦП Iref.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Iref 509
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Iref 509
 /**
  * Множитель данных канала АЦП Ifan.
  */
-#define PARAM_ID_VALUE_MULTIPLIER_Ifan 510
+#define PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan 510
 
 /*
- * Данные калибровки нуля.
+ * Данные калибровки нуля АЦП.
  */
 /**
  * Данные калибровки канала АЦП Ua.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ua 520
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ua 520
 /**
  * Данные калибровки канала АЦП Ub.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ub 521
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ub 521
 /**
  * Данные калибровки канала АЦП Uc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Uc 522
+#define PARAM_ID_ADC_CALIBRATION_DATA_Uc 522
 /**
  * Данные калибровки канала АЦП Urot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Urot 523
+#define PARAM_ID_ADC_CALIBRATION_DATA_Urot 523
 /**
  * Данные калибровки канала АЦП Ia.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ia 524
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ia 524
 /**
  * Данные калибровки канала АЦП Ib.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ib 525
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ib 525
 /**
  * Данные калибровки канала АЦП Ic.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ic 526
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ic 526
 /**
  * Данные калибровки канала АЦП Irot.
  */
-#define PARAM_ID_CALIBRATION_DATA_Irot 527
+#define PARAM_ID_ADC_CALIBRATION_DATA_Irot 527
 /**
  * Данные калибровки канала АЦП Iexc.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iexc 528
+#define PARAM_ID_ADC_CALIBRATION_DATA_Iexc 528
 /**
  * Данные калибровки канала АЦП Iref.
  */
-#define PARAM_ID_CALIBRATION_DATA_Iref 529
+#define PARAM_ID_ADC_CALIBRATION_DATA_Iref 529
 /**
  * Данные калибровки канала АЦП Ifan.
  */
-#define PARAM_ID_CALIBRATION_DATA_Ifan 530
+#define PARAM_ID_ADC_CALIBRATION_DATA_Ifan 530
+/*
+ * Коэффициенты действующих значений.
+ */
+/**
+ * Множитель данных канала Ua.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ua 531
+/**
+ * Множитель данных канала Ub.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ub 532
+/**
+ * Множитель данных канала Uc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Uc 533
+/**
+ * Множитель данных канала Urot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Urot 534
+/**
+ * Множитель данных канала Ia.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ia 535
+/**
+ * Множитель данных канала Ib.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ib 536
+/**
+ * Множитель данных канала Ic.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ic 537
+/**
+ * Множитель данных канала Irot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Irot 538
+/**
+ * Множитель данных канала Iexc.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iexc 539
+/**
+ * Множитель данных канала Iref.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Iref 540
+/**
+ * Множитель данных канала Ifan.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Ifan 541
 
 /*
  * Цифровые входа и выхода.

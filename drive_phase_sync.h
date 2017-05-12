@@ -13,6 +13,8 @@
 #include "drive_phase_state.h"
 
 
+//! Фаза для синхронизации.
+#define DRIVE_PHASE_SYNC_PHASE PHASE_A
 
 
 //! Тип каллбэка получения начального угла.
@@ -70,6 +72,30 @@ extern err_t drive_phase_sync_angle(phase_t phase, fixed32_t* angle);
  * @return Смещение (опережение) фазы.
  */
 extern int16_t drive_phase_sync_offset(phase_t phase);
+
+/**
+ * Получает угол смещения (опережения) фазы, мкс.
+ * @param phase Фаза.
+ * @return Угол смещения (опережения) фазы.
+ */
+extern fixed32_t drive_phase_sync_offset_angle(phase_t phase);
+
+/**
+ * Получает угол фазы относительно предыдущей фазы
+ * согласно направлению чередования фаз.
+ * @param phase Фаза.
+ * @return Угол фазы относительно предыдущей фазы.
+ */
+extern fixed32_t drive_phase_sync_delta_angle(phase_t phase);
+
+/**
+ * Получает отклонение угла между фазой и предыдущей фазой
+ * согласно направлению чередования фаз по сравнению
+ * с нормальным углом между фазами.
+ * @param phase Фаза.
+ * @return Отклонение угла.
+ */
+extern fixed32_t drive_phase_sync_diff_delta_angle(phase_t phase);
 
 /**
  * Вычисляет угол очередной фазы.

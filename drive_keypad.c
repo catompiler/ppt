@@ -17,6 +17,7 @@ typedef enum _Drive_Kpd_Upd_KbdState {
 //! Тип кейпада привода.
 typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
+    reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
     counter_t last_update_time; //!< Последнее время обновления клавиатуры.
     counter_t last_async_io_time; //!< Последнее время обмена данными с PCA9555.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
@@ -70,7 +71,8 @@ ALWAYS_INLINE static bool drive_keypad_kbd_update_timeout(void)
 ALWAYS_INLINE static void drive_keypad_async_io_reset(void)
 {
     pca9555_reset(keypad.ioport);
-    i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
+    if(keypad.reset_i2c_bus_proc) keypad.reset_i2c_bus_proc();
+    else i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
 }
 
 static err_t drive_keypad_wait_safe(void)
@@ -87,6 +89,7 @@ static err_t drive_keypad_wait_safe(void)
     return pca9555_error(keypad.ioport);
 }
 
+/*
 static err_t drive_keypad_try_safe_async(err_t (*pca9555_io_proc)(pca9555_t*))
 {
     drive_keypad_wait_safe();
@@ -103,6 +106,7 @@ static err_t drive_keypad_try_safe_async(err_t (*pca9555_io_proc)(pca9555_t*))
     }
     return err;
 }
+*/
 
 static err_t drive_keypad_try_safe_sync(err_t (*pca9555_io_proc)(pca9555_t*))
 {
@@ -146,6 +150,7 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
     if(keypad_is->ioport == NULL) return E_NULL_POINTER;
     
     keypad.ioport = keypad_is->ioport;
+    keypad.reset_i2c_bus_proc = keypad_is->reset_i2c_bus_proc;
     keypad.last_async_io_time = 0;
     keypad.last_update_time = 0;
     keypad.kbd_need_update = true;

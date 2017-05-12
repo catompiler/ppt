@@ -16,6 +16,7 @@
 #include "drive_triacs.h"
 #include "drive_regulator.h"
 #include "drive_dio.h"
+#include "drive_phase_sync.h"
 
 
 
@@ -78,9 +79,11 @@ typedef enum _Drive_Error {
     DRIVE_ERROR_POWER_DATA_NOT_AVAIL = 0x1, //!< Данные питания не поступают с АЦП.
     DRIVE_ERROR_POWER_INVALID        = 0x2, //!< Неправильные значения питания, см. drive_power_error_t.
     DRIVE_ERROR_EMERGENCY_STOP       = 0x4, //!< Аварийный останов (Грибок).
-    DRIVE_ERROR_PHASE                = 0x8, //!< Ошибка фаз.
-    DRIVE_ERROR_THERMAL_OVERLOAD     = 0x10, //!< Тепловая защита.
-    DRIVE_ERROR_ROT_BREAK            = 0x20 //!< Обрыв якоря.
+    DRIVE_ERROR_PHASE                = 0x8, //!< Ошибка состояния фаз.
+    DRIVE_ERROR_PHASE_ANGLE          = 0x10, //!< Ошибка угла между фазами.
+    DRIVE_ERROR_PHASE_SYNC           = 0x20, //!< Ошибка синхронизации фаз.
+    DRIVE_ERROR_THERMAL_OVERLOAD     = 0x40, //!< Тепловая защита.
+    DRIVE_ERROR_ROT_BREAK            = 0x80 //!< Обрыв якоря.
 } drive_error_t;
 
 //! Тип ошибок привода.
@@ -125,8 +128,10 @@ typedef uint32_t drive_power_errors_t;
 
 typedef enum _Drive_Warning {
     DRIVE_WARNING_NONE  = 0x0, //!< Нет предупреждений.
-    DRIVE_WARNING_POWER = 0x1,  //!< Предупреждение по питанию.
-    DRIVE_WARNING_THERMAL_OVERLOAD = 0x400000 //!< Перегрев.
+    DRIVE_WARNING_POWER = 0x2,  //!< Предупреждение по питанию.
+    DRIVE_WARNING_PHASE_ANGLE = 0x10, //!< Ошибка угла между фазами.
+    DRIVE_WARNING_PHASE_SYNC  = 0x20, //!< Ошибка синхронизации фаз.
+    DRIVE_WARNING_THERMAL_OVERLOAD = 0x40 //!< Перегрев.
 } drive_warning_t;
 
 //! Тип предупреждений привода.
@@ -167,6 +172,39 @@ typedef enum _Drive_Power_Warning {
 
 //! Тип предупреждений питания привода.
 typedef uint32_t drive_power_warnings_t;
+
+/*
+//! Тип ошибки углов фаз.
+typedef enum _Drive_Phase_Angle_Error {
+    DRIVE_PHASE_ANGLE_NO_ERROR  = 0,
+    DRIVE_PHASE_ANGLE_A_ERROR   = 0x1,
+    DRIVE_PHASE_ANGLE_B_ERROR   = 0x2,
+    DRIVE_PHASE_ANGLE_C_ERROR   = 0x4,
+    DRIVE_PHASE_ANGLE_AB_ERROR  = 0x3,
+    DRIVE_PHASE_ANGLE_BC_ERROR  = 0x6,
+    DRIVE_PHASE_ANGLE_AC_ERROR  = 0x5,
+    DRIVE_PHASE_ANGLE_ABC_ERROR = 0x7
+} drive_phase_angle_error_t;
+
+//! Тип ошибок углов фаз.
+typedef uint32_t drive_phase_angle_errors_t;
+
+//! Тип предупреждения углов фаз.
+typedef enum _Drive_Phase_Angle_Warning {
+    DRIVE_PHASE_ANGLE_NO_WARNING  = 0,
+    DRIVE_PHASE_ANGLE_A_WARNING   = 0x1,
+    DRIVE_PHASE_ANGLE_B_WARNING   = 0x2,
+    DRIVE_PHASE_ANGLE_C_WARNING   = 0x4,
+    DRIVE_PHASE_ANGLE_AB_WARNING  = 0x3,
+    DRIVE_PHASE_ANGLE_BC_WARNING  = 0x6,
+    DRIVE_PHASE_ANGLE_AC_WARNING  = 0x5,
+    DRIVE_PHASE_ANGLE_ABC_WARNING = 0x7
+} drive_phase_angle_warning_t;
+
+//! Тип предупреждений углов фаз.
+typedef uint32_t drive_phase_angle_warnings_t;
+*/
+
 
 //! Перечисление состояний инициализации привода.
 typedef enum _Drive_Init_State {
@@ -325,6 +363,18 @@ extern bool drive_power_warning(drive_power_warning_t warning);
 extern drive_power_warnings_t drive_power_warnings(void);
 
 /**
+ * Получает ошибки углов между фазами.
+ * @return Ошибки углов между фазами.
+ */
+//extern drive_phase_angle_errors_t drive_phase_angle_errors(void);
+
+/**
+ * Получает предупреждения углов между фазами.
+ * @return Предупреждения углов между фазами.
+ */
+//extern drive_phase_angle_warnings_t drive_phase_angle_warnings(void);
+
+/**
  * Получает состояние инициализации привода.
  * @return Состояние инициализации привода.
  */
@@ -365,7 +415,7 @@ ALWAYS_INLINE static drive_dir_t drive_direction(void)
 
 /**
  * Получает ошибки фаз.
- * @return Ошибка фаз.
+ * @return Ошибки фаз.
  */
 ALWAYS_INLINE static drive_phase_errors_t drive_phase_errors(void)
 {

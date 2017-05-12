@@ -61,9 +61,13 @@ typedef enum _Drive_Keypad_Key {
 //! Тип кнопок.
 typedef pca9555_pins_t drive_kpd_keys_t;
 
+//! Тип функции сброса шины i2c.
+typedef void (*reset_i2c_bus_proc_t)(void);
+
 //! Структура инициализации кейпада привода.
 typedef struct _Drive_Keypad_Init {
     pca9555_t* ioport; //!< Порт ввода-вывода.
+    reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_keypad_init_t;
 
 /**

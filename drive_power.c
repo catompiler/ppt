@@ -385,6 +385,26 @@ err_t drive_power_calibrate(power_channels_t channels)
     return power_calibrate(&drive_power.power, channels);
 }
 
+fixed32_t drive_power_adc_value_multiplier(size_t channel)
+{
+    return power_adc_value_multiplier(&drive_power.power, channel);
+}
+
+void drive_power_set_adc_value_multiplier(size_t channel, fixed32_t mult)
+{
+    power_set_adc_value_multiplier(&drive_power.power, channel, mult);
+}
+
+uint16_t drive_power_calibration_data(size_t channel)
+{
+    return power_adc_calibration_data(&drive_power.power, channel);
+}
+
+void drive_power_set_calibration_data(size_t channel, uint16_t data)
+{
+    power_set_adc_calibration_data(&drive_power.power, channel, data);
+}
+
 fixed32_t drive_power_value_multiplier(size_t channel)
 {
     return power_value_multiplier(&drive_power.power, channel);
@@ -393,16 +413,6 @@ fixed32_t drive_power_value_multiplier(size_t channel)
 void drive_power_set_value_multiplier(size_t channel, fixed32_t mult)
 {
     power_set_value_multiplier(&drive_power.power, channel, mult);
-}
-
-uint16_t drive_power_calibration_data(size_t channel)
-{
-    return power_calibration_data(&drive_power.power, channel);
-}
-
-void drive_power_set_calibration_data(size_t channel, uint16_t data)
-{
-    power_set_calibration_data(&drive_power.power, channel, data);
 }
 
 power_channel_type_t drive_power_channel_type(size_t channel)

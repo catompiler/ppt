@@ -159,6 +159,8 @@
 #define TR_ID_MENU_PID_ROT          291
 //! ПИД возбуждения.
 #define TR_ID_MENU_PID_EXC          292
+//! ПИД скорости.
+#define TR_ID_MENU_PID_SPD          293
 //! Коэффициент П.
 #define TR_ID_MENU_PID_K_P          295
 //! Коэффициент И.
@@ -185,6 +187,12 @@
 #define TR_ID_MENU_TRIACS_PAIRS_OPEN_TIME 312
 //! Возбуждения.
 #define TR_ID_MENU_TRIAC_EXC_OPEN_TIME 313
+//! Углы открытия.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLES  314
+//! Минимальный угол.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLE_MIN 315
+//! Максимальный угол.
+#define TR_ID_MENU_TRIACS_OPEN_ANGLE_MAX 316
 //! Защита.
 #define TR_ID_MENU_PROTECTION       320
 //! Отсечка.
@@ -290,29 +298,53 @@
 //! Коэффициент Ifan.
 #define TR_ID_MENU_ADC_VALUE_MULT_Ifan  411
 //! Калибровочные данные.
-#define TR_ID_MENU_CALIBRATION_DATA     420
+#define TR_ID_MENU_ADC_CALIBRATION_DATA     420
 //! Коэффициент Ua.
-#define TR_ID_MENU_CALIBRATION_DATA_Ua    421
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ua    421
 //! Коэффициент Ub.
-#define TR_ID_MENU_CALIBRATION_DATA_Ub    422
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ub    422
 //! Коэффициент Uc.
-#define TR_ID_MENU_CALIBRATION_DATA_Uc    423
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Uc    423
 //! Коэффициент Urot.
-#define TR_ID_MENU_CALIBRATION_DATA_Urot  424
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Urot  424
 //! Коэффициент Ia.
-#define TR_ID_MENU_CALIBRATION_DATA_Ia    425
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ia    425
 //! Коэффициент Ib.
-#define TR_ID_MENU_CALIBRATION_DATA_Ib    426
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ib    426
 //! Коэффициент Ic.
-#define TR_ID_MENU_CALIBRATION_DATA_Ic    427
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ic    427
 //! Коэффициент Irot.
-#define TR_ID_MENU_CALIBRATION_DATA_Irot  428
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Irot  428
 //! Коэффициент Iexc.
-#define TR_ID_MENU_CALIBRATION_DATA_Iexc  429
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Iexc  429
 //! Коэффициент Iref.
-#define TR_ID_MENU_CALIBRATION_DATA_Iref  430
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Iref  430
 //! Коэффициент Ifan.
-#define TR_ID_MENU_CALIBRATION_DATA_Ifan  431
+#define TR_ID_MENU_ADC_CALIBRATION_DATA_Ifan  431
+//! Коэффициенты значений.
+#define TR_ID_MENU_VALUE_MULTS  432
+//! Коэффициент Ua.
+#define TR_ID_MENU_VALUE_MULT_Ua    433
+//! Коэффициент Ub.
+#define TR_ID_MENU_VALUE_MULT_Ub    434
+//! Коэффициент Uc.
+#define TR_ID_MENU_VALUE_MULT_Uc    435
+//! Коэффициент Urot.
+#define TR_ID_MENU_VALUE_MULT_Urot  436
+//! Коэффициент Ia.
+#define TR_ID_MENU_VALUE_MULT_Ia    437
+//! Коэффициент Ib.
+#define TR_ID_MENU_VALUE_MULT_Ib    438
+//! Коэффициент Ic.
+#define TR_ID_MENU_VALUE_MULT_Ic    439
+//! Коэффициент Irot.
+#define TR_ID_MENU_VALUE_MULT_Irot  440
+//! Коэффициент Iexc.
+#define TR_ID_MENU_VALUE_MULT_Iexc  441
+//! Коэффициент Iref.
+#define TR_ID_MENU_VALUE_MULT_Iref  442
+//! Коэффициент Ifan.
+#define TR_ID_MENU_VALUE_MULT_Ifan  443
 // //! .
 // #define TR_ID_MENU_
 
@@ -323,8 +355,20 @@
 //! Меню ПИД синхронизации с фазами.
 #define TR_ID_MENU_PHASE_SYNC_PID       452
 
+//! Меню защиты фаз.
+#define TR_ID_MENU_PHASES_PROT        460
+//! Защита последовательности фаз.
+#define TR_ID_MENU_PHASE_STATE_PROT   461
+//! Защита по углам между фазами.
+#define TR_ID_MENU_PHASES_ANGLES_PROT 462
+//! Защита по углам между фазами.
+#define TR_ID_MENU_PHASES_SYNC_PROT   463
+
+//! Меню защиты от обрыва якоря.
+#define TR_ID_MENU_ROT_BREAK_PROT   470
+
 //! Меню интерфейса (GUI)
-#define TR_ID_MENU_GUI              470
+#define TR_ID_MENU_GUI              474
 //! Работа зуммера (звукового оповещения)
 #define TR_ID_MENU_GUI_BUZZER       475
 //! Работа зуммера (звукового оповещения)

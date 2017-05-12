@@ -98,6 +98,8 @@ typedef struct _Phase_Sync_Fft_Filter {
 //! Структура значения FFT.
 typedef struct _Phase_Sync_Fft_Value {
     fixed32_t angle;
+    fixed32_t offset_angle;
+    fixed32_t delta_angle;
     int16_t offset_time;
     fixed32_t filter[FFT_FILTER_SIZE];
     fft_buffer_index_t filter_index;
@@ -156,8 +158,21 @@ err_t drive_phase_sync_init(void)
 
 void drive_phase_sync_reset(void)
 {
+    CRITICAL_ENTER();
+    
+    memset(&phase_sync.buffers, 0x0, sizeof(phase_sync_fft_buffers_t) * FFT_BUFFERS_COUNT);
+    memset(&phase_sync.values, 0x0, sizeof(phase_sync_fft_values_t));
+    
+    phase_sync.adc_counter = 0;
+    phase_sync.calc_phases_counter = 0;
+    
+    phase_sync.put_buffers = 0;
+    phase_sync.get_buffers = 1;
+    
     phase_sync.calc_state = DRIVE_PHASE_SYNC_CALC_INIT;
     pid_controller_reset(&phase_sync.pll.pid);
+    
+    CRITICAL_EXIT();
 }
 
 void drive_phase_sync_set_angle_callback(drive_phase_sync_angle_callback_t callback)
@@ -524,6 +539,33 @@ int16_t drive_phase_sync_offset(phase_t phase)
     return fft_value->offset_time;
 }
 
+fixed32_t drive_phase_sync_offset_angle(phase_t phase)
+{
+    if(phase == PHASE_UNK) return 0;
+    
+    phase_sync_fft_value_t* fft_value = phase_sync_get_value(phase);
+    
+    if(!fft_value) return 0;
+    
+    return fft_value->offset_angle;
+}
+
+fixed32_t drive_phase_sync_delta_angle(phase_t phase)
+{
+    if(phase == PHASE_UNK) return 0;
+    
+    phase_sync_fft_value_t* fft_value = phase_sync_get_value(phase);
+    
+    if(!fft_value) return 0;
+    
+    return fft_value->delta_angle;
+}
+
+fixed32_t drive_phase_sync_diff_delta_angle(phase_t phase)
+{
+    return drive_phase_sync_delta_angle(phase) - ANGLE_120;
+}
+
 err_t drive_phase_sync_process_calc(void)
 {
     err_t err = E_NO_ERROR;
@@ -719,15 +761,63 @@ bool drive_phase_sync_calc_offsets(void)
     
     angle_a -= ref_angle_a;
     offsetf = ANGLE_TO_US(angle_a);
+    phase_sync.values.value_a.offset_angle = angle_a;
     phase_sync.values.value_a.offset_time = fixed32_get_int(offsetf);
     
     angle_b -= ref_angle_b;
     offsetf = ANGLE_TO_US(angle_b);
+    phase_sync.values.value_b.offset_angle = angle_b;
     phase_sync.values.value_b.offset_time = fixed32_get_int(offsetf);
     
     angle_c -= ref_angle_c;
     offsetf = ANGLE_TO_US(angle_c);
+    phase_sync.values.value_c.offset_angle = angle_c;
     phase_sync.values.value_c.offset_time = fixed32_get_int(offsetf);
+
+    return true;
+}
+
+static fixed32_t drive_phase_sync_calc_delta_angle(fixed32_t angle_a, fixed32_t angle_b)
+{
+    if(angle_b >= angle_a) return angle_b - angle_a;
+    return (angle_b + CORDIC32_ANGLE_360) - angle_a;
+}
+
+bool drive_phase_sync_calc_delta_angles(void)
+{
+    if(!drive_phase_sync_data_avail()) return false;
+
+    fixed32_t angle_a = phase_sync.values.value_a.angle;
+    fixed32_t angle_b = phase_sync.values.value_b.angle;
+    fixed32_t angle_c = phase_sync.values.value_c.angle;
+    
+    fixed32_t ref_angle_a = 0;
+    fixed32_t ref_angle_b = 0;
+    fixed32_t ref_angle_c = 0;
+    
+    drive_dir_t dir = drive_phase_sync_current_dir();
+    
+    if(dir == DRIVE_DIR_FORW){
+        ref_angle_a = angle_c;
+        ref_angle_b = angle_a;
+        ref_angle_c = angle_b;
+    }
+    else if(dir == DRIVE_DIR_BACKW){
+        ref_angle_a = angle_b;
+        ref_angle_b = angle_c;
+        ref_angle_c = angle_a;
+    }
+    // DRIVE_DIR_UNK
+    else{
+        return false;
+    }
+    angle_a = drive_phase_sync_calc_delta_angle(angle_a, ref_angle_a);
+    angle_b = drive_phase_sync_calc_delta_angle(angle_b, ref_angle_b);
+    angle_c = drive_phase_sync_calc_delta_angle(angle_c, ref_angle_c);
+    
+    phase_sync.values.value_a.delta_angle = angle_a;
+    phase_sync.values.value_b.delta_angle = angle_b;
+    phase_sync.values.value_c.delta_angle = angle_c;
 
     return true;
 }
@@ -741,6 +831,9 @@ bool drive_phase_sync_process(void)
     if(!res) return false;
     
     res = drive_phase_sync_calc_offsets();
+    if(!res) return false;
+    
+    res = drive_phase_sync_calc_delta_angles();
     if(!res) return false;
     
     return true;

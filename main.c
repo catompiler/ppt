@@ -17,6 +17,7 @@
 #include "fixed/fixed32.h"
 #include "pca9555/pca9555.h"
 #include "scheduler/scheduler.h"
+#include "timers/timers.h"
 #include "m95x/m95x.h"
 #include "storage.h"
 #include "drive.h"
@@ -28,6 +29,7 @@
 #include "drive_modbus.h"
 #include "drive_tasks.h"
 #include "drive_dio.h"
+#include "drive_nvdata.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -65,6 +67,31 @@ static counter_t counter_ms_gtod = 0;
 #define SCHEDULER_TASKS_MAX 5
 //! Буфер задач.
 static TASKS_BUFFER(tasks_buffer, SCHEDULER_TASKS_MAX);
+
+//! Таймеры.
+//! Максимум таймеров.
+#define TIMERS_COUNT_MAX 5
+//! Буфер таймеров.
+static TIMERS_BUFFER(timers_buf, TIMERS_COUNT_MAX);
+//! Константы таймера таймеров.
+//! Таймер.
+#define TIMERS_TIMER TIM5
+//! Прерывание таймера.
+#define TIMERS_TIMER_IRQn TIM5_IRQn
+//! Предделитель.
+#define TIMERS_TIMER_PRESCALER (7200 - 1) // 100us per tick
+//! Тиков за период.
+#define TIMERS_TIMER_PERIOD_TICKS (65536)
+//! Период.
+#define TIMERS_TIMER_PERIOD (0xffff)
+//! Максимум секунд.
+#define TIMERS_TIMER_MAX_SECS (6)
+//! Максимум микросекунд.
+#define TIMERS_TIMER_MAX_USECS (553500)
+//! Минимум тиков.
+#define TIMERS_TIMER_TICKS_MIN (1)
+//! Максимум тиков.
+#define TIMERS_TIMER_TICKS_MAX (TIMERS_TIMER_PERIOD)
 
 //! Шина spi.
 static spi_bus_t spi;
@@ -134,7 +161,7 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 //! Число измерений ADC.
 #define ADC_MEASUREMENTS_PER_PERIOD 128
 //! Число измерений ADC для вычисления питания.
-#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 4)
+#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 2)
 //! Число выполненных измерений ADC.
 static unsigned int adc_data_measured = 0;
 
@@ -170,6 +197,8 @@ static unsigned int adc_data_measured = 0;
  */
 #define IRQ_PRIOR_TRIACS_TIMER 0
 #define IRQ_PRIOR_TRIAC_EXC_TIMER 0
+#define IRQ_PRIOR_SYSTICK 0
+#define IRQ_PRIOR_RTC 0
 #define IRQ_PRIOR_NULL_SENSORS 1
 #define IRQ_PRIOR_ADC_DMA 2
 #define IRQ_PRIOR_NULL_TIMER 4
@@ -178,7 +207,6 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_I2C1 5
 #define IRQ_PRIOR_SPI1 5
 #define IRQ_PRIOR_SPI2 5
-#define IRQ_PRIOR_KEYPAD 6
 #define IRQ_PRIOR_USART 5
 #define IRQ_PRIOR_DMA_CH1 5
 #define IRQ_PRIOR_DMA_CH2 5 // spi1
@@ -187,8 +215,9 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus)
 #define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2 (modbus)
-#define IRQ_PRIOR_RTC 6
+#define IRQ_PRIOR_KEYPAD 6
 #define IRQ_PRIOR_RTC_ALARM 6
+#define IRQ_PRIOR_TIMERS_TIMER 7
 
 
 //! Атрибуты обработчиков прерываний.
@@ -307,8 +336,21 @@ IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
 
 IRQ_ATTRIBS void RTC_IRQHandler(void)
 {
-    counter_ms_gtod = system_counter_ticks();
     rtc_interrupt_handler();
+}
+
+/*
+ * RTC second callback.
+ */
+static void rtc_on_second(void)
+{
+    counter_ms_gtod = system_counter_ticks();
+    
+    drive_nvdata_set_lifetime(drive_nvdata_lifetime() + 1);
+    
+    if(drive_running()){
+        drive_nvdata_set_runtime(drive_nvdata_runtime() + 1);
+    }
 }
 
 /*
@@ -323,6 +365,11 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
     
     tv->tv_sec = rtc_time(NULL);
     tv->tv_usec = system_counter_diff(&counter_ms_gtod) * 1000;
+    
+    if(tv->tv_usec >= 1000000){
+        tv->tv_usec = 1000000 - 1;
+        //tv->tv_sec ++;
+    }
     
     if(tz != NULL){
         tz->tz_minuteswest = 0;
@@ -513,6 +560,12 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
     drive_triac_exc_timer_irq_handler();
 }
 
+IRQ_ATTRIBS void TIM5_IRQHandler(void)
+{
+    TIM_ClearITPendingBit(TIMERS_TIMER, TIM_IT_Update);
+    timers_timer_handler();
+}
+
 IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
     drive_phases_timer_irq_handler();
@@ -597,6 +650,7 @@ static void init_sys_counter(void)
     system_counter_init(1000);
     counter = system_counter_ticks();
     SysTick_Config(SystemCoreClock / 1000);
+    NVIC_SetPriority(SysTick_IRQn, IRQ_PRIOR_SYSTICK);
 }
 
 static void remap_config(void)
@@ -643,6 +697,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);    // Включаем тактирование General-purpose TIM3
     // TIM4.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
+    // TIM5.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);    // Включаем тактирование General-purpose TIM5
     // TIM6.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
     // TIM7.
@@ -683,11 +739,11 @@ static void init_PDR(void)
     PWR->CR |= PWR_CR_PVDE;
 }
 
-static void init_rtc(void)
+static void init_rtc_nvdata(void)
 {
     rtc_init();
     
-    if(rtc_state() == DISABLE){
+    if(rtc_state() == DISABLE || !drive_nvdata_valid()){
         PWR_BackupAccessCmd(ENABLE);
         
         RCC_BackupResetCmd(ENABLE);
@@ -695,6 +751,8 @@ static void init_rtc(void)
         RCC_BackupResetCmd(DISABLE);
         
         PWR_BackupAccessCmd(ENABLE);
+        
+        drive_nvdata_clear();
         
         RCC_LSEConfig(RCC_LSE_ON);
         while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET);
@@ -706,6 +764,8 @@ static void init_rtc(void)
         
         PWR_BackupAccessCmd(DISABLE);
     }
+    
+    rtc_set_second_callback(rtc_on_second);
     
     NVIC_SetPriority(RTC_IRQn, IRQ_PRIOR_RTC);
     NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
@@ -955,6 +1015,14 @@ static void init_i2c_periph(void)
     I2C_Cmd(I2C1, ENABLE);
 }
 
+static void reset_i2c(void)
+{
+    i2c_bus_reset(&i2c);
+    i2c_device_reset(I2C1);
+    
+    init_i2c_periph();
+}
+
 static void init_i2c(void)
 {
     GPIO_InitTypeDef gpio_i2c =
@@ -1181,6 +1249,7 @@ static void init_drive_ui(void)
     
     ui_is.ioport = &ioport;
     ui_is.tft = &tft;
+    ui_is.reset_i2c_bus_proc = reset_i2c;
     
     drive_ui_init(&ui_is);
 }
@@ -1478,7 +1547,7 @@ static void init_gpio (void)
         gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
         gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOC, &gpio_is);
-    //GPIO_SetBits(GPIOC, GPIO_Pin_7);
+    //GPIO_SetBits(GPIOC, GPIO_Pin_7); // PWM: TIM8_CH2.
 }
 
 static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
@@ -1529,6 +1598,73 @@ static void init_dio(void)
     init_dio_out(DRIVE_DIO_OUTPUT_4, DIGITAL_IO_OUT_4_GPIO, DIGITAL_IO_OUT_4_PIN);
 }
 
+static void init_scheduler(void)
+{
+    scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
+}
+
+static void init_timers_timer(void)
+{
+    TIM_DeInit(TIMERS_TIMER);
+    TIM_TimeBaseInitTypeDef tim_is;
+            tim_is.TIM_Prescaler = TIMERS_TIMER_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim_is.TIM_Period = TIMERS_TIMER_PERIOD; // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
+    TIM_TimeBaseInit(TIMERS_TIMER, &tim_is);
+    TIM_SelectOnePulseMode(TIMERS_TIMER, TIM_OPMode_Single);                    // Однопульсный режим таймера
+    TIM_SetCounter(TIMERS_TIMER, 0);                                            // Сбрасываем счетный регистр в ноль
+    
+    TIM_ITConfig(TIMERS_TIMER, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    
+    NVIC_SetPriority(TIMERS_TIMER_IRQn, IRQ_PRIOR_TIMERS_TIMER);
+    NVIC_EnableIRQ(TIMERS_TIMER_IRQn);
+}
+
+static void setup_timers_timer(const struct timeval* time)
+{
+    if(!time) return;
+    
+    TIM_Cmd(TIMERS_TIMER, DISABLE);
+    TIM_SetCounter(TIMERS_TIMER, 0);
+    TIM_ClearITPendingBit(TIMERS_TIMER, TIM_IT_Update);
+    
+    struct timeval tv;
+    
+    if(time->tv_sec < 0 ||
+       (time->tv_sec == 0 && time->tv_usec < 0)){
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+    }else if(time->tv_sec > TIMERS_TIMER_MAX_SECS ||
+       (time->tv_sec == TIMERS_TIMER_MAX_SECS && time->tv_usec > TIMERS_TIMER_MAX_USECS)){
+        tv.tv_sec = TIMERS_TIMER_MAX_SECS;
+        tv.tv_usec = TIMERS_TIMER_MAX_USECS;
+    }else{
+        tv.tv_sec = time->tv_sec;
+        tv.tv_usec = time->tv_usec;
+    }
+    
+    long ticks = tv.tv_sec * 10000 + tv.tv_usec / 100;
+    if(ticks > 0) ticks --;
+    
+    if(ticks > TIMERS_TIMER_TICKS_MAX) ticks = TIMERS_TIMER_TICKS_MAX;
+    if(ticks < TIMERS_TIMER_TICKS_MIN) ticks = TIMERS_TIMER_TICKS_MIN;
+    
+    TIM_SetAutoreload(TIMERS_TIMER, (uint16_t)ticks);
+    TIM_Cmd(TIMERS_TIMER, ENABLE);
+}
+
+static void init_timers(void)
+{
+    timers_init_t timers_is;
+    
+    timers_is.buffer = timers_buf;
+    timers_is.count = TIMERS_COUNT_MAX;
+    timers_is.setup_timer_callback = setup_timers_timer;
+    
+    timers_init(&timers_is);
+}
+
 
 static void* main_task(void* arg)
 {
@@ -1536,6 +1672,7 @@ static void* main_task(void* arg)
     
     return NULL;
 }
+
 
 int main(void)
 {
@@ -1553,7 +1690,7 @@ int main(void)
     
     init_usart();
     
-    init_rtc();
+    init_rtc_nvdata();
     
     printf("STM32 MCU\r\n");
     
@@ -1574,7 +1711,9 @@ int main(void)
         settings_default();
     }
     
-    scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
+    init_scheduler();
+    init_timers_timer();
+    init_timers();
     
     drive_tasks_init();
     

@@ -4,6 +4,8 @@
 #include "drive.h"
 #include "utils/utils.h"
 #include "counter/counter.h"
+#include "timers/timers.h"
+#include <sys/time.h>
 
 
 //! Тип структуры интерфейса привода.
@@ -23,6 +25,7 @@ static err_t drive_ui_init_keypad(drive_ui_init_t* ui_is)
     drive_keypad_init_t keypad_is;
     
     keypad_is.ioport = ui_is->ioport;
+    keypad_is.reset_i2c_bus_proc = ui_is->reset_i2c_bus_proc;
     
     return drive_keypad_init(&keypad_is);
 }
@@ -36,8 +39,38 @@ static err_t drive_ui_init_gui(drive_ui_init_t* ui_is)
     return drive_gui_init(&gui_is);
 }
 
+static void* drive_ui_timer_buzz_off_proc(void* arg)
+{
+    while(drive_keypad_pins_off(DRIVE_KPD_PIN_BUZZ) != E_NO_ERROR);
+    
+    return NULL;
+}
+
+static void* drive_ui_timer_buzz_on_proc(void* arg)
+{
+    while(drive_keypad_pins_on(DRIVE_KPD_PIN_BUZZ) != E_NO_ERROR);
+
+    struct timeval tv_start;
+    
+    gettimeofday(&tv_start, NULL);
+    tv_start.tv_sec += 0;
+    tv_start.tv_usec += 100000;
+    
+    timers_add_timer(drive_ui_timer_buzz_off_proc, &tv_start, NULL, NULL, NULL);/**/
+    
+    return NULL;
+}
+
 static void drive_ui_on_key_pressed(keycode_t key)
 {
+    struct timeval tv_start;
+    
+    gettimeofday(&tv_start, NULL);
+    tv_start.tv_sec += 0;
+    tv_start.tv_usec += 100000;
+    
+    timers_add_timer(drive_ui_timer_buzz_on_proc, &tv_start, NULL, NULL, NULL);/**/
+    
     switch(key){
         case KEY_START:
             drive_start();

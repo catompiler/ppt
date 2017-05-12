@@ -9,17 +9,22 @@
 #include <stdio.h>
 
 
+//! Минимальное значение PID-регулятора скорости.
+#define DRIVE_SPD_PID_VALUE_MIN 0
+
 //! Максимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MAX TRIACS_PAIRS_ANGLE_MAX_F // 120.0
 //! Минимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MIN TRIACS_PAIRS_ANGLE_MIN_F
 
 //! Максимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MAX (TRIAC_EXC_ANGLE_MAX_F - TRIAC_EXC_ANGLE_MIN_F) // 180.0 - 30.0
+//#define DRIVE_EXC_PID_VALUE_MAX (TRIAC_EXC_ANGLE_MAX_F - TRIAC_EXC_ANGLE_MIN_F) // 180.0 - 30.0
+#define DRIVE_EXC_PID_VALUE_MAX TRIAC_EXC_ANGLE_MAX_F
 //! Минимальное значение PID-регулятора тока возбуждения.
-#define DRIVE_EXC_PID_VALUE_MIN 0
+//#define DRIVE_EXC_PID_VALUE_MIN 0
+#define DRIVE_EXC_PID_VALUE_MIN TRIAC_EXC_ANGLE_MIN_F
 //! Добавочный угол открытия тиристора возбуждения.
-#define DRIVE_EXC_PID_VALUE_DELTA TRIAC_EXC_ANGLE_MIN_F // 30.0
+//#define DRIVE_EXC_PID_VALUE_DELTA TRIAC_EXC_ANGLE_MIN_F // 30.0
 
 //! Коэффициент П-звена ПИД-регулятора синхронизации с фазами.
 //#define DRIVE_PHASE_SYNC_PLL_PIC_Kp (fixed32_make_from_fract(18, 1))
@@ -82,6 +87,9 @@ typedef struct _Drive {
     drive_warnings_t warnings; //!< Предупреждения.
     drive_power_errors_t power_errors; //!< Ошибки питания.
     drive_power_warnings_t power_warnings; //!< Предупреждения питания.
+    drive_power_errors_t power_cutoff_errors; //!< Ошибки отсечки питания.
+    //drive_phase_angle_errors_t phase_angle_errors; //!< Ошибки углов между фазами.
+    //drive_phase_angle_warnings_t phase_angle_warnings; //!< Предупреждения углов между фазами.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
@@ -186,24 +194,41 @@ typedef struct _Drive_Prot_Data {
 
 
 static const size_t drive_prot_items[] = {
-    DRIVE_PROT_ITEM_FAULT_OVF_Ua, DRIVE_PROT_ITEM_FAULT_UDF_Ua, DRIVE_PROT_ITEM_FAULT_OVF_Ia,
-    DRIVE_PROT_ITEM_FAULT_OVF_Ub, DRIVE_PROT_ITEM_FAULT_UDF_Ub, DRIVE_PROT_ITEM_FAULT_OVF_Ib,
-    DRIVE_PROT_ITEM_FAULT_OVF_Uc, DRIVE_PROT_ITEM_FAULT_UDF_Uc, DRIVE_PROT_ITEM_FAULT_OVF_Ic,
-    DRIVE_PROT_ITEM_FAULT_OVF_Urot, DRIVE_PROT_ITEM_FAULT_OVF_Irot,
-    DRIVE_PROT_ITEM_FAULT_OVF_Iexc, DRIVE_PROT_ITEM_FAULT_UDF_Iexc,
-    DRIVE_PROT_ITEM_WARN_OVF_Ua, DRIVE_PROT_ITEM_WARN_UDF_Ua, DRIVE_PROT_ITEM_WARN_OVF_Ia,
-    DRIVE_PROT_ITEM_WARN_OVF_Ub, DRIVE_PROT_ITEM_WARN_UDF_Ub, DRIVE_PROT_ITEM_WARN_OVF_Ib,
-    DRIVE_PROT_ITEM_WARN_OVF_Uc, DRIVE_PROT_ITEM_WARN_UDF_Uc, DRIVE_PROT_ITEM_WARN_OVF_Ic,
-    DRIVE_PROT_ITEM_WARN_OVF_Urot, DRIVE_PROT_ITEM_WARN_OVF_Irot,
-    DRIVE_PROT_ITEM_WARN_OVF_Iexc, DRIVE_PROT_ITEM_WARN_UDF_Iexc,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Ia, DRIVE_PROT_ITEM_WARN_IDLE_Ia,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Ib, DRIVE_PROT_ITEM_WARN_IDLE_Ib,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Ic, DRIVE_PROT_ITEM_WARN_IDLE_Ic,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Urot, DRIVE_PROT_ITEM_WARN_IDLE_Urot,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Irot, DRIVE_PROT_ITEM_WARN_IDLE_Irot,
-    DRIVE_PROT_ITEM_FAULT_IDLE_Iexc, DRIVE_PROT_ITEM_WARN_IDLE_Iexc
+    DRIVE_PROT_PWR_ITEM_FAULT_OVF_Ua, DRIVE_PROT_PWR_ITEM_FAULT_UDF_Ua, DRIVE_PROT_PWR_ITEM_FAULT_OVF_Ia,
+    DRIVE_PROT_PWR_ITEM_FAULT_OVF_Ub, DRIVE_PROT_PWR_ITEM_FAULT_UDF_Ub, DRIVE_PROT_PWR_ITEM_FAULT_OVF_Ib,
+    DRIVE_PROT_PWR_ITEM_FAULT_OVF_Uc, DRIVE_PROT_PWR_ITEM_FAULT_UDF_Uc, DRIVE_PROT_PWR_ITEM_FAULT_OVF_Ic,
+    DRIVE_PROT_PWR_ITEM_FAULT_OVF_Urot, DRIVE_PROT_PWR_ITEM_FAULT_OVF_Irot,
+    DRIVE_PROT_PWR_ITEM_FAULT_OVF_Iexc, DRIVE_PROT_PWR_ITEM_FAULT_UDF_Iexc,
+    DRIVE_PROT_PWR_ITEM_WARN_OVF_Ua, DRIVE_PROT_PWR_ITEM_WARN_UDF_Ua, DRIVE_PROT_PWR_ITEM_WARN_OVF_Ia,
+    DRIVE_PROT_PWR_ITEM_WARN_OVF_Ub, DRIVE_PROT_PWR_ITEM_WARN_UDF_Ub, DRIVE_PROT_PWR_ITEM_WARN_OVF_Ib,
+    DRIVE_PROT_PWR_ITEM_WARN_OVF_Uc, DRIVE_PROT_PWR_ITEM_WARN_UDF_Uc, DRIVE_PROT_PWR_ITEM_WARN_OVF_Ic,
+    DRIVE_PROT_PWR_ITEM_WARN_OVF_Urot, DRIVE_PROT_PWR_ITEM_WARN_OVF_Irot,
+    DRIVE_PROT_PWR_ITEM_WARN_OVF_Iexc, DRIVE_PROT_PWR_ITEM_WARN_UDF_Iexc,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ia, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Ia,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ib, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Ib,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ic, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Ic,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Urot, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Urot,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Irot, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Irot,
+    DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Iexc, DRIVE_PROT_PWR_ITEM_WARN_IDLE_Iexc
 };
 #define DRIVE_CHECK_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_items)
+
+static const size_t drive_prot_cutoff_items[] = {
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Ua, DRIVE_PROT_PWR_ITEM_CUTOFF_Ub, DRIVE_PROT_PWR_ITEM_CUTOFF_Uc,
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Ia, DRIVE_PROT_PWR_ITEM_CUTOFF_Ib, DRIVE_PROT_PWR_ITEM_CUTOFF_Ic,
+    DRIVE_PROT_PWR_ITEM_CUTOFF_Urot, DRIVE_PROT_PWR_ITEM_CUTOFF_Irot, DRIVE_PROT_PWR_ITEM_CUTOFF_Iexc
+};
+#define DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT ARRAY_LEN(drive_prot_cutoff_items)
+
+#define PROT_CUTOFF_ITEMS_ERRORS_MASK\
+    (DRIVE_POWER_ERROR_OVERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Uc |\
+     DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |\
+     DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc)
+
+/*#define PROT_CUTOFF_ITEMS_WARNINGS_MASK\
+    (DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |\
+     DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |\
+     DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc)*/
 
 // INIT
 #define PROT_ITEMS_INIT_ERRORS_MASK     PROT_ERRORS_MASK_IN_OVF
@@ -264,11 +289,11 @@ ALWAYS_INLINE static drive_state_t drive_get_state(void)
 static void drive_set_prot_masks(drive_state_t state)
 {
     if(state < DRIVE_PROT_DATA_COUNT){
-        drive_protection_set_errs_mask(drive_prot_data[state].errors_mask);
-        drive_protection_set_warn_mask(drive_prot_data[state].warnings_mask);
+        drive_protection_power_set_errs_mask(drive_prot_data[state].errors_mask);
+        drive_protection_power_set_warn_mask(drive_prot_data[state].warnings_mask);
     }else{
-        drive_protection_set_errs_mask(DRIVE_POWER_ERROR_ALL);
-        drive_protection_set_warn_mask(DRIVE_POWER_WARNING_ALL);
+        drive_protection_power_set_errs_mask(DRIVE_POWER_ERROR_ALL);
+        drive_protection_power_set_warn_mask(DRIVE_POWER_WARNING_ALL);
     }
 }
 
@@ -302,10 +327,23 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
         drive_set_prot_masks(state_to);
     }
     
-    if(state_to == DRIVE_STATE_INIT){
-        drive_protection_phases_set_masked(true);
+    if(state_to == DRIVE_STATE_INIT ||
+       state_to == DRIVE_STATE_ERROR){
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, false);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_ANGLES, false);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_SYNC, false);
     }else{
-        drive_protection_phases_set_masked(false);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, true);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_ANGLES, true);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASES_SYNC, true);
+    }
+    
+    if(state_to == DRIVE_STATE_RUN ||
+       state_to == DRIVE_STATE_START ||
+       state_to == DRIVE_STATE_STOP){
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
+    }else{
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
     }
 }
 
@@ -458,7 +496,10 @@ static void drive_set_power_error(drive_power_errors_t error)
 static void drive_clear_power_error(drive_power_errors_t error)
 {
     drive.power_errors &= ~error;
-    if(drive.power_errors == DRIVE_POWER_ERROR_NONE) drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    if(drive.power_errors == DRIVE_POWER_ERROR_NONE &&
+       drive.power_cutoff_errors == DRIVE_POWER_ERROR_NONE){
+        drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    }
 }
 
 /**
@@ -466,10 +507,10 @@ static void drive_clear_power_error(drive_power_errors_t error)
  * @param error Ошибка питания.
  * @return Флаг возникновения новой ошибки питания.
  */
-ALWAYS_INLINE static bool drive_is_new_power_error(drive_power_error_t error)
+/*ALWAYS_INLINE static bool drive_is_new_power_error(drive_power_error_t error)
 {
     return (drive.power_errors & error) == 0;
-}
+}*/
 
 /**
  * Установка предупреждения питания.
@@ -496,10 +537,74 @@ static void drive_clear_power_warning(drive_power_warnings_t warning)
  * @param warning Предупреждение питания.
  * @return Флаг возникновения нового предупреждения питания.
  */
-ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warning)
+/*ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warning)
 {
     return (drive.power_warnings & warning) == 0;
+}*/
+
+/**
+ * Установка ошибки отсечки питания.
+ * @param error Ошибка.
+ */
+static void drive_set_power_cutoff_error(drive_power_errors_t error)
+{
+    drive.power_cutoff_errors |= error;
+    drive_set_error(DRIVE_ERROR_POWER_INVALID);
 }
+
+/**
+ * Снятие ошибки отсечки питания.
+ * @param error Ошибка.
+ */
+/*static void drive_clear_power_cutoff_error(drive_power_errors_t error)
+{
+    drive.power_cutoff_errors &= ~error;
+    if(drive.power_errors == DRIVE_POWER_ERROR_NONE &&
+       drive.power_cutoff_errors == DRIVE_POWER_ERROR_NONE){
+        drive_clear_error(DRIVE_ERROR_POWER_INVALID);
+    }
+}*/
+
+
+/**
+ * Установка ошибки углов между фазами.
+ * @param error Ошибка.
+ */
+/*static void drive_set_phase_angle_error(drive_phase_angle_errors_t error)
+{
+    drive.phase_angle_errors |= error;
+    drive_set_error(DRIVE_ERROR_PHASE_ANGLE);
+}*/
+
+/**
+ * Снятие ошибки углов между фазами.
+ * @param error Ошибка.
+ */
+/*static void drive_clear_phase_angle_error(drive_phase_angle_errors_t error)
+{
+    drive.phase_angle_errors &= ~error;
+    if(drive.phase_angle_errors == DRIVE_PHASE_ANGLE_NO_ERROR) drive_clear_error(DRIVE_ERROR_PHASE_ANGLE);
+}*/
+
+/**
+ * Установка предупреждения углов между фазами.
+ * @param warning Предупреждение.
+ */
+/*static void drive_set_phase_angle_warning(drive_phase_angle_warnings_t warning)
+{
+    drive.phase_angle_warnings |= warning;
+    drive_set_warning(DRIVE_WARNING_PHASE_ANGLE);
+}*/
+
+/**
+ * Снятие предупреждения углов между фазами.
+ * @param warning Предупреждение.
+ */
+/*static void drive_clear_phase_angle_warning(drive_phase_angle_warnings_t warning)
+{
+    drive.phase_angle_warnings &= ~warning;
+    if(drive.phase_angle_warnings == DRIVE_PHASE_ANGLE_NO_WARNING) drive_clear_warning(DRIVE_WARNING_PHASE_ANGLE);
+}*/
 
 /*
  * Обработка возникновения ошибки.
@@ -510,7 +615,11 @@ ALWAYS_INLINE static bool drive_is_new_power_warning(drive_power_warning_t warni
  */
 static void drive_on_error(void)
 {
-    if(drive.on_error_occured) drive.on_error_occured();
+    if(drive.status != DRIVE_STATUS_ERROR){
+        if(drive.on_error_occured){
+            drive.on_error_occured();
+        }
+    }
 }
 
 /**
@@ -531,50 +640,54 @@ static void drive_error_occured(drive_errors_t error)
  */
 static void drive_on_warning(void)
 {
-    if(drive.on_warning_occured) drive.on_warning_occured();
+    if(drive.status != DRIVE_STATUS_ERROR){
+        if(drive.on_warning_occured){
+            drive.on_warning_occured();
+        }
+    }
 }
 
 /**
  * Обработчик возникновения предупреждения.
  * @param error Предупреждение.
  */
-static void drive_warning_occured(drive_warnings_t warning)
+/*static void drive_warning_occured(drive_warnings_t warning)
 {
     drive_set_warning(warning);
 
     if(drive.status != DRIVE_STATUS_ERROR){
         drive_on_warning();
     }
-}
+}*/
 
 /**
  * Обработчик возникновения ошибки питания.
  * @param error Ошибка питания.
  */
-static void drive_power_error_occured(drive_power_errors_t error)
+/*static void drive_power_error_occured(drive_power_errors_t error)
 {
     drive_set_power_error(error);
     drive_error_occured(DRIVE_ERROR_POWER_INVALID);
-}
+}*/
 
 /**
  * Обработчик возникновения предупреждения питания.
  * @param warning Предупреждение питания.
  */
-static void drive_power_warning_occured(drive_power_warnings_t warning)
+/*static void drive_power_warning_occured(drive_power_warnings_t warning)
 {
     drive_set_power_warning(warning);
     drive_warning_occured(DRIVE_WARNING_POWER);
-}
+}*/
 
 /**
  * Обработчик возникновения ошибки фаз.
  */
-static void drive_on_phase_error_occured(void)
+/*static void drive_on_phase_error_occured(void)
 {
     if(drive.state != DRIVE_STATE_INIT)
         drive_error_occured(DRIVE_ERROR_PHASE);
-}
+}*/
 
 /**
  * Прекращает подачу питания на двигатель.
@@ -750,6 +863,29 @@ static drive_prot_action_t drive_prot_get_hard_action(drive_prot_action_t lact, 
 }
 
 /**
+ * Выполняет проверку общего элемента защиты.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return результирующее действие.
+ */
+static drive_prot_action_t drive_check_prot_item(drive_prot_index_t item, drive_error_t error, drive_warning_t warning)
+{
+    if(drive_protection_check_item(item)){
+        if(error != DRIVE_ERROR_NONE) drive_set_error(error);
+        if(warning != DRIVE_WARNING_NONE) drive_set_warning(warning);
+        
+        return drive_protection_item_action(item);
+        
+    }else if(!drive_protection_item_active(item)){
+        if(error != DRIVE_ERROR_NONE) drive_clear_error(error);
+        if(warning != DRIVE_WARNING_NONE) drive_clear_warning(warning);
+    }
+    
+    return DRIVE_PROT_ACTION_IGNORE;
+}
+
+/**
  * Проверяет значение входов питания.
  */
 static void drive_check_prots(void)
@@ -769,16 +905,16 @@ static void drive_check_prots(void)
         
         index = drive_prot_items[i];
         
-        item_warnings = drive_protection_item_warning(index);
-        item_errors = drive_protection_item_error(index);
+        item_warnings = drive_protection_power_item_warning(index);
+        item_errors = drive_protection_power_item_error(index);
         
-        if(drive_protection_check_item(index, NULL, NULL)){
+        if(drive_protection_power_check_item(index, NULL, NULL)){
             
             res_action = drive_prot_get_hard_action(res_action,
-                                drive_protection_item_action(index));
+                                drive_protection_power_item_action(index));
             
         }
-        if(drive_protection_item_active(index)){
+        if(drive_protection_power_item_active(index)){
             
             if(item_warnings != DRIVE_POWER_WARNING_NONE){
                 drive_set_power_warning(item_warnings);
@@ -817,13 +953,24 @@ static void drive_check_prots(void)
             break;
     }
     
-    if(drive_protection_phases_check()){
-        res_action = drive_prot_get_hard_action(res_action,
-                        drive_protection_phases_action());
-        drive_set_error(DRIVE_ERROR_PHASE);
-    }else if(!drive_protection_phases_active()){
-        drive_clear_error(DRIVE_ERROR_PHASE);
-    }
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, DRIVE_ERROR_PHASE, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_PHASES_ANGLES, DRIVE_ERROR_PHASE_ANGLE, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_WARN_PHASES_ANGLES, DRIVE_ERROR_NONE, DRIVE_WARNING_PHASE_ANGLE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_PHASES_SYNC, DRIVE_ERROR_PHASE_SYNC, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_WARN_PHASES_SYNC, DRIVE_ERROR_NONE, DRIVE_WARNING_PHASE_SYNC));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_ROT_BREAK, DRIVE_ERROR_ROT_BREAK, DRIVE_WARNING_NONE));
+    
     
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
@@ -838,39 +985,18 @@ static void drive_check_prots(void)
  */
 static void drive_check_power_inst(void)
 {
-    static const size_t prot_cutoff_items[] = {
-        DRIVE_PROT_ITEM_CUTOFF_Ua, DRIVE_PROT_ITEM_CUTOFF_Ub, DRIVE_PROT_ITEM_CUTOFF_Uc,
-        DRIVE_PROT_ITEM_CUTOFF_Ia, DRIVE_PROT_ITEM_CUTOFF_Ib, DRIVE_PROT_ITEM_CUTOFF_Ic,
-        DRIVE_PROT_ITEM_CUTOFF_Urot, DRIVE_PROT_ITEM_CUTOFF_Irot, DRIVE_PROT_ITEM_CUTOFF_Iexc
-    };
-    
-    static const size_t prot_cutoff_items_count = ARRAY_LEN(prot_cutoff_items);
-    
-    static const drive_power_errors_t prot_cutoff_errs_mask = 
-        DRIVE_POWER_ERROR_OVERFLOW_Ua | DRIVE_POWER_ERROR_OVERFLOW_Ub | DRIVE_POWER_ERROR_OVERFLOW_Uc |
-        DRIVE_POWER_ERROR_OVERFLOW_Ia | DRIVE_POWER_ERROR_OVERFLOW_Ib | DRIVE_POWER_ERROR_OVERFLOW_Ic |
-        DRIVE_POWER_ERROR_OVERFLOW_Urot | DRIVE_POWER_ERROR_OVERFLOW_Irot | DRIVE_POWER_ERROR_OVERFLOW_Iexc;
-    
-    static const drive_power_warnings_t prot_cutoff_warn_mask = 
-        DRIVE_POWER_WARNING_OVERFLOW_Ua | DRIVE_POWER_WARNING_OVERFLOW_Ub | DRIVE_POWER_WARNING_OVERFLOW_Uc |
-        DRIVE_POWER_WARNING_OVERFLOW_Ia | DRIVE_POWER_WARNING_OVERFLOW_Ib | DRIVE_POWER_WARNING_OVERFLOW_Ic |
-        DRIVE_POWER_WARNING_OVERFLOW_Urot | DRIVE_POWER_WARNING_OVERFLOW_Irot | DRIVE_POWER_WARNING_OVERFLOW_Iexc;
-    
-    drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
+    //drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     
-    drive_protection_set_cutoff_errs_mask(prot_cutoff_errs_mask);
-    drive_protection_set_cutoff_warn_mask(prot_cutoff_warn_mask);
+    drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
+    //drive_protection_power_set_cutoff_warn_mask(PROT_CUTOFF_ITEMS_WARNINGS_MASK);
     
-    if(drive_protection_check_power_items(prot_cutoff_items, prot_cutoff_items_count, &warnings, &errors)){
+    if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, NULL, &errors)){
         
         if(errors != DRIVE_POWER_ERROR_NONE){
+            drive_set_power_cutoff_error(errors);
+            drive_on_error();
             drive_error_stop_cutoff();
-            drive_power_error_occured(errors);
-        }
-
-        if(warnings != DRIVE_POWER_WARNING_NONE){
-            drive_power_warning_occured(warnings);
         }
     }
 }
@@ -914,17 +1040,17 @@ static void drive_update_power_parameters(void)
  */
 static void drive_update_clibration_parameters(void)
 {
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ua, DRIVE_POWER_Ua);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ub, DRIVE_POWER_Ub);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Uc, DRIVE_POWER_Uc);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Urot, DRIVE_POWER_Urot);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ia, DRIVE_POWER_Ia);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ib, DRIVE_POWER_Ib);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ic, DRIVE_POWER_Ic);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Irot, DRIVE_POWER_Irot);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iexc, DRIVE_POWER_Iexc);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Iref, DRIVE_POWER_Iref);
-    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_CALIBRATION_DATA_Ifan, DRIVE_POWER_Ifan);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ua, DRIVE_POWER_Ua);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ub, DRIVE_POWER_Ub);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Uc, DRIVE_POWER_Uc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Urot, DRIVE_POWER_Urot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ia, DRIVE_POWER_Ia);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ib, DRIVE_POWER_Ib);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ic, DRIVE_POWER_Ic);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Irot, DRIVE_POWER_Irot);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Iexc, DRIVE_POWER_Iexc);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Iref, DRIVE_POWER_Iref);
+    DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID_ADC_CALIBRATION_DATA_Ifan, DRIVE_POWER_Ifan);
 }
 
 /**
@@ -991,24 +1117,24 @@ static bool drive_regulate(void)
 {
     if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS) && drive_phase_state_errors() == PHASE_NO_ERROR){
         fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
         fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
 
-        drive_regulator_regulate(U_rot, I_exc);
+        drive_regulator_regulate(U_rot, I_rot, I_exc);
 
-        fixed32_t rot_pid_val = drive_regulator_rot_pid_value();
-        fixed32_t exc_pid_val = drive_regulator_exc_pid_value() + DRIVE_EXC_PID_VALUE_DELTA;
+        fixed32_t rot_angle = drive_regulator_rot_open_angle();
+        fixed32_t exc_angle = drive_regulator_exc_open_angle();// + DRIVE_EXC_PID_VALUE_DELTA;
 
-        drive_triacs_set_pairs_open_angle(rot_pid_val);
+        drive_triacs_set_pairs_open_angle(rot_angle);
         //drive_triacs_set_pairs_open_angle(fixed32_make_from_int(30));
-        drive_triacs_set_exc_open_angle(exc_pid_val);
+        drive_triacs_set_exc_open_angle(exc_angle);
         //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
 
-        //pid_controller_t* pid = drive_regulator_rot_pid();
+        pid_controller_t* pid_spd = drive_regulator_spd_pid();
+        pid_controller_t* pid_rot = drive_regulator_rot_pid();
 
-        //printf("PID: %d - %d = %d\r\n", (int)pid->prev_i, (int)pid->prev_e, (int)pid->value);
-
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), exc_pid_val);
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), rot_pid_val);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), pid_spd->value);
+        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_7), pid_rot->value);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
@@ -1053,7 +1179,7 @@ static err_t drive_state_process_running(void)
  */
 static bool drive_state_process_stop_brake(bool fast_stop)
 {
-    drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
+    bool wait_done = false;
     
     drive_regulate();
     
@@ -1078,47 +1204,45 @@ static bool drive_state_process_stop_brake(bool fast_stop)
             }
             break;
         case DRIVE_STOPPING_WAIT_ROT:
-            check_res = drive_protection_check_rot_zero_voltage();
+            if(drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Urot) &&
+               drive_protection_power_item_stable(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Urot)){
+                wait_done = true;
+            }else if(drive.iters_counter >= drive.settings.stop_rot_iters){
+                wait_done = true;
+            }else{
+                drive.iters_counter ++;
+            }
             
-            if(drive_protection_is_normal(check_res) ||
-                    ( drive.iters_counter >= drive.settings.stop_rot_iters &&
-                      drive_protection_is_allow(check_res) )){
-                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Urot);
-                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Urot);
-                drive_protection_reset_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
-                drive_protection_reset_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+            if(wait_done){
+                drive_protection_power_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Urot);
+                drive_protection_power_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Urot);
+                drive_protection_power_reset_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                drive_protection_power_reset_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 drive_triacs_set_exc_enabled(false);
                 drive_regulator_set_exc_enabled(false);
                 drive.stopping_state = DRIVE_STOPPING_WAIT_EXC;
                 drive.iters_counter = 0;
-            }else if(drive.iters_counter >= drive.settings.stop_rot_iters){
-                if(drive.iters_counter >= drive.settings.stop_rot_iters){
-                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Urot);
-                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Urot);
-                }else{
-                    drive.iters_counter ++;
-                }
             }
+            
             break;
         case DRIVE_STOPPING_WAIT_EXC:
-            check_res = drive_protection_check_exc_zero_current();
-
-            if(drive_protection_is_normal(check_res) ||
-                    ( drive.iters_counter >= drive.settings.stop_exc_iters &&
-                      drive_protection_is_allow(check_res) )){
-                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
-                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
+            if(drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Iexc) &&
+               drive_protection_power_item_stable(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Iexc)){
+                wait_done = true;
+            }else if(drive.iters_counter >= drive.settings.stop_exc_iters){
+                wait_done = true;
+            }else{
+                drive.iters_counter ++;
+            }
+            
+            if(wait_done){
+                drive_protection_power_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
+                drive_protection_power_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
                 drive.stopping_state = DRIVE_STOPPING_DONE;
                 drive.iters_counter = 0;
                 return true;
-            }else if(drive.iters_counter >= drive.settings.stop_exc_iters){
-                if(drive.iters_counter >= drive.settings.stop_exc_iters){
-                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_IDLE_Iexc);
-                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_IDLE_Iexc);
-                }else{
-                    drive.iters_counter ++;
-                }
             }
+            
             break;
         case DRIVE_STOPPING_DONE:
             return true;
@@ -1178,7 +1302,7 @@ static err_t drive_state_process_stop_error(void)
  */
 static err_t drive_state_process_start(void)
 {
-    drive_pwr_check_res_t check_res = DRIVE_PWR_CHECK_NORMAL;
+    bool wait_exc_done = false;
     
     drive_regulate();
     
@@ -1196,32 +1320,32 @@ static err_t drive_state_process_start(void)
             drive.iters_counter = 0;
             break;
         case DRIVE_STARTING_WAIT_EXC:
-            check_res = drive_protection_check_exc();
-            
-            if(drive_protection_is_normal(check_res) ||
-                    ( drive.iters_counter >= drive.settings.start_exc_iters &&
-                      drive_protection_is_allow(check_res) )){
-                drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
-                drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
-                drive_triacs_set_pairs_enabled(true);
-                drive_regulator_set_rot_enabled(true);
-                drive.starting_state = DRIVE_STARTING_RAMP;
-                drive.iters_counter = 0;
+            if(drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_UDF_Iexc) &&
+               drive_protection_power_item_stable(DRIVE_PROT_PWR_ITEM_WARN_UDF_Iexc)){
+                wait_exc_done = true;
             }else{
                 if(drive.iters_counter >= drive.settings.start_exc_iters){
-                    drive_protection_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
-                    drive_protection_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+                    wait_exc_done = true;
                 }else{
                     drive.iters_counter ++;
                 }
             }
             
+            if(wait_exc_done){
+                drive_protection_power_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
+                drive_protection_power_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
+                drive_triacs_set_pairs_enabled(true);
+                drive_regulator_set_rot_enabled(true);
+                drive.starting_state = DRIVE_STARTING_RAMP;
+                drive.iters_counter = 0;
+            }
+            
             break;
         case DRIVE_STARTING_RAMP:
-            if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
+            //if(drive_regulator_state() == DRIVE_REGULATOR_STATE_RUN){
                 drive.starting_state = DRIVE_STARTING_DONE;
                 drive_set_state(DRIVE_STATE_RUN);
-            }
+            //}
             break;
         case DRIVE_STARTING_DONE:
             drive_set_state(DRIVE_STATE_RUN);
@@ -1414,7 +1538,7 @@ err_t drive_init(void)
     drive_phase_sync_set_angle_callback(drive_get_null_timer_angle);
     
     drive_phase_state_init();
-    drive_phase_state_set_error_callback(drive_on_phase_error_occured);
+    //drive_phase_state_set_error_callback(drive_on_phase_error_occured);
     
     drive_regulator_init();
     
@@ -1426,9 +1550,6 @@ err_t drive_init(void)
     drive_protection_init();
     
     drive_dio_init();
-    
-    drive_regulator_rot_pid_clamp(DRIVE_ROT_PID_VALUE_MIN, DRIVE_ROT_PID_VALUE_MAX);
-    drive_regulator_exc_pid_clamp(DRIVE_EXC_PID_VALUE_MIN, DRIVE_EXC_PID_VALUE_MAX);
     
     drive_phase_sync_pll_pid_clamp(
             -fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX),
@@ -1486,11 +1607,50 @@ err_t drive_update_settings(void)
     drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
                                 settings_valuef(PARAM_ID_EXC_PID_K_I),
                                 settings_valuef(PARAM_ID_EXC_PID_K_D));
+    drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
+                                settings_valuef(PARAM_ID_SPD_PID_K_I),
+                                settings_valuef(PARAM_ID_SPD_PID_K_D));
+    
+    fixed32_t rot_angle_min = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN);
+    fixed32_t rot_angle_max = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX);
+    fixed32_t exc_angle_min = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN);
+    fixed32_t exc_angle_max = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX);
+    
+    drive_triacs_clamp_pairs_open_angle(rot_angle_min, rot_angle_max);
+    drive_triacs_clamp_exc_open_angle(exc_angle_min, exc_angle_max);
+    
+    drive_regulator_spd_pid_clamp(DRIVE_SPD_PID_VALUE_MIN, settings_valuef(PARAM_ID_I_ROT_NOM));
+    drive_regulator_rot_pid_clamp(rot_angle_min, rot_angle_max);
+    drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
+    
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ua));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ub));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Uc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Urot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ia));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ib));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ic));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Irot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iref));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan));
+    
+    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ua));
+    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ub));
+    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Uc));
+    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Urot));
+    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ia));
+    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ib));
+    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ic));
+    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Irot));
+    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iexc));
+    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iref));
+    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ifan));
     
     drive_power_set_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ua));
     drive_power_set_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ub));
@@ -1503,18 +1663,6 @@ err_t drive_update_settings(void)
     drive_power_set_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iexc));
     drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
     drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
-    
-    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ua));
-    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ub));
-    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Uc));
-    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Urot));
-    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ia));
-    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ib));
-    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ic));
-    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_CALIBRATION_DATA_Irot));
-    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iexc));
-    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_CALIBRATION_DATA_Iref));
-    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_CALIBRATION_DATA_Ifan));
     
     drive_dio_input_setup(DRIVE_DIO_INPUT_1, settings_valueu(PARAM_ID_DIGITAL_IN_1_TYPE),
                                              settings_valueu(PARAM_ID_DIGITAL_IN_1_INVERSION));
@@ -1583,12 +1731,12 @@ drive_warnings_t drive_warnings(void)
 
 bool drive_power_error(drive_power_error_t error)
 {
-    return (drive.power_errors & error) != 0;
+    return ((drive.power_errors | drive.power_cutoff_errors) & error) != 0;
 }
 
 drive_power_errors_t drive_power_errors(void)
 {
-    return drive.power_errors;
+    return drive.power_errors | drive.power_cutoff_errors;
 }
 
 bool drive_power_warning(drive_power_warning_t warning)
@@ -1600,6 +1748,16 @@ drive_power_warnings_t drive_power_warnings(void)
 {
     return drive.power_warnings;
 }
+
+/*drive_phase_angle_errors_t drive_phase_angle_errors(void)
+{
+    return drive.phase_angle_errors;
+}
+
+drive_phase_angle_warnings_t drive_phase_angle_warnings(void)
+{
+    return drive.phase_angle_warnings;
+}*/
 
 drive_init_state_t drive_init_state(void)
 {
@@ -1701,15 +1859,20 @@ void drive_clear_errors(void)
 {
     drive.errors = DRIVE_ERROR_NONE;
     drive.power_errors = DRIVE_POWER_ERROR_NONE;
-    drive_protection_clear_power_errors();
-    drive_protection_clear_phases_errors();
+    drive.warnings = DRIVE_WARNING_NONE;
+    drive.power_warnings = DRIVE_POWER_WARNING_NONE;
+    drive.power_cutoff_errors = DRIVE_POWER_ERROR_NONE;
+    
+    //drive.phase_angle_errors = DRIVE_PHASE_ANGLE_NO_ERROR;
+    //drive.phase_angle_warnings = DRIVE_PHASE_ANGLE_NO_WARNING;
+    
+    drive_protection_power_clear_errors();
+    drive_phase_state_clear_errors();
+    drive_protection_clear_errors();
     
     if(drive.state == DRIVE_STATE_ERROR){
         drive_set_state(DRIVE_STATE_INIT);
     }
-    
-    drive.warnings = DRIVE_WARNING_NONE;
-    drive.power_warnings = DRIVE_POWER_WARNING_NONE;
 }
 
 drive_error_callback_t drive_error_callback(void)
@@ -1765,7 +1928,8 @@ static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
 {
     drive_phase_state_handle(phase);
 
-    if(drive_phase_state_errors() == PHASE_NO_ERROR){
+    if(drive_phase_state_errors() == PHASE_NO_ERROR &&
+       drive_phase_sync_synchronized()){
         drive_setup_triacs_open(phase, sensor_time);
     }
     
