@@ -2,6 +2,7 @@
 #include "drive.h"
 #include "settings.h"
 #include "drive_events.h"
+#include "drive_keypad.h"
 #include <stdlib.h>
 
 /**
@@ -63,4 +64,8 @@ bool command_settings_default(void) {
     return (settings_default() == E_NO_ERROR);
 }
 
+bool command_test_leds(void) {
+    drive_keypad_leds_on(DRIVE_KPD_LED_ALL);
+    return true;
+}
 

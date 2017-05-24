@@ -388,7 +388,8 @@
 #define TR_ID_MENU_CMD_STATE_SAVE       485 
 //! Настройки по умолчанию
 #define TR_ID_MENU_CMD_SETTINGS_DEFAULT 486
-
+//! Тест светодиодов
+#define TR_ID_MENU_CMD_TEST_LEDS        487
 //! Питание.
 #define TR_ID_HELP_POWER            550
 //! Сеть.

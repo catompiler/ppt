@@ -30,6 +30,10 @@
  * Меню Настройки по умолчанию
  */
 #define CMD_ID_SETTINGS_DEFAULT 50
+/**
+ * Меню Тест светодиодов
+ */
+#define CMD_ID_TEST_LEDS 60
 
 #endif	/* COMMANDS_IDS_H */
 
