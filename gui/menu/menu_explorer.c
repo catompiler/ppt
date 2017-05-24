@@ -54,6 +54,11 @@ void menu_explorer_touch(menu_explorer_t* explorer)
     explorer->touch = cur;
 }
 
+counter_t menu_explorer_get_touch(menu_explorer_t* explorer)
+{
+    return explorer->touch;
+}
+
 void menu_explorer_set_user(menu_explorer_t* explorer, menu_user_t user)
 {
     explorer->user = user;

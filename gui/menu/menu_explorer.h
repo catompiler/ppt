@@ -85,6 +85,11 @@ EXTERN err_t menu_explorer_init(menu_explorer_t* explorer, menu_t* menu);
 EXTERN void menu_explorer_touch(menu_explorer_t* explorer);
 
 /**
+ * Последнее время обращения пользователя
+ */
+EXTERN counter_t menu_explorer_get_touch(menu_explorer_t* explorer);
+
+/**
  * Устанавливает права доступа (пользователя) меню
  * @param explorer
  * @param user

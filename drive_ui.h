@@ -11,17 +11,18 @@
 #include "drive_keypad.h"
 #include "drive_gui.h"
 
-// период обновления зуммера
-#define DRIVE_UI_BUZZER_PERIOD 10
-#define DRIVE_UI_BUZZER_SEQUECE_WARNING 10 
+// период обновления зуммера при аварии
 #define DRIVE_UI_BUZZER_SEQUECE_ALARM 5
+// период обновления зуммера при предупреждении
+#define DRIVE_UI_BUZZER_SEQUECE_WARNING 10 
+// время тишины при нажатии на кнопки пульта
+#define DRIVE_UI_BUZZER_MUTE_AFTER_TOUCH_SEC 15
 
 //! Перечисление светодиодов.
 typedef enum _Drive_Ui_Buzzer_State {
     GUI_BUZZER_ON = 0, // Звуковое оповещение есть
     GUI_BUZZER_OFF = 1 // Звуковое оповещение отключено
 } drive_ui_buzzer_state_t;
-
 
 //! Структура инициализации интерфейса привода.
 typedef struct _Drive_Ui_Init {
@@ -30,6 +31,12 @@ typedef struct _Drive_Ui_Init {
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_ui_init_t;
 
+extern void* drive_ui_update_buzzer(void* arg);
+
+/**
+ * Звуковой сигнал (короткий)
+ */
+extern void* drive_ui_buzzer_beep(void* arg);
 
 /**
  * Инициализирует интерфейс привода.

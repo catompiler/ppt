@@ -12,7 +12,6 @@
 typedef struct _Drive_Ui {
     counter_t update_period;
     counter_t last_update_time;
-    counter_t buzz_update_time;
     bool need_update;
 } drive_ui_t;
 
@@ -63,13 +62,7 @@ static void* drive_ui_timer_buzz_on_proc(void* arg)
 
 static void drive_ui_on_key_pressed(keycode_t key)
 {
-    struct timeval tv_start;
-    
-    gettimeofday(&tv_start, NULL);
-    tv_start.tv_sec += 0;
-    tv_start.tv_usec += 100000;
-    
-    timers_add_timer(drive_ui_timer_buzz_on_proc, &tv_start, NULL, NULL, NULL);/**/
+    drive_ui_buzzer_beep(NULL);
     
     switch(key){
         case KEY_START:
@@ -86,11 +79,23 @@ static void drive_ui_on_key_pressed(keycode_t key)
     }
 }
 
+void* drive_ui_buzzer_beep(void* arg) {
+    if (drive_ui_sound_enabled()) {
+        struct timeval tv_start;
+
+        gettimeofday(&tv_start, NULL);
+        tv_start.tv_sec += 0;
+        tv_start.tv_usec += 100000;
+
+        timers_add_timer(drive_ui_timer_buzz_on_proc, &tv_start, NULL, NULL, NULL);/**/
+    }
+    return NULL;
+}
+
 static void drive_ui_on_key_released(keycode_t key)
 {
     drive_gui_on_key_released(key);
 }
-
 
 err_t drive_ui_init(drive_ui_init_t* ui_is)
 {
@@ -102,9 +107,17 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     key_input_set_on_pressed_callback(drive_ui_on_key_pressed);
     key_input_set_on_released_callback(drive_ui_on_key_released);
     
+    // обновление звукового оповещения по таймеру
+    struct timeval timeout = {1, 0};
+    struct timeval tv;
+    
+    gettimeofday(&tv, NULL);
+    timeradd(&tv, &timeout, &tv);
+    
+    timers_add_timer(drive_ui_update_buzzer, &tv, &timeout, NULL, NULL);/**/
+    
     ui.need_update = true;
     ui.last_update_time = 0;
-    ui.buzz_update_time = 0;
     ui.update_period = system_counter_ticks_per_sec() / 4;
     
     return E_NO_ERROR;
@@ -150,32 +163,28 @@ static void drive_ui_update_leds(void)
 /**
  * Обновление звукового оповещения
  */
-static void drive_ui_update_buzzer(void)
+void* drive_ui_update_buzzer(void* arg)
 {
     static int8_t buzcnt;
     buzcnt++;
-    counter_diff_t diff = system_counter_diff(&ui.buzz_update_time);
-    if (diff > DRIVE_UI_BUZZER_PERIOD) {
-        bool buzon = (drive_ui_sound_enabled()) \
-                && (((buzcnt % DRIVE_UI_BUZZER_SEQUECE_ALARM == 0) && (drive_errors() != DRIVE_ERROR_NONE)) \
-                    || ((buzcnt % DRIVE_UI_BUZZER_SEQUECE_WARNING == 0) && (drive_warnings() != DRIVE_WARNING_NONE)));
-        if (buzon) {
-            drive_keypad_buzzer_on();
+    bool buzon = (((buzcnt % DRIVE_UI_BUZZER_SEQUECE_ALARM == 0) && (drive_errors() != DRIVE_ERROR_NONE)) \
+                || ((buzcnt % DRIVE_UI_BUZZER_SEQUECE_WARNING == 0) && (drive_warnings() != DRIVE_WARNING_NONE)));
+    if (buzon) {
+        counter_t cur = system_counter_ticks();
+        counter_t ticks_per_sec = system_counter_ticks_per_sec();
+        counter_t mute_time = drive_gui_get_touch_menu_explorer() + ticks_per_sec * DRIVE_UI_BUZZER_MUTE_AFTER_TOUCH_SEC;
+        if (cur >= mute_time) {
+            drive_ui_buzzer_beep(NULL);
         }
-        else {
-            drive_keypad_buzzer_off();
-        }
-        ui.buzz_update_time = system_counter_ticks();
     }
+    
+    return NULL;
 }
 
 void drive_ui_process(void)
 {
     if(drive_keypad_update()) drive_keypad_process();
     else drive_keypad_repeat();
-    
-    // обновление звукового оповещения
-    drive_ui_update_buzzer();
     
     if(drive_ui_update_timeout()) ui.need_update = true;
     

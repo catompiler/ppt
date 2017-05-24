@@ -418,3 +418,8 @@ bool drive_gui_menu_user_is(menu_user_t user)
 {
     return gui.menu.explorer.user == user;
 }
+
+counter_t drive_gui_get_touch_menu_explorer()
+{
+    return gui.menu.explorer.touch;
+}
