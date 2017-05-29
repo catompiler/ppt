@@ -19,6 +19,7 @@
 #include "scheduler/scheduler.h"
 #include "timers/timers.h"
 #include "m95x/m95x.h"
+#include "lm75/lm75.h"
 #include "storage.h"
 #include "drive.h"
 #include "settings.h"
@@ -30,6 +31,7 @@
 #include "drive_tasks.h"
 #include "drive_dio.h"
 #include "drive_nvdata.h"
+#include "drive_temp.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -108,8 +110,30 @@ static m95x_t eeprom;
 #define M95X_CE_PIN GPIO_Pin_8
 
 
+// Пины i2c1.
+//! Пин SDA.
+#define I2C1_PIN_SDA (GPIO_Pin_7)
+//! Пин SCL.
+#define I2C1_PIN_SCL (GPIO_Pin_6)
+//! Порт i2c1.
+#define I2C1_GPIO (GPIOB)
 //! Шина i2c.
-static i2c_bus_t i2c;
+static i2c_bus_t i2c1;
+
+// Пины i2c2.
+//! Пин SDA.
+#define I2C2_PIN_SDA (GPIO_Pin_11)
+//! Пин SCL.
+#define I2C2_PIN_SCL (GPIO_Pin_10)
+//! Порт i2c2.
+#define I2C2_GPIO (GPIOB)
+//! Шина i2c2.
+static i2c_bus_t i2c2;
+
+//! Датчик температуры радиатора.
+static lm75_t heatsink_sensor;
+//! Адрес датчика температуры радиатора.
+#define HEATSINK_SENSOR_ADDRESS (LM75_I2C_DEFAULT_ADDRESS | 0x1)
 
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
@@ -205,6 +229,7 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_PHASES_TIMER 4
 #define IRQ_PRIOR_MODBUS_USART 3
 #define IRQ_PRIOR_I2C1 5
+#define IRQ_PRIOR_I2C2 5
 #define IRQ_PRIOR_SPI1 5
 #define IRQ_PRIOR_SPI2 5
 #define IRQ_PRIOR_USART 5
@@ -212,8 +237,8 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_DMA_CH2 5 // spi1
 #define IRQ_PRIOR_DMA_CH3 5 // spi1
 #define IRQ_PRIOR_DMA_CH4 5 // spi2 usart1 (modbus)
-#define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus)
-#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus) i2c2
+#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 (modbus) i2c2
 #define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2 (modbus)
 #define IRQ_PRIOR_KEYPAD 6
 #define IRQ_PRIOR_RTC_ALARM 6
@@ -300,33 +325,45 @@ IRQ_ATTRIBS void DMA1_Channel3_IRQHandler(void)
 IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
 {
     usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
-    spi_bus_dma_rx_channel_irq_handler(&spi2);
+    spi_bus_dma_rx_channel_irq_handler(&spi2) ||
+    i2c_bus_dma_tx_channel_irq_handler(&i2c2);
 }
 
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
     usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
-    spi_bus_dma_tx_channel_irq_handler(&spi2);
+    spi_bus_dma_tx_channel_irq_handler(&spi2) ||
+    i2c_bus_dma_rx_channel_irq_handler(&i2c2);
 }
 
 IRQ_ATTRIBS void DMA1_Channel6_IRQHandler(void)
 {
-    i2c_bus_dma_tx_channel_irq_handler(&i2c);
+    i2c_bus_dma_tx_channel_irq_handler(&i2c1);
 }
 
 IRQ_ATTRIBS void DMA1_Channel7_IRQHandler(void)
 {
-    i2c_bus_dma_rx_channel_irq_handler(&i2c);
+    i2c_bus_dma_rx_channel_irq_handler(&i2c1);
 }
 
 IRQ_ATTRIBS void I2C1_EV_IRQHandler(void)
 {
-    i2c_bus_event_irq_handler(&i2c);
+    i2c_bus_event_irq_handler(&i2c1);
 }
 
 IRQ_ATTRIBS void I2C1_ER_IRQHandler(void)
 {
-    i2c_bus_error_irq_handler(&i2c);
+    i2c_bus_error_irq_handler(&i2c1);
+}
+
+IRQ_ATTRIBS void I2C2_EV_IRQHandler(void)
+{
+    i2c_bus_event_irq_handler(&i2c2);
+}
+
+IRQ_ATTRIBS void I2C2_ER_IRQHandler(void)
+{
+    i2c_bus_error_irq_handler(&i2c2);
 }
 
 IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
@@ -585,6 +622,11 @@ static bool i2c_callback(void)
     return pca9555_i2c_callback(&ioport);
 }
 
+static bool i2c2_callback(void)
+{
+    return lm75_i2c_callback(&heatsink_sensor);
+}
+
 static bool spi_callback(void)
 {
     return tft9341_spi_callback(&tft);
@@ -689,6 +731,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
     // I2C1.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+    // I2C2.
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2, ENABLE);
     // TIM1.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);    // Включаем тактирование General-purpose TIM2
     // TIM2.
@@ -999,7 +1043,34 @@ static void init_storage(void)
     storage_init(&eeprom);
 }
 
-static void init_i2c_periph(void)
+static void reset_i2c_slave(GPIO_TypeDef* gpio, uint16_t pin_sda, uint16_t pin_scl)
+{
+    gpio->BSRR = pin_sda;
+    gpio->BRR = pin_scl;
+    delay_us(250);
+    
+    size_t clocks = 0;
+#define I2C_RESET_SLAVE_CLOKS_MAX 9
+    
+    for(; clocks < I2C_RESET_SLAVE_CLOKS_MAX; clocks ++){
+        if(gpio->IDR & pin_sda) break;
+        
+        gpio->BSRR = pin_scl;
+        delay_us(250);
+        gpio->BRR = pin_scl;
+        delay_us(250);
+    }
+    
+#undef I2C_RESET_SLAVE_CLOKS_MAX
+    
+    gpio->BRR = pin_sda;
+    delay_us(250);
+    gpio->BSRR = pin_scl;
+    delay_us(250);
+    gpio->BSRR = pin_sda;
+}
+
+static void init_i2c1_periph(void)
 {
     I2C_InitTypeDef i2c_is;
     i2c_is.I2C_Ack = I2C_Ack_Disable;
@@ -1015,30 +1086,52 @@ static void init_i2c_periph(void)
     I2C_Cmd(I2C1, ENABLE);
 }
 
-static void reset_i2c(void)
-{
-    i2c_bus_reset(&i2c);
-    i2c_device_reset(I2C1);
-    
-    init_i2c_periph();
-}
-
-static void init_i2c(void)
+static void init_i2c1_gpio(void)
 {
     GPIO_InitTypeDef gpio_i2c =
-        {.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_OD};
-    GPIO_Init(GPIOB, &gpio_i2c);
+        {.GPIO_Pin = I2C1_PIN_SDA | I2C1_PIN_SCL, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_OD};
+    GPIO_Init(I2C1_GPIO, &gpio_i2c);
+}
+
+static void reset_i2c1_slave(void)
+{
+    GPIO_InitTypeDef gpio_i2c =
+        {.GPIO_Pin = I2C1_PIN_SDA | I2C1_PIN_SCL, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_Out_OD};
+    GPIO_Init(I2C1_GPIO, &gpio_i2c);
     
-    init_i2c_periph();
+    reset_i2c_slave(I2C1_GPIO, I2C1_PIN_SDA, I2C1_PIN_SCL);
+    
+    init_i2c1_gpio();
+}
+
+static void reset_i2c1(void)
+{
+    i2c_bus_reset(&i2c1);
+    i2c_device_reset(I2C1);
+    
+    I2C_Cmd(I2C1, DISABLE);
+    
+    if(!(I2C1_GPIO->IDR & I2C1_PIN_SDA)){
+        reset_i2c1_slave();
+    }
+    
+    init_i2c1_periph();
+}
+
+static void init_i2c1(void)
+{
+    init_i2c1_gpio();
+    
+    init_i2c1_periph();
     
     i2c_bus_init_t i2c_bus_is;
     i2c_bus_is.i2c_device = I2C1;
     i2c_bus_is.dma_rx_channel = DMA1_Channel7;
     i2c_bus_is.dma_tx_channel = DMA1_Channel6;
     
-    i2c_bus_init(&i2c, &i2c_bus_is);
+    i2c_bus_init(&i2c1, &i2c_bus_is);
     
-    i2c_bus_set_callback(&i2c, i2c_callback);
+    i2c_bus_set_callback(&i2c1, i2c_callback);
     
     NVIC_SetPriority(I2C1_EV_IRQn, IRQ_PRIOR_I2C1);
     NVIC_SetPriority(I2C1_ER_IRQn, IRQ_PRIOR_I2C1);
@@ -1049,6 +1142,80 @@ static void init_i2c(void)
     NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
     NVIC_EnableIRQ(DMA1_Channel6_IRQn);
     NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+}
+
+static void init_i2c2_gpio(void)
+{
+    GPIO_InitTypeDef gpio_i2c =
+        {.GPIO_Pin = I2C2_PIN_SDA | I2C2_PIN_SCL, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_OD};
+    GPIO_Init(I2C2_GPIO, &gpio_i2c);
+}
+
+static void init_i2c2_periph(void)
+{
+    I2C_InitTypeDef i2c_is;
+    i2c_is.I2C_Ack = I2C_Ack_Disable;
+    i2c_is.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
+    i2c_is.I2C_OwnAddress1 = 0x11;
+    i2c_is.I2C_ClockSpeed = 10000;
+    i2c_is.I2C_DutyCycle = I2C_DutyCycle_2;
+    i2c_is.I2C_Mode = I2C_Mode_I2C;
+    
+    I2C_DeInit(I2C2);
+    I2C_Init(I2C2, &i2c_is);
+    I2C_StretchClockCmd(I2C2, ENABLE);
+    I2C_Cmd(I2C2, ENABLE);
+}
+
+static void reset_i2c2_slave(void)
+{
+    GPIO_InitTypeDef gpio_i2c =
+        {.GPIO_Pin = I2C2_PIN_SDA | I2C2_PIN_SCL, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_Out_OD};
+    GPIO_Init(I2C2_GPIO, &gpio_i2c);
+    
+    reset_i2c_slave(I2C2_GPIO, I2C2_PIN_SDA, I2C2_PIN_SCL);
+    
+    init_i2c2_gpio();
+}
+
+static void reset_i2c2(void)
+{
+    i2c_bus_reset(&i2c2);
+    i2c_device_reset(I2C2);
+    
+    I2C_Cmd(I2C2, DISABLE);
+    
+    if(!(I2C2_GPIO->IDR & I2C2_PIN_SDA)){
+        reset_i2c2_slave();
+    }
+    
+    init_i2c2_periph();
+}
+
+static void init_i2c2(void)
+{
+    init_i2c2_gpio();
+    
+    init_i2c2_periph();
+    
+    i2c_bus_init_t i2c_bus_is;
+    i2c_bus_is.i2c_device = I2C2;
+    i2c_bus_is.dma_rx_channel = DMA1_Channel5;
+    i2c_bus_is.dma_tx_channel = DMA1_Channel4;
+    
+    i2c_bus_init(&i2c2, &i2c_bus_is);
+    
+    i2c_bus_set_callback(&i2c2, i2c2_callback);
+    
+    NVIC_SetPriority(I2C2_EV_IRQn, IRQ_PRIOR_I2C2);
+    NVIC_SetPriority(I2C2_ER_IRQn, IRQ_PRIOR_I2C2);
+    NVIC_EnableIRQ(I2C2_EV_IRQn);
+    NVIC_EnableIRQ(I2C2_ER_IRQn);
+    
+    NVIC_SetPriority(DMA1_Channel4_IRQn, IRQ_PRIOR_DMA_CH4);
+    NVIC_SetPriority(DMA1_Channel5_IRQn, IRQ_PRIOR_DMA_CH5);
+    NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+    NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 }
 
 static void init_adc(void)
@@ -1206,7 +1373,7 @@ static void init_adc(void)
 
 static void init_ioport_simple(void)
 {
-    pca9555_init(&ioport, &i2c, PCA9555_I2C_DEFAULT_ADDRESS);
+    pca9555_init(&ioport, &i2c1, PCA9555_I2C_DEFAULT_ADDRESS);
 }
 
 static void init_tft_simple(void)
@@ -1249,7 +1416,7 @@ static void init_drive_ui(void)
     
     ui_is.ioport = &ioport;
     ui_is.tft = &tft;
-    ui_is.reset_i2c_bus_proc = reset_i2c;
+    ui_is.reset_i2c_bus_proc = reset_i2c1;
     
     drive_ui_init(&ui_is);
 }
@@ -1665,10 +1832,43 @@ static void init_timers(void)
     timers_init(&timers_is);
 }
 
+static void init_heatsink_sensor(void)
+{
+    lm75_init(&heatsink_sensor, &i2c2, HEATSINK_SENSOR_ADDRESS);
+}
+
+static void reset_heatsink_sensor(void)
+{
+    lm75_timeout(&heatsink_sensor);
+    reset_i2c2();
+}
+
+static void init_drive_temp(void)
+{
+    drive_temp_init_t temp_is;
+    
+    struct timeval temp_interval = { 10, 0 };
+    struct timeval timeout = {0, 100000};
+    
+    temp_is.heatsink_sensor = &heatsink_sensor;
+    temp_is.heatsink_sensor_reset = reset_heatsink_sensor;
+    temp_is.heatsink_sensor_timeout = &timeout;
+    temp_is.update_interval = &temp_interval;
+    
+    drive_temp_init(&temp_is);
+}
+
 
 static void* main_task(void* arg)
 {
     drive_ui_process();
+    
+    return NULL;
+}
+
+static void* drive_temp_task(void* arg)
+{
+    drive_temp_update();
     
     return NULL;
 }
@@ -1694,7 +1894,7 @@ int main(void)
     
     printf("STM32 MCU\r\n");
     
-    init_i2c();
+    init_i2c1();
     init_spi();
     
     init_spi2();
@@ -1741,9 +1941,14 @@ int main(void)
     
     init_exti_pca9555();
     
+    init_i2c2();
+    init_heatsink_sensor();
+    init_drive_temp();
+    
     //drive_set_reference(REFERENCE_MAX);
     
     scheduler_add_task(main_task, 0, NULL, 0, NULL);
+    scheduler_add_task(drive_temp_task, 0, NULL, 0, NULL);
     
     for(;;){
         scheduler_process();

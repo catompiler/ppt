@@ -1007,6 +1007,10 @@
  */
 #define PARAM_ID_POWER_I_EXC 1028
 
+/**
+ * Температура радиатора.
+ */
+#define PARAM_ID_HEATSINK_TEMP 1050
 
 #endif	/* PARAMETERS_IDS_H */
 
