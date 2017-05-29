@@ -18,7 +18,6 @@
 #define GUI_HOME_TILES_WIDTH 2
 #define GUI_HOME_TILES_HEIGHT 2
 #define GUI_HOME_TILES_COUNT (GUI_HOME_TILES_WIDTH * GUI_HOME_TILES_HEIGHT)
-#define GUI_HOME_TILES_TEXT_COUNT 2
 
 #define GUI_HOME_ON_ENTER_PROC(proc) ((void (*)(gui_home_t*))proc)
 
@@ -32,32 +31,17 @@ struct _Gui_Home {
 
 typedef void (*gui_home_on_enter_t)(gui_home_t*);
 
-typedef enum _Home_Tile {
-    HOME_ANCHOR_VOLTAGE = 0,
-    HOME_ANCHOR_CURRENT,
-    HOME_EXCITATION_CURRENT,
-    HOME_RADIATOR_TEMPERATURE,
-} home_tile_t;
-
 typedef enum _Home_Tile_Param {
     HOME_TILE_CAPTION = 0,
     HOME_TILE_UNIT,
 } home_tile_param_t;
 
-#define HOME_TILES_TEXT(home_tiles_text) \
-static const char* home_tiles_text[GUI_HOME_TILES_COUNT][GUI_HOME_TILES_TEXT_COUNT] = {\
-    {TEXT(TR_ID_HOME_ANCHOR_VOLTAGE), TEXT(TR_ID_UNITS_V)},\
-    {TEXT(TR_ID_HOME_ANCHOR_CURRENT), TEXT(TR_ID_UNITS_A)},\
-    {TEXT(TR_ID_HOME_EXCITATION_CURRENT), TEXT(TR_ID_UNITS_A)},\
-    {TEXT(TR_ID_HOME_RADIATOR_TEMPERATURE), TEXT(TR_ID_UNITS_DEGREE_CELSIUS)},\
-};
-
 #define HOME_TILES_VALUES(home_tiles_values)\
-static const size_t home_tiles_values[GUI_HOME_TILES_COUNT] = {\
-    DRIVE_POWER_Urot,\
-    DRIVE_POWER_Irot,\
-    DRIVE_POWER_Iexc,\
-    DRIVE_POWER_Ifan,\
+static const param_id_t home_tiles_values[GUI_HOME_TILES_COUNT] = {\
+    PARAM_ID_GUI_TILE_1,\
+    PARAM_ID_GUI_TILE_2,\
+    PARAM_ID_GUI_TILE_3,\
+    PARAM_ID_GUI_TILE_4,\
 };
 
 //! Приводит указатель home к типу главного экрана.

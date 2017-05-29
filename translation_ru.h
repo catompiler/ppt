@@ -172,6 +172,11 @@ TEXT_TR(TR_ID_MENU_PHASES_ANGLES_PROT, "Угол между фазами")
 TEXT_TR(TR_ID_MENU_PHASES_SYNC_PROT, "Синхронизация с фазами")
 TEXT_TR(TR_ID_MENU_ROT_BREAK_PROT, "Обрыв якоря")
 TEXT_TR(TR_ID_MENU_GUI, "Настройки панели (GUI)")
+TEXT_TR(TR_ID_MENU_GUI_TILES, "Плитки")
+TEXT_TR(TR_ID_MENU_GUI_TILE_1, "Плитка 1")
+TEXT_TR(TR_ID_MENU_GUI_TILE_2, "Плитка 2")
+TEXT_TR(TR_ID_MENU_GUI_TILE_3, "Плитка 3")
+TEXT_TR(TR_ID_MENU_GUI_TILE_4, "Плитка 4")          
 TEXT_TR(TR_ID_MENU_GUI_BUZZER, "Звуковое оповещение")
 TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ADMIN, "Пароль администратора")
 TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ROOT, "Пароль ROOT")
@@ -182,6 +187,10 @@ TEXT_TR(TR_ID_MENU_CMD_SETTINGS_SAVE, "Записать параметры в п
 TEXT_TR(TR_ID_MENU_CMD_STATE_SAVE, "Записать состояние в память")
 TEXT_TR(TR_ID_MENU_CMD_SETTINGS_DEFAULT, "Уст. настр. по умолч.")  
 TEXT_TR(TR_ID_MENU_CMD_TEST_LEDS, "Проверка светодиодов")  
+        
+TEXT_TR(TR_ID_MENU_STATUS, "Статус привода")
+TEXT_TR(TR_ID_MENU_EVENTS, "История событий")
+TEXT_TR(TR_ID_MENU_MEASUREMENTS, "Измерения")         
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")
@@ -197,6 +206,27 @@ TEXT_TR(TR_ID_HELP_I_ROT_NOM, "Номинальный ток якоря в ам�
 
 TEXT_TR(TR_ID_ENUM_BUZZER_ON, "Включено")
 TEXT_TR(TR_ID_ENUM_BUZZER_OFF, "Без звука")
+  
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ua, "Напр. фазы A")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ia, "Ток фазы A")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ub, "Напр. фазы B")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ib, "Ток фазы B") 
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Uc, "Напр. фазы C")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ic, "Ток фазы C")   
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Urot, "Напр. якоря")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Irot, "Ток якоря")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iexc, "Ток возб.")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iref, "Ток 4-20 мА")
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ifan, "Ток вент.")       
+
+//! Напряжения фаз
+TEXT_TR(TR_ID_HOME_PHASE_A_VOLTAGE, "Напряжение\nфазы A")
+TEXT_TR(TR_ID_HOME_PHASE_B_VOLTAGE, "Напряжение\nфазы B")
+TEXT_TR(TR_ID_HOME_PHASE_C_VOLTAGE, "Напряжение\nфазы C")
+//! Токи фаз
+TEXT_TR(TR_ID_HOME_PHASE_A_CURRENT, "Ток фазы A")
+TEXT_TR(TR_ID_HOME_PHASE_B_CURRENT, "Ток фазы B")
+TEXT_TR(TR_ID_HOME_PHASE_C_CURRENT, "Ток фазы C")
         
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Напряжение\nякоря")

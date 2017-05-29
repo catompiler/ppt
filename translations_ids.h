@@ -368,13 +368,19 @@
 #define TR_ID_MENU_ROT_BREAK_PROT   470
 
 //! Меню интерфейса (GUI)
-#define TR_ID_MENU_GUI              474
+#define TR_ID_MENU_GUI              471
+//! Плитки (выбор отображаемых измерений)
+#define TR_ID_MENU_GUI_TILES        472
+#define TR_ID_MENU_GUI_TILE_1        473
+#define TR_ID_MENU_GUI_TILE_2        474
+#define TR_ID_MENU_GUI_TILE_3        475
+#define TR_ID_MENU_GUI_TILE_4        476
 //! Работа зуммера (звукового оповещения)
-#define TR_ID_MENU_GUI_BUZZER       475
+#define TR_ID_MENU_GUI_BUZZER       477
 //! Работа зуммера (звукового оповещения)
-#define TR_ID_MENU_GUI_PASSWORD_ADMIN       476
+#define TR_ID_MENU_GUI_PASSWORD_ADMIN       478
 //! Работа зуммера (звукового оповещения)
-#define TR_ID_MENU_GUI_PASSWORD_ROOT       477
+#define TR_ID_MENU_GUI_PASSWORD_ROOT       479
 
 //! Меню Команды
 #define TR_ID_MENU_COMMANDS     480
@@ -390,7 +396,14 @@
 #define TR_ID_MENU_CMD_SETTINGS_DEFAULT 486
 //! Тест светодиодов
 #define TR_ID_MENU_CMD_TEST_LEDS        487
-//! Питание.
+
+//! Меню Статус привода
+#define TR_ID_MENU_STATUS 490
+//! История событий
+#define TR_ID_MENU_EVENTS 491
+//! Измерения
+#define TR_ID_MENU_MEASUREMENTS 492
+
 #define TR_ID_HELP_POWER            550
 //! Сеть.
 #define TR_ID_HELP_POWER_IN         551
@@ -414,6 +427,18 @@
 //! Зуммер отключен
 #define TR_ID_ENUM_BUZZER_OFF       711
 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ua     720
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ia     721 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ub     722 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ib     723 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Uc     724
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ic     725     
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Urot   726   
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Irot   727 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Iexc   728
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
+
 // /**
 //  * .
 //  */
@@ -426,6 +451,14 @@
 // //!
 // #define TR_ID_
 
+//! Напряжения фаз
+#define TR_ID_HOME_PHASE_A_VOLTAGE 901
+#define TR_ID_HOME_PHASE_B_VOLTAGE 902
+#define TR_ID_HOME_PHASE_C_VOLTAGE 903
+//! Токи фаз
+#define TR_ID_HOME_PHASE_A_CURRENT 906
+#define TR_ID_HOME_PHASE_B_CURRENT 907
+#define TR_ID_HOME_PHASE_C_CURRENT 908
 //! Напряжение якоря
 #define TR_ID_HOME_ANCHOR_VOLTAGE 910
 //! Ток якоря

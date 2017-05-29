@@ -5,6 +5,10 @@
 #ifndef GUI_TILE_H
 #define	GUI_TILE_H
 
+#include "translations_ids.h"
+#include "parameters_ids.h"
+#include "settings.h"
+#include "localization/localization.h"
 #include "gui/gui_metro.h"
 #include "gui/gui_widget.h"
 #include "errors/errors.h"
@@ -25,11 +29,26 @@ typedef struct _Gui_Tile gui_tile_t;
 //! Зеначение идентификатора типа плитки.
 #define GUI_TILE_TYPE_ID 102
 
+typedef struct _Gui_Tile_Type gui_tile_type_t;
+
+struct _Gui_Tile_Type {
+    param_id_t param_id;
+    const char* title;
+};
+
+//! Тип плитки (отображаемое значение)
+#define GUI_TILE_TYPE(id, arg_title) { .param_id = id, .title = arg_title }
+
+//! Список типов плитки (отображаемых значений)
+#define GUI_TILE_TYPES_COUNT 9
+#define GUI_TILE_TYPES_MIN 0
+#define GUI_TILE_TYPES_MAX (GUI_TILE_TYPES_COUNT - 1)
+#define GUI_TILE_TYPES(arg_name, arg_count)\
+        static const gui_tile_type_t arg_name[arg_count] = 
+
 struct _Gui_Tile {
     gui_widget_t super; //!< Суперкласс.
-    const char* caption; //!< Подпись.
-    const char* value; //!< Отображаемое значение.
-    const char* unit; //!< Единица измерения.
+    gui_tile_type_t type; //!< Тип плитки (отображаемое значение)
     const char* errors; //!< Сообщения об ошибках.
     gui_tile_status_t status; //!< Статус плитки.
     graphics_color_t status_color; //!< Цвет фона плитки
@@ -56,23 +75,6 @@ EXTERN err_t gui_tile_init(gui_tile_t* tile, gui_metro_t* gui);
 EXTERN err_t gui_tile_init_parent(gui_tile_t* tile, gui_metro_t* gui, gui_widget_t* parent);
 
 /**
- * Получает текст подписи плитки.
- * @param tile Плитка.
- * @return Текст подписи плитки.
- */
-ALWAYS_INLINE static const char*  gui_tile_caption(gui_tile_t* tile)
-{
-    return tile->caption;
-}
-
-/**
- * Устанавливает текст подписи плитки.
- * @param tile Плитка.
- * @param caption Текст подписи плитки.
- */
-EXTERN void gui_tile_set_caption(gui_tile_t* tile, const char*  caption);
-
-/**
  * Получает статус плитки.
  * @param tile Плитка.
  * @return Статус плитки.
@@ -83,46 +85,28 @@ ALWAYS_INLINE static const gui_tile_status_t gui_tile_status(gui_tile_t* tile)
 }
 
 /**
+ * Получает тип плитки.
+ * @param tile Плитка.
+ * @return Тип плитки.
+ */
+ALWAYS_INLINE static const gui_tile_type_t gui_tile_type(gui_tile_t* tile)
+{
+    return tile->type;
+}
+
+/**
  * Устанавливает cтатус плитки.
  * @param tile Плитка.
  * @param status Статус плитки.
  */
 EXTERN void gui_tile_set_status(gui_tile_t* tile, const gui_tile_status_t status);
 
-
 /**
- * Получает единицу измерения плитки.
+ * Устанавливает тип плитки.
  * @param tile Плитка.
- * @return Единица измерения плитки.
+ * @param type Статус плитки.
  */
-ALWAYS_INLINE static const char* gui_tile_unit(gui_tile_t* tile)
-{
-    return tile->unit;
-}
-
-/**
- * Устанавливает единицу измерения плитки.
- * @param tile Плитка.
- * @param unit Единица измерения плитки.
- */
-EXTERN void gui_tile_set_unit(gui_tile_t* tile, const char* unit);
-
-/**
- * Получает значение плитки.
- * @param tile Плитка.
- * @return Значение плитки.
- */
-ALWAYS_INLINE static const char* gui_tile_value(gui_tile_t* tile)
-{
-    return tile->value;
-}
-
-/**
- * Устанавливает цвет фона плитки.
- * @param tile Плитка.
- * @param color Цвет фона плитки.
- */
-EXTERN void gui_tile_set_value(gui_tile_t* tile, const char* value);
+EXTERN void gui_tile_set_type(gui_tile_t* tile, const gui_tile_type_t type);
 
 EXTERN void gui_tile_set_errors(gui_tile_t* tile, const char* errors);
 

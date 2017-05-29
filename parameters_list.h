@@ -9,6 +9,7 @@
 #include "translations_ids.h"
 #include "localization/localization.h"
 #include "settings.h"
+#include "gui/widgets/gui_tile.h"
 
 //! Макрос для сокращения декларации дробного значения fixed32.
 #define F32(A, B) fixed32_make_from_fract(A, B)
@@ -18,7 +19,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 240
+#define PARAMETERS_REAL_COUNT 244
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 19
 // Общее число параметров.
@@ -324,6 +325,10 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_MODBUS_BAUD,     PARAM_TYPE_UINT,  1200,  57600,  9600,  0, NOUNITS),
     
     // Настройки интерфейса панели (GUI)
+    PARAM_DESCR(PARAM_ID_GUI_TILE_1,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  0,  0,  NOUNITS),  
+    PARAM_DESCR(PARAM_ID_GUI_TILE_2,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  1,  0,  NOUNITS), 
+    PARAM_DESCR(PARAM_ID_GUI_TILE_3,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  2,  0,  NOUNITS), 
+    PARAM_DESCR(PARAM_ID_GUI_TILE_4,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  3,  0,  NOUNITS), 
     PARAM_DESCR(PARAM_ID_GUI_BUZZER,       PARAM_TYPE_UINT, 0,  1,  1,  0,  NOUNITS),
     PARAM_DESCR(PARAM_ID_GUI_PASSWORD_ADMIN,    PARAM_TYPE_UINT, 0,  9999,  0,  0,  NOUNITS),
     PARAM_DESCR(PARAM_ID_GUI_PASSWORD_ROOT,     PARAM_TYPE_UINT, 0,  9999,  0,  0,  NOUNITS),

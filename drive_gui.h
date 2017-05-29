@@ -59,11 +59,9 @@ extern void drive_gui_home_on_enter(gui_home_t* home);
 extern void drive_gui_menu_on_home(gui_menu_t* menu);
 
 /**
- * Обновление состояния плитки
- * @param tile Плитка
- * @param value Идинтификатор значения
+ * Обновление состояния плиток
  */
-extern void drive_gui_update_tile(gui_tile_t* tile, size_t value);
+extern void drive_gui_update_tiles();
 
 /**
  * Устанавливает последнее время обработки callback для отображения статуса в GUI

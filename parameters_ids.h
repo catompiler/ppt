@@ -927,17 +927,24 @@
  * Настройки интерфейса панели (GUI)
  */
 /**
+ * Плитки (выбор отображаемых значений)
+ */
+#define PARAM_ID_GUI_TILE_1 801
+#define PARAM_ID_GUI_TILE_2 802
+#define PARAM_ID_GUI_TILE_3 803
+#define PARAM_ID_GUI_TILE_4 804
+/**
  * Работа зуммера (звукового оповещения)
  */
-#define PARAM_ID_GUI_BUZZER 800
+#define PARAM_ID_GUI_BUZZER 811
 /**
  * Пароль администратора
  */
-#define PARAM_ID_GUI_PASSWORD_ADMIN 804
+#define PARAM_ID_GUI_PASSWORD_ADMIN 821
 /**
  * Пароль рута
  */
-#define PARAM_ID_GUI_PASSWORD_ROOT 808
+#define PARAM_ID_GUI_PASSWORD_ROOT 822
 
 /*
  * Отладочные параметры.

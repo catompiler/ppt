@@ -41,12 +41,22 @@
 // позиция иконки статусбара
 #define gui_statusbar_icon_pos(pos) pos * ICONS_STATUSBAR_HEIGHT
 
-// наименования и единицы измерения плиток
-HOME_TILES_TEXT(home_tiles_text)
+// список вариантов отображения значений на плитках
+GUI_TILE_TYPES(gui_tile_types, GUI_TILE_TYPES_COUNT) {
+    GUI_TILE_TYPE(PARAM_ID_POWER_U_A, TEXT(TR_ID_HOME_PHASE_A_VOLTAGE)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_U_B, TEXT(TR_ID_HOME_PHASE_B_VOLTAGE)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_U_C, TEXT(TR_ID_HOME_PHASE_C_VOLTAGE)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_U_ROT, TEXT(TR_ID_HOME_ANCHOR_VOLTAGE)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_I_A, TEXT(TR_ID_HOME_PHASE_A_CURRENT)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_I_B, TEXT(TR_ID_HOME_PHASE_B_CURRENT)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_I_C, TEXT(TR_ID_HOME_PHASE_C_CURRENT)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_I_ROT, TEXT(TR_ID_HOME_ANCHOR_CURRENT)),
+    GUI_TILE_TYPE(PARAM_ID_POWER_I_EXC, TEXT(TR_ID_HOME_EXCITATION_CURRENT)),
+    //TEXT(TR_ID_HOME_RADIATOR_TEMPERATURE) 
+};
+// соответствие плитки идентификатору параметра
+HOME_TILES_VALUES(gui_tiles_values)
 
-// отображаемые значения плиток
-HOME_TILES_VALUES(home_tiles_values)
-        
 // последнее время обработки callback_modbus
 static uint32_t drive_modbus_last_time; 
 
@@ -259,8 +269,6 @@ static void make_gui_struct(void) {
             int k = i * GUI_HOME_TILES_WIDTH + j;
             gui_tile_t* tile = &gui.tiles[k];
             gui_tile_init_parent(tile, &gui.gui, GUI_WIDGET(&gui.home));
-            gui_tile_set_caption(tile, home_tiles_text[k][HOME_TILE_CAPTION]);
-            gui_tile_set_unit(tile, home_tiles_text[k][HOME_TILE_UNIT]);
             gui_widget_move(GUI_WIDGET(tile), x, y);
             gui_widget_resize(GUI_WIDGET(tile), GUI_TILE_WIDTH, GUI_TILE_HEIGHT);
             gui_widget_set_border(GUI_WIDGET(tile), GUI_BORDER_NONE);
@@ -271,6 +279,8 @@ static void make_gui_struct(void) {
         x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
     }
 
+    drive_gui_update_tiles();
+    
     gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
     
     gui_menu_init_parent(&gui.menu, &gui.gui, &gui.root_widget);
@@ -310,11 +320,8 @@ void drive_gui_update(void)
     gui_statusbar_update_icons(&gui.statusbar, false);
     gui_statusbar_update(&gui.statusbar, NULL);
     
-    int i;
-    for (i = 0; i < GUI_HOME_TILES_COUNT; i++) {
-        drive_gui_update_tile(&gui.tiles[i], home_tiles_values[i]);
-    }
-        
+    drive_gui_update_tiles();
+
     gui_menu_on_timer_home_action(&gui.menu);
 }
 
@@ -363,34 +370,39 @@ void drive_gui_menu_on_home(gui_menu_t* menu)
     gui_home_tiles_set_visible(&gui.tiles[0], true);
 }
 
-void drive_gui_update_tile(gui_tile_t* tile, size_t value) 
+void drive_gui_update_tiles() 
 {
-    if(drive_power_data_avail(DRIVE_POWER_CHANNELS)) {
-        char str[9];
-        uint32_t int_part = fixed32_get_int(drive_power_channel_real_value(value));
-        //fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(drive_power_channel_real_value(DRIVE_POWER_Urot)), 10);
-        snprintf(str, 9, "% 4d", (int)int_part);
-        gui_tile_set_value(tile, str);
-        /**
-        gui_tile_status_t new_tile_status = GUI_TILE_STATUS_OK;
-        
-        if (cur3 > 150) {
-            new_tile_status = GUI_TILE_STATUS_ALARM;
-        } else if (cur3 > 70) {
-            new_tile_status = GUI_TILE_STATUS_WARNING;
-        }
-        
-        if (new_tile_status != gui_tile_status(&gui.tiles[3])) {
-            gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), false);
-            gui_tile_set_value(&gui.tiles[3], time_str);
-            gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), true);
-            gui_tile_set_status(&gui.tiles[3], new_tile_status);
-        }
-        else {
-            gui_tile_set_value(&gui.tiles[3], time_str);
-        }
-        */
+    int i;
+    for (i = 0; i < GUI_HOME_TILES_COUNT; i++) {
+        param_t* param = settings_param_by_id(gui_tiles_values[i]);
+        uint32_t val = settings_param_valueu(param);
+        if (val < 0 || val > GUI_TILE_TYPES_COUNT) val = 0;
+        gui_tile_t* tile = &gui.tiles[i];
+        // изменения показания
+        gui_tile_set_type(tile, gui_tile_types[val]);
+        // обновление значения
+        gui_tile_repaint_value(&gui.tiles[i], NULL);
     }
+
+    /**
+    gui_tile_status_t new_tile_status = GUI_TILE_STATUS_OK;
+
+    if (cur3 > 150) {
+        new_tile_status = GUI_TILE_STATUS_ALARM;
+    } else if (cur3 > 70) {
+        new_tile_status = GUI_TILE_STATUS_WARNING;
+    }
+
+    if (new_tile_status != gui_tile_status(&gui.tiles[3])) {
+        gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), false);
+        gui_tile_set_value(&gui.tiles[3], time_str);
+        gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), true);
+        gui_tile_set_status(&gui.tiles[3], new_tile_status);
+    }
+    else {
+        gui_tile_set_value(&gui.tiles[3], time_str);
+    }
+    */
 }
 
 void drive_gui_modbus_set_last_time()

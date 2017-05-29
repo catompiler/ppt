@@ -6,6 +6,8 @@
 #include "localization/localization.h"
 #include "graphics/graphics.h"
 #include "../fonts/arialbold42.h"
+#include "drive_power.h"
+#include <stdio.h>
 
 err_t gui_tile_init(gui_tile_t* tile, gui_metro_t* gui)
 {
@@ -29,12 +31,6 @@ err_t gui_tile_init_parent(gui_tile_t* tile, gui_metro_t* gui, gui_widget_t* par
     return E_NO_ERROR;
 }
 
-void gui_tile_set_caption(gui_tile_t* tile, const char*  caption)
-{
-    tile->caption = caption;
-    gui_widget_repaint(GUI_WIDGET(tile), NULL);
-}
-
 void gui_tile_set_status(gui_tile_t* tile, const gui_tile_status_t status)
 {
     if (tile->status != status) {
@@ -56,18 +52,14 @@ void gui_tile_set_status(gui_tile_t* tile, const gui_tile_status_t status)
     }
 }
 
-void gui_tile_set_unit(gui_tile_t* tile, const char*  unit)
+void gui_tile_set_type(gui_tile_t* tile, const gui_tile_type_t type)
 {
-    tile->unit = unit;
-    gui_widget_repaint(GUI_WIDGET(tile), NULL);
+    if (tile->type.param_id != type.param_id) {
+        tile->type = type;
+        gui_widget_repaint(GUI_WIDGET(tile), NULL);
+    }
 }
 
-void gui_tile_set_value(gui_tile_t* tile, const char* value)
-{
-    tile->value = value;
-    gui_tile_repaint_value(tile, NULL);
-}
-          
 void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
 {
     gui_widget_on_repaint(GUI_WIDGET(tile), rect);
@@ -88,7 +80,7 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
             text_x = 3;//((graphics_pos_t)gui_widget_width(GUI_WIDGET(label)) - text_x) / 2;
             text_y = 1;//((graphics_pos_t)gui_widget_height(GUI_WIDGET(label)) - text_y) / 2;
 
-            painter_draw_string(&painter, text_x, text_y, TR(tile->caption));
+            painter_draw_string(&painter, text_x, text_y, TR(tile->type.title));
         //}
         //if (tile->unit != NULL) {
             painter_set_pen(&painter, PAINTER_PEN_SOLID);
@@ -97,12 +89,13 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
             painter_set_font(&painter, theme->big_font);
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
 
+            param_units_t unit = settings_param_units(settings_param_by_id(tile->type.param_id));
             //graphics_pos_t text_x, text_y;
-            painter_string_size(&painter, TR(tile->unit), (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+            painter_string_size(&painter, TR(unit), (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
             text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(tile)) - text_x - 3);
             text_y = ((graphics_pos_t)gui_widget_height(GUI_WIDGET(tile)) - text_y + 2);
 
-            painter_draw_string(&painter, text_x, text_y, TR(tile->unit));
+            painter_draw_string(&painter, text_x, text_y, TR(unit));
         //}
         gui_widget_end_paint(GUI_WIDGET(tile), &painter);
         
@@ -117,7 +110,16 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
         painter_t painter;
         gui_widget_begin_paint(GUI_WIDGET(tile), &painter, rect);
 
-        if (tile->value!= NULL) {
+        if(drive_power_data_avail(DRIVE_POWER_CHANNELS)) {
+            char str[9];
+            
+            param_t* param = settings_param_by_id(tile->type.param_id);
+            uint32_t int_part = fixed32_get_int(settings_param_valuef(param));
+            //fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(drive_power_channel_real_value(DRIVE_POWER_Urot)), 10);
+            param_units_t unit = settings_param_units(param);
+
+            snprintf(str, 9, "% 4d", (int)int_part);
+            
             painter_set_pen(&painter, PAINTER_PEN_SOLID);
             painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
             painter_set_pen_color(&painter, theme->color_tile_font);
@@ -126,13 +128,14 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
 
             graphics_pos_t text_x, text_y, dx, dy;
-            painter_string_size(&painter, tile->value, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+            painter_string_size(&painter, str, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
             text_y = ((graphics_pos_t)gui_widget_height(GUI_WIDGET(tile)) - text_y + 2);
-            painter_string_size(&painter, TR(tile->unit), (graphics_size_t*)&dx, (graphics_size_t*)&dy);
+            painter_string_size(&painter, TR(unit), (graphics_size_t*)&dx, (graphics_size_t*)&dy);
             text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(tile)) - dx - text_x - 5);
             //painter_draw_fillrect(&painter, text_x, text_y, text_x + dx, text_y + dy);
-            gui_tile_draw_value_string(&painter, text_x, text_y, tile->value);
+            gui_tile_draw_value_string(&painter, text_x, text_y, str);
         }
+        
         gui_widget_end_paint(GUI_WIDGET(tile), &painter);
     }
 }
