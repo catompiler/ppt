@@ -107,7 +107,8 @@ bool drive_temp_update(void)
         
         tid = timers_add_timer(drive_temp_reset_sensor_task, &timeout, NULL, (void*)drive_temp.heatsink_sensor_reset, NULL);
         
-        if(lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
+        if(tid != INVALID_TIMER_ID &&
+                lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
             drive_temp.heatsink_temp_avail = true;
             drive_temp.heatsink_temp = fixed16_to_32(temp16);
         }else{
