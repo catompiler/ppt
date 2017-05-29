@@ -20,7 +20,7 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    i2c pca9555 list key_input scheduler\
 	    pid_controller m95x menu localization\
 	    crc16_ccitt bsqrt cordic32\
-	    usart_bus modbus_rtu timers
+	    usart_bus modbus_rtu timers lm75 drive_temp
 
 # Макросы.
 DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
