@@ -28,6 +28,7 @@ typedef struct _Drive_Prot_Base_Item {
 
 
 #define DRIVE_PROT_PIE_MAX 0x10000
+#define DRIVE_PROT_CUTOFF_PIE_MAX (DRIVE_PROT_PIE_MAX / 4)
 #define DRIVE_PROT_CALC_PIE_INC(time) (0x6aac1 / time) //6.667 * f32(1.0) / t_avail
 
 
@@ -444,7 +445,7 @@ static bool drive_prot_check_base_item(drive_prot_base_item_t* item, bool masked
             
             if(masked){
                 item->active = true;
-
+                
                 if(item->latch_enabled){
                     item->hold_value = true;
                 }
@@ -579,6 +580,7 @@ static void drive_prot_power_update_item_settings(drive_prot_index_t index)
     // Вычислим уровень защиты в зависимости от типа (от повышения или от понижения значения).
     switch(descr->type){
         case DRIVE_PROT_TYPE_CUT:
+            item->base_item.pie_inc = DRIVE_PROT_CUTOFF_PIE_MAX;
         case DRIVE_PROT_TYPE_OVF:
             item->value_level = drive_protection_get_ovf_level(ref_val, settings_valueu(descr->param_level));
             break;
@@ -935,17 +937,26 @@ static bool drive_protection_check_power_item_inst(drive_protection_power_item_t
         
         item->base_item.allow = false;
         
-        if(masked){
-            if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
-                if(warnings) (*warnings) |= descr->flag;
-            }else{ // DRIVE_PROT_TYPE_ERR
-                if(errors) (*errors) |= descr->flag;
+        if(item->base_item.pie >= DRIVE_PROT_PIE_MAX){
+            item->base_item.pie = DRIVE_PROT_PIE_MAX;
+            
+            if(masked){
+                if(descr->flag_type == DRIVE_PROT_FLAG_WRN){
+                    if(warnings) (*warnings) |= descr->flag;
+                }else{ // DRIVE_PROT_TYPE_ERR
+                    if(errors) (*errors) |= descr->flag;
+                }
+                item->base_item.active = true;
+            }else{
+                item->base_item.active = false;
             }
-            item->base_item.active = true;
         }else{
-            item->base_item.active = false;
+            item->base_item.pie += item->base_item.pie_inc;
         }
     }else{
+        item->base_item.pie -= item->base_item.pie_inc;
+        if(item->base_item.pie < 0) item->base_item.pie = 0;
+        
         item->base_item.allow = true;
         item->base_item.active = false;
     }
