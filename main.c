@@ -130,10 +130,16 @@ static i2c_bus_t i2c1;
 //! Шина i2c2.
 static i2c_bus_t i2c2;
 
+#define I2C_RESET_CLK_HALF_PERIOD_US (100)
+
 //! Датчик температуры радиатора.
 static lm75_t heatsink_sensor;
 //! Адрес датчика температуры радиатора.
 #define HEATSINK_SENSOR_ADDRESS (LM75_I2C_DEFAULT_ADDRESS | 0x1)
+//! Таймаут обмена данными с датчиком температуры радиатора, мкс.
+#define HEATSINK_SENSOR_IO_TIMEOUT_US (100000)
+//! Период обновления температуры, сек.
+#define DRIVE_TEMP_UPDATE_PERIOD_S (10)
 
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
@@ -1047,7 +1053,7 @@ static void reset_i2c_slave(GPIO_TypeDef* gpio, uint16_t pin_sda, uint16_t pin_s
 {
     gpio->BSRR = pin_sda;
     gpio->BRR = pin_scl;
-    delay_us(250);
+    delay_us(I2C_RESET_CLK_HALF_PERIOD_US);
     
     size_t clocks = 0;
 #define I2C_RESET_SLAVE_CLOKS_MAX 9
@@ -1056,17 +1062,17 @@ static void reset_i2c_slave(GPIO_TypeDef* gpio, uint16_t pin_sda, uint16_t pin_s
         if(gpio->IDR & pin_sda) break;
         
         gpio->BSRR = pin_scl;
-        delay_us(250);
+        delay_us(I2C_RESET_CLK_HALF_PERIOD_US);
         gpio->BRR = pin_scl;
-        delay_us(250);
+        delay_us(I2C_RESET_CLK_HALF_PERIOD_US);
     }
     
 #undef I2C_RESET_SLAVE_CLOKS_MAX
     
     gpio->BRR = pin_sda;
-    delay_us(250);
+    delay_us(I2C_RESET_CLK_HALF_PERIOD_US);
     gpio->BSRR = pin_scl;
-    delay_us(250);
+    delay_us(I2C_RESET_CLK_HALF_PERIOD_US);
     gpio->BSRR = pin_sda;
 }
 
@@ -1185,9 +1191,15 @@ static void reset_i2c2(void)
     
     I2C_Cmd(I2C2, DISABLE);
     
+    //settings_param_set_valueu(settings_param_by_id(PARAM_ID_HEATSINK_TEMP), 100);
+    //drive_dio_set_output_type_state(DRIVE_DIO_OUT_USER, DRIVE_DIO_ON);
+    
     if(!(I2C2_GPIO->IDR & I2C2_PIN_SDA)){
         reset_i2c2_slave();
     }
+    
+    //delay_ms(500);
+    //drive_dio_set_output_type_state(DRIVE_DIO_OUT_USER, DRIVE_DIO_OFF);
     
     init_i2c2_periph();
 }
@@ -1847,8 +1859,8 @@ static void init_drive_temp(void)
 {
     drive_temp_init_t temp_is;
     
-    struct timeval temp_interval = { 10, 0 };
-    struct timeval timeout = {0, 100000};
+    struct timeval temp_interval = { DRIVE_TEMP_UPDATE_PERIOD_S, 0 };
+    struct timeval timeout = {0, HEATSINK_SENSOR_IO_TIMEOUT_US};
     
     temp_is.heatsink_sensor = &heatsink_sensor;
     temp_is.heatsink_sensor_reset = reset_heatsink_sensor;
