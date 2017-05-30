@@ -114,11 +114,16 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             char str[9];
             
             param_t* param = settings_param_by_id(tile->type.param_id);
-            uint32_t int_part = fixed32_get_int(settings_param_valuef(param));
-            //fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(drive_power_channel_real_value(DRIVE_POWER_Urot)), 10);
+            int32_t int_part = fixed32_get_int(settings_param_valuef(param));
+            int32_t fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(settings_param_valuef(param)), 10);
             param_units_t unit = settings_param_units(param);
-
-            snprintf(str, 9, "% 4d", (int)int_part);
+            
+            if ((int_part < 0 && int_part > -10) || (int_part > 0 && int_part < 100)) {
+                snprintf(str, 9, "% 3d.%d", (int)int_part, (int)fract_part);
+            }
+            else {
+                snprintf(str, 9, "% 4d", (int)int_part);
+            }
             
             painter_set_pen(&painter, PAINTER_PEN_SOLID);
             painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
@@ -155,8 +160,14 @@ size_t gui_tile_draw_value_string(painter_t* painter, graphics_pos_t x, graphics
         c = font_utf8_decode(s, &c_size);
         if (c < 44 && c > 57) return count;
         s += c_size;
+        if (c == 46) painter_draw_fillrect(painter, x, y, x + 10, y + ARIALBOLD42_CHAR_HEIGHT);
         if(painter_draw_char(painter, x, y, c)){
-            x += GUI_TILE_VALUE_FONT_WIDTH;
+            if (c == 46) {
+                x += 10;
+            }
+            else {
+                x += GUI_TILE_VALUE_FONT_WIDTH;
+            }
             count ++;
         }
         painter_draw_fillrect(painter, x, y, x + GUI_TILE_VALUE_FONT_SPACE, y + ARIALBOLD42_CHAR_HEIGHT);
