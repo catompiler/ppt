@@ -241,6 +241,8 @@
 #define TR_ID_MENU_COMMUNICATION    365
 //! Скорость Modbus RTU.
 #define TR_ID_MENU_MODBUS_BAUD      366
+//! Адрес Modbus RTU.
+#define TR_ID_MENU_MODBUS_ADDRESS   367
 //! Цифровые входа.
 #define TR_ID_MENU_DIGITAL_INPUTS   370
 //! Цифровые выхода.

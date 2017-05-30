@@ -426,6 +426,7 @@ MENU_DESCRS(menu_descrs) {
     // Коммуникация.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_COMMUNICATION), NULL, 0, 0, 0, 0),
         MENU_DESCR(1, PARAM_ID_MODBUS_BAUD, TEXT(TR_ID_MENU_MODBUS_BAUD), NULL, 0, MENU_FLAG_DATA, 0, 0),
+        MENU_DESCR(1, PARAM_ID_MODBUS_ADDRESS, TEXT(TR_ID_MENU_MODBUS_ADDRESS), NULL, 0, MENU_FLAG_DATA, 0, 0),
     // Цифровые входа/выхода.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_DIGITAL_IO), NULL, 0, 0, 0, 0),
         // Цифровые входа.

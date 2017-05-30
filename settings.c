@@ -24,6 +24,7 @@
 #include "drive_triacs.h"
 #include "ramp.h"
 #include "fixed/fixed32.h"
+#include "gui/widgets/gui_tile.h"
 #include "parameters_list.h"
 
 // Данные параметров.

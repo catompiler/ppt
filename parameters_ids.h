@@ -922,6 +922,10 @@
  * Скорость соединения Modbus RTU.
  */
 #define PARAM_ID_MODBUS_BAUD 700
+/**
+ * Адрес устройства Modbus RTU.
+ */
+#define PARAM_ID_MODBUS_ADDRESS 701
 
 /*
  * Настройки интерфейса панели (GUI)

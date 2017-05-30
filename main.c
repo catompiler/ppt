@@ -920,7 +920,12 @@ static void init_modbus(void)
     
     modbus_is.usart = &usart_bus;
     modbus_is.mode = MODBUS_RTU_MODE_SLAVE;
-    modbus_is.address = 0xaa;//0x10;
+    param_t* address_param = settings_param_by_id(PARAM_ID_MODBUS_ADDRESS);
+    if(address_param){
+        modbus_is.address = settings_param_valueu(address_param);
+    }else{
+        modbus_is.address = 0xaa;//0x10;
+    }
     modbus_is.rx_message = &modbus_rx_msg;
     modbus_is.tx_message = &modbus_tx_msg;
     
