@@ -438,7 +438,7 @@
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iexc   728
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
-
+#define TR_ID_ENUM_HEATSINK_TEMP            740
 // /**
 //  * .
 //  */
@@ -466,7 +466,7 @@
 //! Ток возбуждения
 #define TR_ID_HOME_EXCITATION_CURRENT 930
 //! Температура радиатора
-#define TR_ID_HOME_RADIATOR_TEMPERATURE 940
+#define TR_ID_HOME_HEATSINK_TEMP 940
 
 //! Заголовок меню
 #define TR_ID_MENU_HEADER_TITLE  1010

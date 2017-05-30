@@ -40,7 +40,7 @@ struct _Gui_Tile_Type {
 #define GUI_TILE_TYPE(id, arg_title) { .param_id = id, .title = arg_title }
 
 //! Список типов плитки (отображаемых значений)
-#define GUI_TILE_TYPES_COUNT 9
+#define GUI_TILE_TYPES_COUNT 10
 #define GUI_TILE_TYPES_MIN 0
 #define GUI_TILE_TYPES_MAX (GUI_TILE_TYPES_COUNT - 1)
 #define GUI_TILE_TYPES(arg_name, arg_count)\

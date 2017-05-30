@@ -183,7 +183,7 @@ TEXT_TR(TR_ID_MENU_ROT_BREAK_PROT, "Rotor break")
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Anchor\nvoltage")
 TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Anchor\ncurrent")
 TEXT_TR(TR_ID_HOME_EXCITATION_CURRENT, "Excitation\ncurrent")
-TEXT_TR(TR_ID_HOME_RADIATOR_TEMPERATURE, "Radiator\ntemperature")
+TEXT_TR(TR_ID_HOME_HEATSINK_TEMP, "Radiator\ntemperature")
 // меню
 TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Menu")
 

@@ -217,7 +217,8 @@ TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Urot, "Напр. якоря")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Irot, "Ток якоря")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iexc, "Ток возб.")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iref, "Ток 4-20 мА")
-TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ifan, "Ток вент.")       
+TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ifan, "Ток вент.")  
+TEXT_TR(TR_ID_ENUM_HEATSINK_TEMP, "Темп. радиат.") 
 
 //! Напряжения фаз
 TEXT_TR(TR_ID_HOME_PHASE_A_VOLTAGE, "Напряжение\nфазы A")
@@ -232,7 +233,7 @@ TEXT_TR(TR_ID_HOME_PHASE_C_CURRENT, "Ток фазы C")
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Напряжение\nякоря")
 TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Ток\nякоря")
 TEXT_TR(TR_ID_HOME_EXCITATION_CURRENT, "Ток\nвозбуждения")
-TEXT_TR(TR_ID_HOME_RADIATOR_TEMPERATURE, "Температура\nрадиатора")
+TEXT_TR(TR_ID_HOME_HEATSINK_TEMP, "Температура\nрадиатора")
 // меню
 TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Меню")
 // запрос пароля
