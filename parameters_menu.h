@@ -10,7 +10,6 @@
 #include "translations_ids.h"
 #include "parameters_ids.h"
 #include "commands_ids.h"
-#include "gui/resources/resources_menu.h"
 
 /*
  * Перечисления типов для выбора в меню.
@@ -427,6 +426,14 @@ MENU_DESCRS(menu_descrs) {
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_COMMUNICATION), NULL, 0, 0, 0, 0),
         MENU_DESCR(1, PARAM_ID_MODBUS_BAUD, TEXT(TR_ID_MENU_MODBUS_BAUD), NULL, 0, MENU_FLAG_DATA, 0, 0),
         MENU_DESCR(1, PARAM_ID_MODBUS_ADDRESS, TEXT(TR_ID_MENU_MODBUS_ADDRESS), NULL, 0, MENU_FLAG_DATA, 0, 0),
+    // Управление вентиляторами.
+    MENU_DESCR(0, 0, TEXT(TR_ID_FAN_CONTROL), NULL, 0, 0, 0, 0),
+        MENU_DESCR(1, PARAM_ID_FAN_CONTROL_ENABLE, TEXT(TR_ID_FAN_CONTROL_ENABLE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_bool),
+        MENU_DESCR(1, PARAM_ID_FAN_TEMP_MIN, TEXT(TR_ID_FAN_TEMP_MIN), NULL, 0, MENU_FLAG_DATA, 0, 0),
+        MENU_DESCR(1, PARAM_ID_FAN_TEMP_MAX, TEXT(TR_ID_FAN_TEMP_MAX), NULL, 0, MENU_FLAG_DATA, 0, 0),
+        MENU_DESCR(1, PARAM_ID_FAN_RPM_MIN, TEXT(TR_ID_FAN_RPM_MIN), NULL, 0, MENU_FLAG_DATA, 0, 0),
+        MENU_DESCR(1, PARAM_ID_FAN_ECO_MODE_ENABLE, TEXT(TR_ID_FAN_ECO_MODE_ENABLE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_bool),
+        MENU_DESCR(1, PARAM_ID_FAN_ECO_COOLING_TIME, TEXT(TR_ID_FAN_ECO_COOLING_TIME), NULL, 0, MENU_FLAG_DATA, 0, 0),
     // Цифровые входа/выхода.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_DIGITAL_IO), NULL, 0, 0, 0, 0),
         // Цифровые входа.

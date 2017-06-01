@@ -141,6 +141,14 @@ static lm75_t heatsink_sensor;
 //! Период обновления температуры, сек.
 #define DRIVE_TEMP_UPDATE_PERIOD_S (10)
 
+// Шим вентилятора.
+//! Таймер для ШИМ.
+#define HEATSINK_FAN_PWM_TIM TIM8
+//! Минимальное значение ШИМ.
+#define HEATSINK_FAN_PWM_MIN 0
+// Максимальное значение ШИМ.
+#define HEATSINK_FAN_PWM_MAX 999
+
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
 
@@ -753,6 +761,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
     // TIM7.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
+    // TIM8.
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8, ENABLE);    // Включаем тактирование Motor-control TIM8
     // Backup domain + RTC.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
@@ -1725,13 +1735,49 @@ static void init_gpio (void)
         gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
         gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(RS485_IFACE_CTL_GPIO, &gpio_is);
-        
-    /* GPIOC Configuration: 64 (PC7 - FAN) as output pp */
+}
+
+static void init_fan_pwm(void)
+{
+    GPIO_InitTypeDef gpio_is;
+    /* GPIOC Configuration: 64 (PC7 - FAN) as output af pp */
         gpio_is.GPIO_Pin = GPIO_Pin_7;
         gpio_is.GPIO_Speed = GPIO_Speed_2MHz;
-        gpio_is.GPIO_Mode = GPIO_Mode_Out_PP;
+        gpio_is.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_Init(GPIOC, &gpio_is);
     //GPIO_SetBits(GPIOC, GPIO_Pin_7); // PWM: TIM8_CH2.
+    
+    
+    TIM_TimeBaseInitTypeDef tim_is;
+    tim_is.TIM_ClockDivision = TIM_CKD_DIV1;
+    tim_is.TIM_CounterMode = TIM_CounterMode_Up;
+    tim_is.TIM_RepetitionCounter = 0;
+    tim_is.TIM_Prescaler = 12 - 1; // 6 kHz.
+    tim_is.TIM_Period = HEATSINK_FAN_PWM_MAX;
+    
+    TIM_TimeBaseInit(HEATSINK_FAN_PWM_TIM, &tim_is);
+    
+    TIM_OCInitTypeDef pwm_is;
+    pwm_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+    pwm_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    pwm_is.TIM_OCPolarity = TIM_OCPolarity_High;
+    pwm_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+    pwm_is.TIM_OutputState = TIM_OutputState_Enable;
+    pwm_is.TIM_OutputNState = TIM_OutputNState_Disable;
+    pwm_is.TIM_OCMode = TIM_OCMode_PWM1;
+    pwm_is.TIM_Pulse = 0;
+    
+    TIM_OC2Init(HEATSINK_FAN_PWM_TIM, &pwm_is);
+    TIM_CCxCmd(HEATSINK_FAN_PWM_TIM, TIM_Channel_2, TIM_CCx_Enable);
+    
+    TIM_OC2PreloadConfig(HEATSINK_FAN_PWM_TIM, TIM_OCPreload_Enable);
+    TIM_ARRPreloadConfig(HEATSINK_FAN_PWM_TIM, ENABLE);
+    
+    TIM_Cmd(HEATSINK_FAN_PWM_TIM, ENABLE);
+    
+    TIM_CtrlPWMOutputs(HEATSINK_FAN_PWM_TIM, ENABLE);
+    
+    //TIM_SetCompare2(HEATSINK_FAN_PWM_TIM, HEATSINK_FAN_PWM_MAX / 3);
 }
 
 static void init_dio_in_pin(GPIO_TypeDef* GPIO, uint16_t pin)
@@ -1860,6 +1906,20 @@ static void reset_heatsink_sensor(void)
     reset_i2c2();
 }
 
+static void fan_pwm_set_value(uint32_t rpm_percents)
+{
+    if(rpm_percents == 0){
+        TIM_SetCompare2(HEATSINK_FAN_PWM_TIM, 0);
+        return;
+    }
+    
+    rpm_percents = rpm_percents * HEATSINK_FAN_PWM_MAX / 100;
+    
+    rpm_percents = CLAMP(rpm_percents, 0, HEATSINK_FAN_PWM_MAX);
+    
+    TIM_SetCompare2(HEATSINK_FAN_PWM_TIM, rpm_percents);
+}
+
 static void init_drive_temp(void)
 {
     drive_temp_init_t temp_is;
@@ -1868,9 +1928,10 @@ static void init_drive_temp(void)
     struct timeval timeout = {0, HEATSINK_SENSOR_IO_TIMEOUT_US};
     
     temp_is.heatsink_sensor = &heatsink_sensor;
-    temp_is.heatsink_sensor_reset = reset_heatsink_sensor;
+    temp_is.heatsink_sensor_reset_proc = reset_heatsink_sensor;
     temp_is.heatsink_sensor_timeout = &timeout;
     temp_is.update_interval = &temp_interval;
+    temp_is.set_fan_rpm_proc = fan_pwm_set_value;
     
     drive_temp_init(&temp_is);
 }
@@ -1960,6 +2021,7 @@ int main(void)
     
     init_i2c2();
     init_heatsink_sensor();
+    init_fan_pwm();
     init_drive_temp();
     
     //drive_set_reference(REFERENCE_MAX);
