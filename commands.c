@@ -3,6 +3,7 @@
 #include "settings.h"
 #include "drive_events.h"
 #include "drive_keypad.h"
+#include "drive_tasks.h"
 #include <stdlib.h>
 
 /**
@@ -53,11 +54,11 @@ bool command_enable_drive(void) {
 }
 
 bool command_settings_save(void) {
-    return (settings_write() == E_NO_ERROR);
+    return (drive_tasks_save_settings() == E_NO_ERROR);
 }
 
 bool command_state_save(void) {
-    return (drive_events_write() == E_NO_ERROR);
+    return (drive_tasks_write_status_event() == E_NO_ERROR);
 }
 
 bool command_settings_default(void) {

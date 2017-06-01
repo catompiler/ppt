@@ -106,10 +106,6 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
 void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
 {
     if (gui_widget_visible(GUI_WIDGET(tile))) {
-        gui_metro_theme_t* theme = gui_metro_theme(gui_object_gui(GUI_OBJECT(tile)));
-        painter_t painter;
-        gui_widget_begin_paint(GUI_WIDGET(tile), &painter, rect);
-
         if(drive_power_data_avail(DRIVE_POWER_CHANNELS)) {
             char str[9];
             
@@ -119,16 +115,39 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             param_t* param_warn_max = settings_param_by_id(tile->type.warn_max);
             param_t* param_alarm_max = settings_param_by_id(tile->type.alarm_max);
             fixed32_t valf = settings_param_valuef(param);
+            fixed32_t alarm_min = settings_param_valuef(param_alarm_min);
+            fixed32_t warn_min = settings_param_valuef(param_warn_min);
+            fixed32_t warn_max = settings_param_valuef(param_warn_max);
+            fixed32_t alarm_max = settings_param_valuef(param_alarm_max);
+            
             int32_t int_part = fixed32_get_int(valf);
             int32_t fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(valf), 10);
             param_units_t unit = settings_param_units(param);
             
             if ((int_part < 0 && int_part > -10) || (int_part > 0 && int_part < 100)) {
+                // отображение с дробной частью
                 snprintf(str, 9, "% 3d.%d", (int)int_part, (int)fract_part);
             }
             else {
+                // отображение только целой части
                 snprintf(str, 9, "% 4d", (int)int_part);
             }
+            
+            // измениение статуса (цвета плитки)
+            gui_tile_status_t ch_status = GUI_TILE_STATUS_OK;
+            if (valf <= alarm_min || valf >= alarm_max) {
+                ch_status = GUI_TILE_STATUS_ALARM;
+            }
+            else if (valf <= warn_min || valf >= warn_max) {
+                ch_status = GUI_TILE_STATUS_WARNING;
+            }
+            // перерисовывается только при изменении статуса
+            gui_tile_set_status(tile, ch_status);
+            
+            // перерисовка значения показания
+            gui_metro_theme_t* theme = gui_metro_theme(gui_object_gui(GUI_OBJECT(tile)));
+            painter_t painter;
+            gui_widget_begin_paint(GUI_WIDGET(tile), &painter, rect);
             
             painter_set_pen(&painter, PAINTER_PEN_SOLID);
             painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
@@ -144,9 +163,9 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(tile)) - dx - text_x - 5);
             //painter_draw_fillrect(&painter, text_x, text_y, text_x + dx, text_y + dy);
             gui_tile_draw_value_string(&painter, text_x, text_y, str);
+            
+            gui_widget_end_paint(GUI_WIDGET(tile), &painter);
         }
-        
-        gui_widget_end_paint(GUI_WIDGET(tile), &painter);
     }
 }
 

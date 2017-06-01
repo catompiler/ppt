@@ -8,6 +8,7 @@
 #include "gui/resources/resources_menu.h"
 #include "commands.h"
 #include "../resources/resources_params.h"
+#include "drive_tasks.h"
 
 err_t menu_explorer_init(menu_explorer_t* explorer, menu_t* menu)
 {
@@ -361,7 +362,7 @@ bool menu_explorer_edit_enter(menu_explorer_t* explorer)
                     }
                     break;
             }
-            settings_write(); // сохраняем параметры в хранилище данных
+            drive_tasks_apply_settings(); // применяем настройки
         }
         explorer->state = MENU_EXPLORER_STATE_NAVI;
         explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
