@@ -114,8 +114,13 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             char str[9];
             
             param_t* param = settings_param_by_id(tile->type.param_id);
-            int32_t int_part = fixed32_get_int(settings_param_valuef(param));
-            int32_t fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(settings_param_valuef(param)), 10);
+            param_t* param_alarm_min = settings_param_by_id(tile->type.alarm_min);
+            param_t* param_warn_min = settings_param_by_id(tile->type.warn_min);
+            param_t* param_warn_max = settings_param_by_id(tile->type.warn_max);
+            param_t* param_alarm_max = settings_param_by_id(tile->type.alarm_max);
+            fixed32_t valf = settings_param_valuef(param);
+            int32_t int_part = fixed32_get_int(valf);
+            int32_t fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(valf), 10);
             param_units_t unit = settings_param_units(param);
             
             if ((int_part < 0 && int_part > -10) || (int_part > 0 && int_part < 100)) {

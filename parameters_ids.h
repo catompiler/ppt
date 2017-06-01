@@ -950,6 +950,8 @@
  */
 #define PARAM_ID_GUI_PASSWORD_ROOT 822
 
+
+
 /*
  * Отладочные параметры.
  */
@@ -1038,6 +1040,52 @@
  * Температура радиатора.
  */
 #define PARAM_ID_HEATSINK_TEMP 1050
+
+/*
+ * GUI: диапазоны индикации WARN и ALARM статусов значений, отображаемых на плитках.
+ */
+/**
+ * Напряжение фазы.
+ */
+#define PARAM_ID_POWER_U_ALARM_MIN    1110
+#define PARAM_ID_POWER_U_WARN_MIN     1111
+#define PARAM_ID_POWER_U_WARN_MAX     1112
+#define PARAM_ID_POWER_U_ALARM_MAX    1113
+/**
+ * Напряжение якоря.
+ */
+#define PARAM_ID_POWER_U_ROT_ALARM_MIN    1140
+#define PARAM_ID_POWER_U_ROT_WARN_MIN     1141
+#define PARAM_ID_POWER_U_ROT_WARN_MAX     1142
+#define PARAM_ID_POWER_U_ROT_ALARM_MAX    1143
+/**
+ * Ток фазы.
+ */
+#define PARAM_ID_POWER_I_ALARM_MIN    1150
+#define PARAM_ID_POWER_I_WARN_MIN     1151
+#define PARAM_ID_POWER_I_WARN_MAX     1152
+#define PARAM_ID_POWER_I_ALARM_MAX    1153
+/**
+ * Ток якоря.
+ */
+#define PARAM_ID_POWER_I_ROT_ALARM_MIN    1180
+#define PARAM_ID_POWER_I_ROT_WARN_MIN     1181
+#define PARAM_ID_POWER_I_ROT_WARN_MAX     1182
+#define PARAM_ID_POWER_I_ROT_ALARM_MAX    1183
+/**
+ * Ток возбуждения.
+ */
+#define PARAM_ID_POWER_I_EXC_ALARM_MIN    1190
+#define PARAM_ID_POWER_I_EXC_WARN_MIN     1191
+#define PARAM_ID_POWER_I_EXC_WARN_MAX     1192
+#define PARAM_ID_POWER_I_EXC_ALARM_MAX    1193
+/**
+ * Температура радиатора.
+ */
+#define PARAM_ID_HEATSINK_TEMP_ALARM_MIN    1200
+#define PARAM_ID_HEATSINK_TEMP_WARN_MIN     1201
+#define PARAM_ID_HEATSINK_TEMP_WARN_MAX     1202
+#define PARAM_ID_HEATSINK_TEMP_ALARM_MAX    1203
 
 #endif	/* PARAMETERS_IDS_H */
 

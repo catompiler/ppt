@@ -33,11 +33,18 @@ typedef struct _Gui_Tile_Type gui_tile_type_t;
 
 struct _Gui_Tile_Type {
     param_id_t param_id;
+    param_id_t alarm_min;
+    param_id_t warn_min;
+    param_id_t warn_max;
+    param_id_t alarm_max;
     const char* title;
 };
 
 //! Тип плитки (отображаемое значение)
-#define GUI_TILE_TYPE(id, arg_title) { .param_id = id, .title = arg_title }
+#define GUI_TILE_TYPE(id, arg_title, arg_alarm_min, arg_warn_min, arg_warn_max, arg_alarm_max)\
+     { .param_id = id, .title = arg_title, \
+        .alarm_min = arg_alarm_min, .warn_min = arg_warn_min,\
+        .warn_max = arg_warn_max, .alarm_max = arg_alarm_max }
 
 //! Список типов плитки (отображаемых значений)
 #define GUI_TILE_TYPES_COUNT 10
