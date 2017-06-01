@@ -6,6 +6,7 @@
 #include "settings.h"
 #include "drive.h"
 #include "drive_events.h"
+#include "drive_temp.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -75,6 +76,7 @@ err_t drive_tasks_init(void)
 static void* apply_settings_task()
 {
     drive_update_settings();
+    drive_temp_update_settings();
     return NULL;
 }
 

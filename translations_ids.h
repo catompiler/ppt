@@ -421,6 +421,23 @@
 #define TR_ID_HELP_I_ROT_NOM        562
 
 
+
+//! Управление вентиляторами.
+#define TR_ID_FAN_CONTROL            600
+//! Разрешение управления вентиляторами.
+#define TR_ID_FAN_CONTROL_ENABLE     601
+//! Температура включения вентилятора.
+#define TR_ID_FAN_TEMP_MIN           602
+//! Температура включения вентилятора на максимум.
+#define TR_ID_FAN_TEMP_MAX           603
+//! Начальные обороты вентилятора, %.
+#define TR_ID_FAN_RPM_MIN            604
+//! Разрешение эко-режима.
+#define TR_ID_FAN_ECO_MODE_ENABLE    605
+//! Время охлаждения в эко-режиме.
+#define TR_ID_FAN_ECO_COOLING_TIME   606
+
+
 //! Настройки интерфейса
 
 //! Перечисление работы зуммера

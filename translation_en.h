@@ -180,6 +180,15 @@ TEXT_TR(TR_ID_MENU_ROT_BREAK_PROT, "Rotor break")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")
 
+
+TEXT_TR(TR_ID_FAN_CONTROL, "Fan control")
+TEXT_TR(TR_ID_FAN_CONTROL_ENABLE, "Fan control enable")
+TEXT_TR(TR_ID_FAN_TEMP_MIN, "Temp fan min")
+TEXT_TR(TR_ID_FAN_TEMP_MAX, "Temp fan max")
+TEXT_TR(TR_ID_FAN_RPM_MIN, "Fan rpm min")
+TEXT_TR(TR_ID_FAN_ECO_MODE_ENABLE, "Eco-mode enable")
+TEXT_TR(TR_ID_FAN_ECO_COOLING_TIME, "Eco-mode cooling time")
+
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Anchor\nvoltage")
 TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Anchor\ncurrent")

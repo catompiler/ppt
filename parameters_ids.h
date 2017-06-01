@@ -928,6 +928,34 @@
 #define PARAM_ID_MODBUS_ADDRESS 701
 
 /*
+ * Управление вентиляторами.
+ */
+/**
+ * Разрешение управления вентиляторами.
+ */
+#define PARAM_ID_FAN_CONTROL_ENABLE 750
+/**
+ * Температура включения вентилятора.
+ */
+#define PARAM_ID_FAN_TEMP_MIN 751
+/**
+ * Температура включения вентилятора на максимум.
+ */
+#define PARAM_ID_FAN_TEMP_MAX 752
+/**
+ * Начальные обороты вентилятора, %.
+ */
+#define PARAM_ID_FAN_RPM_MIN 753
+/**
+ * Разрешение эко-режима.
+ */
+#define PARAM_ID_FAN_ECO_MODE_ENABLE 754
+/**
+ * Время охлаждения в эко-режиме.
+ */
+#define PARAM_ID_FAN_ECO_COOLING_TIME 755
+
+/*
  * Настройки интерфейса панели (GUI)
  */
 /**

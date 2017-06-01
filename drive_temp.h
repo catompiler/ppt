@@ -14,12 +14,19 @@
 //! Тип функции сброса датчика/шины.
 typedef void (*drive_temp_sensor_reset_proc_t)(void);
 
+/**
+ * Тип функции установки оборотов вентилятора.
+ * @param rpm_percents Обороты вентилятора в %.
+ */
+typedef void(*drive_temp_set_fan_rpm_proc_t)(uint32_t rpm_percents);
+
 //! Структура инициализации температуры привода.
 typedef struct _Drive_Temp_Init {
     lm75_t* heatsink_sensor; //!< Датчик температуры радиатора.
-    drive_temp_sensor_reset_proc_t heatsink_sensor_reset; //!< Функция сброса датчика температуры радиатора.
+    drive_temp_sensor_reset_proc_t heatsink_sensor_reset_proc; //!< Функция сброса датчика температуры радиатора.
     struct timeval* heatsink_sensor_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
     struct timeval* update_interval; //!< Интервал обновления температур.
+    drive_temp_set_fan_rpm_proc_t set_fan_rpm_proc; //!< Функция установки оборотов вентилятора.
 } drive_temp_init_t;
 
 
@@ -31,10 +38,15 @@ typedef struct _Drive_Temp_Init {
 extern err_t drive_temp_init(drive_temp_init_t* temp_is);
 
 /**
+ * Обновляет настройки температуры привода.
+ */
+extern void drive_temp_update_settings(void);
+
+/**
  * Обновляет температуру привода.
  * @return Флаг обновления температуры.
  */
-bool drive_temp_update(void);
+extern bool drive_temp_update(void);
 
 /**
  * Получает доступность температуры радиатора.

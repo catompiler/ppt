@@ -205,6 +205,14 @@ TEXT_TR(TR_ID_HELP_ROTOR, "Напряжение и ток якоря")
 TEXT_TR(TR_ID_HELP_U_ROT_NOM, "Номинальное напряжение якоря в вольтах")
 TEXT_TR(TR_ID_HELP_I_ROT_NOM, "Номинальный ток якоря в амперах")
 
+TEXT_TR(TR_ID_FAN_CONTROL, "Управление вентиляторами")
+TEXT_TR(TR_ID_FAN_CONTROL_ENABLE, "Разрешение управления вентиляторами")
+TEXT_TR(TR_ID_FAN_TEMP_MIN, "Температура включения вентилятора на минимум")
+TEXT_TR(TR_ID_FAN_TEMP_MAX, "Температура включения вентилятора на максимум")
+TEXT_TR(TR_ID_FAN_RPM_MIN, "Начальные обороты вентилятора")
+TEXT_TR(TR_ID_FAN_ECO_MODE_ENABLE, "Разрешение эко-режима")
+TEXT_TR(TR_ID_FAN_ECO_COOLING_TIME, "Время охлаждения в эко-режиме")
+
 TEXT_TR(TR_ID_ENUM_BUZZER_ON, "Включено")
 TEXT_TR(TR_ID_ENUM_BUZZER_OFF, "Без звука")
   
