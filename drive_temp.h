@@ -60,4 +60,16 @@ extern bool drive_temp_heatsink_temp_avail(void);
  */
 extern fixed32_t drive_temp_heatsink_temp(void);
 
+/**
+ * Получает обороты вентилятора в %.
+ * @return Обороты вентилятора в %.
+ */
+extern uint32_t drive_temp_fan_rpm(void);
+
+/**
+ * Получает флаг работы вентилятора.
+ * @return Флаг работы вентилятора.
+ */
+extern bool drive_temp_fan_running(void);
+
 #endif /* DRIVE_TEMP_H */

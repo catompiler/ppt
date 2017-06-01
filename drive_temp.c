@@ -36,6 +36,7 @@ typedef struct _Drive_Temp {
     fixed32_t fan_temp_min; //!< Темперетура включения вентилятора.
     fixed32_t fan_temp_max; //!< Температура максимальных оборотов вентилятора.
     uint16_t fan_eco_time; //!< Время работы вентилятора в эко-режиме.
+    uint16_t fan_rpm; //!< Обороты вентилятора, %.
     
     bool heatsink_temp_avail; //!< Доступность температуры радиатора.
     fixed32_t heatsink_temp; //!< Температура радиатора.
@@ -138,6 +139,8 @@ static void drive_temp_regulate_fan(void)
     
     }
     
+    drive_temp.fan_rpm = rpm;
+    
     drive_temp.set_fan_rpm(rpm);
 }
 
@@ -228,4 +231,14 @@ bool drive_temp_heatsink_temp_avail(void)
 fixed32_t drive_temp_heatsink_temp(void)
 {
     return drive_temp.heatsink_temp;
+}
+
+uint32_t drive_temp_fan_rpm(void)
+{
+    return drive_temp.fan_rpm;
+}
+
+bool drive_temp_fan_running(void)
+{
+    return drive_temp.fan_rpm != DRIVE_TEMP_FAN_RPM_STOP;
 }
