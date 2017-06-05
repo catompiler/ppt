@@ -406,6 +406,20 @@
 //! Измерения
 #define TR_ID_MENU_MEASUREMENTS 492
 
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_U_A                      511
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_U_B                      512
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_U_C                      513
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_U_ROT                    514
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_A                      515
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_B                      516
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_C                      517
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_ROT                    518
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_EXC                    519
+#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP                  520
+#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM               521
+#define TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE        522
+#define TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE           523
+
 #define TR_ID_HELP_POWER            550
 //! Сеть.
 #define TR_ID_HELP_POWER_IN         551

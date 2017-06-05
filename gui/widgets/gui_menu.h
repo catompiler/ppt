@@ -6,7 +6,7 @@
 #define	GUI_MENU_H
 
 #define MENU_HOME_ON_LONG_ESC_CNT 4
-#define MENU_HOME_ON_TIMER_CNT 30
+#define MENU_HOME_ON_TIMER_SEC 60
 #define MENU_MACRO
 #define MENU_DESCR_MACRO
 #define MENU_DESCRS_ATTRIBS static const

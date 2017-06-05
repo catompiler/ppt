@@ -45,7 +45,6 @@ err_t gui_menu_init_parent(gui_menu_t* menu, gui_metro_t* gui, gui_widget_t* par
 void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui)
 {
     menu->long_esc_press_cnt = 0;
-    menu->home_on_timer_cnt = 0;
     menu->key_down_press = false;
     menu->key_up_press = false;
     menu->explorer.help = false;
@@ -53,6 +52,7 @@ void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui)
 
 void gui_menu_on_repaint(gui_menu_t* menu, const rect_t* rect)
 {
+    menu->explorer.autoupdate = system_counter_ticks();
     //gui_widget_on_repaint(GUI_WIDGET(menu), rect);
     if (gui_widget_visible(GUI_WIDGET(menu))) {
 
@@ -119,16 +119,24 @@ void gui_menu_on_home_action(gui_menu_t* menu, keycode_t key)
 void gui_menu_on_timer_home_action(gui_menu_t* menu)
 {
     //if (GUI_WIDGET(menu)->focusable) {
-        menu->home_on_timer_cnt++;
-        if (menu->home_on_timer_cnt > MENU_HOME_ON_TIMER_CNT) {
-            gui_menu_on_home_action(menu, 0);
-        }
         counter_t cur = system_counter_ticks();
         counter_t ticks_per_sec = system_counter_ticks_per_sec();
-        counter_t reset_time = menu->explorer.touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
+        // проверка перехода на главный экран
+        counter_t reset_time = menu->explorer.touch + ticks_per_sec * MENU_HOME_ON_TIMER_SEC;
         if (cur >= reset_time) {
-            // сброс предыдущих прав пользователя по таймауту
+            gui_menu_on_home_action(menu, 0);
+        }
+        // проверка сброса предыдущих прав пользователя по таймауту
+        reset_time = menu->explorer.touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
+        if (cur >= reset_time) {
             menu->explorer.user = MENU_USER_NONE;
+        }
+        // проверка обновления значений пунктов меню
+        reset_time = menu->explorer.autoupdate + ticks_per_sec * MENU_EXPLORER_AUTO_UPDATE_VALUES_SEC;
+        if (cur >= reset_time) {
+            // перерисовываются только автообновляемые значения
+            menu->explorer.draw_mode = GUI_MENU_DRAW_MODE_NONE;
+            gui_menu_on_repaint(menu, NULL);
         }
     //}
 }
@@ -264,6 +272,7 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
     bool mode_is_lines = ((mode & GUI_MENU_DRAW_MODE_LINES) > 0);
     bool mode_is_values = false;
     bool mode_is_edit = false;
+    bool item_is_autoupdate = false;
     if (item_not_null) {
         item_is_selected = menu_explorer_is_selected(&menu->explorer, menu_item);
         item_is_submenu = menu_item_childs_count(menu_item) > 0;
@@ -271,9 +280,10 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
         if (item_is_param) {
             param = settings_param_by_id(menu_item->id);
             item_is_command = (menu_item->flags & MENU_FLAG_CMD);
+            item_is_autoupdate = (menu_item->flags & MENU_FLAG_VALUE); 
             item_is_param = (param != NULL);
             item_is_enum = (menu_item->value != NULL) && !item_is_command;
-            mode_is_values = ((mode & GUI_MENU_DRAW_MODE_VALUES) > 0);
+            mode_is_values = ((mode & GUI_MENU_DRAW_MODE_VALUES) > 0) || item_is_autoupdate;
             if (item_is_selected) {
                 if (menu_explorer_state_edit(&menu->explorer)) 
                     mode_is_edit = ((mode & GUI_MENU_DRAW_MODE_EDIT) > 0);

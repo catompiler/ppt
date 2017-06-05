@@ -15,7 +15,10 @@
 #define MENU_EXPLORER_DISPLAYED_COUNT 7
 
 // Время повторного запроса пароля для предоставления прав пользователя в сек.
-#define MENU_EXPLORER_USER_RESET_SEC 10
+#define MENU_EXPLORER_USER_RESET_SEC 60
+
+// Автообновление значений пунктов меню (измеренных) 
+#define MENU_EXPLORER_AUTO_UPDATE_VALUES_SEC 4
 
 // Тип состояния меню
 typedef enum _Menu_Explorer_State {
@@ -68,6 +71,7 @@ struct _Menu_Explorer {
     menu_explorer_state_t state; //!< Состояние меню (режим)
     gui_menu_draw_mode_t draw_mode; //!< Режим перерисовки после обновления состояния
     counter_t touch; //!< Последнее время обращения пользователя
+    counter_t autoupdate; //!< Время автообновления
     menu_user_t user; //!< Права доступа текущего пользователя
 };
 
