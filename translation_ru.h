@@ -250,6 +250,45 @@ TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST, "Доступ по паролю:")
 // запрос пароля "Нажмите Esc чтобы выйти"
 TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST_ESC, "Нажмите Esc чтобы выйти") 
         
+// Значения, отображаемые 
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUES, "Отображаемые значения")
+// Напряжение фазы
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U, "Напряжение фазы")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ALARM_MAX, "Ошибка (макс.)")
+// Напряжение якоря
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT, "Напряжение якоря")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_ALARM_MAX, "Ошибка (макс.)")
+// Ток фазы
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I, "Ток фазы")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ALARM_MAX, "Ошибка (макс.)")
+// Ток якоря
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT, "Ток якоря")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_ALARM_MAX, "Ошибка (макс.)")
+// Ток возбуждения
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC, "Ток возбуждения")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_ALARM_MAX, "Ошибка (макс.)")
+// Температура радиатора
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP, "Температура радиатора")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_ALARM_MAX, "Ошибка (макс.)")
+        
 //! Описание ошибок привода
 TEXT_TR(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL, "E#01: Данные питания не поступают с АЦП.")
 TEXT_TR(TR_ID_DRIVE_ERROR_POWER_INVALID, "E#02: Неправильные значения питания.")

@@ -495,6 +495,45 @@
 //! Сообщение: Нажмите Esc для выхода
 #define TR_ID_MENU_PASSWORD_REQUEST_ESC 1013
 
+// Значения, отображаемые 
+#define TR_ID_MENU_GUI_TILE_VALUES                      1210
+// Напряжение фазы
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U               1220
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ALARM_MIN     1221
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_WARN_MIN      1222
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_WARN_MAX      1223
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ALARM_MAX     1224
+// Напряжение якоря
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT               1230
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_ALARM_MIN     1231
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_WARN_MIN      1232
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_WARN_MAX      1233
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_U_ROT_ALARM_MAX     1234
+// Ток фазы
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I                        1240
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ALARM_MIN              1241
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_WARN_MIN               1242
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_WARN_MAX               1243
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ALARM_MAX              1244
+// Ток якоря
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT                        1250
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_ALARM_MIN              1251
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_WARN_MIN               1252
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_WARN_MAX               1253
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_ROT_ALARM_MAX              1254
+// Ток возбуждения
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC                        1260
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_ALARM_MIN              1261
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_WARN_MIN               1262
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_WARN_MAX               1263
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_EXC_ALARM_MAX              1264
+// Температура радиатора
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP                        1270
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_ALARM_MIN              1271
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MIN               1272
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MAX               1273
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_ALARM_MAX              1274
+
 //! Описание ошибок привода
 #define TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL  2101 //!< Данные питания не поступают с АЦП.
 #define TR_ID_DRIVE_ERROR_POWER_INVALID         2102 //!< Неправильные значения питания, см. drive_power_error_t.
