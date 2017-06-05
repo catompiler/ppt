@@ -270,6 +270,7 @@ static void make_gui_struct(void) {
         for (j = 0; j < GUI_HOME_TILES_HEIGHT; j++) {
             int k = i * GUI_HOME_TILES_WIDTH + j;
             gui_tile_t* tile = &gui.tiles[k];
+            tile->id = k;
             gui_tile_init_parent(tile, &gui.gui, GUI_WIDGET(&gui.home));
             gui_widget_move(GUI_WIDGET(tile), x, y);
             gui_widget_resize(GUI_WIDGET(tile), GUI_TILE_WIDTH, GUI_TILE_HEIGHT);
@@ -376,35 +377,16 @@ void drive_gui_update_tiles()
 {
     int i;
     for (i = 0; i < GUI_HOME_TILES_COUNT; i++) {
+        gui_tile_t* tile = &gui.tiles[i];
         param_t* param = settings_param_by_id(gui_tiles_values[i]);
         uint32_t val = settings_param_valueu(param);
         if (val < 0 || val > GUI_TILE_TYPES_COUNT) val = 0;
-        gui_tile_t* tile = &gui.tiles[i];
+        
         // изменения показания
         gui_tile_set_type(tile, gui_tile_types[val]);
         // обновление значения
         gui_tile_repaint_value(&gui.tiles[i], NULL);
     }
-
-    /**
-    gui_tile_status_t new_tile_status = GUI_TILE_STATUS_OK;
-
-    if (cur3 > 150) {
-        new_tile_status = GUI_TILE_STATUS_ALARM;
-    } else if (cur3 > 70) {
-        new_tile_status = GUI_TILE_STATUS_WARNING;
-    }
-
-    if (new_tile_status != gui_tile_status(&gui.tiles[3])) {
-        gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), false);
-        gui_tile_set_value(&gui.tiles[3], time_str);
-        gui_widget_set_repaint_enable(GUI_WIDGET(&gui.tiles[3]), true);
-        gui_tile_set_status(&gui.tiles[3], new_tile_status);
-    }
-    else {
-        gui_tile_set_value(&gui.tiles[3], time_str);
-    }
-    */
 }
 
 void drive_gui_modbus_set_last_time()

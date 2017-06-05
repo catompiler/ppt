@@ -495,5 +495,20 @@
 //! Сообщение: Нажмите Esc для выхода
 #define TR_ID_MENU_PASSWORD_REQUEST_ESC 1013
 
+//! Описание ошибок привода
+#define TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL  2101 //!< Данные питания не поступают с АЦП.
+#define TR_ID_DRIVE_ERROR_POWER_INVALID         2102 //!< Неправильные значения питания, см. drive_power_error_t.
+#define TR_ID_DRIVE_ERROR_EMERGENCY_STOP        2103 //!< Аварийный останов (Грибок).
+#define TR_ID_DRIVE_ERROR_PHASE                 2104 //!< Ошибка состояния фаз.
+#define TR_ID_DRIVE_ERROR_PHASE_ANGLE           2105 //!< Ошибка угла между фазами.
+#define TR_ID_DRIVE_ERROR_PHASE_SYNC            2106 //!< Ошибка синхронизации фаз.
+#define TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD      2107 //!< Тепловая защита.
+#define TR_ID_DRIVE_ERROR_ROT_BREAK             2108 //!< Обрыв якоря.
+//! Описание предупреждений привода
+#define TR_ID_DRIVE_WARNING_POWER                     2202 //!< Предупреждение по питанию.
+#define TR_ID_DRIVE_WARNING_PHASE_ANGLE               2203 //!< Ошибка угла между фазами.
+#define TR_ID_DRIVE_WARNING_PHASE_SYNC                2204 //!< Ошибка синхронизации фаз.
+#define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
+
 #endif /* TRANSLATIONS_IDS_H */
 

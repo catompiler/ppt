@@ -131,7 +131,7 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
 
 void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height);
 
-void gui_menu_string_line_wrapping(painter_t* painter, const char* source, graphics_size_t sx, graphics_size_t sy, graphics_size_t width, graphics_size_t height);
+EXTERN bool gui_menu_string_line_wrapping(painter_t* painter, const char* source, graphics_size_t* sx, graphics_size_t* sy, graphics_size_t width, graphics_size_t height);
 
 void gui_menu_value_to_str(param_t* param, char* str, size_t len);
 

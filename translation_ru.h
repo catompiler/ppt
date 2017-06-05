@@ -250,6 +250,21 @@ TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST, "Доступ по паролю:")
 // запрос пароля "Нажмите Esc чтобы выйти"
 TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST_ESC, "Нажмите Esc чтобы выйти") 
         
+//! Описание ошибок привода
+TEXT_TR(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL, "E#01: Данные питания не поступают с АЦП.")
+TEXT_TR(TR_ID_DRIVE_ERROR_POWER_INVALID, "E#02: Неправильные значения питания.")
+TEXT_TR(TR_ID_DRIVE_ERROR_EMERGENCY_STOP, "E#04: Аварийный останов.")
+TEXT_TR(TR_ID_DRIVE_ERROR_PHASE, "E#08: Ошибка состояния фаз.")
+TEXT_TR(TR_ID_DRIVE_ERROR_PHASE_ANGLE, "E#10: Ошибка угла между фазами.")
+TEXT_TR(TR_ID_DRIVE_ERROR_PHASE_SYNC, "E#20: Ошибка синхронизации фаз.")
+TEXT_TR(TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD, "E#40: Тепловая защита.")
+TEXT_TR(TR_ID_DRIVE_ERROR_ROT_BREAK, "E#80: Обрыв якоря.")
+//! Описание предупреждений привода
+TEXT_TR(TR_ID_DRIVE_WARNING_POWER, "W#02: Предупреждение по питанию.")
+TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_ANGLE, "W#10: Ошибка угла между фазами.")
+TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_SYNC, "W#20: Ошибка синхронизации фаз.")
+TEXT_TR(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD, "W#40: Перегрев.")
+        
 TEXT_TRS_END()
 
 #endif /* TRANSLATION_RU_H */

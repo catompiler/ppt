@@ -13,9 +13,30 @@
 #include "gui/gui_widget.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
+#include "drive_events.h"
+#include "counter/counter.h"
 
 #define GUI_TILE_VALUE_FONT_WIDTH 24
 #define GUI_TILE_VALUE_FONT_SPACE 2
+
+
+typedef bool (*gui_tile_error_condition_callback_t)();
+
+//! Тип дескриптора условия отображения ошибок.
+typedef struct _Gui_Tile_Condition {
+    gui_tile_error_condition_callback_t callback; // функция-условие отображения ошибки
+    uint32_t param; // параметр функции условия
+    const char* text;               // текст ошибки
+} gui_tile_error_condition_t;
+
+//! Начинает список условий отображения ошибок.
+#define GUI_TILE_CONDITIONS(arg_name, arg_count)\
+        static const gui_tile_error_condition_t arg_name[arg_count] = 
+
+//! Описывает дескриптор условия отображения иконки.
+#define GUI_TILE_CONDITION(arg_callback, arg_param, arg_text)\
+        { .callback = (gui_tile_error_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .text = arg_text }
+
 
 //! Статус плитки.
 typedef enum _Gui_Tile_Status {
@@ -46,6 +67,8 @@ struct _Gui_Tile_Type {
         .alarm_min = arg_alarm_min, .warn_min = arg_warn_min,\
         .warn_max = arg_warn_max, .alarm_max = arg_alarm_max }
 
+#define TILE_TIMEOUT_ERROR_UPDATE 10
+
 //! Список типов плитки (отображаемых значений)
 #define GUI_TILE_TYPES_COUNT 10
 #define GUI_TILE_TYPES_MIN 0
@@ -53,10 +76,17 @@ struct _Gui_Tile_Type {
 #define GUI_TILE_TYPES(arg_name, arg_count)\
         static const gui_tile_type_t arg_name[arg_count] = 
 
+typedef uint8_t gui_tile_id_t;
+
 struct _Gui_Tile {
     gui_widget_t super; //!< Суперкласс.
+    gui_tile_id_t id; //!< Идентификатор параметра плитки.
     gui_tile_type_t type; //!< Тип плитки (отображаемое значение)
-    const char* errors; //!< Сообщения об ошибках.
+    drive_errors_t errors; //!< Отображаемые ошибки
+    drive_warnings_t warnings; //!< Отображаемые предупреждения
+    uint8_t show_error_break; //!< Индекс последней отображаемой ошибки (которая отобразилась не полностью)
+    counter_t last_error_update; //!< Предыдушее время обновления отображения ошибок
+    bool update_errors; //! Необходимость обновления отображения ошибок
     gui_tile_status_t status; //!< Статус плитки.
     graphics_color_t status_color; //!< Цвет фона плитки
 };
