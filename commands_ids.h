@@ -27,6 +27,10 @@
  */
 #define CMD_ID_STATE_SAVE       40
 /**
+ * Меню сброс настроек
+ */
+#define CMD_ID_CLEAR_EVENTS       45
+/**
  * Меню Настройки по умолчанию
  */
 #define CMD_ID_SETTINGS_DEFAULT 50

@@ -61,6 +61,10 @@ bool command_state_save(void) {
     return (drive_tasks_write_status_event() == E_NO_ERROR);
 }
 
+bool command_clear_events(void) {
+    return (drive_tasks_clear_events() == E_NO_ERROR);
+}
+
 bool command_settings_default(void) {
     return (settings_default() == E_NO_ERROR);
 }

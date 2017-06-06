@@ -398,6 +398,8 @@
 #define TR_ID_MENU_CMD_SETTINGS_DEFAULT 486
 //! Тест светодиодов
 #define TR_ID_MENU_CMD_TEST_LEDS        487
+//! Сброс ошибок
+#define TR_ID_MENU_CMD_CLEAR_EVENTS     488
 
 //! Меню Статус привода
 #define TR_ID_MENU_STATUS 490
