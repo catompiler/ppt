@@ -24,6 +24,8 @@
 #define TR_ID_UNITS_DEGREE 125
 //! Градусы цельсия.
 #define TR_ID_UNITS_DEGREE_CELSIUS 130
+//! Обороты.
+#define TR_ID_UNITS_RPM 135
 
 /**
  * Перечисления меню.
@@ -417,10 +419,12 @@
 #define TR_ID_MENU_MESS_PARAM_ID_POWER_I_C                      517
 #define TR_ID_MENU_MESS_PARAM_ID_POWER_I_ROT                    518
 #define TR_ID_MENU_MESS_PARAM_ID_POWER_I_EXC                    519
-#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP                  520
-#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM               521
-#define TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE        522
-#define TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE           523
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_FAN                    520
+#define TR_ID_MENU_MESS_PARAM_ID_POWER_I_REF                    521
+#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP                  522
+#define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM               523
+#define TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE        524
+#define TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE           525
 
 #define TR_ID_HELP_POWER            550
 //! Сеть.
@@ -482,6 +486,9 @@
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
 #define TR_ID_ENUM_HEATSINK_TEMP            740
+#define TR_ID_ENUM_HEATSINK_FAN_RPM         742
+#define TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE  744
+#define TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE     746
 // /**
 //  * .
 //  */
@@ -508,8 +515,19 @@
 #define TR_ID_HOME_ANCHOR_CURRENT 920
 //! Ток возбуждения
 #define TR_ID_HOME_EXCITATION_CURRENT 930
+//! Ток вентилятора.
+#define TR_ID_HOME_POWER_I_FAN  934
+//! Ток 4-20 мА.
+#define TR_ID_HOME_POWER_I_REF  936
 //! Температура радиатора
 #define TR_ID_HOME_HEATSINK_TEMP 940
+//! Обороты вентилятора охлаждения радиатора
+#define TR_ID_HOME_HEATSINK_FAN_RPM  942 
+//! Угол открытия основных тиристоров.
+#define TR_ID_HOME_TRIACS_PAIRS_OPEN_ANGLE 944
+//! Угол открытия основных симистора возбуждения.
+#define TR_ID_HOME_TRIAC_EXC_OPEN_ANGLE 946
+        
 
 //! Заголовок меню
 #define TR_ID_MENU_HEADER_TITLE  1010
@@ -557,6 +575,36 @@
 #define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MIN               1272
 #define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_WARN_MAX               1273
 #define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_TEMP_ALARM_MAX              1274
+// Ток вентилятора
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_FAN                        1280
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_FAN_ALARM_MIN              1281
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_FAN_WARN_MIN               1282
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_FAN_WARN_MAX               1283
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_FAN_ALARM_MAX              1284
+// Ток 4-20.
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_REF                        1290
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_REF_ALARM_MIN              1291
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_REF_WARN_MIN               1292
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_REF_WARN_MAX               1293
+#define TR_ID_MENU_GUI_TILE_VALUE_POWER_I_REF_ALARM_MAX              1294
+// Обороты вентилятора радиатора.
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_FAN_RPM                        1300
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_FAN_RPM_ALARM_MIN              1301
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_FAN_RPM_WARN_MIN               1302
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_FAN_RPM_WARN_MAX               1303
+#define TR_ID_MENU_GUI_TILE_VALUE_HEATSINK_FAN_RPM_ALARM_MAX              1304
+// Угол открытия тиристоров.
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIACS_PAIRS_OPEN_ANGLE                 1310
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIACS_PAIRS_OPEN_ANGLE_ALARM_MIN       1311
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIACS_PAIRS_OPEN_ANGLE_WARN_MIN        1312
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIACS_PAIRS_OPEN_ANGLE_WARN_MAX        1313
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIACS_PAIRS_OPEN_ANGLE_ALARM_MAX       1314
+// Угол открытия возбуждения.
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE                     1320
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MIN           1321
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MIN            1322
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX            1323
+#define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX           1324
 
 //! Описание ошибок привода
 #define TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL  2101 //!< Данные питания не поступают с АЦП.
