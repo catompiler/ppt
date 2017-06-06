@@ -239,10 +239,10 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
 
                 // измениение статуса (цвета плитки)
                 gui_tile_status_t ch_status = GUI_TILE_STATUS_OK;
-                if (valf <= alarm_min || valf >= alarm_max) {
+                if (valf < alarm_min || valf > alarm_max) {
                     ch_status = GUI_TILE_STATUS_ALARM;
                 }
-                else if (valf <= warn_min || valf >= warn_max) {
+                else if (valf < warn_min || valf > warn_max) {
                     ch_status = GUI_TILE_STATUS_WARNING;
                 }
                 // перерисовывается только при изменении статуса
