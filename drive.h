@@ -83,7 +83,8 @@ typedef enum _Drive_Error {
     DRIVE_ERROR_PHASE_ANGLE          = 0x10, //!< Ошибка угла между фазами.
     DRIVE_ERROR_PHASE_SYNC           = 0x20, //!< Ошибка синхронизации фаз.
     DRIVE_ERROR_THERMAL_OVERLOAD     = 0x40, //!< Тепловая защита.
-    DRIVE_ERROR_ROT_BREAK            = 0x80 //!< Обрыв якоря.
+    DRIVE_ERROR_ROT_BREAK            = 0x80, //!< Обрыв якоря.
+    DRIVE_ERROR_HEATSINK_TEMP        = 0x200 //!< Перегрев радиатора.
 } drive_error_t;
 
 //! Тип ошибок привода.
@@ -127,11 +128,13 @@ typedef enum _Drive_Power_Error {
 typedef uint32_t drive_power_errors_t;
 
 typedef enum _Drive_Warning {
-    DRIVE_WARNING_NONE  = 0x0, //!< Нет предупреждений.
-    DRIVE_WARNING_POWER = 0x2,  //!< Предупреждение по питанию.
-    DRIVE_WARNING_PHASE_ANGLE = 0x10, //!< Ошибка угла между фазами.
-    DRIVE_WARNING_PHASE_SYNC  = 0x20, //!< Ошибка синхронизации фаз.
-    DRIVE_WARNING_THERMAL_OVERLOAD = 0x40 //!< Перегрев.
+    DRIVE_WARNING_NONE             = 0x0, //!< Нет предупреждений.
+    DRIVE_WARNING_POWER            = 0x2,  //!< Предупреждение по питанию.
+    DRIVE_WARNING_PHASE_ANGLE      = 0x10, //!< Ошибка угла между фазами.
+    DRIVE_WARNING_PHASE_SYNC       = 0x20, //!< Ошибка синхронизации фаз.
+    DRIVE_WARNING_THERMAL_OVERLOAD = 0x40, //!< Перегрев.
+    DRIVE_WARNING_FAN_FAIL         = 0x100, //!< Ошибка вентилятора.
+    DRIVE_WARNING_HEATSINK_TEMP    = 0x200 //!< Перегрев радиатора.
 } drive_warning_t;
 
 //! Тип предупреждений привода.

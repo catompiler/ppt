@@ -224,6 +224,22 @@
  * Время охлаждения в эко-режиме.
  */
 #define PARAM_ID_FAN_ECO_COOLING_TIME 1505
+/*
+ * Номинальный ток вентилятора, А.
+ */
+#define PARAM_ID_FAN_I_NOM 1510
+/*
+ * Шум нуля тока вентилятора, А.
+ */
+#define PARAM_ID_FAN_I_ZERO_NOISE 1511
+/**
+ * Время срабатывания защиты вентилятора, мс.
+ */
+#define PARAM_ID_FAN_PROT_TIME 1515
+/**
+ * Значение уровеня предупреждения превышения тока вентилятора, %.
+ */
+#define PARAM_ID_FAN_PROT_OVF_LEVEL 1516
 
 
 /////////////
@@ -1085,6 +1101,14 @@
  * Ток возбуждения.
  */
 #define PARAM_ID_POWER_I_EXC 8108
+/**
+ * Ток 4-20 мА.
+ */
+#define PARAM_ID_POWER_I_REF 8109
+/**
+ * Ток вентилятора.
+ */
+#define PARAM_ID_POWER_I_FAN 8110
 
 /**
  * Температура радиатора.

@@ -6,6 +6,7 @@
 #include "drive_phase_state.h"
 #include "drive.h"
 #include "drive_phase_sync.h"
+#include "drive_temp.h"
 //#include "defs/defs.h"
 
 
@@ -43,6 +44,17 @@ typedef struct _Drive_TOP {
     bool overheat; //!< Флаг перегрева.
     drive_prot_action_t action; //!< Действие при срабатывании.
 } drive_top_t;
+
+//! Структура защиты вентилятора.
+typedef struct _Drive_Fan {
+    bool enabled; //!< Разрешение защиты вентилятора.
+    drive_prot_base_item_t item_idle; //!< Элемент нулевого тока.
+    drive_prot_base_item_t item_ovf; //!< Элемент превышения тока.
+    drive_prot_base_item_t item_udf; //!< Элемент понижения тока.
+    fixed32_t I_fan_nom; //!< Номинальный ток вентилятора.
+    fixed32_t I_fan_zero_noise; //!< Шум нуля тока вентилятора.
+    fixed32_t I_fan_ovf; //!< Уровень срабатывания защиты по превышению тока.
+} drive_fan_t;
 
 /*
  * Защита питания.
@@ -370,6 +382,7 @@ typedef struct _Drive_Protection {
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
+    drive_fan_t fan; //!< Защита вентилятора.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
     drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
 } drive_protection_t;
@@ -739,6 +752,92 @@ static bool drive_prot_check_rot_break(drive_protection_item_t* item)
 }
 
 /*
+ * Защита вентилятора.
+ */
+
+/**
+ * Инициализирует защиту вентилятора.
+ * @return Код ошибки.
+ */
+//err_t drive_protection_fan_init(void)
+//{
+//}
+
+/**
+ * Обновляет настройки защиты вентилятора.
+ */
+void drive_protection_fan_update_settings(void)
+{
+    drive_prot.fan.I_fan_nom = settings_valuef(PARAM_ID_FAN_I_NOM);
+    drive_prot.fan.I_fan_zero_noise = settings_valuef(PARAM_ID_FAN_I_ZERO_NOISE);
+    drive_prot.fan.I_fan_ovf = drive_protection_get_ovf_level(drive_prot.fan.I_fan_nom, settings_valueu(PARAM_ID_FAN_PROT_OVF_LEVEL));
+    //
+    drive_prot_update_base_item_settings(&drive_prot.fan.item_idle, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
+    drive_prot_update_base_item_settings(&drive_prot.fan.item_ovf, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
+    drive_prot_update_base_item_settings(&drive_prot.fan.item_udf, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
+}
+
+/**
+ * Проверяет элемент защиты.
+ * @return Флаг срабатывания элемента защиты.
+ */
+ALWAYS_INLINE static bool drive_prot_fan_item_check(drive_prot_base_item_t* item, bool masked, bool valid)
+{
+    if(!drive_prot_base_item_enabled(item)) return false;
+    
+    bool prev_active = drive_prot_base_item_active(item);
+    bool new_active = drive_prot_check_base_item(item, masked, valid);
+    
+    return !prev_active && new_active;
+}
+
+bool drive_protection_fan_check(void)
+{
+    bool fan_run = drive_temp_fan_running();
+    
+    fixed32_t i_fan = drive_power_channel_real_value(DRIVE_POWER_Ifan);
+    
+    bool fan_i_zero = i_fan <= drive_prot.fan.I_fan_zero_noise;
+    bool fan_i_ovf = i_fan > drive_prot.fan.I_fan_ovf;
+    
+    bool fan_idle = drive_prot_fan_item_check(&drive_prot.fan.item_idle, !fan_run, fan_i_zero);
+    bool fan_udf = drive_prot_fan_item_check(&drive_prot.fan.item_udf, fan_run, !fan_i_zero);
+    bool fan_ovf = drive_prot_fan_item_check(&drive_prot.fan.item_ovf, fan_run, !fan_i_ovf);
+    
+    return fan_idle || fan_udf || fan_ovf;
+}
+
+bool drive_protection_fan_allow(void)
+{
+    bool fan_idle_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_idle) &&
+                          drive_prot_base_item_allow(&drive_prot.fan.item_idle);
+    
+    bool fan_udf_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_udf) &&
+                         drive_prot_base_item_allow(&drive_prot.fan.item_udf);
+    
+    bool fan_ovf_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_ovf) &&
+                         drive_prot_base_item_allow(&drive_prot.fan.item_ovf);
+    
+    return fan_idle_allow || fan_udf_allow || fan_ovf_allow;
+}
+
+bool drive_protection_fan_active(void)
+{
+    bool fan_idle_active = drive_prot_base_item_enabled(&drive_prot.fan.item_idle) &&
+                          drive_prot_base_item_active(&drive_prot.fan.item_idle);
+    
+    bool fan_udf_active = drive_prot_base_item_enabled(&drive_prot.fan.item_udf) &&
+                         drive_prot_base_item_active(&drive_prot.fan.item_udf);
+    
+    bool fan_ovf_active = drive_prot_base_item_enabled(&drive_prot.fan.item_ovf) &&
+                         drive_prot_base_item_active(&drive_prot.fan.item_ovf);
+    
+    return fan_idle_active || fan_udf_active || fan_ovf_active;
+}
+
+
+
+/*
  * Основные функции защиты.
  */
 
@@ -760,6 +859,8 @@ void drive_protection_update_settings(void)
     drive_prot.I_rot_idle = settings_valuef(PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE);
     
     drive_protection_update_top_settings();
+    
+    drive_protection_fan_update_settings();
     
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     

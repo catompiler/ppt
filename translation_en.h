@@ -188,6 +188,10 @@ TEXT_TR(TR_ID_FAN_TEMP_MAX, "Temp fan max")
 TEXT_TR(TR_ID_FAN_RPM_MIN, "Fan rpm min")
 TEXT_TR(TR_ID_FAN_ECO_MODE_ENABLE, "Eco-mode enable")
 TEXT_TR(TR_ID_FAN_ECO_COOLING_TIME, "Eco-mode cooling time")
+TEXT_TR(TR_ID_FAN_I_NOM, "Fan nominal current")
+TEXT_TR(TR_ID_FAN_I_ZERO_NOISE, "Fan current zero noize")
+TEXT_TR(TR_ID_FAN_PROT_TIME, "Fan protection activation time")
+TEXT_TR(TR_ID_FAN_PROT_OVF_LEVEL, "Fan protection overflow warning level")
 
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Anchor\nvoltage")

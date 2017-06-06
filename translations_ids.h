@@ -452,6 +452,14 @@
 #define TR_ID_FAN_ECO_MODE_ENABLE    605
 //! Время охлаждения в эко-режиме.
 #define TR_ID_FAN_ECO_COOLING_TIME   606
+//! Номинальный ток вентилятора.
+#define TR_ID_FAN_I_NOM              607
+//! Шум нуля тока вентилятора, А.
+#define TR_ID_FAN_I_ZERO_NOISE       608
+//! Время срабатывания защиты вентилятора, мс.
+#define TR_ID_FAN_PROT_TIME          609
+//! Значение уровеня предупреждения превышения тока вентилятора, %.
+#define TR_ID_FAN_PROT_OVF_LEVEL     610
 
 
 //! Настройки интерфейса

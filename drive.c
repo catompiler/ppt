@@ -73,6 +73,8 @@ typedef struct _Drive_Parameters {
     param_t* param_i_c;
     param_t* param_i_rot;
     param_t* param_i_exc;
+    param_t* param_i_ref;
+    param_t* param_i_fan;
 } drive_parameters_t;
 
 //! Структура привода.
@@ -953,6 +955,19 @@ static void drive_check_prots(void)
             break;
     }
     
+    // Защита вентилятора.
+    if(drive_protection_fan_check()){
+        res_action = drive_prot_get_hard_action(res_action, DRIVE_PROT_ACTION_WARNING);
+    }
+    if(drive_protection_fan_active()){
+        drive_set_warning(DRIVE_WARNING_FAN_FAIL);
+    }else{
+        drive_clear_warning(DRIVE_WARNING_FAN_FAIL);
+    }
+    
+    
+    // Прочие защиты.
+    
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, DRIVE_ERROR_PHASE, DRIVE_WARNING_NONE));
     
@@ -1026,6 +1041,8 @@ static void drive_update_power_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_c, DRIVE_POWER_Ic);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_rot, DRIVE_POWER_Irot);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_ref, DRIVE_POWER_Iref);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_fan, DRIVE_POWER_Ifan);
 }
 
 //! Макрос для обновления параметра калибровочных данных.
@@ -1568,6 +1585,8 @@ err_t drive_init(void)
     drive.params.param_i_c = settings_param_by_id(PARAM_ID_POWER_I_C);
     drive.params.param_i_rot = settings_param_by_id(PARAM_ID_POWER_I_ROT);
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
+    drive.params.param_i_ref = settings_param_by_id(PARAM_ID_POWER_I_REF);
+    drive.params.param_i_fan = settings_param_by_id(PARAM_ID_POWER_I_FAN);
     
     //drive_set_state(DRIVE_STATE_INIT);
     drive.init_state = DRIVE_INIT_BEGIN;
