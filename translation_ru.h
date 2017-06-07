@@ -182,6 +182,7 @@ TEXT_TR(TR_ID_MENU_GUI_TILE_4, "Плитка 4")
 TEXT_TR(TR_ID_MENU_GUI_BUZZER, "Звуковое оповещение")
 TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ADMIN, "Пароль администратора")
 TEXT_TR(TR_ID_MENU_GUI_PASSWORD_ROOT, "Пароль ROOT")
+TEXT_TR(TR_ID_MENU_GUI_LANGUAGE, "Язык")
 TEXT_TR(TR_ID_MENU_COMMANDS, "Команды")
 TEXT_TR(TR_ID_MENU_CMD_START_STOP, "Старт/Стоп")
 TEXT_TR(TR_ID_MENU_CMD_ENABLE_DRIVE, "Enable drive")
@@ -254,6 +255,10 @@ TEXT_TR(TR_ID_ENUM_HEATSINK_TEMP, "Темп. радиат.")
 TEXT_TR(TR_ID_ENUM_HEATSINK_FAN_RPM, "Об. вент. рад.") 
 TEXT_TR(TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE, "Уг.откр.тир.") 
 TEXT_TR(TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE, "Уг.о.тир.возб.") 
+
+//! Язык интерфейса        
+TEXT_TR(TR_ID_ENUM_LANGUAGES_RU, "Русский (RU)") 
+TEXT_TR(TR_ID_ENUM_LANGUAGES_EN, "Английский (EN)")         
         
 //! Напряжения фаз
 TEXT_TR(TR_ID_HOME_PHASE_A_VOLTAGE, "Напряжение\nфазы A")

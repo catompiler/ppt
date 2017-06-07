@@ -89,6 +89,11 @@ MENU_VALUES(menu_enum_gui_tiles,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE)),   // PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE)),      // PARAM_ID_TRIAC_EXC_OPEN_ANGLE
 );
+//! Перечисление выбора языка интерфейса
+MENU_VALUES(menu_enum_gui_languages,
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_LANGUAGES_RU)),      // Русский
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_LANGUAGES_EN)),      // Английский
+);
 
 //! Перечисление .
 //MENU_VALUES(menu_enum_,
@@ -110,6 +115,7 @@ MENU_VALUE_ENUM(menu_val_dio_in_type, 0, MENU_ENUM_LEN(menu_enum_dio_in_type), m
 MENU_VALUE_ENUM(menu_val_dio_out_type, 0, MENU_ENUM_LEN(menu_enum_dio_out_type), menu_enum_dio_out_type);
 MENU_VALUE_ENUM(menu_val_gui_buzzer, 0, MENU_ENUM_LEN(menu_enum_gui_buzzer), menu_enum_gui_buzzer);
 MENU_VALUE_ENUM(menu_val_gui_tiles, 0, MENU_ENUM_LEN(menu_enum_gui_tiles), menu_enum_gui_tiles);
+MENU_VALUE_ENUM(menu_val_gui_languages, 0, MENU_ENUM_LEN(menu_enum_gui_languages), menu_enum_gui_languages);
 
 //MENU_VALUE_ENUM(menu_val_, 0, MENU_ENUM_LEN(menu_enum_), menu_enum_);
 
@@ -154,6 +160,7 @@ MENU_DESCRS(menu_descrs) {
             
     // Настройки интерфеса
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_GUI), NULL, 0, MENU_FLAG_ROOT, 0, 0),
+        MENU_DESCR(1, PARAM_ID_GUI_LANGUAGE, TEXT(TR_ID_MENU_GUI_LANGUAGE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_gui_languages),    
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_GUI_TILES), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, 0),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_1, TEXT(TR_ID_MENU_GUI_TILE_1), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_2, TEXT(TR_ID_MENU_GUI_TILE_2), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),

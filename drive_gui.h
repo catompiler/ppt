@@ -11,6 +11,14 @@
 #include "gui/widgets/gui_home.h"
 #include "gui/widgets/gui_menu.h"
 
+//! Список доступных языков интерфейса
+#define GUI_TILE_LANGUAGES_COUNT 2
+#define GUI_TILE_LANGUAGES_MIN 0
+#define GUI_TILE_LANGUAGES_MAX (GUI_TILE_TYPES_COUNT - 1)
+#define GUI_TILE_LANGUAGES(arg_name, arg_count)\
+        static const lang_id_t arg_name[arg_count] = 
+#define GUI_TILE_LANGUAGE(lang_id) lang_id
+
 //! Структура инициализации графического интерфейса привода.
 typedef struct _Drive_Gui_Init {
     tft9341_t* tft; //!< TFT.
@@ -23,6 +31,11 @@ typedef struct _Drive_Gui_Init {
  * @return Код ошибки.
  */
 extern err_t drive_gui_init(drive_gui_init_t* gui_is);
+
+/**
+ * Проверка параметра и изменение языка интерфейса
+ */
+extern bool drive_gui_check_language(void);
 
 /**
  * Перерисовывает графический интерфейс привода.

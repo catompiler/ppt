@@ -386,8 +386,10 @@
 //! Работа зуммера (звукового оповещения)
 #define TR_ID_MENU_GUI_PASSWORD_ROOT       479
 
+#define TR_ID_MENU_GUI_LANGUAGE             480
+
 //! Меню Команды
-#define TR_ID_MENU_COMMANDS     480
+#define TR_ID_MENU_COMMANDS     481
 //! Старт/стоп
 #define TR_ID_MENU_CMD_START_STOP       482
 //! Enable/drive
@@ -473,7 +475,7 @@
 #define TR_ID_ENUM_BUZZER_ON        710
 //! Зуммер отключен
 #define TR_ID_ENUM_BUZZER_OFF       711
-
+//! Измеренные значения
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ua     720
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ia     721 
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ub     722 
@@ -489,6 +491,9 @@
 #define TR_ID_ENUM_HEATSINK_FAN_RPM         742
 #define TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE  744
 #define TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE     746
+//! Языки интерфейса
+#define TR_ID_ENUM_LANGUAGES_RU             750
+#define TR_ID_ENUM_LANGUAGES_EN             751
 // /**
 //  * .
 //  */

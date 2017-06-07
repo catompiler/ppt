@@ -41,6 +41,12 @@
 // позиция иконки статусбара
 #define gui_statusbar_icon_pos(pos) pos * ICONS_STATUSBAR_HEIGHT
 
+// список доступных языков интерфейса
+GUI_TILE_LANGUAGES(gui_languages, GUI_TILE_TYPES_COUNT) {
+    GUI_TILE_LANGUAGE(TR_LANG_ID_RU),
+    GUI_TILE_LANGUAGE(TR_LANG_ID_EN),    
+};
+
 // список вариантов отображения значений на плитках
 GUI_TILE_TYPES(gui_tile_types, GUI_TILE_TYPES_COUNT) {
     GUI_TILE_TYPE(PARAM_ID_POWER_U_A, TEXT(TR_ID_HOME_PHASE_A_VOLTAGE), PARAM_ID_POWER_U_ALARM_MIN, PARAM_ID_POWER_U_WARN_MIN, PARAM_ID_POWER_U_WARN_MAX, PARAM_ID_POWER_U_ALARM_MAX),
@@ -192,6 +198,8 @@ static gui_metro_theme_t theme = MAKE_GUI_METRO_THEME(
 
 //! Тип структуры графического интерфейса привода.
 typedef struct _Drive_Gui {
+    lang_id_t language; // язык интерфейса
+    
     tft9341_t* tft;
     // GUI.
     gui_metro_t gui;
@@ -310,14 +318,28 @@ static void make_gui(void)
     localization_init(trs_main, TRANSLATIONS_COUNT(trs_main));
     localization_set_default_lang(TR_LANG_ID_RU);
     localization_set_default_text("No translation");
-    localization_set_lang(TR_LANG_ID_RU);
     
+    drive_gui_check_language();
+        
     // инициализация графического интерфейcа
     make_gui_struct();
     gui_metro_set_root_widget(&gui.gui, &gui.root_widget);
     gui_metro_set_focus_widget(&(gui.gui), GUI_WIDGET(&gui.home));
     
     gui_widget_set_visible(&gui.root_widget, true);
+}
+
+bool drive_gui_check_language(void) {
+    param_t* param = settings_param_by_id(PARAM_ID_GUI_LANGUAGE);
+    if (param) {
+        uint32_t val = settings_param_valueu(param);
+        if (gui.language != gui_languages[val]) {
+            gui.language = gui_languages[val];
+            localization_set_lang(gui.language);
+            return true; // язык изменился
+        }
+    }
+    return false; // язык не изменился
 }
 
 // перерисовка графич. интерфейса
@@ -330,6 +352,9 @@ void drive_gui_update(void)
 {    
     gui_statusbar_update_icons(&gui.statusbar, false);
     gui_statusbar_update(&gui.statusbar, NULL);
+    
+    // проверка языка интерфейса
+    if (drive_gui_check_language()) drive_gui_repaint();
     
     drive_gui_update_tiles();
 
