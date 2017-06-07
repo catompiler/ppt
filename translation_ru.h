@@ -211,6 +211,20 @@ TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP, "Температура ради
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM, "Обороты вент. радаит.")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE, "Угол открытия тиристоров")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE, "Угол открытия тир.возб.")
+
+// Цифровые входа
+TEXT_TR(TR_ID_MENU_DIGITAL_INPUTS_STATE, "Цифровые входа")
+TEXT_TR(TR_ID_MENU_DIGITAL_IN_1_STATE, "Вход 1")
+TEXT_TR(TR_ID_MENU_DIGITAL_IN_2_STATE, "Вход 2")
+TEXT_TR(TR_ID_MENU_DIGITAL_IN_3_STATE, "Вход 3")
+TEXT_TR(TR_ID_MENU_DIGITAL_IN_4_STATE, "Вход 4")
+TEXT_TR(TR_ID_MENU_DIGITAL_IN_5_STATE, "Вход 5")
+// Цифровые выхода
+TEXT_TR(TR_ID_MENU_DIGITAL_OUTPUTS_STATE, "Цифровые выхода")
+TEXT_TR(TR_ID_MENU_DIGITAL_OUT_1_STATE, "Выход 1")
+TEXT_TR(TR_ID_MENU_DIGITAL_OUT_2_STATE, "Выход 2")
+TEXT_TR(TR_ID_MENU_DIGITAL_OUT_3_STATE, "Выход 3")
+TEXT_TR(TR_ID_MENU_DIGITAL_OUT_4_STATE, "Выход 4") 
         
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
@@ -259,6 +273,10 @@ TEXT_TR(TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE, "Уг.о.тир.возб.")
 //! Язык интерфейса        
 TEXT_TR(TR_ID_ENUM_LANGUAGES_RU, "Русский (RU)") 
 TEXT_TR(TR_ID_ENUM_LANGUAGES_EN, "Английский (EN)")         
+ 
+//! Состояния цифровых входов/выходов
+TEXT_TR(TR_ID_ENUM_DIGITAL_STATES_ON, "Включен (1)") 
+TEXT_TR(TR_ID_ENUM_DIGITAL_STATES_OFF, "Выключен (0)")  
         
 //! Напряжения фаз
 TEXT_TR(TR_ID_HOME_PHASE_A_VOLTAGE, "Напряжение\nфазы A")

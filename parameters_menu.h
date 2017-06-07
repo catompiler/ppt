@@ -94,6 +94,11 @@ MENU_VALUES(menu_enum_gui_languages,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_LANGUAGES_RU)),      // Русский
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_LANGUAGES_EN)),      // Английский
 );
+//! Перечисления состояний цифрового входа/выхода
+MENU_VALUES(menu_enum_gui_digital_states,
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIGITAL_STATES_OFF)),      // Включен
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIGITAL_STATES_ON)),      // Выключен
+);
 
 //! Перечисление .
 //MENU_VALUES(menu_enum_,
@@ -116,6 +121,7 @@ MENU_VALUE_ENUM(menu_val_dio_out_type, 0, MENU_ENUM_LEN(menu_enum_dio_out_type),
 MENU_VALUE_ENUM(menu_val_gui_buzzer, 0, MENU_ENUM_LEN(menu_enum_gui_buzzer), menu_enum_gui_buzzer);
 MENU_VALUE_ENUM(menu_val_gui_tiles, 0, MENU_ENUM_LEN(menu_enum_gui_tiles), menu_enum_gui_tiles);
 MENU_VALUE_ENUM(menu_val_gui_languages, 0, MENU_ENUM_LEN(menu_enum_gui_languages), menu_enum_gui_languages);
+MENU_VALUE_ENUM(menu_val_gui_digital_states, 0, MENU_ENUM_LEN(menu_enum_gui_digital_states), menu_enum_gui_digital_states);
 
 //MENU_VALUE_ENUM(menu_val_, 0, MENU_ENUM_LEN(menu_enum_), menu_enum_);
 
@@ -140,7 +146,7 @@ MENU_DESCRS(menu_descrs) {
         // История событий
         //MENU_DESCR(1, 0, TEXT(TR_ID_MENU_EVENTS), NULL, 0, MENU_FLAG_EVENTS, 0, 0),
         // Измерения
-        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_MEASUREMENTS), NULL, 0, MENU_FLAG_VALUE, 0, 0),
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_MEASUREMENTS), NULL, 0, 0, 0, 0),
             MENU_DESCR(2, PARAM_ID_POWER_U_A, TEXT(TR_ID_MENU_MESS_PARAM_ID_POWER_U_A), NULL, 0, MENU_FLAG_VALUE, 0, 0),
             MENU_DESCR(2, PARAM_ID_POWER_U_B, TEXT(TR_ID_MENU_MESS_PARAM_ID_POWER_U_B), NULL, 0, MENU_FLAG_VALUE, 0, 0),
             MENU_DESCR(2, PARAM_ID_POWER_U_C, TEXT(TR_ID_MENU_MESS_PARAM_ID_POWER_U_C), NULL, 0, MENU_FLAG_VALUE, 0, 0),
@@ -157,7 +163,18 @@ MENU_DESCRS(menu_descrs) {
             MENU_DESCR(2, PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE, TEXT(TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE), NULL, 0, MENU_FLAG_VALUE, 0, 0),
             MENU_DESCR(2, PARAM_ID_TRIAC_EXC_OPEN_ANGLE, TEXT(TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE), NULL, 0, MENU_FLAG_VALUE, 0, 0),
         // Цифровые входа
-            
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_DIGITAL_INPUTS_STATE), NULL, 0, 0, 0, 0),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_IN_1_STATE, TEXT(TR_ID_MENU_DIGITAL_IN_1_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_IN_2_STATE, TEXT(TR_ID_MENU_DIGITAL_IN_2_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_IN_3_STATE, TEXT(TR_ID_MENU_DIGITAL_IN_3_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_IN_4_STATE, TEXT(TR_ID_MENU_DIGITAL_IN_4_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_IN_5_STATE, TEXT(TR_ID_MENU_DIGITAL_IN_5_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+        // Цифровые выхода
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_DIGITAL_OUTPUTS_STATE), NULL, 0, 0, 0, 0), 
+            MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_1_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_1_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_2_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_2_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_3_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_3_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+            MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_4_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_4_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
     // Настройки интерфеса
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_GUI), NULL, 0, MENU_FLAG_ROOT, 0, 0),
         MENU_DESCR(1, PARAM_ID_GUI_LANGUAGE, TEXT(TR_ID_MENU_GUI_LANGUAGE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_gui_languages),    

@@ -1168,6 +1168,49 @@
  */
 #define PARAM_ID_TRIAC_EXC_OPEN_ANGLE 8301
 
+/*
+ * Данные состояния цифровых входов.
+ */
+/**
+ * Состояние цифрового входа 1.
+ */
+#define PARAM_ID_DIGITAL_IN_1_STATE     8351
+/**
+ * Состояние цифрового входа 2.
+ */
+#define PARAM_ID_DIGITAL_IN_2_STATE     8352
+/**
+ * Состояние цифрового входа 3.
+ */
+#define PARAM_ID_DIGITAL_IN_3_STATE     8353
+/**
+ * Состояние цифрового входа 4.
+ */
+#define PARAM_ID_DIGITAL_IN_4_STATE     8354
+/**
+ * Состояние цифрового входа 5.
+ */
+#define PARAM_ID_DIGITAL_IN_5_STATE     8355
+
+/*
+ * Данные состояния цифровых выходов.
+ */
+/**
+ * Состояние цифрового выхода 1.
+ */
+#define PARAM_ID_DIGITAL_OUT_1_STATE     8361
+/**
+ * Состояние цифрового выхода 2.
+ */
+#define PARAM_ID_DIGITAL_OUT_2_STATE     8362
+/**
+ * Состояние цифрового выхода 3.
+ */
+#define PARAM_ID_DIGITAL_OUT_3_STATE     8363
+/**
+ * Состояние цифрового выхода 4.
+ */
+#define PARAM_ID_DIGITAL_OUT_4_STATE     8364
 
 ///////////////////////////
 // Отладочные параметры. //

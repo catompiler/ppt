@@ -379,7 +379,7 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
 
             text_x = width - 22;
             
-            if (item_is_selected) {
+            if (item_is_selected && !item_is_autoupdate) {
                 painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
                 if (mode_is_values || mode_is_edit)
                     painter_draw_string(painter, text_x, text_y, GUI_MENU_ENUM_VALUE_POSTFIX);

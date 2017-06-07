@@ -75,6 +75,17 @@ typedef struct _Drive_Parameters {
     param_t* param_i_exc;
     param_t* param_i_ref;
     param_t* param_i_fan;
+    // цифровые входа
+    param_t* param_digital_in_1;
+    param_t* param_digital_in_2;
+    param_t* param_digital_in_3;
+    param_t* param_digital_in_4;
+    param_t* param_digital_in_5;
+    // цифровые выхода
+    param_t* param_digital_out_1;
+    param_t* param_digital_out_2;
+    param_t* param_digital_out_3;
+    param_t* param_digital_out_4;
 } drive_parameters_t;
 
 //! Структура привода.
@@ -1045,6 +1056,34 @@ static void drive_update_power_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_fan, DRIVE_POWER_Ifan);
 }
 
+//! Макрос для обновления параметра состояния цифрового входа.
+#define DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(PARAM, INPUT)\
+    do {\
+        if(PARAM) settings_param_set_valueu(PARAM, (uint32_t)drive_dio_input_state(INPUT));\
+    }while(0)
+//! Макрос для обновления параметра состояния цифрового выхода.
+#define DRIVE_UPDATE_DIGITAL_OUTPUT_STATE_PARAM(PARAM, OUTPUT)\
+    do {\
+        if(PARAM) settings_param_set_valueu(PARAM, (uint32_t)drive_dio_output_state(OUTPUT));\
+    }while(0)
+/**
+ * Обновляет значения состояний цифровых входов/выходов в параметрах.
+ */
+static void drive_update_digital_state_parameters(void)
+{
+    // цифровые входа
+    DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(drive.params.param_digital_in_1, DRIVE_DIO_INPUT_1);
+    DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(drive.params.param_digital_in_2, DRIVE_DIO_INPUT_2);
+    DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(drive.params.param_digital_in_3, DRIVE_DIO_INPUT_3);
+    DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(drive.params.param_digital_in_4, DRIVE_DIO_INPUT_4);
+    DRIVE_UPDATE_DIGITAL_INPUT_STATE_PARAM(drive.params.param_digital_in_5, DRIVE_DIO_INPUT_5);
+    // цифровые выхода
+    DRIVE_UPDATE_DIGITAL_OUTPUT_STATE_PARAM(drive.params.param_digital_out_1, DRIVE_DIO_OUTPUT_1);
+    DRIVE_UPDATE_DIGITAL_OUTPUT_STATE_PARAM(drive.params.param_digital_out_2, DRIVE_DIO_OUTPUT_2);
+    DRIVE_UPDATE_DIGITAL_OUTPUT_STATE_PARAM(drive.params.param_digital_out_3, DRIVE_DIO_OUTPUT_3);
+    DRIVE_UPDATE_DIGITAL_OUTPUT_STATE_PARAM(drive.params.param_digital_out_4, DRIVE_DIO_OUTPUT_4);
+}
+
 //! Макрос для обновления параметра калибровочных данных.
 #define DRIVE_UPDATE_CALIBRATION_PARAM(PARAM_ID, CHANNEL)\
     do {\
@@ -1510,6 +1549,8 @@ static err_t drive_states_process(void)
     
     drive_update_power_parameters();
     
+    drive_update_digital_state_parameters();
+    
     return E_NO_ERROR;
 }
 
@@ -1587,6 +1628,18 @@ err_t drive_init(void)
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     drive.params.param_i_ref = settings_param_by_id(PARAM_ID_POWER_I_REF);
     drive.params.param_i_fan = settings_param_by_id(PARAM_ID_POWER_I_FAN);
+    
+    // цифровые входа
+    drive.params.param_digital_in_1 = settings_param_by_id(PARAM_ID_DIGITAL_IN_1_STATE);
+    drive.params.param_digital_in_2 = settings_param_by_id(PARAM_ID_DIGITAL_IN_2_STATE);
+    drive.params.param_digital_in_3 = settings_param_by_id(PARAM_ID_DIGITAL_IN_3_STATE);
+    drive.params.param_digital_in_4 = settings_param_by_id(PARAM_ID_DIGITAL_IN_4_STATE);
+    drive.params.param_digital_in_5 = settings_param_by_id(PARAM_ID_DIGITAL_IN_5_STATE);
+    // цифровые выхода
+    drive.params.param_digital_out_1 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_1_STATE);
+    drive.params.param_digital_out_2 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_2_STATE);
+    drive.params.param_digital_out_3 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_3_STATE);
+    drive.params.param_digital_out_4 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_4_STATE);
     
     //drive_set_state(DRIVE_STATE_INIT);
     drive.init_state = DRIVE_INIT_BEGIN;

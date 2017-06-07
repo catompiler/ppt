@@ -307,7 +307,7 @@ menu_item_t* menu_explorer_navi_in(menu_explorer_t* explorer)
             // обработка команды
             menu_explorer_navi_in_command(explorer);
         }
-        else { // параметр
+        else if (explorer->sel_object->flags & MENU_FLAG_DATA) { // параметр
             // переходим в режим редактирования
             menu_explorer_navi_in_param(explorer);
         }

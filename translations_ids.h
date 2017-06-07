@@ -428,6 +428,20 @@
 #define TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE        524
 #define TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE           525
 
+// Цифровые входа
+#define TR_ID_MENU_DIGITAL_INPUTS_STATE                 530
+#define TR_ID_MENU_DIGITAL_IN_1_STATE                   531
+#define TR_ID_MENU_DIGITAL_IN_2_STATE                   532
+#define TR_ID_MENU_DIGITAL_IN_3_STATE                   533
+#define TR_ID_MENU_DIGITAL_IN_4_STATE                   534
+#define TR_ID_MENU_DIGITAL_IN_5_STATE                   535
+// Цифровые выхода
+#define TR_ID_MENU_DIGITAL_OUTPUTS_STATE               540
+#define TR_ID_MENU_DIGITAL_OUT_1_STATE                 541
+#define TR_ID_MENU_DIGITAL_OUT_2_STATE                 542
+#define TR_ID_MENU_DIGITAL_OUT_3_STATE                 543
+#define TR_ID_MENU_DIGITAL_OUT_4_STATE                 544
+
 #define TR_ID_HELP_POWER            550
 //! Сеть.
 #define TR_ID_HELP_POWER_IN         551
@@ -494,6 +508,9 @@
 //! Языки интерфейса
 #define TR_ID_ENUM_LANGUAGES_RU             750
 #define TR_ID_ENUM_LANGUAGES_EN             751
+//! Состояния цифровых входов/выходов
+#define TR_ID_ENUM_DIGITAL_STATES_ON         760
+#define TR_ID_ENUM_DIGITAL_STATES_OFF        761
 // /**
 //  * .
 //  */
