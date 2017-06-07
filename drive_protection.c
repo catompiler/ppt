@@ -46,7 +46,7 @@ typedef struct _Drive_TOP {
 } drive_top_t;
 
 //! Структура защиты вентилятора.
-typedef struct _Drive_Fan {
+typedef struct _Drive_Fan_Prot {
     bool enabled; //!< Разрешение защиты вентилятора.
     drive_prot_base_item_t item_idle; //!< Элемент нулевого тока.
     drive_prot_base_item_t item_ovf; //!< Элемент превышения тока.
@@ -54,7 +54,13 @@ typedef struct _Drive_Fan {
     fixed32_t I_fan_nom; //!< Номинальный ток вентилятора.
     fixed32_t I_fan_zero_noise; //!< Шум нуля тока вентилятора.
     fixed32_t I_fan_ovf; //!< Уровень срабатывания защиты по превышению тока.
-} drive_fan_t;
+} drive_fan_prot_t;
+
+//! Структура защиты по температуре радиатора.
+typedef struct _Drive_Temp_Prot {
+    bool warn_enabled;
+    bool fault_enabled;
+} drive_temp_prot_t;
 
 /*
  * Защита питания.
@@ -323,6 +329,7 @@ typedef struct _Drive_Prot_Descr {
     param_id_t param_time; //!< Параметр времени срабатывания защиты.
     param_id_t param_latch_ena; //!< Параметр разрешения защёлки.
     param_id_t param_action; //!< Параметр действия.
+    drive_prot_action_t default_action; //!< Действие по-умолчанию.
 } drive_protection_descr_t;
 
 //! Тип элемента защиты.
@@ -343,28 +350,37 @@ static bool drive_prot_check_phases_angles(drive_protection_item_t* item);
 static bool drive_prot_check_phases_sync(drive_protection_item_t* item);
 // Проверка обрыва якоря.
 static bool drive_prot_check_rot_break(drive_protection_item_t* item);
+// Проверка вентилятора.
+static bool drive_prot_check_fan(drive_protection_item_t* item);
+// Проверка температуры радиатора.
+static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item);
 
 #define PROT_DESCR(arg_check_proc, arg_par_ena, arg_par_lvl, arg_par_time,\
-                   arg_par_lch_ena, arg_par_act)\
+                   arg_par_lch_ena, arg_par_act, arg_def_act)\
     {\
         .check_proc = arg_check_proc, .param_ena = arg_par_ena, .param_level = arg_par_lvl, .param_time = arg_par_time,\
-        .param_latch_ena = arg_par_lch_ena, .param_action = arg_par_act\
+        .param_latch_ena = arg_par_lch_ena, .param_action = arg_par_act, .default_action = arg_def_act\
     }
 
 
 static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_COUNT] = {
     PROT_DESCR(drive_prot_check_phase_state, PARAM_ID_PROT_PHASES_STATE_ENABLED, 0,
-               PARAM_ID_PROT_PHASES_STATE_TIME_MS, 0, PARAM_ID_PROT_PHASES_STATE_ACTION),
+               PARAM_ID_PROT_PHASES_STATE_TIME_MS, 0, PARAM_ID_PROT_PHASES_STATE_ACTION, 0),
     PROT_DESCR(drive_prot_check_phases_angles, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_FAULT_VALUE,
-               PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION),
+               PARAM_ID_PROT_PHASES_ANGLES_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_FAULT_ACTION, 0),
     PROT_DESCR(drive_prot_check_phases_angles, PARAM_ID_PROT_PHASES_ANGLES_WARN_ENABLED, PARAM_ID_PROT_PHASES_ANGLES_WARN_VALUE,
-               PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION),
+               PARAM_ID_PROT_PHASES_ANGLES_WARN_TIME_MS, PARAM_ID_PROT_PHASES_ANGLES_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_ANGLES_WARN_ACTION, 0),
     PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_FAULT_ENABLED, PARAM_ID_PROT_PHASES_SYNC_FAULT_VALUE,
-               PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION),
+               PARAM_ID_PROT_PHASES_SYNC_FAULT_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_FAULT_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_FAULT_ACTION, 0),
     PROT_DESCR(drive_prot_check_phases_sync, PARAM_ID_PROT_PHASES_SYNC_WARN_ENABLED, PARAM_ID_PROT_PHASES_SYNC_WARN_VALUE,
-               PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION),
+               PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION, 0),
     PROT_DESCR(drive_prot_check_rot_break, PARAM_ID_PROT_ROT_BREAK_ENABLED, PARAM_ID_PROT_ROT_BREAK_VALUE,
-               PARAM_ID_PROT_ROT_BREAK_TIME_MS, PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE, PARAM_ID_PROT_ROT_BREAK_ACTION),
+               PARAM_ID_PROT_ROT_BREAK_TIME_MS, PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE, PARAM_ID_PROT_ROT_BREAK_ACTION, 0),
+    PROT_DESCR(drive_prot_check_fan, PARAM_ID_FAN_CONTROL_ENABLE, 0, PARAM_ID_FAN_PROT_TIME, 0, 0, DRIVE_PROT_ACTION_WARNING),
+    PROT_DESCR(drive_prot_check_heatsink_temp, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ENABLED, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_VALUE,
+               0, 0, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ACTION, 0),
+    PROT_DESCR(drive_prot_check_heatsink_temp, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ENABLED, PARAM_ID_PROT_HEATSINK_TEMP_WARN_VALUE,
+               0, 0, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ACTION, 0),
 };
 
 
@@ -382,7 +398,7 @@ typedef struct _Drive_Protection {
     drive_power_errors_t prot_cutoff_errs_mask; //!< Маска ошибок защиты отсечки.
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
-    drive_fan_t fan; //!< Защита вентилятора.
+    drive_fan_prot_t fan; //!< Защита вентилятора.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
     drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
 } drive_protection_t;
@@ -396,7 +412,8 @@ static drive_protection_t drive_prot;
  */
 
 static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
-                        param_id_t param_ena, param_id_t param_time, param_id_t param_latch_ena, param_id_t param_action)
+                        param_id_t param_ena, param_id_t param_time, param_id_t param_latch_ena, param_id_t param_action,
+                        drive_prot_action_t default_action)
 {
     // Если отсутствует элемент - возврат.
     if(item == NULL) return;
@@ -444,7 +461,7 @@ static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
         item->action = settings_valueu(param_action);
     }else{
         // По-умолчанию - экстренное отключение.
-        item->action = DRIVE_PROT_ACTION_EMERGENCY_STOP;
+        item->action = default_action;
     }
 }
 
@@ -577,7 +594,7 @@ static void drive_prot_power_update_item_settings(drive_prot_index_t index)
     const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
     
     drive_prot_update_base_item_settings(&item->base_item,
-            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action);
+            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action, DRIVE_PROT_ACTION_EMERGENCY_STOP);
     
     // Значение уровня элемента защиты.
     fixed32_t ref_val = 0;
@@ -647,10 +664,12 @@ static void drive_prot_update_item_settings(drive_prot_index_t index)
     const drive_protection_descr_t* descr = drive_protection_get_item_descr(index);
     
     drive_prot_update_base_item_settings(&item->base_item,
-            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action);
+            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action, descr->default_action);
     
     // Значение уровня элемента защиты.
-    item->value_level = settings_valuef(descr->param_level);
+    if(descr->param_level){
+        item->value_level = settings_valuef(descr->param_level);
+    }
 }
 
 /**
@@ -751,47 +770,11 @@ static bool drive_prot_check_rot_break(drive_protection_item_t* item)
     return Urot <= item->value_level || Irot > drive_prot.I_rot_idle;
 }
 
-/*
- * Защита вентилятора.
- */
-
 /**
- * Инициализирует защиту вентилятора.
- * @return Код ошибки.
+ * Выполняет проверку вентилятора.
+ * @return Флаг допустимости элемента защиты.
  */
-//err_t drive_protection_fan_init(void)
-//{
-//}
-
-/**
- * Обновляет настройки защиты вентилятора.
- */
-void drive_protection_fan_update_settings(void)
-{
-    drive_prot.fan.I_fan_nom = settings_valuef(PARAM_ID_FAN_I_NOM);
-    drive_prot.fan.I_fan_zero_noise = settings_valuef(PARAM_ID_FAN_I_ZERO_NOISE);
-    drive_prot.fan.I_fan_ovf = drive_protection_get_ovf_level(drive_prot.fan.I_fan_nom, settings_valueu(PARAM_ID_FAN_PROT_OVF_LEVEL));
-    //
-    drive_prot_update_base_item_settings(&drive_prot.fan.item_idle, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
-    drive_prot_update_base_item_settings(&drive_prot.fan.item_ovf, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
-    drive_prot_update_base_item_settings(&drive_prot.fan.item_udf, PARAM_ID_FAN_CONTROL_ENABLE, PARAM_ID_FAN_PROT_TIME, 0, 0);
-}
-
-/**
- * Проверяет элемент защиты.
- * @return Флаг срабатывания элемента защиты.
- */
-ALWAYS_INLINE static bool drive_prot_fan_item_check(drive_prot_base_item_t* item, bool masked, bool valid)
-{
-    if(!drive_prot_base_item_enabled(item)) return false;
-    
-    bool prev_active = drive_prot_base_item_active(item);
-    bool new_active = drive_prot_check_base_item(item, masked, valid);
-    
-    return !prev_active && new_active;
-}
-
-bool drive_protection_fan_check(void)
+static bool drive_prot_check_fan(drive_protection_item_t* item)
 {
     bool fan_run = drive_temp_fan_running();
     
@@ -800,41 +783,34 @@ bool drive_protection_fan_check(void)
     bool fan_i_zero = i_fan <= drive_prot.fan.I_fan_zero_noise;
     bool fan_i_ovf = i_fan > drive_prot.fan.I_fan_ovf;
     
-    bool fan_idle = drive_prot_fan_item_check(&drive_prot.fan.item_idle, !fan_run, fan_i_zero);
-    bool fan_udf = drive_prot_fan_item_check(&drive_prot.fan.item_udf, fan_run, !fan_i_zero);
-    bool fan_ovf = drive_prot_fan_item_check(&drive_prot.fan.item_ovf, fan_run, !fan_i_ovf);
+    bool fan_idle_fail = !fan_run && !fan_i_zero;
+    bool fan_udf_fail = fan_run && fan_i_zero;
+    bool fan_ovf_fail = fan_run && fan_i_ovf;
     
-    return fan_idle || fan_udf || fan_ovf;
+    return !(fan_idle_fail || fan_udf_fail || fan_ovf_fail);
 }
 
-bool drive_protection_fan_allow(void)
+/**
+ * Выполняет проверку температуры радиатора.
+ * @return Флаг допустимости элемента защиты.
+ */
+static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item)
 {
-    bool fan_idle_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_idle) &&
-                          drive_prot_base_item_allow(&drive_prot.fan.item_idle);
-    
-    bool fan_udf_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_udf) &&
-                         drive_prot_base_item_allow(&drive_prot.fan.item_udf);
-    
-    bool fan_ovf_allow = drive_prot_base_item_enabled(&drive_prot.fan.item_ovf) &&
-                         drive_prot_base_item_allow(&drive_prot.fan.item_ovf);
-    
-    return fan_idle_allow || fan_udf_allow || fan_ovf_allow;
+    return drive_temp_heatsink_temp() <= item->value_level;
 }
 
-bool drive_protection_fan_active(void)
+/*
+ * Защита вентилятора.
+ */
+/**
+ * Обновляет настройки защиты вентилятора.
+ */
+void drive_protection_fan_update_settings(void)
 {
-    bool fan_idle_active = drive_prot_base_item_enabled(&drive_prot.fan.item_idle) &&
-                          drive_prot_base_item_active(&drive_prot.fan.item_idle);
-    
-    bool fan_udf_active = drive_prot_base_item_enabled(&drive_prot.fan.item_udf) &&
-                         drive_prot_base_item_active(&drive_prot.fan.item_udf);
-    
-    bool fan_ovf_active = drive_prot_base_item_enabled(&drive_prot.fan.item_ovf) &&
-                         drive_prot_base_item_active(&drive_prot.fan.item_ovf);
-    
-    return fan_idle_active || fan_udf_active || fan_ovf_active;
+    drive_prot.fan.I_fan_nom = settings_valuef(PARAM_ID_FAN_I_NOM);
+    drive_prot.fan.I_fan_zero_noise = settings_valuef(PARAM_ID_FAN_I_ZERO_NOISE);
+    drive_prot.fan.I_fan_ovf = drive_protection_get_ovf_level(drive_prot.fan.I_fan_nom, settings_valueu(PARAM_ID_FAN_PROT_OVF_LEVEL));
 }
-
 
 
 /*

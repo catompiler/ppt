@@ -347,6 +347,10 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     }else{
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
     }
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAN, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, true);
 }
 
 /**
@@ -955,16 +959,6 @@ static void drive_check_prots(void)
             break;
     }
     
-    // Защита вентилятора.
-    if(drive_protection_fan_check()){
-        res_action = drive_prot_get_hard_action(res_action, DRIVE_PROT_ACTION_WARNING);
-    }
-    if(drive_protection_fan_active()){
-        drive_set_warning(DRIVE_WARNING_FAN_FAIL);
-    }else{
-        drive_clear_warning(DRIVE_WARNING_FAN_FAIL);
-    }
-    
     
     // Прочие защиты.
     
@@ -985,6 +979,15 @@ static void drive_check_prots(void)
     
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_ROT_BREAK, DRIVE_ERROR_ROT_BREAK, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAN, DRIVE_ERROR_NONE, DRIVE_WARNING_FAN_FAIL));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, DRIVE_ERROR_HEATSINK_TEMP, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, DRIVE_ERROR_NONE, DRIVE_WARNING_HEATSINK_TEMP));
     
     
     // Если требуется действие.
