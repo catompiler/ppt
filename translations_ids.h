@@ -638,11 +638,14 @@
 #define TR_ID_DRIVE_ERROR_PHASE_SYNC            2106 //!< Ошибка синхронизации фаз.
 #define TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD      2107 //!< Тепловая защита.
 #define TR_ID_DRIVE_ERROR_ROT_BREAK             2108 //!< Обрыв якоря.
+#define TR_ID_DRIVE_ERROR_HEATSINK_TEMP         2109 //!< Перегрев радиатора.
 //! Описание предупреждений привода
 #define TR_ID_DRIVE_WARNING_POWER                     2202 //!< Предупреждение по питанию.
 #define TR_ID_DRIVE_WARNING_PHASE_ANGLE               2203 //!< Ошибка угла между фазами.
 #define TR_ID_DRIVE_WARNING_PHASE_SYNC                2204 //!< Ошибка синхронизации фаз.
 #define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
+#define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
+#define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
 
 #endif /* TRANSLATIONS_IDS_H */
 

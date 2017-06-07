@@ -51,8 +51,16 @@ typedef struct _Gui_Icon_Condition {
                             DRIVE_ERROR_POWER_DATA_NOT_AVAIL |\
                             DRIVE_ERROR_PHASE
 
+// ошибки по перегреву
+#define DRIVE_ERROR_OVERHEAT    DRIVE_ERROR_THERMAL_OVERLOAD |\
+                                DRIVE_ERROR_HEATSINK_TEMP
+
 //другие предупреждения
 #define DRIVE_WARNING_ETC 0xffffff
+
+// предупреждения по перегреву
+#define DRIVE_WARNING_OVERHEAT      DRIVE_WARNING_THERMAL_OVERLOAD |\
+                                    DRIVE_WARNING_HEATSINK_TEMP
 
 // ошибка по току возбуждения
 #define DRIVE_POWER_ERROR_Iexc  DRIVE_POWER_ERROR_UNDERFLOW_Iexc |\
@@ -135,7 +143,7 @@ typedef struct _Gui_Icon_Condition {
 EXTERN bool gui_statusbar_drive_ready();
 
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_ICON_CONDITIONS_COUNT 22
+#define GUI_ICON_CONDITIONS_COUNT 23
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // состояние
     GUI_ICON_CONDITION(gui_statusbar_drive_ready,     NULL,   0,  THEME_COLOR_BLUE_L,    &icons_statusbar_anim_ready),
@@ -147,18 +155,19 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_U,        ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_RED_L, NULL),
     GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_I,        ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_RED_L, NULL),
     GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_Ifan,     ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_RED_L, NULL),
-    GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT, THEME_COLOR_RED_L, NULL),
+    GUI_ICON_CONDITION(drive_error,         DRIVE_ERROR_OVERHEAT,       ICONS_STATUSBAR_VAL_OVERHEAT, THEME_COLOR_RED_L, NULL),
     GUI_ICON_CONDITION(drive_power_error,   DRIVE_POWER_ERROR_Iref,     ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_RED_L, NULL),
-    
+          
     // предупреждения
     GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_ETC,              ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iexc,       ICONS_STATUSBAR_VAL_FAULT_F,    THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_U,          ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_I,          ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Ifan,       ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_YELLOW, NULL),
-    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_THERMAL_OVERLOAD, ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_OVERHEAT,         ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_FAN_FAIL,         ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_YELLOW, NULL),
-    
+ 
     // информация
     GUI_ICON_CONDITION(drive_gui_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
     GUI_ICON_CONDITION(drive_gui_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),

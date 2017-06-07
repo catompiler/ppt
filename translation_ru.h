@@ -376,19 +376,23 @@ TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX, "Предупр
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX, "Ошибка (макс.)")
         
 //! Описание ошибок привода
-TEXT_TR(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL, "E#01: Данные питания не поступают с АЦП.")
-TEXT_TR(TR_ID_DRIVE_ERROR_POWER_INVALID, "E#02: Неправильные значения питания.")
-TEXT_TR(TR_ID_DRIVE_ERROR_EMERGENCY_STOP, "E#04: Аварийный останов.")
-TEXT_TR(TR_ID_DRIVE_ERROR_PHASE, "E#08: Ошибка состояния фаз.")
+TEXT_TR(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL, "E#1: Данные питания не поступают с АЦП.")
+TEXT_TR(TR_ID_DRIVE_ERROR_POWER_INVALID, "E#2: Неправильные значения питания.")
+TEXT_TR(TR_ID_DRIVE_ERROR_EMERGENCY_STOP, "E#4: Аварийный останов.")
+TEXT_TR(TR_ID_DRIVE_ERROR_PHASE, "E#8: Ошибка состояния фаз.")
 TEXT_TR(TR_ID_DRIVE_ERROR_PHASE_ANGLE, "E#10: Ошибка угла между фазами.")
 TEXT_TR(TR_ID_DRIVE_ERROR_PHASE_SYNC, "E#20: Ошибка синхронизации фаз.")
 TEXT_TR(TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD, "E#40: Тепловая защита.")
 TEXT_TR(TR_ID_DRIVE_ERROR_ROT_BREAK, "E#80: Обрыв якоря.")
+TEXT_TR(TR_ID_DRIVE_ERROR_HEATSINK_TEMP, "E#200: Перегрев радиатора.")
 //! Описание предупреждений привода
-TEXT_TR(TR_ID_DRIVE_WARNING_POWER, "W#02: Предупреждение по питанию.")
+TEXT_TR(TR_ID_DRIVE_WARNING_POWER, "W#2: Предупреждение по питанию.")
 TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_ANGLE, "W#10: Ошибка угла между фазами.")
 TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_SYNC, "W#20: Ошибка синхронизации фаз.")
 TEXT_TR(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD, "W#40: Перегрев.")
+TEXT_TR(TR_ID_DRIVE_WARNING_FAN_FAIL, "W#100: Ошибка вентилятора.")
+TEXT_TR(TR_ID_DRIVE_WARNING_HEATSINK_TEMP, "W#200: Перегрев радиатора.")
+      
         
 TEXT_TRS_END()
 
