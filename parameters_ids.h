@@ -353,6 +353,29 @@
 //! Действие.
 #define PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION 2244
 
+/*
+ * Защита от перегрева.
+ */
+/*
+ * Ошибки.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ENABLED 2250
+//! Значение.
+#define PARAM_ID_PROT_HEATSINK_TEMP_FAULT_VALUE 2251
+//! Действие.
+#define PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ACTION 2252
+/*
+ * Предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_HEATSINK_TEMP_WARN_ENABLED 2260
+//! Значение.
+#define PARAM_ID_PROT_HEATSINK_TEMP_WARN_VALUE 2261
+//! Действие.
+#define PARAM_ID_PROT_HEATSINK_TEMP_WARN_ACTION 2262
+
+
 
 /////////////////////
 // Защита питания. //

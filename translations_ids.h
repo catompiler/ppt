@@ -367,9 +367,10 @@
 #define TR_ID_MENU_PHASES_ANGLES_PROT 462
 //! Защита по углам между фазами.
 #define TR_ID_MENU_PHASES_SYNC_PROT   463
-
 //! Меню защиты от обрыва якоря.
-#define TR_ID_MENU_ROT_BREAK_PROT   470
+#define TR_ID_MENU_ROT_BREAK_PROT   464
+//! Меню защиты по температуре радиатора.
+#define TR_ID_MENU_HEATSINK_TEMP_PROT 465
 
 //! Меню интерфейса (GUI)
 #define TR_ID_MENU_GUI              471

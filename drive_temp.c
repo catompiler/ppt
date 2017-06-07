@@ -41,6 +41,7 @@ typedef struct _Drive_Temp {
     bool heatsink_temp_avail; //!< Доступность температуры радиатора.
     fixed32_t heatsink_temp; //!< Температура радиатора.
     param_t* heatsink_temp_param; //!< Параметр для записи температуры радиатора.
+    param_t* heatsink_fan_rpm_param; //!< Параметр для записи оборотов вентилятора.
 } drive_temp_t;
 
 //! Температура привода.
@@ -80,6 +81,7 @@ err_t drive_temp_init(drive_temp_init_t* temp_is)
     drive_temp_update_settings();
     
     drive_temp.heatsink_temp_param = settings_param_by_id(PARAM_ID_HEATSINK_TEMP);
+    drive_temp.heatsink_fan_rpm_param = settings_param_by_id(PARAM_ID_HEATSINK_FAN_RPM);
     
     return E_NO_ERROR;
 }
@@ -148,6 +150,9 @@ static void drive_temp_update_params(void)
 {
     if(drive_temp.heatsink_temp_param){
         settings_param_set_valuef(drive_temp.heatsink_temp_param, drive_temp.heatsink_temp);
+    }
+    if(drive_temp.heatsink_fan_rpm_param){
+        settings_param_set_valueu(drive_temp.heatsink_fan_rpm_param, drive_temp.fan_rpm);
     }
 }
 

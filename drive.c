@@ -75,6 +75,8 @@ typedef struct _Drive_Parameters {
     param_t* param_i_exc;
     param_t* param_i_ref;
     param_t* param_i_fan;
+    param_t* param_pairs_angle;
+    param_t* param_exc_angle;
     // цифровые входа
     param_t* param_digital_in_1;
     param_t* param_digital_in_2;
@@ -358,6 +360,10 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     }else{
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
     }
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAN, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, true);
 }
 
 /**
@@ -966,16 +972,6 @@ static void drive_check_prots(void)
             break;
     }
     
-    // Защита вентилятора.
-    if(drive_protection_fan_check()){
-        res_action = drive_prot_get_hard_action(res_action, DRIVE_PROT_ACTION_WARNING);
-    }
-    if(drive_protection_fan_active()){
-        drive_set_warning(DRIVE_WARNING_FAN_FAIL);
-    }else{
-        drive_clear_warning(DRIVE_WARNING_FAN_FAIL);
-    }
-    
     
     // Прочие защиты.
     
@@ -996,6 +992,15 @@ static void drive_check_prots(void)
     
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_ROT_BREAK, DRIVE_ERROR_ROT_BREAK, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAN, DRIVE_ERROR_NONE, DRIVE_WARNING_FAN_FAIL));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, DRIVE_ERROR_HEATSINK_TEMP, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, DRIVE_ERROR_NONE, DRIVE_WARNING_HEATSINK_TEMP));
     
     
     // Если требуется действие.
@@ -1037,10 +1042,29 @@ static void drive_check_power_inst(void)
     do {\
         if(PARAM) settings_param_set_valuef(PARAM, drive_power_channel_real_value(CHANNEL));\
     }while(0)
+
+//! Макрос для обновления параметра fixed32.
+#define DRIVE_UPDATE_PARAM_FIXED(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valuef(PARAM, VALUE);\
+    }while(0)
+
+//! Макрос для обновления параметра int.
+#define DRIVE_UPDATE_PARAM_INT(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valuei(PARAM, VALUE);\
+    }while(0)
+
+//! Макрос для обновления параметра uint.
+#define DRIVE_UPDATE_PARAM_UINT(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valueu(PARAM, VALUE);\
+    }while(0)
+
 /**
  * Обновляет значения питания в параметрах.
  */
-static void drive_update_power_parameters(void)
+static void drive_update_virtual_parameters(void)
 {
     if(!drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)) return;
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_a, DRIVE_POWER_Ua);
@@ -1054,6 +1078,9 @@ static void drive_update_power_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_ref, DRIVE_POWER_Iref);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_fan, DRIVE_POWER_Ifan);
+    
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pairs_angle, TRIACS_PAIRS_ANGLE_MAX_F - drive_regulator_rot_open_angle());
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_exc_angle, TRIAC_EXC_ANGLE_MAX_F - drive_regulator_exc_open_angle());
 }
 
 //! Макрос для обновления параметра состояния цифрового входа.
@@ -1547,7 +1574,7 @@ static err_t drive_states_process(void)
     
     drive_update_digital_outputs();
     
-    drive_update_power_parameters();
+    drive_update_virtual_parameters();
     
     drive_update_digital_state_parameters();
     
@@ -1628,6 +1655,8 @@ err_t drive_init(void)
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     drive.params.param_i_ref = settings_param_by_id(PARAM_ID_POWER_I_REF);
     drive.params.param_i_fan = settings_param_by_id(PARAM_ID_POWER_I_FAN);
+    drive.params.param_pairs_angle = settings_param_by_id(PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE);
+    drive.params.param_exc_angle = settings_param_by_id(PARAM_ID_TRIAC_EXC_OPEN_ANGLE);
     
     // цифровые входа
     drive.params.param_digital_in_1 = settings_param_by_id(PARAM_ID_DIGITAL_IN_1_STATE);

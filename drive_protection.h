@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 6
+#define DRIVE_PROT_ITEMS_COUNT 9
 
 /*
  * Индексы элементов защиты питания.
@@ -115,6 +115,11 @@
 #define DRIVE_PROT_ITEM_WARN_PHASES_SYNC     4
 
 #define DRIVE_PROT_ITEM_ROT_BREAK            5
+
+#define DRIVE_PROT_ITEM_FAN                  6
+
+#define DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP  7
+#define DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP   8
 
 
 //! Тип индекса элемента защиты.
@@ -409,27 +414,6 @@ extern drive_prot_action_t drive_protection_top_action(void);
  */
 extern drive_prot_action_t drive_protection_emergency_stop_action(void);
 
-/*
- * Защита вентилятора.
- */
-
-/**
- * Проверяет работу вентилятора.
- * @return Флаг срабатывания защиты вентилятора.
- */
-extern bool drive_protection_fan_check(void);
-
-/**
- * Получает флаг допустимой работы вентилятора.
- * @return Флаг допустимой работы вентилятора.
- */
-extern bool drive_protection_fan_allow(void);
-
-/**
- * Получает флаг активности защиты вентилятора.
- * @return Флаг активности защиты вентилятора.
- */
-extern bool drive_protection_fan_active(void);
 
 /*
  * Общие элементы защиты.

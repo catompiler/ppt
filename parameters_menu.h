@@ -10,7 +10,7 @@
 #include "translations_ids.h"
 #include "parameters_ids.h"
 #include "commands_ids.h"
-#include "gui/resources/resources_menu.h"
+
 
 /*
  * Перечисления типов для выбора в меню.
@@ -364,6 +364,15 @@ MENU_DESCRS(menu_descrs) {
                     MENU_DESCR(4, PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, TEXT(TR_ID_MENU_PROT_LEVEL_TIME_MS), NULL, 0, MENU_FLAG_DATA, 0, 0),
                     MENU_DESCR(4, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, TEXT(TR_ID_MENU_PROT_LATCH_ENABLE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_bool),
                     MENU_DESCR(4, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION, TEXT(TR_ID_MENU_PROT_ACTION), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_prot_action),
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_HEATSINK_TEMP_PROT), NULL, 0, 0, 0, 0),
+            MENU_DESCR(2, 0, TEXT(TR_ID_MENU_PROT_ERROR_LEVEL), NULL, 0, 0, 0, 0),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ENABLED, TEXT(TR_ID_MENU_PROT_ENABLE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_bool),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_VALUE, TEXT(TR_ID_MENU_PROT_LEVEL), NULL, 0, MENU_FLAG_DATA, 0, 0),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ACTION, TEXT(TR_ID_MENU_PROT_ACTION), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_prot_action),
+            MENU_DESCR(2, 0, TEXT(TR_ID_MENU_PROT_WARNING_LEVEL), NULL, 0, 0, 0, 0),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ENABLED, TEXT(TR_ID_MENU_PROT_ENABLE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_bool),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_WARN_VALUE, TEXT(TR_ID_MENU_PROT_LEVEL), NULL, 0, MENU_FLAG_DATA, 0, 0),
+                MENU_DESCR(3, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ACTION, TEXT(TR_ID_MENU_PROT_ACTION), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_prot_action),
         // Напряжение сети.
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_POWER_VOLTAGE), NULL, 0, 0, 0, 0),
             MENU_DESCR(2, 0, TEXT(TR_ID_MENU_CUTOFF), NULL, 0, 0, 0, 0),
