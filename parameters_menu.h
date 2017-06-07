@@ -30,7 +30,8 @@ MENU_VALUES(menu_enum_bool,
 //! Перечисление режима возбуждения.
 MENU_VALUES(menu_enum_exc_mode,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_EXC_MODE_FIXED)),
-    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_EXC_MODE_REGULATED))
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_EXC_MODE_REGULATED)),
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_EXC_MODE_EXTERNAL))
 );
 //! Перечисление типа останова.
 MENU_VALUES(menu_enum_stop_mode,

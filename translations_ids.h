@@ -57,6 +57,8 @@
 #define TR_ID_ENUM_EXC_MODE_FIXED       207
 //! Регулируемое.
 #define TR_ID_ENUM_EXC_MODE_REGULATED   208
+//! Регулируемое.
+#define TR_ID_ENUM_EXC_MODE_EXTERNAL   209
 
 /**
  * Перечисление режима останова.
