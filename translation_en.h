@@ -195,6 +195,11 @@ TEXT_TR(TR_ID_FAN_I_ZERO_NOISE, "Fan current zero noize")
 TEXT_TR(TR_ID_FAN_PROT_TIME, "Fan protection activation time")
 TEXT_TR(TR_ID_FAN_PROT_OVF_LEVEL, "Fan protection overflow warning level")
 
+TEXT_TR(TR_ID_MENU_REGULATOR, "Regulator")
+TEXT_TR(TR_ID_MENU_REGULATOR_MODE, "Regulator mode")
+TEXT_TR(TR_ID_ENUM_REGULATOR_MODE_SPEED, "Const speed")
+TEXT_TR(TR_ID_ENUM_REGULATOR_MODE_TORQUE, "Const torque")
+
 // главный экран
 TEXT_TR(TR_ID_HOME_ANCHOR_VOLTAGE, "Anchor\nvoltage")
 TEXT_TR(TR_ID_HOME_ANCHOR_CURRENT, "Anchor\ncurrent")

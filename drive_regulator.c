@@ -15,6 +15,8 @@
 typedef struct _Drive_Regulator {
     drive_regulator_state_t state; //!< Состояние регулятора.
     
+    drive_regulator_mode_t mode; //!< Режим регулятора.
+    
     fixed32_t reference; //!< Задание.
     
     ramp_t speed_ramp; //!< Разгон.
@@ -26,6 +28,7 @@ typedef struct _Drive_Regulator {
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t u_rot_ref; //!< Текущее напряжение задания.
+    fixed32_t i_rot_ref; //!< Текущий ток задания.
     
     pid_controller_t spd_pid; //!< ПИД-регулятор скорости.
     pid_controller_t rot_pid; //!< ПИД-регулятор тока якоря.
@@ -65,6 +68,16 @@ pid_controller_t* drive_regulator_exc_pid(void)
 drive_regulator_state_t drive_regulator_state(void)
 {
     return regulator.state;
+}
+
+drive_regulator_mode_t drive_regulator_mode(void)
+{
+    return regulator.mode;
+}
+
+void drive_regulator_set_mode(drive_regulator_mode_t mode)
+{
+    regulator.mode = mode;
 }
 
 reference_t drive_regulator_reference(void)
@@ -277,6 +290,11 @@ fixed32_t drive_regulator_current_u_ref(void)
     return regulator.u_rot_ref;
 }
 
+fixed32_t drive_regulator_current_i_ref(void)
+{
+    return regulator.i_rot_ref;
+}
+
 fixed32_t drive_regulator_rot_open_angle(void)
 {
     return pid_controller_value(&regulator.rot_pid);
@@ -297,11 +315,19 @@ static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_rot_
         fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / 100;
         
         regulator.u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
+        regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_nom, ramp_cur_ref);
         
-        fixed32_t u_rot_e = regulator.u_rot_ref - u_rot_back;
+        fixed32_t u_rot_e = 0;
+        fixed32_t i_rot_e = 0;
+        
+        u_rot_e = regulator.u_rot_ref - u_rot_back;
         pid_controller_calculate(&regulator.spd_pid, u_rot_e, DRIVE_PID_DT);
         
-        fixed32_t i_rot_e = pid_controller_value(&regulator.spd_pid) - i_rot_back;
+        if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
+            i_rot_e = pid_controller_value(&regulator.spd_pid) - i_rot_back;
+        }else{ //DRIVE_REGULATOR_MODE_TORQUE
+            i_rot_e = regulator.i_rot_ref - i_rot_back;
+        }
         pid_controller_calculate(&regulator.rot_pid, i_rot_e, DRIVE_PID_DT);
     }
     

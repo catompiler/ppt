@@ -1721,12 +1721,15 @@ err_t drive_update_settings(void)
     drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
     drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     
+    drive_regulator_set_mode(settings_valueu(PARAM_ID_REGULATOR_MODE));
+    
     drive_regulator_set_reference_time(settings_valuef(PARAM_ID_RAMP_REFERENCE_TIME));
     drive_regulator_set_start_time(settings_valuef(PARAM_ID_RAMP_START_TIME));
     drive_regulator_set_stop_time(settings_valuef(PARAM_ID_RAMP_STOP_TIME));
     drive_regulator_set_fast_stop_time(settings_valuef(PARAM_ID_RAMP_FAST_STOP_TIME));
     
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
+    drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_I_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
                                 settings_valuef(PARAM_ID_ROT_PID_K_I),

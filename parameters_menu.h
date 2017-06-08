@@ -27,6 +27,11 @@ MENU_VALUES(menu_enum_bool,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_NO)),
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_YES))
 );
+//! Перечисление режима регулирования.
+MENU_VALUES(menu_enum_regulator_mode,
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_REGULATOR_MODE_SPEED)),
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_REGULATOR_MODE_TORQUE))
+);
 //! Перечисление режима возбуждения.
 MENU_VALUES(menu_enum_exc_mode,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_EXC_MODE_FIXED)),
@@ -115,6 +120,7 @@ MENU_VALUES(menu_enum_gui_digital_states,
 MENU_VALUE_ENUM(menu_val_phase, 0, MENU_ENUM_LEN(menu_enum_phases), menu_enum_phases);
 MENU_VALUE_ENUM(menu_val_bool, 0, MENU_ENUM_LEN(menu_enum_bool), menu_enum_bool);
 MENU_VALUE_ENUM(menu_val_exc_mode, 0, MENU_ENUM_LEN(menu_enum_exc_mode), menu_enum_exc_mode);
+MENU_VALUE_ENUM(menu_val_regulator_mode, 0, MENU_ENUM_LEN(menu_enum_regulator_mode), menu_enum_regulator_mode);
 MENU_VALUE_ENUM(menu_val_stop_mode, 0, MENU_ENUM_LEN(menu_enum_stop_mode), menu_enum_stop_mode);
 MENU_VALUE_ENUM(menu_val_prot_action, 0, MENU_ENUM_LEN(menu_enum_prot_action), menu_enum_prot_action);
 MENU_VALUE_ENUM(menu_val_dio_in_type, 0, MENU_ENUM_LEN(menu_enum_dio_in_type), menu_enum_dio_in_type);
@@ -283,6 +289,9 @@ MENU_DESCRS(menu_descrs) {
             MENU_DESCR(2, PARAM_ID_PHASE_SYNC_PLL_PID_K_P, TEXT(TR_ID_MENU_PID_K_P), NULL, 0, MENU_FLAG_DATA, 0, 0),
             MENU_DESCR(2, PARAM_ID_PHASE_SYNC_PLL_PID_K_I, TEXT(TR_ID_MENU_PID_K_I), NULL, 0, MENU_FLAG_DATA, 0, 0),
             MENU_DESCR(2, PARAM_ID_PHASE_SYNC_PLL_PID_K_D, TEXT(TR_ID_MENU_PID_K_D), NULL, 0, MENU_FLAG_DATA, 0, 0),
+    // Регулятор.
+    MENU_DESCR(0, 0, TEXT(TR_ID_MENU_REGULATOR), NULL, 0, 0, 0, 0),
+        MENU_DESCR(1, PARAM_ID_REGULATOR_MODE, TEXT(TR_ID_MENU_REGULATOR_MODE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_regulator_mode),
     // ПИД.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_PID), NULL, 0, 0, 0, 0),
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_PID_SPD), NULL, 0, 0, 0, 0),

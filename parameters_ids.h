@@ -45,6 +45,14 @@
  */
 #define PARAM_ID_CALC_PHASE_CURRENT 1100
 
+/**
+ * Регулятор.
+ */
+/**
+ * Режим регулятора.
+ */
+#define PARAM_ID_REGULATOR_MODE 1125
+
 /*
  * Возбуждение.
  */

@@ -484,6 +484,14 @@
 //! Значение уровеня предупреждения превышения тока вентилятора, %.
 #define TR_ID_FAN_PROT_OVF_LEVEL     610
 
+//! Регулятор.
+#define TR_ID_MENU_REGULATOR              650
+//! Режим регулятора.
+#define TR_ID_MENU_REGULATOR_MODE         651
+//! Регулятор скорости.
+#define TR_ID_ENUM_REGULATOR_MODE_SPEED   652
+//! Регулятор момента.
+#define TR_ID_ENUM_REGULATOR_MODE_TORQUE  653
 
 //! Настройки интерфейса
 

@@ -19,6 +19,12 @@ typedef enum _Drive_Regulator_State {
     DRIVE_REGULATOR_STATE_STOP
 } drive_regulator_state_t;
 
+//! Режим регулятора.
+typedef enum _Drive_Regulator_Mode {
+    DRIVE_REGULATOR_MODE_SPEED = 0,  //!< Поддержание скорости (напряжения).
+    DRIVE_REGULATOR_MODE_TORQUE = 1 //!< Поддержание момента (тока).
+} drive_regulator_mode_t;
+
 //! Тип задания.
 typedef ramp_reference_t reference_t;
 //! Минимальное задание.
@@ -60,6 +66,18 @@ extern pid_controller_t* drive_regulator_exc_pid(void);
  * @return Состояние регулятора привода.
  */
 extern drive_regulator_state_t drive_regulator_state(void);
+
+/**
+ * Получает режим регулятора.
+ * @return Режим регулятора.
+ */
+extern drive_regulator_mode_t drive_regulator_mode(void);
+
+/**
+ * Устанавливает режим регулятора.
+ * @param mode Режим регулятора.
+ */
+extern void drive_regulator_set_mode(drive_regulator_mode_t mode);
 
 /**
  * Получает значение задания.
@@ -242,9 +260,15 @@ extern void drive_regulator_set_exc_current(fixed32_t current);
 
 /**
  * Получает значение текущего напряжения задания (с учётом разгона).
- * @return Текущее напряжение задание.
+ * @return Текущее напряжение задания.
  */
 extern fixed32_t drive_regulator_current_u_ref(void);
+
+/**
+ * Получает значение текущего тока задания (с учётом разгона).
+ * @return Текущий ток задания.
+ */
+extern fixed32_t drive_regulator_current_i_ref(void);
 
 /**
  * Получает угол открытия для ротора.

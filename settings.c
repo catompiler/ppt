@@ -22,6 +22,7 @@
 
 #include "drive_phase_state.h"
 #include "drive_triacs.h"
+#include "drive_regulator.h"
 #include "ramp.h"
 #include "fixed/fixed32.h"
 #include "gui/widgets/gui_tile.h"

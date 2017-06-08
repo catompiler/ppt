@@ -253,6 +253,11 @@ TEXT_TR(TR_ID_FAN_I_ZERO_NOISE, "Шум нуля тока вентилятора
 TEXT_TR(TR_ID_FAN_PROT_TIME, "Время срабатывания защиты вентилятора")
 TEXT_TR(TR_ID_FAN_PROT_OVF_LEVEL, "Уровень предупреждения превышения тока вентилятора")
 
+TEXT_TR(TR_ID_MENU_REGULATOR, "Регулятор")
+TEXT_TR(TR_ID_MENU_REGULATOR_MODE, "Режим регулятора")
+TEXT_TR(TR_ID_ENUM_REGULATOR_MODE_SPEED, "Поддержание скорости")
+TEXT_TR(TR_ID_ENUM_REGULATOR_MODE_TORQUE, "Поддержание момента")
+
 TEXT_TR(TR_ID_ENUM_BUZZER_ON, "Включено")
 TEXT_TR(TR_ID_ENUM_BUZZER_OFF, "Без звука")
   
