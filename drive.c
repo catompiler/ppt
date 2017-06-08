@@ -1057,30 +1057,11 @@ static void drive_check_power_inst(void)
         if(PARAM) settings_param_set_valuef(PARAM, drive_power_channel_real_value(CHANNEL));\
     }while(0)
 
-//! Макрос для обновления параметра fixed32.
-#define DRIVE_UPDATE_PARAM_FIXED(PARAM, VALUE)\
-    do {\
-        if(PARAM) settings_param_set_valuef(PARAM, VALUE);\
-    }while(0)
-
-//! Макрос для обновления параметра int.
-#define DRIVE_UPDATE_PARAM_INT(PARAM, VALUE)\
-    do {\
-        if(PARAM) settings_param_set_valuei(PARAM, VALUE);\
-    }while(0)
-
-//! Макрос для обновления параметра uint.
-#define DRIVE_UPDATE_PARAM_UINT(PARAM, VALUE)\
-    do {\
-        if(PARAM) settings_param_set_valueu(PARAM, VALUE);\
-    }while(0)
-
 /**
  * Обновляет значения питания в параметрах.
  */
 static void drive_update_virtual_parameters(void)
 {
-    if(!drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)) return;
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_a, DRIVE_POWER_Ua);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_b, DRIVE_POWER_Ub);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_u_c, DRIVE_POWER_Uc);

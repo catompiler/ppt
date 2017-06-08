@@ -407,6 +407,8 @@ static void rtc_on_second(void)
     if(drive_temp_fan_running()){
         drive_nvdata_inc_fan_runtime(drive_temp_fan_rpm());
     }
+    
+    drive_nvdata_update_time_params();
 }
 
 /*

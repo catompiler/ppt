@@ -92,6 +92,25 @@ typedef struct _Param {
 } param_t;
 
 
+//! Макрос для обновления параметра fixed32.
+#define DRIVE_UPDATE_PARAM_FIXED(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valuef(PARAM, VALUE);\
+    }while(0)
+
+//! Макрос для обновления параметра int.
+#define DRIVE_UPDATE_PARAM_INT(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valuei(PARAM, VALUE);\
+    }while(0)
+
+//! Макрос для обновления параметра uint.
+#define DRIVE_UPDATE_PARAM_UINT(PARAM, VALUE)\
+    do {\
+        if(PARAM) settings_param_set_valueu(PARAM, VALUE);\
+    }while(0)
+
+
 /**
  * Инициализирует настройки значениями по-умолчанию.
  * @return Код ошибки.

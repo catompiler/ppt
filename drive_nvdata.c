@@ -1,6 +1,7 @@
 #include "drive_nvdata.h"
 #include "nvdata.h"
 #include <string.h>
+#include "settings.h"
 
 
 //! Magic - контрольное значение валидности данных.
@@ -36,6 +37,12 @@
 typedef struct _Drive_Nvdata {
     uint8_t fan_runtime_fract; //!< Дробная часть времени работы вентилятора.
     time_t last_run_time; //!< Время работы после последнего включения.
+    
+    // Параметры.
+    param_t* param_lifetime; //!< Время включения.
+    param_t* param_runtime; //!< Время работы.
+    param_t* param_fan_runtime; //!< Время работы вентилятора.
+    param_t* param_last_runtime; //!< Время работы после включения.
 } drive_nvdata_t;
 
 //! Энергонезависимые данные привода.
@@ -46,6 +53,11 @@ static drive_nvdata_t nvdata;
 void drive_nvdata_init(void)
 {
     memset(&nvdata, 0x0, sizeof(drive_nvdata_t));
+    
+    nvdata.param_lifetime = settings_param_by_id(PARAM_ID_LIFETIME);
+    nvdata.param_runtime = settings_param_by_id(PARAM_ID_RUNTIME);
+    nvdata.param_fan_runtime = settings_param_by_id(PARAM_ID_FAN_RUNTIME);
+    nvdata.param_last_runtime = settings_param_by_id(PARAM_ID_LAST_RUNTIME);
 }
 
 bool drive_nvdata_valid(void)
@@ -62,6 +74,14 @@ void drive_nvdata_clear(void)
 {
     nvdata_clear();
     nvdata_put_half_word(DRIVE_NVDATA_MAGIC_ADDRESS, DRIVE_NVDATA_MAGIC);
+}
+
+void drive_nvdata_update_time_params(void)
+{
+    DRIVE_UPDATE_PARAM_UINT(nvdata.param_lifetime, drive_nvdata_lifetime() / 3600);
+    DRIVE_UPDATE_PARAM_UINT(nvdata.param_runtime, drive_nvdata_runtime() / 3600);
+    DRIVE_UPDATE_PARAM_UINT(nvdata.param_fan_runtime, drive_nvdata_fan_runtime() / 3600);
+    DRIVE_UPDATE_PARAM_UINT(nvdata.param_last_runtime, drive_nvdata_last_runtime() / 3600);
 }
 
 time_t drive_nvdata_lifetime(void)

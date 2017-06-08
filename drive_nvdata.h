@@ -29,6 +29,11 @@ extern bool drive_nvdata_valid(void);
  */
 extern void drive_nvdata_clear(void);
 
+/**
+ * Обновляет виртуальные параметры,
+ * связанные со временем.
+ */
+extern void drive_nvdata_update_time_params(void);
 
 /**
  * Получает общее время включения привода.
