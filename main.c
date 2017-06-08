@@ -401,6 +401,7 @@ static void rtc_on_second(void)
     
     if(drive_running()){
         drive_nvdata_inc_runtime();
+        drive_nvdata_inc_last_runtime();
     }
     
     if(drive_temp_fan_running()){

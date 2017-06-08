@@ -85,6 +85,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_INPUT_REG_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 31)
 //! Общее время работы вентилятора.
 #define DRIVE_MODBUS_INPUT_REG_FAN_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 32)
+//! Время работы после включения.
+#define DRIVE_MODBUS_INPUT_REG_LAST_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 33)
 // Регистры хранения.
 //! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
@@ -305,6 +307,9 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
             break;
         case DRIVE_MODBUS_INPUT_REG_FAN_RUNTIME:
             *value = drive_nvdata_fan_runtime() / 3600;
+            break;
+        case DRIVE_MODBUS_INPUT_REG_LAST_RUNTIME:
+            *value = drive_nvdata_last_runtime() / 3600;
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

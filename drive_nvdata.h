@@ -29,6 +29,7 @@ extern bool drive_nvdata_valid(void);
  */
 extern void drive_nvdata_clear(void);
 
+
 /**
  * Получает общее время включения привода.
  * @return Общее время включения привода.
@@ -46,6 +47,7 @@ extern void drive_nvdata_set_lifetime(time_t lifetime);
  */
 extern void drive_nvdata_inc_lifetime(void);
 
+
 /**
  * Получает общее время работы привода.
  * @return Общее время работы привода.
@@ -62,6 +64,24 @@ extern void drive_nvdata_set_runtime(time_t runtime);
  * Увеличивает время работы привода.
  */
 extern void drive_nvdata_inc_runtime(void);
+
+
+/**
+ * Получает время работы привода после включения.
+ * @return Время работы привода после включения.
+ */
+extern time_t drive_nvdata_last_runtime(void);
+
+/**
+ * Устанавливает время работы привода после включения.
+ * @param lifetime Время работы привода после включения.
+ */
+extern void drive_nvdata_set_last_runtime(time_t runtime);
+
+/**
+ * Увеличивает время работы привода после включения.
+ */
+extern void drive_nvdata_inc_last_runtime(void);
 
 
 /**

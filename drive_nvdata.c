@@ -34,7 +34,8 @@
 
 //! Структура энергонезависимых данных привода.
 typedef struct _Drive_Nvdata {
-    uint8_t fan_runtime_fract; //! Дробная часть времени работы вентилятора.
+    uint8_t fan_runtime_fract; //!< Дробная часть времени работы вентилятора.
+    time_t last_run_time; //!< Время работы после последнего включения.
 } drive_nvdata_t;
 
 //! Энергонезависимые данные привода.
@@ -103,6 +104,21 @@ void drive_nvdata_set_runtime(time_t runtime)
 void drive_nvdata_inc_runtime(void)
 {
     drive_nvdata_set_runtime(drive_nvdata_runtime() + 1);
+}
+
+time_t drive_nvdata_last_runtime(void)
+{
+    return nvdata.last_run_time;
+}
+
+void drive_nvdata_set_last_runtime(time_t runtime)
+{
+    nvdata.last_run_time = runtime;
+}
+
+void drive_nvdata_inc_last_runtime(void)
+{
+    nvdata.last_run_time ++;
 }
 
 time_t drive_nvdata_fan_runtime(void)
