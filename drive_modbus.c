@@ -81,8 +81,10 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_INPUT_REG_PHASE_ERRORS1 (DRIVE_MODBUS_INPUT_REGS_START + 19)
 //! Общее время включения.
 #define DRIVE_MODBUS_INPUT_REG_LIFETIME (DRIVE_MODBUS_INPUT_REGS_START + 30)
-//! Общее время включения.
+//! Общее время работы.
 #define DRIVE_MODBUS_INPUT_REG_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 31)
+//! Общее время работы вентилятора.
+#define DRIVE_MODBUS_INPUT_REG_FAN_RUNTIME (DRIVE_MODBUS_INPUT_REGS_START + 32)
 // Регистры хранения.
 //! Задание.
 #define DRIVE_MODBUS_HOLD_REG_REFERENCE (DRIVE_MODBUS_HOLD_REGS_START + 0)
@@ -123,6 +125,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_EMERGENCY_STOP (DRIVE_MODBUS_COILS_START + 9)
 //! Перезагрузка.
 #define DRIVE_MODBUS_COIL_REBOOT (DRIVE_MODBUS_COILS_START + 10)
+//! Сброс времени работы вентилятора.
+#define DRIVE_MODBUS_COIL_RESET_FAN_RUNTIME (DRIVE_MODBUS_COILS_START + 11)
 
 
 /** Пользовательские функции и коды.
@@ -299,6 +303,9 @@ static modbus_rtu_error_t drive_modbus_on_read_inp_reg(uint16_t address, uint16_
         case DRIVE_MODBUS_INPUT_REG_RUNTIME:
             *value = drive_nvdata_runtime() / 3600;
             break;
+        case DRIVE_MODBUS_INPUT_REG_FAN_RUNTIME:
+            *value = drive_nvdata_fan_runtime() / 3600;
+            break;
     }
     return MODBUS_RTU_ERROR_NONE;
 }
@@ -469,6 +476,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
             break;
         case DRIVE_MODBUS_COIL_REBOOT:
             NVIC_SystemReset();
+            break;
+        case DRIVE_MODBUS_COIL_RESET_FAN_RUNTIME:
+            drive_nvdata_reset_fan_runtime();
             break;
     }
     return MODBUS_RTU_ERROR_NONE;

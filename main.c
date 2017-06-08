@@ -397,10 +397,14 @@ static void rtc_on_second(void)
 {
     counter_ms_gtod = system_counter_ticks();
     
-    drive_nvdata_set_lifetime(drive_nvdata_lifetime() + 1);
+    drive_nvdata_inc_lifetime();
     
     if(drive_running()){
-        drive_nvdata_set_runtime(drive_nvdata_runtime() + 1);
+        drive_nvdata_inc_runtime();
+    }
+    
+    if(drive_temp_fan_running()){
+        drive_nvdata_inc_fan_runtime(drive_temp_fan_rpm());
     }
 }
 
@@ -801,6 +805,7 @@ static void init_PDR(void)
 
 static void init_rtc_nvdata(void)
 {
+    drive_nvdata_init();
     rtc_init();
     
     if(rtc_state() == DISABLE || !drive_nvdata_valid()){

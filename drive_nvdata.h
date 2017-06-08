@@ -11,6 +11,12 @@
 #include <sys/types.h>
 
 
+
+/**
+ * Инициализирует энергонезависимые данные привода.
+ */
+extern void drive_nvdata_init(void);
+
 /**
  * Получает флаг валидности энергонезависимых данных привода.
  * @return Флаг валидности энергонезависимых данных привода.
@@ -36,6 +42,11 @@ extern time_t drive_nvdata_lifetime(void);
 extern void drive_nvdata_set_lifetime(time_t lifetime);
 
 /**
+ * Увеличивает время включения привода.
+ */
+extern void drive_nvdata_inc_lifetime(void);
+
+/**
  * Получает общее время работы привода.
  * @return Общее время работы привода.
  */
@@ -46,6 +57,35 @@ extern time_t drive_nvdata_runtime(void);
  * @param lifetime Общее время работы привода.
  */
 extern void drive_nvdata_set_runtime(time_t runtime);
+
+/**
+ * Увеличивает время работы привода.
+ */
+extern void drive_nvdata_inc_runtime(void);
+
+
+/**
+ * Получает общее время работы вентилятора привода.
+ * @return Общее время работы вентилятора привода.
+ */
+extern time_t drive_nvdata_fan_runtime(void);
+
+/**
+ * Устанавливает общее время работы вентилятора привода.
+ * @param time Общее время работы вентилятора привода.
+ */
+extern void drive_nvdata_set_fan_runtime(time_t runtime);
+
+/**
+ * Увеличивает время работы вентилятора привода.
+ * @param rpm_percents Обороты вентилятора в % от номинальных.
+ */
+extern void drive_nvdata_inc_fan_runtime(uint32_t rpm_percents);
+
+/**
+ * Сбрасывает время работы вентилятора привода.
+ */
+extern void drive_nvdata_reset_fan_runtime(void);
 
 #endif /* DRIVE_NVDATA_H */
 
