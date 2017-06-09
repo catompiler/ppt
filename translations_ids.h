@@ -12,6 +12,12 @@
 #define TR_ID_UNITS_V 100
 //! Амперы.
 #define TR_ID_UNITS_A 101
+//! Ом.
+#define TR_ID_UNITS_OHM 102
+//! кВт.
+#define TR_ID_UNITS_KW 105
+//! Н•м.
+#define TR_ID_UNITS_TORQUE 106
 //! Секунды.
 #define TR_ID_UNITS_S 110
 //! Миллисекунды.
@@ -126,27 +132,44 @@
  * Меню.
  */
 //! Питание.
-#define TR_ID_MENU_POWER            250
+#define TR_ID_MENU_SUPPLY           250
 //! Сеть.
-#define TR_ID_MENU_POWER_IN         251
+#define TR_ID_MENU_SUPPLY_IN        251
 //! Ном. U сети.
 #define TR_ID_MENU_U_NOM            252
 //! Ном. I сети.
 #define TR_ID_MENU_I_NOM            253
-//! Якорь.
-#define TR_ID_MENU_ROTOR            260
+//! Двигатель.
+#define TR_ID_MENU_MOTOR            260
+//! Ном. мощность.
+#define TR_ID_MENU_MOTOR_P_NOM           261
+//! Ном. обороты.
+#define TR_ID_MENU_MOTOR_RPM_NOM         262
+//! Макс. обороты.
+#define TR_ID_MENU_MOTOR_RPM_MAX         263
 //! Ном. U якоря.
-#define TR_ID_MENU_U_ROT_NOM        261
+#define TR_ID_MENU_MOTOR_U_ROT_NOM  265
 //! Ном. I якоря.
-#define TR_ID_MENU_I_ROT_NOM        262
+#define TR_ID_MENU_MOTOR_I_ROT_NOM  266
+//! Ном. U возбуждения.
+#define TR_ID_MENU_MOTOR_U_EXC_NOM  267
+//! Ном. I возбуждения.
+#define TR_ID_MENU_MOTOR_I_EXC_NOM  268
+//! Ном. КПД.
+#define TR_ID_MENU_MOTOR_EFF_NOM         269
+//! Ном. сопротивление якоря.
+#define TR_ID_MENU_MOTOR_R_ROT_NOM       270
+
+//! Якорь.
+#define TR_ID_MENU_ROTOR            274
 //! Возбуждение.
-#define TR_ID_MENU_EXCITATION       270
+#define TR_ID_MENU_EXCITATION       275
 //! I возбуждения.
-#define TR_ID_MENU_I_EXC            271
+#define TR_ID_MENU_I_EXC            276
 //! Фаза возбуждения.
-#define TR_ID_MENU_EXC_PHASE        272
+#define TR_ID_MENU_EXC_PHASE        277
 //! Режим возбуждения.
-#define TR_ID_MENU_EXC_MODE         273
+#define TR_ID_MENU_EXC_MODE         278
 //! Разгон и торможение.
 #define TR_ID_MENU_RAMP             280
 //! Время разгона 0-100%.

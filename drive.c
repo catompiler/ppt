@@ -1709,8 +1709,8 @@ err_t drive_update_settings(void)
     drive_regulator_set_stop_time(settings_valuef(PARAM_ID_RAMP_STOP_TIME));
     drive_regulator_set_fast_stop_time(settings_valuef(PARAM_ID_RAMP_FAST_STOP_TIME));
     
-    drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_U_ROT_NOM));
-    drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_I_ROT_NOM));
+    drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM));
+    drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
                                 settings_valuef(PARAM_ID_ROT_PID_K_I),
@@ -1730,7 +1730,7 @@ err_t drive_update_settings(void)
     drive_triacs_clamp_pairs_open_angle(rot_angle_min, rot_angle_max);
     drive_triacs_clamp_exc_open_angle(exc_angle_min, exc_angle_max);
     
-    drive_regulator_spd_pid_clamp(DRIVE_SPD_PID_VALUE_MIN, settings_valuef(PARAM_ID_I_ROT_NOM));
+    drive_regulator_spd_pid_clamp(DRIVE_SPD_PID_VALUE_MIN, settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
     drive_regulator_rot_pid_clamp(rot_angle_min, rot_angle_max);
     drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     

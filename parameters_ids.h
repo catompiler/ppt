@@ -22,18 +22,46 @@
  * Номинальный фазный ток, А.
  */
 #define PARAM_ID_I_NOM 101
+
+/*
+ * Двигатель.
+ */
+/**
+ * Номинальная мощность двигателя.
+ */
+#define PARAM_ID_MOTOR_P_NOM    200
+/**
+ * Номинальные обороты.
+ */
+#define PARAM_ID_MOTOR_RPM_NOM  201
+/**
+ * Максимальные обороты.
+ */
+#define PARAM_ID_MOTOR_RPM_MAX  202
 /**
  * Номинальное напряжение якоря двигателя, В.
  */
-#define PARAM_ID_U_ROT_NOM 110
+#define PARAM_ID_MOTOR_U_ROT_NOM      210
 /**
  * Номинальный ток якоря двигателя, А.
  */
-#define PARAM_ID_I_ROT_NOM 111
+#define PARAM_ID_MOTOR_I_ROT_NOM      211
 /**
- * Ток возбуждения двигателя, А.
+ * Номинальное напряжение возбуждения двигателя, В.
  */
-#define PARAM_ID_I_EXC 120
+#define PARAM_ID_MOTOR_U_EXC_NOM      212
+/**
+ * Номинальный ток возбуждения двигателя, А.
+ */
+#define PARAM_ID_MOTOR_I_EXC_NOM      213
+/**
+ * Номинальный коэффициент полезного действия.
+ */
+#define PARAM_ID_MOTOR_EFF_NOM        214
+/**
+ * Номинальное сопротивление якоря.
+ */
+#define PARAM_ID_MOTOR_R_ROT_NOM      215
 
 
 ///////////////////////
@@ -57,13 +85,17 @@
  * Возбуждение.
  */
 /**
- * Фаза возбуждения.
- */
-#define PARAM_ID_EXC_PHASE 1150
-/**
  * Режим возбуждения.
  */
-#define PARAM_ID_EXC_MODE 1151
+#define PARAM_ID_EXC_MODE  1150
+/**
+ * Фаза возбуждения.
+ */
+#define PARAM_ID_EXC_PHASE 1151
+/**
+ * Поддерживаемый ток возбуждения двигателя, А.
+ */
+#define PARAM_ID_I_EXC     1152
 
 /*
  * Рампа.
@@ -1262,6 +1294,27 @@
  * Время работы после включения.
  */
 #define PARAM_ID_LAST_RUNTIME    8403
+
+/*
+ * Мотор.
+ */
+/**
+ * Вычисленный коэффициент полезного действия.
+ */
+#define PARAM_ID_MOTOR_EFF        8450
+/**
+ * Вычисленное сопротивление якоря.
+ */
+#define PARAM_ID_MOTOR_R_ROT      8451
+/**
+ * Вычисленные обороты.
+ */
+#define PARAM_ID_MOTOR_RPM        8452
+/**
+ * Вычисленный момент.
+ */
+#define PARAM_ID_MOTOR_TORQUE     8453
+
 
 ///////////////////////////
 // Отладочные параметры. //
