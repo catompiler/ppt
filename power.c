@@ -44,7 +44,7 @@ static int power_filter_cmp(const void* a, const void* b)
     return (((const power_filter_value_t*)a)->sum - ((const power_filter_value_t*)b)->sum);
 }
 
-static int32_t power_filter_calculate(power_filter_t* filter)
+static int32_t power_filter_calculate(power_filter_t* filter, int32_t* ret_count)
 {
     if(filter->count <= 1) return 0;
     
@@ -78,7 +78,11 @@ static int32_t power_filter_calculate(power_filter_t* filter)
         from ++;
     }
     
-    val /= count_val;
+    if(!ret_count){
+        val /= count_val;
+    }else{
+        *ret_count = count_val;
+    }
     
     return val;
 }
@@ -276,20 +280,38 @@ err_t power_process_accumulated_data(power_t* power, power_channels_t channels)
  */
 static void power_channel_calc(power_value_t* channel)
 {
-    int32_t value = power_filter_calculate(&channel->filter_value);
+    int32_t count_val = 0;
+    int32_t sum_val = power_filter_calculate(&channel->filter_value, &count_val);
     
-    channel->raw_zero_cur = power_filter_calculate(&channel->filter_zero);
+    channel->raw_zero_cur = power_filter_calculate(&channel->filter_zero, NULL);
+    
+    if(count_val == 0) return;
+    
+    int32_t raw_val = sum_val / count_val;
     
     if(channel->type == POWER_CHANNEL_AC){
-        channel->raw_value = bsqrti(value);
+        channel->raw_value = bsqrti(raw_val);
     }else{
-        channel->raw_value = value;
+        channel->raw_value = raw_val;
     }
     
     fixed32_t real_val = 0;
     
     if(!channel->is_soft){
-        real_val = (fixed32_t)channel->raw_value * channel->adc_mult;
+        if(channel->type == POWER_CHANNEL_AC){
+            //real_val = (fixed32_t)channel->raw_value * channel->adc_mult;
+            int32_t sq_sum = bsqrti(sum_val);
+            int64_t sq_sumf = fixed32_make_from_int((int64_t)sq_sum);
+            
+            fixed32_t count_valf = fixed32_make_from_int(count_val);
+            fixed32_t sq_countf = bsqrtf(count_valf);
+            
+            real_val = (int32_t)fixed32_div(sq_sumf, sq_countf);
+            real_val = fixed32_mul((int64_t)real_val, channel->adc_mult);
+        }else{
+            int64_t real_sum = (int64_t)sum_val * channel->adc_mult;
+            real_val = real_sum / count_val;
+        }
     }else{
         real_val = power_value_raw_to_soft(channel->raw_value);
     }
