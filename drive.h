@@ -444,6 +444,12 @@ ALWAYS_INLINE static err_t drive_set_reference(reference_t reference)
 }
 
 /**
+ * Получает флаг отсутствия проблем привода.
+ * @return Флаг отсутствия проблем привода.
+ */
+extern bool drive_ok(void);
+
+/**
  * Получает флаг готовности привода.
  * @return Флаг готовности привода.
  */

@@ -7,6 +7,7 @@
 #include "drive_phase_sync.h"
 #include <string.h>
 #include <stdio.h>
+#include "drive_motor.h"
 
 
 //! Минимальное значение PID-регулятора скорости.
@@ -1170,7 +1171,7 @@ static void drive_process_digital_inputs(void)
  */
 static void drive_update_digital_outputs(void)
 {
-    drive_dio_set_output_type_state(DRIVE_DIO_OUT_OK,      drive_get_state() != DRIVE_STATE_ERROR);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_OK,      drive_ok());
     drive_dio_set_output_type_state(DRIVE_DIO_OUT_READY,   drive_ready());
     drive_dio_set_output_type_state(DRIVE_DIO_OUT_RUNNING, drive_running());
     drive_dio_set_output_type_state(DRIVE_DIO_OUT_WARNING, drive_warnings() != DRIVE_WARNING_NONE);
@@ -1648,7 +1649,10 @@ err_t drive_init(void)
             fixed32_make_from_int(DRIVE_NULL_TIMER_OFFSET_TICKS_MAX)
             );
     
+    drive_motor_init();
+    
     drive_update_settings();
+    
     drive_update_prot_masks();
     
     drive.params.param_u_a = settings_param_by_id(PARAM_ID_POWER_U_A);
@@ -1738,6 +1742,8 @@ err_t drive_update_settings(void)
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
+    
+    drive_motor_update_settings();
     
     drive_power_set_adc_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ua));
     drive_power_set_adc_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ub));
@@ -1895,12 +1901,20 @@ drive_err_stopping_t drive_err_stopping(void)
     return drive.err_stopping_state;
 }
 
+bool drive_ok(void)
+{
+    return drive_get_state() != DRIVE_STATE_ERROR &&
+           drive_protection_top_ready() &&
+           drive_motor_ready();
+}
+
 bool drive_ready(void)
 {
     return (drive.errors == 0) &&
            (drive.state != DRIVE_STATE_INIT) &&
             drive_flags_is_set(DRIVE_READY_FLAGS) &&
-            drive_protection_top_ready();
+            drive_protection_top_ready() &&
+            drive_motor_ready();
 }
 
 bool drive_start(void)
@@ -2156,7 +2170,10 @@ bool drive_calculate_power(void)
     if(drive_power_calc_values(DRIVE_POWER_CHANNELS, &err)){
 
         if(err == E_NO_ERROR && drive_power_data_avail(DRIVE_POWER_CHANNELS)){
+            
             drive_set_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
+            drive_motor_calculate();
+            
         }else{
             drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);

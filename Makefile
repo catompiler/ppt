@@ -11,7 +11,8 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    gui/gui_widget.o gui/widgets/gui_time.o\
 	    gui/widgets/gui_statusbar.o gui/menu/menu_explorer.o\
 	    gui/widgets/gui_menu.o gui/widgets/gui_home.o commands.o\
-	    storage.o nvdata.o drive_nvdata.o drive_events.o
+	    storage.o nvdata.o drive_nvdata.o drive_events.o\
+	    drive_temp.o drive_motor.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
@@ -20,7 +21,7 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    i2c pca9555 list key_input scheduler\
 	    pid_controller m95x menu localization\
 	    crc16_ccitt bsqrt cordic32\
-	    usart_bus modbus_rtu timers lm75 drive_temp
+	    usart_bus modbus_rtu timers lm75
 
 # Макросы.
 DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
