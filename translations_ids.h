@@ -664,6 +664,33 @@
 #define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX            1323
 #define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX           1324
 
+// Список состояний пуст
+#define TR_ID_MENU_EVENTS_NONE 2001
+// Тип события - Состояние
+#define TR_ID_MENU_EVENT_STATUS 2002
+// Тип события - Предупреждение
+#define TR_ID_MENU_EVENT_WARNING 2003
+// Тип события - Ошибка
+#define TR_ID_MENU_EVENT_ERROR 2004
+// Инициализация
+#define TR_ID_MENU_EVENT_DRIVE_STATE_INIT 2005
+// Калибровка питания.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_CALIBRATION 2006
+// Простой (готовность).
+#define TR_ID_MENU_EVENT_DRIVE_STATE_IDLE 2007
+// Останов.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_STOP 2008
+// Запуск.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_START 2009
+// Работа.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_RUN 2010
+// Останов при ошибке.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_STOP_ERROR 2011
+// Ошибка.
+#define TR_ID_MENU_EVENT_DRIVE_STATE_ERROR 2012
+
+#define TR_ID_MENU_EVENT_DRIVE_REFERENCE_FORMAT 2015
+
 //! Описание ошибок привода
 #define TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL  2101 //!< Данные питания не поступают с АЦП.
 #define TR_ID_DRIVE_ERROR_POWER_INVALID         2102 //!< Неправильные значения питания, см. drive_power_error_t.
@@ -681,6 +708,7 @@
 #define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
 #define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
 #define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
+
 
 #endif /* TRANSLATIONS_IDS_H */
 

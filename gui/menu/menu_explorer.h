@@ -26,6 +26,8 @@ typedef enum _Menu_Explorer_State {
     MENU_EXPLORER_STATE_NAVI,               // навигация
     MENU_EXPLORER_STATE_PASSWORD_REQUEST,   // запрос доступа
     MENU_EXPLORER_STATE_EDIT,               // редактирование
+    MENU_EXPLORER_STATE_EVENTS,             // просмотр списка событий
+    MENU_EXPLORER_STATE_EVENT,              // просмотр события
 } menu_explorer_state_t;
 
 // Тип режима перерисовки меню
@@ -146,7 +148,8 @@ bool menu_explorer_edit_enter(menu_explorer_t* explorer);
  * @param explorer Проводник меню
  * @return Статус
  */
-bool menu_explorer_edit_esc(menu_explorer_t* explorer);
+bool menu_explorer_edit_esc(menu_explorer_t* explorer
+);
 
 /**
  * Обработка длительного нажатия Esc в режиме редактирования
@@ -169,6 +172,8 @@ EXTERN bool menu_explorer_out(menu_explorer_t* explorer);
  */
 bool menu_explorer_navi_out(menu_explorer_t* explorer);
 
+bool menu_explorer_navi_out_impl(menu_explorer_t* explorer);
+
 /**
  * Обработка нажатия UP
  * @param explorer Проводник меню
@@ -188,12 +193,27 @@ EXTERN menu_item_t* menu_explorer_down(menu_explorer_t* explorer);
  * @return Выбранный элемент меню
  */
 EXTERN menu_item_t* menu_explorer_next(menu_explorer_t* explorer);
+
+/**
+ * Выбрать следующее событие
+ * @param explorer
+ * @return 
+ */
+EXTERN bool menu_events_next(menu_explorer_t* explorer);
+
 /**
  * Выбрать предыдущий элемент меню
  * @param explorer Проводник меню
  * @return Выбранный элемент меню
  */
 EXTERN menu_item_t* menu_explorer_prev(menu_explorer_t* explorer);
+
+/**
+ * Выбрать предыдущее событие
+ * @param explorer Проводник меню
+ * @return
+ */
+EXTERN bool menu_events_prev(menu_explorer_t* explorer);
 
 /**
  * Получает видимость справочной информации по элементу меню
@@ -271,6 +291,13 @@ EXTERN bool menu_explorer_state_home(menu_explorer_t* explorer);
  * @return 
  */
 EXTERN bool menu_explorer_state_password_request(menu_explorer_t* explorer);
+
+/**
+ * Возвращает флаг состояния меню История событий
+ * @param explorer
+ * @return 
+ */
+EXTERN bool menu_explorer_state_events(menu_explorer_t* explorer);
 
 /**
  * Возвращает параметр текущего элемента меню

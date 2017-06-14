@@ -303,6 +303,7 @@ static void make_gui_struct(void) {
     gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
     
     gui_menu_init_parent(&gui.menu, &gui.gui, &gui.root_widget);
+    gui_menu_set_graphics(&gui.menu, &icon_statusbar_graphics, ICONS_STATUSBAR_COUNT);
     gui_widget_move(GUI_WIDGET(&gui.menu), 0, GUI_STATUSBAR_HEIGHT);
     gui_widget_resize(GUI_WIDGET(&gui.menu), TFT_WIDTH, TFT_HEIGHT - GUI_STATUSBAR_HEIGHT);
     gui_widget_set_border(GUI_WIDGET(&gui.menu), GUI_BORDER_NONE);

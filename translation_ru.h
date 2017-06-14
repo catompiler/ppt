@@ -394,6 +394,33 @@ TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MIN, "Ошибка 
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MIN, "Предупр. (мин.)")
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX, "Предупр. (макс.)")
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX, "Ошибка (макс.)")
+
+// Список событий пуст        
+TEXT_TR(TR_ID_MENU_EVENTS_NONE, "Список событий пуст")
+// Тип события - Состояние
+TEXT_TR(TR_ID_MENU_EVENT_STATUS, "Событие: состояние")
+// Тип события - Предупреждение
+TEXT_TR(TR_ID_MENU_EVENT_WARNING, "Событие: предупреждение")
+// Тип события - Ошибка
+TEXT_TR(TR_ID_MENU_EVENT_ERROR, "Событие: ошибка")
+// Инициализация
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_INIT, "Состояние: инициализация")
+// Калибровка питания.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_CALIBRATION, "Состояние: калибровка питания")
+// Простой (готовность).
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_IDLE, "Состояние: готовность")
+// Останов.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_STOP, "Состояние: останов")
+// Запуск.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_START, "Состояние: запуск")
+// Работа.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_RUN, "Состояние: работа")
+// Останов при ошибке.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_STOP_ERROR, "Состояние: останов при ошибке")
+// Ошибка.
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_STATE_ERROR, "Состояние: ошибка")        
+// Формат вывода задания в подсказке события      
+TEXT_TR(TR_ID_MENU_EVENT_DRIVE_REFERENCE_FORMAT, "Задание: ")
         
 //! Описание ошибок привода
 TEXT_TR(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL, "E#1: Данные питания не поступают с АЦП.")

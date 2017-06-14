@@ -160,6 +160,23 @@ param_t* menu_explorer_selelected_param(menu_explorer_t* explorer) {
     return param;
 }
 
+void menu_explorer_navi_in_events(menu_explorer_t* explorer)
+{
+    explorer->state = MENU_EXPLORER_STATE_EVENTS;
+    explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+
+    if (explorer->level < MENU_EXPLORER_MAX_LEVEL) {
+        explorer->history[explorer->level] = explorer->sel_object;
+        explorer->history_pos[explorer->level] = explorer->sel_pos;
+        explorer->history_item_pos[explorer->level] = explorer->item_pos;
+        explorer->level++;
+    }
+    explorer->count = drive_events_count();
+    //explorer->sel_object = ;
+    explorer->sel_pos = 0;
+    explorer->item_pos = 0;
+}
+
 void menu_explorer_navi_in_param(menu_explorer_t* explorer)
 {
     
@@ -311,6 +328,10 @@ menu_item_t* menu_explorer_navi_in(menu_explorer_t* explorer)
             // переходим в режим редактирования
             menu_explorer_navi_in_param(explorer);
         }
+        else if (explorer->sel_object->flags & MENU_FLAG_EVENTS) {
+            // список событий
+            menu_explorer_navi_in_events(explorer);
+        }
     }
     else { // есть дочерние элементы 
         // переходим в подменю
@@ -395,16 +416,57 @@ bool menu_explorer_out(menu_explorer_t* explorer)
             explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
             return true;
             break;
+        case MENU_EXPLORER_STATE_EVENTS:
+            explorer->state = MENU_EXPLORER_STATE_NAVI;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+            return menu_explorer_navi_out_impl(explorer);
+            break;
         case MENU_EXPLORER_STATE_NAVI:  
             return menu_explorer_navi_out(explorer);
             break;  
         case MENU_EXPLORER_STATE_EDIT: 
             return menu_explorer_edit_esc(explorer);
-            break;  
+            break;   
         default: 
             break;  
     }
     return false;
+}
+
+bool menu_explorer_navi_out_impl(menu_explorer_t* explorer) 
+{
+    if (explorer->level > 0) explorer->level--;
+    explorer->sel_object = explorer->history[explorer->level];
+    explorer->count = menu_item_count(explorer->sel_object);
+    explorer->sel_pos = explorer->history_pos[explorer->level];
+    if (explorer->sel_pos >= menu_explorer_displayed_cnt(explorer)) {
+        explorer->sel_pos = menu_explorer_displayed_cnt(explorer) - 1;
+    }
+    explorer->item_pos = explorer->history_item_pos[explorer->level];
+
+    // отображаемые элементы
+    int i;
+    for (i = 0; i < menu_explorer_displayed_cnt(explorer); i++) {
+        explorer->displayed[i] = NULL;
+    }
+
+    menu_item_t* obj = explorer->sel_object;
+
+    //explorer->displayed[0] = obj;
+    for (i = explorer->sel_pos; i >= 0; i--) {
+        explorer->displayed[i] = obj;
+        obj = menu_item_prev(obj);
+        if (obj == NULL) break;
+    }
+    obj = explorer->sel_object;
+    for (i = explorer->sel_pos; i < menu_explorer_displayed_cnt(explorer); i++) {
+        explorer->displayed[i] = obj;
+        obj = menu_item_next(obj);
+        if (obj == NULL) break;
+    }
+    explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+    
+    return true;
 }
 
 bool menu_explorer_navi_out(menu_explorer_t* explorer) 
@@ -412,39 +474,26 @@ bool menu_explorer_navi_out(menu_explorer_t* explorer)
     bool is_not_root = !(explorer->sel_object->parent == NULL);
     if (is_not_root) {
         // родитель - не корневой элемент
-        
-        if (explorer->level > 0) explorer->level--;
-        explorer->sel_object = explorer->history[explorer->level];
-        explorer->count = menu_item_count(explorer->sel_object);
-        explorer->sel_pos = explorer->history_pos[explorer->level];
-        if (explorer->sel_pos >= menu_explorer_displayed_cnt(explorer)) {
-            explorer->sel_pos = menu_explorer_displayed_cnt(explorer) - 1;
-        }
-        explorer->item_pos = explorer->history_item_pos[explorer->level];
-        
-        // отображаемые элементы
-        int i;
-        for (i = 0; i < menu_explorer_displayed_cnt(explorer); i++) {
-            explorer->displayed[i] = NULL;
-        }
-         
-        menu_item_t* obj = explorer->sel_object;
-        
-        //explorer->displayed[0] = obj;
-        for (i = explorer->sel_pos; i >= 0; i--) {
-            explorer->displayed[i] = obj;
-            obj = menu_item_prev(obj);
-            if (obj == NULL) break;
-        }
-        obj = explorer->sel_object;
-        for (i = explorer->sel_pos; i < menu_explorer_displayed_cnt(explorer); i++) {
-            explorer->displayed[i] = obj;
-            obj = menu_item_next(obj);
-            if (obj == NULL) break;
-        }
-        explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+        menu_explorer_navi_out_impl(explorer);
     }
     return is_not_root;
+}
+
+bool menu_events_next(menu_explorer_t* explorer)
+{
+    if (explorer->item_pos < (explorer->count - 1)) explorer->item_pos++;
+    if (explorer->sel_pos < menu_explorer_center_pos(explorer)) {
+        if (explorer->sel_pos < explorer->item_pos) explorer->sel_pos++;
+    }
+    else {
+        if ((explorer->item_pos + menu_explorer_center_pos(explorer)) > (explorer->count - 1)) {
+            if (explorer->sel_pos < (menu_explorer_displayed_cnt(explorer) - 1)) {
+                if (explorer->sel_pos < explorer->item_pos) explorer->sel_pos++;
+            }
+        }
+    }
+    explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+    return true;
 }
 
 /**
@@ -478,6 +527,16 @@ EXTERN menu_item_t* menu_explorer_next(menu_explorer_t* explorer)
         explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
     }
     return explorer->sel_object;
+}
+
+EXTERN bool menu_events_prev(menu_explorer_t* explorer)
+{
+    if (explorer->item_pos > 0) explorer->item_pos--;
+    if (explorer->sel_pos > menu_explorer_center_pos(explorer) || explorer->sel_pos > explorer->item_pos) {
+        if (explorer->sel_pos > 0) explorer->sel_pos--;
+    }
+    explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+    return true;
 }
 
 /**
@@ -600,6 +659,9 @@ menu_item_t* menu_explorer_up(menu_explorer_t* explorer)
         case MENU_EXPLORER_STATE_NAVI:  
             return menu_explorer_prev(explorer);
             break;  
+        case MENU_EXPLORER_STATE_EVENTS:  
+            menu_events_prev(explorer);
+            break;  
         case MENU_EXPLORER_STATE_EDIT: 
             {
                 param_t* param = menu_explorer_selelected_param(explorer);
@@ -630,6 +692,9 @@ menu_item_t* menu_explorer_down(menu_explorer_t* explorer)
     {  
         case MENU_EXPLORER_STATE_NAVI:  
             return menu_explorer_next(explorer);
+            break;  
+        case MENU_EXPLORER_STATE_EVENTS:  
+            menu_events_next(explorer);
             break;  
         case MENU_EXPLORER_STATE_EDIT: 
             {
@@ -672,6 +737,11 @@ bool menu_explorer_state_home(menu_explorer_t* explorer) {
 bool menu_explorer_state_password_request(menu_explorer_t* explorer)
 {
     return explorer->state == MENU_EXPLORER_STATE_PASSWORD_REQUEST;
+}
+
+bool menu_explorer_state_events(menu_explorer_t* explorer)
+{
+    return explorer->state == MENU_EXPLORER_STATE_EVENTS;
 }
 
 bool menu_explorer_user_change(menu_explorer_t* explorer, int32_t password)

@@ -151,7 +151,7 @@ MENU_DESCRS(menu_descrs) {
     // Статус привода
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_STATUS), NULL, 0, 0, 0, 0), 
         // История событий
-        //MENU_DESCR(1, 0, TEXT(TR_ID_MENU_EVENTS), NULL, 0, MENU_FLAG_EVENTS, 0, 0),
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_EVENTS), NULL, 0, MENU_FLAG_EVENTS, 0, 0),
         // Измерения
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_MEASUREMENTS), NULL, 0, 0, 0, 0),
             MENU_DESCR(2, PARAM_ID_POWER_U_A, TEXT(TR_ID_MENU_MESS_PARAM_ID_POWER_U_A), NULL, 0, MENU_FLAG_VALUE, 0, 0),

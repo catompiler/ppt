@@ -18,9 +18,13 @@
 #include "gui/gui_widget.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
-#include "../resources/resources_params.h"
-#include "../menu/menu_explorer.h"
-#include "../../settings.h"
+#include "gui/resources/resources_params.h"
+#include "gui/menu/menu_explorer.h"
+#include "settings.h"
+#include "drive_events.h"
+#include "gui_icon_conditions.h"
+#include "gui/bitmaps/icons_statusbar.h"
+#include "gui/resources/resources_colors.h"
 
 typedef struct _Gui_Menu gui_menu_t;
 
@@ -37,6 +41,62 @@ typedef struct _Gui_Menu gui_menu_t;
 
 #define GUI_MENU_SUBMENU_PREFIX "►"
 #define GUI_MENU_ENUM_VALUE_POSTFIX "↕"
+#define GUI_MENU_PASSWORD_ASTERISK "*"
+#define GUI_MENU_EVENT_TITLE_SIZE 25
+#define GUI_MENU_EVENT_TITLE_FORMAT "%02d.%02d.%02d|%02d:%02d:%02d|#%02d|"
+#define GUI_MENU_EVENT_ICONS_COUNT 3
+#define GUI_MENU_EVENT_HELP_ICONS_W 3
+#define GUI_MENU_EVENT_HELP_ICONS_SEP 2
+
+typedef bool (*gui_event_icon_condition_callback_t)();
+
+//! Тип дескриптора иконок (условия отображения).
+typedef struct _Gui_Event_Icon_Condition {
+    gui_event_icon_condition_callback_t callback; // функция-условие отображения иконки
+    uint32_t param;             // параметр функции условия
+    uint8_t icon;               // идентификатор статической иконки
+    graphics_color_t color;     // цвет иконки
+} gui_event_icon_condition_t;
+
+//! Начинает список условий отображения иконок.
+#define GUI_EVENT_ICON_CONDITIONS(arg_name, arg_count)\
+        static const gui_event_icon_condition_t arg_name[arg_count] = 
+
+//! Описывает дескриптор условия отображения иконки.
+#define GUI_EVENT_ICON_CONDITION(arg_callback, arg_param, arg_icon, arg_color)\
+        { .callback = (gui_event_icon_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .icon = arg_icon, .color = arg_color}
+
+bool gui_menu_event_error(drive_event_t* event, drive_error_t error);
+
+bool gui_menu_event_warning(drive_event_t* event, drive_warning_t warning);
+
+bool gui_menu_event_power_error (drive_event_t* event, drive_power_error_t error);
+
+bool gui_menu_event_power_warning(drive_event_t* event, drive_power_warning_t warning);
+
+//! Таблица отображения иконок в зависимости от условий
+#define GUI_EVENT_ICON_CONDITIONS_COUNT 16
+GUI_EVENT_ICON_CONDITIONS(gui_event_icon_conditions, GUI_EVENT_ICON_CONDITIONS_COUNT) {
+    // ошибки
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_error,         DRIVE_ERROR_ETC,            ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_error,         DRIVE_ERROR_EMERGENCY_STOP, ICONS_STATUSBAR_VAL_EMERGENCY,  THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_error,   DRIVE_POWER_ERROR_Iexc,     ICONS_STATUSBAR_VAL_FAULT_F,    THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_error,   DRIVE_POWER_ERROR_U,        ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_error,   DRIVE_POWER_ERROR_I,        ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_error,   DRIVE_POWER_ERROR_Ifan,     ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_error,         DRIVE_ERROR_OVERHEAT,       ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_RED_L),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_error,   DRIVE_POWER_ERROR_Iref,     ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_RED_L),
+          
+    // предупреждения
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_ETC,              ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Iexc,       ICONS_STATUSBAR_VAL_FAULT_F,    THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_U,          ICONS_STATUSBAR_VAL_FAULT_U,    THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_I,          ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Ifan,       ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_OVERHEAT,         ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_FAN_FAIL,         ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_ORANGE),
+};
 
 struct _Gui_Menu {
     gui_widget_t super; //!< Суперкласс.
@@ -46,6 +106,8 @@ struct _Gui_Menu {
     uint8_t home_on_timer_cnt; //!< Счетчик выхода на главный экран по таймеру
     bool key_down_press; //!< Сотояние кнопки DOWN
     bool key_up_press; //!< Сотояние кнопки UP
+    graphics_t* icon_graphics; //!< Ссылка на набор  иконок
+    uint8_t icon_count; //!< Количество значков в изображении иконок
     void (*on_home)(gui_menu_t* menu); //!< Каллбэк: выход из меню
 };
 
@@ -79,6 +141,11 @@ EXTERN err_t gui_menu_init_parent(gui_menu_t* menu, gui_metro_t* gui, gui_widget
  * @param rect Область перерисовки.
  */
 EXTERN void gui_menu_on_repaint(gui_menu_t* menu, const rect_t* rect);
+
+/**
+ * Устанавливает изображение значков.
+ */
+EXTERN void gui_menu_set_graphics(gui_menu_t* menu, graphics_t* graphics, uint8_t count);
 
 /**
  * Обработчик нажатия клавиши.
@@ -121,6 +188,8 @@ EXTERN void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui);
 
 int gui_menu_get_f32_fract(int number, int decimals);
 
+void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
+
 void gui_menu_draw_password_request(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
 void gui_menu_draw_title(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
@@ -129,7 +198,13 @@ void gui_menu_draw_scrollbar(gui_menu_t* menu, painter_t* painter, gui_metro_the
 
 void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height, graphics_pos_t x, graphics_pos_t y);
 
+void gui_menu_draw_event(uint8_t index, gui_menu_t* menu, drive_event_t* event, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height, graphics_pos_t x, graphics_pos_t y);
+
+void gui_menu_event_title(char* title, size_t size, const char* format, drive_event_t* event);
+
 void gui_menu_draw_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height);
+
+void gui_menu_draw_events_help(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width, graphics_pos_t height);
 
 EXTERN bool gui_menu_string_line_wrapping(painter_t* painter, const char* source, graphics_size_t* sx, graphics_size_t* sy, graphics_size_t width, graphics_size_t height);
 
