@@ -14,10 +14,14 @@
 #define TR_ID_UNITS_A 101
 //! Ом.
 #define TR_ID_UNITS_OHM 102
+//! Ом Ω.
+#define TR_ID_UNITS_OHM_SHORT 103
 //! кВт.
 #define TR_ID_UNITS_KW 105
 //! Н•м.
 #define TR_ID_UNITS_TORQUE 106
+//! Н•м (сокр.).
+#define TR_ID_UNITS_TORQUE_SHORT 107
 //! Секунды.
 #define TR_ID_UNITS_S 110
 //! Миллисекунды.
@@ -34,6 +38,8 @@
 #define TR_ID_UNITS_DEGREE_CELSIUS 130
 //! Обороты.
 #define TR_ID_UNITS_RPM 135
+//! Обороты (сокр.).
+#define TR_ID_UNITS_RPM_SHORT 136
 
 /**
  * Перечисления меню.
@@ -437,6 +443,7 @@
 #define TR_ID_MENU_STATUS 490
 //! История событий
 #define TR_ID_MENU_EVENTS 491
+
 //! Измерения
 #define TR_ID_MENU_MEASUREMENTS 492
 
@@ -455,6 +462,15 @@
 #define TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM               523
 #define TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE        524
 #define TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE           525
+/////////// Мотор ////////////
+// Вычисленный коэффициент полезного действия.
+#define TR_ID_MENU_MESS_PARAM_ID_MOTOR_EFF        526
+// Вычисленное сопротивление якоря.
+#define TR_ID_MENU_MESS_PARAM_ID_MOTOR_R_ROT      527
+// Вычисленные обороты.
+#define TR_ID_MENU_MESS_PARAM_ID_MOTOR_RPM        528
+// Вычисленный момент.
+#define TR_ID_MENU_MESS_PARAM_ID_MOTOR_TORQUE     529
 
 // Цифровые входа
 #define TR_ID_MENU_DIGITAL_INPUTS_STATE                 530
@@ -537,10 +553,15 @@
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iexc   728
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
-#define TR_ID_ENUM_HEATSINK_TEMP            740
-#define TR_ID_ENUM_HEATSINK_FAN_RPM         742
-#define TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE  744
-#define TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE     746
+#define TR_ID_ENUM_TILES_HEATSINK_TEMP            740
+#define TR_ID_ENUM_TILES_HEATSINK_FAN_RPM         741
+#define TR_ID_ENUM_TILES_TRIACS_PAIRS_OPEN_ANGLE  742
+#define TR_ID_ENUM_TILES_TRIAC_EXC_OPEN_ANGLE     743
+#define TR_ID_ENUM_TILES_MOTOR_EFF                744
+#define TR_ID_ENUM_TILES_MOTOR_R_ROT              745
+#define TR_ID_ENUM_TILES_MOTOR_RPM                746
+#define TR_ID_ENUM_TILES_MOTOR_TORQUE             747
+
 //! Языки интерфейса
 #define TR_ID_ENUM_LANGUAGES_RU             750
 #define TR_ID_ENUM_LANGUAGES_EN             751
@@ -585,7 +606,15 @@
 #define TR_ID_HOME_TRIACS_PAIRS_OPEN_ANGLE 944
 //! Угол открытия основных симистора возбуждения.
 #define TR_ID_HOME_TRIAC_EXC_OPEN_ANGLE 946
-        
+/////////// Мотор ////////////
+// Вычисленный коэффициент полезного действия.
+#define TR_ID_HOME_MOTOR_EFF        950
+// Вычисленное сопротивление якоря.
+#define TR_ID_HOME_MOTOR_R_ROT      952
+// Вычисленные обороты.
+#define TR_ID_HOME_MOTOR_RPM        954
+// Вычисленный момент.
+#define TR_ID_HOME_MOTOR_TORQUE     956        
 
 //! Заголовок меню
 #define TR_ID_MENU_HEADER_TITLE  1010
@@ -663,6 +692,31 @@
 #define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MIN            1322
 #define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX            1323
 #define TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX           1324
+/////////// Мотор //////////// 
+// Вычисленный коэффициент полезного действия.
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF                 1330
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_ALARM_MIN       1331
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_WARN_MIN        1332
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_WARN_MAX        1333
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_ALARM_MAX       1334
+// Вычисленное сопротивление якоря.
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT                   1340
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_ALARM_MIN         1341
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_WARN_MIN          1342
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_WARN_MAX          1343
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_ALARM_MAX         1344
+// Вычисленные обороты. 
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM                     1350
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_ALARM_MIN           1351
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_WARN_MIN            1352
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_WARN_MAX            1353
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_ALARM_MAX           1354
+// Вычисленный момент.
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE                      1360
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_ALARM_MIN            1361
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MIN             1362
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MAX             1363
+#define TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_ALARM_MAX            1364
 
 // Список состояний пуст
 #define TR_ID_MENU_EVENTS_NONE 2001

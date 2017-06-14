@@ -1012,6 +1012,28 @@
 #define PARAM_ID_TRIAC_EXC_OPEN_ANGLE_WARN_MAX    6402
 #define PARAM_ID_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX    6403
 
+/////////// Мотор ////////////
+// Вычисленный коэффициент полезного действия.
+#define PARAM_ID_MOTOR_EFF_ALARM_MIN            6410
+#define PARAM_ID_MOTOR_EFF_WARN_MIN             6411
+#define PARAM_ID_MOTOR_EFF_WARN_MAX             6412
+#define PARAM_ID_MOTOR_EFF_ALARM_MAX            6413
+// Вычисленное сопротивление якоря.
+#define PARAM_ID_MOTOR_R_ROT_ALARM_MIN          6420
+#define PARAM_ID_MOTOR_R_ROT_WARN_MIN           6421
+#define PARAM_ID_MOTOR_R_ROT_WARN_MAX           6422
+#define PARAM_ID_MOTOR_R_ROT_ALARM_MAX          6423
+// Вычисленные обороты.
+#define PARAM_ID_MOTOR_RPM_ALARM_MIN            6430
+#define PARAM_ID_MOTOR_RPM_WARN_MIN             6431
+#define PARAM_ID_MOTOR_RPM_WARN_MAX             6432
+#define PARAM_ID_MOTOR_RPM_ALARM_MAX            6433
+// Вычисленный момент.
+#define PARAM_ID_MOTOR_TORQUE_ALARM_MIN         6440
+#define PARAM_ID_MOTOR_TORQUE_WARN_MIN          6441
+#define PARAM_ID_MOTOR_TORQUE_WARN_MAX          6442
+#define PARAM_ID_MOTOR_TORQUE_ALARM_MAX         6443
+
 //////////
 // АЦП. //
 //////////

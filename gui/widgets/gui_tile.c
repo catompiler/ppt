@@ -153,7 +153,7 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
             painter_set_font(&painter, theme->big_font);
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
 
-            param_units_t unit = settings_param_units(settings_param_by_id(tile->type.param_id));
+            param_units_t unit = gui_tile_units(tile);
             //graphics_pos_t text_x, text_y;
             painter_string_size(&painter, TR(unit), (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
             text_x = ((graphics_pos_t)gui_widget_width(GUI_WIDGET(tile)) - text_x - 3);
@@ -229,7 +229,7 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
 
                 int32_t int_part = fixed32_get_int(valf);
                 int32_t fract_part = fixed32_get_fract_by_denom((int64_t)fixed_abs(valf), 10);
-                param_units_t unit = settings_param_units(param);
+                param_units_t unit = gui_tile_units(tile);
 
                 if ((int_part < 0 && int_part > -10) || (int_part > 0 && int_part < 100)) {
                     // отображение с дробной частью
@@ -275,6 +275,17 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             }
         }
     }
+}
+
+param_units_t gui_tile_units(gui_tile_t* tile)
+{
+    // приоритет единицы измерения специально для плитки
+    param_units_t unit = tile->type.unit;
+    if (unit == NULL) {
+        // единица измерения из параметра
+        unit = settings_param_units(settings_param_by_id(tile->type.param_id));
+    }
+    return unit;
 }
 
 size_t gui_tile_draw_value_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s)

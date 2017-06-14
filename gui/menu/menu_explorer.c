@@ -644,7 +644,7 @@ bool menu_explorer_long_esc(menu_explorer_t* explorer)
         explorer->state = MENU_EXPLORER_STATE_NAVI;
         return true;
     }
-    else if (explorer->state == MENU_EXPLORER_STATE_NAVI) {
+    else {
         explorer->state = MENU_EXPLORER_STATE_HOME;
         return true;
     }

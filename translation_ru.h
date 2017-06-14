@@ -15,8 +15,10 @@ TEXT_TRS_BEGIN(text_trs_ru)
 TEXT_TR(TR_ID_UNITS_V, "В")
 TEXT_TR(TR_ID_UNITS_A, "А")
 TEXT_TR(TR_ID_UNITS_OHM, "Ом")
+TEXT_TR(TR_ID_UNITS_OHM_SHORT, "Ω")
 TEXT_TR(TR_ID_UNITS_KW, "кВт")
 TEXT_TR(TR_ID_UNITS_TORQUE, "Н•м")
+TEXT_TR(TR_ID_UNITS_TORQUE_SHORT, "Η") // Нм
 TEXT_TR(TR_ID_UNITS_S, "с")
 TEXT_TR(TR_ID_UNITS_MS, "мс")
 TEXT_TR(TR_ID_UNITS_US, "мкс")
@@ -24,7 +26,8 @@ TEXT_TR(TR_ID_UNITS_HOUR, "ч")
 TEXT_TR(TR_ID_UNITS_PERCENT, "%")
 TEXT_TR(TR_ID_UNITS_DEGREE, "°")
 TEXT_TR(TR_ID_UNITS_DEGREE_CELSIUS, "°C")
-TEXT_TR(TR_ID_UNITS_RPM, "об/м")        
+TEXT_TR(TR_ID_UNITS_RPM, "об/м")  
+TEXT_TR(TR_ID_UNITS_RPM_SHORT, "Ξ") // RPM
 TEXT_TR(TR_ID_ENUM_PHASE_UNK, "Не задано")
 TEXT_TR(TR_ID_ENUM_PHASE_A, "Фаза A")
 TEXT_TR(TR_ID_ENUM_PHASE_B, "Фаза B")
@@ -212,22 +215,31 @@ TEXT_TR(TR_ID_MENU_STATUS, "Статус привода")
 TEXT_TR(TR_ID_MENU_EVENTS, "История событий")
 TEXT_TR(TR_ID_MENU_MEASUREMENTS, "Измерения") 
 
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_A, "Напряжение фазы A")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_B, "Напряжение фазы B")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_C, "Напряжение фазы C")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_ROT, "Напряжение якоря")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_A, "Напр. фазы A")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_B, "Напр. фазы B")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_C, "Напр. фазы C")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_U_ROT, "Напр. якоря")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_A, "Ток фазы A")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_B, "Ток фазы B")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_C, "Ток фазы C")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_ROT, "Ток якоря")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_EXC, "Ток возбуждения")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_FAN, "Ток вентиляторов")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_EXC, "Ток возб.")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_FAN, "Ток вент.")
 TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_POWER_I_REF, "Ток 4-20 мА")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP, "Температура радиатора")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM, "Обороты вент. радаит.")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE, "Угол открытия тиристоров")
-TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE, "Угол открытия тир.возб.")
-
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_TEMP, "Темп. радиат.")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_HEATSINK_FAN_RPM, "Об. вент. радаиат.")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE, "Угол откр. тир-ов")
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_TRIAC_EXC_OPEN_ANGLE, "Уг.откр.тир.возб.")
+/////////// Мотор ////////////
+// Вычисленный коэффициент полезного действия.
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_MOTOR_EFF, "Выч. КПД")
+// Вычисленное сопротивление якоря.
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_MOTOR_R_ROT, "Выч. R якоря")
+// Вычисленные обороты.
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_MOTOR_RPM, "Выч. обороты")
+// Вычисленный момент.
+TEXT_TR(TR_ID_MENU_MESS_PARAM_ID_MOTOR_TORQUE, "Выч. момент")
+        
 // Цифровые входа
 TEXT_TR(TR_ID_MENU_DIGITAL_INPUTS_STATE, "Цифровые входа")
 TEXT_TR(TR_ID_MENU_DIGITAL_IN_1_STATE, "Вход 1")
@@ -286,11 +298,15 @@ TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Irot, "Ток якоря")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iexc, "Ток возб.")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Iref, "Ток 4-20 мА")
 TEXT_TR(TR_ID_ENUM_TILES_DRIVE_POWER_Ifan, "Ток вент.")  
-TEXT_TR(TR_ID_ENUM_HEATSINK_TEMP, "Темп. радиат.") 
-TEXT_TR(TR_ID_ENUM_HEATSINK_FAN_RPM, "Об. вент. рад.") 
-TEXT_TR(TR_ID_ENUM_TRIACS_PAIRS_OPEN_ANGLE, "Уг.откр.тир.") 
-TEXT_TR(TR_ID_ENUM_TRIAC_EXC_OPEN_ANGLE, "Уг.о.тир.возб.") 
-
+TEXT_TR(TR_ID_ENUM_TILES_HEATSINK_TEMP, "Темп. радиат.") 
+TEXT_TR(TR_ID_ENUM_TILES_HEATSINK_FAN_RPM, "Об. вент. рад.") 
+TEXT_TR(TR_ID_ENUM_TILES_TRIACS_PAIRS_OPEN_ANGLE, "Уг.откр.тир.") 
+TEXT_TR(TR_ID_ENUM_TILES_TRIAC_EXC_OPEN_ANGLE, "Уг.о.тир.возб.") 
+TEXT_TR(TR_ID_ENUM_TILES_MOTOR_EFF, "Выч. КПД") 
+TEXT_TR(TR_ID_ENUM_TILES_MOTOR_R_ROT, "Выч. R якоря") 
+TEXT_TR(TR_ID_ENUM_TILES_MOTOR_RPM, "Выч. обороты") 
+TEXT_TR(TR_ID_ENUM_TILES_MOTOR_TORQUE, "Выч. момент") 
+        
 //! Язык интерфейса        
 TEXT_TR(TR_ID_ENUM_LANGUAGES_RU, "Русский (RU)") 
 TEXT_TR(TR_ID_ENUM_LANGUAGES_EN, "Английский (EN)")         
@@ -318,6 +334,15 @@ TEXT_TR(TR_ID_HOME_HEATSINK_TEMP, "Температура\nрадиатора")
 TEXT_TR(TR_ID_HOME_HEATSINK_FAN_RPM, "Обороты\nвентилятора")
 TEXT_TR(TR_ID_HOME_TRIACS_PAIRS_OPEN_ANGLE, "Угол откр.\nосн.тиристоров")
 TEXT_TR(TR_ID_HOME_TRIAC_EXC_OPEN_ANGLE, "Угол откр.сим.\nвозбуждения")   
+/////////// Мотор ////////////
+// Вычисленный коэффициент полезного действия.
+TEXT_TR(TR_ID_HOME_MOTOR_EFF, "Вычисленный\nКПД")
+// Вычисленное сопротивление якоря.
+TEXT_TR(TR_ID_HOME_MOTOR_R_ROT, "Сопротивление\nякоря")
+// Вычисленные обороты.
+TEXT_TR(TR_ID_HOME_MOTOR_RPM, "Вычисленные\nобороты")
+// Вычисленный момент.
+TEXT_TR(TR_ID_HOME_MOTOR_TORQUE, "Вычисленный\nмомент")
         
 // меню
 TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Меню")
@@ -394,7 +419,32 @@ TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MIN, "Ошибка 
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MIN, "Предупр. (мин.)")
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_WARN_MAX, "Предупр. (макс.)")
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_TRIAC_EXC_OPEN_ANGLE_ALARM_MAX, "Ошибка (макс.)")
-
+/////////// Мотор //////////// 
+// Вычисленный коэффициент полезного действия.
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF, "Вычисленный КПД")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_EFF_ALARM_MAX, "Ошибка (макс.)")
+// Вычисленное сопротивление якоря.
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT, "Выч.сопр.якоря")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_WARN_MAX, "Предупр. (макс.)") 
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_R_ROT_ALARM_MAX, "Ошибка (макс.)")
+// Вычисленные обороты. 
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM, "Выч. обороты")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_RPM_ALARM_MAX, "Ошибка (макс.)")
+// Вычисленный момент.
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE, "Выч. момент")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_ALARM_MIN, "Ошибка (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MIN, "Предупр. (мин.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MAX, "Предупр. (макс.)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_ALARM_MAX, "Ошибка (макс.)")
+        
 // Список событий пуст        
 TEXT_TR(TR_ID_MENU_EVENTS_NONE, "Список событий пуст")
 // Тип события - Состояние

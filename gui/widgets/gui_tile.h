@@ -59,18 +59,19 @@ struct _Gui_Tile_Type {
     param_id_t warn_max;
     param_id_t alarm_max;
     const char* title;
+    const char* unit;
 };
 
 //! Тип плитки (отображаемое значение)
-#define GUI_TILE_TYPE(id, arg_title, arg_alarm_min, arg_warn_min, arg_warn_max, arg_alarm_max)\
+#define GUI_TILE_TYPE(id, arg_title, arg_alarm_min, arg_warn_min, arg_warn_max, arg_alarm_max, arg_unit)\
      { .param_id = id, .title = arg_title, \
         .alarm_min = arg_alarm_min, .warn_min = arg_warn_min,\
-        .warn_max = arg_warn_max, .alarm_max = arg_alarm_max }
+        .warn_max = arg_warn_max, .alarm_max = arg_alarm_max, .unit = arg_unit }
 
 #define TILE_TIMEOUT_ERROR_UPDATE 10
 
 //! Список типов плитки (отображаемых значений)
-#define GUI_TILE_TYPES_COUNT 15
+#define GUI_TILE_TYPES_COUNT 19
 #define GUI_TILE_TYPES_MIN 0
 #define GUI_TILE_TYPES_MAX (GUI_TILE_TYPES_COUNT - 1)
 #define GUI_TILE_TYPES(arg_name, arg_count)\
@@ -159,6 +160,8 @@ EXTERN void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect);
  * @param tile Плитка.
  */
 EXTERN void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect);
+
+EXTERN param_units_t gui_tile_units(gui_tile_t* tile);
 
 size_t gui_tile_draw_value_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s);
 
