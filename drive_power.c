@@ -1,7 +1,9 @@
 #include "drive_power.h"
 #include "utils/utils.h"
 #include "settings.h"
+#include "drive_triacs.h"
 #include <string.h>
+#include <arm_math.h>
 
 
 
@@ -14,6 +16,9 @@ static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_CHANNELS_COU
 
 //! Максимальный разрешённый дрифт.
 #define DRIVE_POWER_MAX_DRIFT 32
+
+//! Коэффициент для расчёта напряжения по углу открытия.
+#define DRIVE_POWER_K_UD0 (0x256CF) // 3 * sqrt(6) / pi == 2.3391.
 
 /**
  * Делитель измерений АЦП.
@@ -38,6 +43,8 @@ typedef struct _Drive_Power {
     size_t iters_processed; //!< Число итераций обработки данных.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
     phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
+    // Вычисляемые значения.
+    fixed32_t open_angle_voltage; //!< Напряжение согласно углу открытия тиристоров.
 } drive_power_t;
 
 //! Питание привода.
@@ -364,6 +371,31 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
 {
     err_t e = power_calc_values(&drive_power.power, channels);
     if(err) *err = e;
+    
+    if(e != E_NO_ERROR) return;
+    
+    fixed32_t Uin = (power_channel_real_value(&drive_power.power, DRIVE_POWER_Ua) +
+                     power_channel_real_value(&drive_power.power, DRIVE_POWER_Ub) +
+                     power_channel_real_value(&drive_power.power, DRIVE_POWER_Uc)) / 3;
+    
+    fixed32_t Ud0 = fixed32_mul((int64_t)Uin, DRIVE_POWER_K_UD0);
+    
+    fixed32_t open_angle = drive_triacs_pairs_start_open_angle();
+    
+    q15_t open_angle_scaled = 0;
+    fixed32_t open_angle_cos = 0;
+    
+    if(open_angle < fixed32_make_from_int(60)){
+        // 0...360 --[/360]-> 0...1(0...65536) --[>>1]-> 0...32768
+        open_angle_scaled = (q15_t)((open_angle / 360) >> 1);
+        open_angle_cos = (fixed32_t)arm_cos_q15(open_angle_scaled) * 2;
+    }else{
+        // 0...360 --[/360]-> 0...1(0...65536) --[>>1]-> 0...32768
+        open_angle_scaled = (q15_t)(((open_angle + fixed32_make_from_int(60)) / 360) >> 1);
+        open_angle_cos = fixed32_make_from_int(1) + (fixed32_t)arm_cos_q15(open_angle_scaled) * 2;
+    }
+    
+    drive_power.open_angle_voltage = fixed32_mul((int64_t)Ud0, open_angle_cos);
 }
 
 bool drive_power_calc_values(power_channels_t channels, err_t* err)
@@ -453,4 +485,9 @@ fixed32_t drive_power_channel_real_value_inst(size_t channel)
 fixed32_t drive_power_channel_real_value(size_t channel)
 {
     return power_channel_real_value(&drive_power.power, channel);
+}
+
+fixed32_t drive_power_open_angle_voltage(void)
+{
+    return drive_power.open_angle_voltage;
 }

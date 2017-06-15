@@ -76,6 +76,7 @@ typedef struct _Drive_Parameters {
     param_t* param_i_exc;
     param_t* param_i_ref;
     param_t* param_i_fan;
+    param_t* param_calc_u_rot;
     param_t* param_pairs_angle;
     param_t* param_exc_angle;
     // цифровые входа
@@ -1075,8 +1076,10 @@ static void drive_update_virtual_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_ref, DRIVE_POWER_Iref);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_fan, DRIVE_POWER_Ifan);
     
-    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pairs_angle, TRIACS_PAIRS_ANGLE_MAX_F - drive_regulator_rot_open_angle());
-    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_exc_angle, TRIAC_EXC_ANGLE_MAX_F - drive_regulator_exc_open_angle());
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_calc_u_rot, drive_power_open_angle_voltage());
+    
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pairs_angle, drive_triacs_pairs_start_open_angle());
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_exc_angle, drive_triacs_exc_start_open_angle());
 }
 
 //! Макрос для обновления параметра состояния цифрового входа.
@@ -1666,6 +1669,7 @@ err_t drive_init(void)
     drive.params.param_i_exc = settings_param_by_id(PARAM_ID_POWER_I_EXC);
     drive.params.param_i_ref = settings_param_by_id(PARAM_ID_POWER_I_REF);
     drive.params.param_i_fan = settings_param_by_id(PARAM_ID_POWER_I_FAN);
+    drive.params.param_calc_u_rot = settings_param_by_id(PARAM_ID_POWER_CALC_U_ROT);
     drive.params.param_pairs_angle = settings_param_by_id(PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE);
     drive.params.param_exc_angle = settings_param_by_id(PARAM_ID_TRIAC_EXC_OPEN_ANGLE);
     

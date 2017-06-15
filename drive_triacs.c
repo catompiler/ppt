@@ -71,6 +71,9 @@ typedef struct _Drive_Triacs {
     fixed32_t triac_exc_min_angle; //!< Минимальный угол открытия симистора возбуждения.
     fixed32_t triac_exc_max_angle; //!< Максимальный угол открытия симистора возбуждения.
     
+    fixed32_t triacs_pairs_open_angle; //!< Угол открытия тиристорных пар.
+    fixed32_t triac_exc_open_angle; //!< Угол открытия симистора возбуждения.
+    
     uint16_t triacs_pairs_angle_ticks; //!< Угол открытия тиристорных пар - значение регистра сравнения таймера.
     uint16_t triacs_pairs_open_ticks; //!< Время открытия тиристорных пар в тиках таймера.
     
@@ -227,33 +230,63 @@ err_t drive_triacs_clamp_exc_open_angle(fixed32_t angle_min, fixed32_t angle_max
     return err;
 }
 
+fixed32_t drive_triacs_pairs_open_angle(void)
+{
+    if(!drive_triacs.pairs_enabled) return 0;
+    return drive_triacs.triacs_pairs_open_angle;
+}
+
+fixed32_t drive_triacs_pairs_start_open_angle(void)
+{
+    return TRIACS_PAIRS_ANGLE_MAX_F - drive_triacs_pairs_open_angle();
+}
+
 err_t drive_triacs_set_pairs_open_angle(fixed32_t angle)
 {
     err_t err = E_NO_ERROR;
     if(angle < drive_triacs.triacs_pairs_min_angle){
-        angle = 0;
+        angle = drive_triacs.triacs_pairs_min_angle;
         err = E_OUT_OF_RANGE;
     }
     if(angle > drive_triacs.triacs_pairs_max_angle){
         angle = drive_triacs.triacs_pairs_max_angle;
         err = E_OUT_OF_RANGE;
     }
+    
+    drive_triacs.triacs_pairs_open_angle = angle;
+    
     angle /= TRIACS_TIM_MAX_TICKS_ANGLE;
     drive_triacs.triacs_pairs_angle_ticks = fixed32_mul(angle, TRIACS_TIM_MAX_TICKS);
     return err;
+}
+
+fixed32_t drive_triacs_exc_open_angle(void)
+{
+    if(!drive_triacs.exc_enabled) return 0;
+    if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_EXTERNAL) return 0;
+    if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_FIXED) return TRIAC_EXC_ANGLE_MAX_F;
+    return drive_triacs.triac_exc_open_angle;
+}
+
+fixed32_t drive_triacs_exc_start_open_angle(void)
+{
+    return TRIAC_EXC_ANGLE_MAX_F - drive_triacs_exc_open_angle();
 }
 
 err_t drive_triacs_set_exc_open_angle(fixed32_t angle)
 {
     err_t err = E_NO_ERROR;
     if(angle < drive_triacs.triac_exc_min_angle){
-        angle = 0;
+        angle = drive_triacs.triac_exc_min_angle;
         err = E_OUT_OF_RANGE;
     }
     if(angle > drive_triacs.triac_exc_max_angle){
         angle = drive_triacs.triac_exc_max_angle;
         err = E_OUT_OF_RANGE;
     }
+    
+    drive_triacs.triac_exc_open_angle = angle;
+    
     angle /= TRIAC_EXC_MAX_TICKS_ANGLE;
     drive_triacs.triac_exc_angle_ticks = fixed32_mul(angle, TRIAC_EXC_MAX_TICKS);
     return err;

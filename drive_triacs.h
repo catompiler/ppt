@@ -219,11 +219,35 @@ extern err_t drive_triacs_clamp_pairs_open_angle(fixed32_t angle_min, fixed32_t 
 extern err_t drive_triacs_clamp_exc_open_angle(fixed32_t angle_min, fixed32_t angle_max);
 
 /**
+ * Получает угол открытия тиристорных пар.
+ * @return Угол открытия.
+ */
+extern fixed32_t drive_triacs_pairs_open_angle(void);
+
+/**
+ * Получает начальный угол открытия тиристорных пар.
+ * @return Угол открытия.
+ */
+extern fixed32_t drive_triacs_pairs_start_open_angle(void);
+
+/**
  * Устанавливает угол открытия тиристорных пар.
  * @param angle Угол открытия.
  * @return Код ошибки.
  */
 extern err_t drive_triacs_set_pairs_open_angle(fixed32_t angle);
+
+/**
+ * Получает угол открытия симистора возбуждения.
+ * @return Угол открытия.
+ */
+extern fixed32_t drive_triacs_exc_open_angle(void);
+
+/**
+ * Получает начальный угол открытия симистора возбуждения.
+ * @return Угол открытия.
+ */
+extern fixed32_t drive_triacs_exc_start_open_angle(void);
 
 /**
  * Устанавливает угол открытия симистора возбуждения.

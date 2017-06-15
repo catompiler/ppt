@@ -1238,6 +1238,11 @@
 #define PARAM_ID_POWER_I_FAN 8110
 
 /**
+ * Вычисленное напряжение якоря.
+ */
+#define PARAM_ID_POWER_CALC_U_ROT 8150
+
+/**
  * Температура радиатора.
  */
 #define PARAM_ID_HEATSINK_TEMP 8200

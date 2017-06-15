@@ -375,5 +375,11 @@ extern fixed32_t drive_power_channel_real_value_inst(size_t channel);
  */
 extern fixed32_t drive_power_channel_real_value(size_t channel);
 
+/**
+ * Получает напряжение по углу открытия тиристоров.
+ * @return Напряжение по углу открытия тиристоров.
+ */
+extern fixed32_t drive_power_open_angle_voltage(void);
+
 #endif /* DRIVE_POWER_H */
 
