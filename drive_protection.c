@@ -299,7 +299,7 @@ static const drive_protection_power_descr_t drive_prot_power_items_descrs[DRIVE_
         0, PARAM_ID_PROT_I_ROT_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
     
-    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_I_EXC,\
+    PROT_PWR_DESCR(DRIVE_POWER_Iexc, DRIVE_PROT_TYPE_CUT, DRIVE_PROT_FLAG_ERR, DRIVE_POWER_ERROR_OVERFLOW_Iexc, PARAM_ID_MOTOR_I_EXC_NOM,\
         0, PARAM_ID_PROT_I_EXC_CUTOFF_LEVEL_VALUE, 0,\
         0, 0),
 };
@@ -1385,6 +1385,13 @@ drive_pwr_check_res_t drive_protection_check_rot_zero_voltage(void)
 {
     if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Urot)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
     if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Urot)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
+    return DRIVE_PWR_CHECK_NORMAL;
+}
+
+drive_pwr_check_res_t drive_protection_check_rot_zero_current(void)
+{
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Irot)) return DRIVE_PWR_CHECK_FAULT_OVERFLOW;
+    if(!drive_protection_power_item_allow(DRIVE_PROT_PWR_ITEM_WARN_IDLE_Irot)) return DRIVE_PWR_CHECK_WARN_OVERFLOW;
     return DRIVE_PWR_CHECK_NORMAL;
 }
 

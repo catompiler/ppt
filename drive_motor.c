@@ -1,6 +1,8 @@
 #include "drive_motor.h"
 #include "drive_power.h"
 #include "drive_triacs.h"
+#include "drive_protection.h"
+#include "drive.h"
 #include <string.h>
 #include "settings.h"
 
@@ -92,7 +94,7 @@ err_t drive_motor_update_settings(void)
     motor.R_rot = R_rot75;
     
     param_t* p_eff = settings_param_by_id(PARAM_ID_MOTOR_EFF);
-    DRIVE_UPDATE_PARAM_FIXED(p_eff, eff_f);
+    DRIVE_UPDATE_PARAM_FIXED(p_eff, eff_f * 100);
     
     param_t* p_r = settings_param_by_id(PARAM_ID_MOTOR_R_ROT);
     DRIVE_UPDATE_PARAM_FIXED(p_r, R_rot);
@@ -111,28 +113,45 @@ void drive_motor_calculate(void)
 {
     if(!motor.valid) return;
     
-    fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
-    fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
-    fixed32_t I_exc = 0;
+    fixed32_t N = 0;
+    fixed32_t M = 0;
     
-    if(drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL){
-        I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
-    }else{
-        I_exc = motor.I_exc;
+    //bool i_exc_allow = drive_protection_is_allow(drive_protection_check_exc());
+    
+    if(drive_running()){
+        fixed32_t U_rot = 0;
+        fixed32_t I_rot = 0;
+        fixed32_t I_exc = 0;
+    
+        bool u_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_voltage());
+        bool i_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_current());
+        bool i_exc_zero = false;
+        
+        if(!u_rot_zero) U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        if(!i_rot_zero) I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+
+        if(drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL){
+            i_exc_zero = drive_protection_is_allow(drive_protection_check_exc_zero_current());
+            if(!i_exc_zero) I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
+        }else{
+            I_exc = motor.I_exc;
+        }
+        
+        if(!i_exc_zero){
+            fixed32_t U_R_rot = fixed32_mul((int64_t)I_rot, motor.R_rot);
+            fixed32_t U_minus_IR = U_rot - U_R_rot;
+            fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
+            N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
+
+            fixed32_t I_rot_I_exc = fixed32_mul((int64_t)I_rot, I_exc);
+            M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
+        }
     }
-    
-    fixed32_t U_R_rot = fixed32_mul((int64_t)I_rot, motor.R_rot);
-    fixed32_t U_minus_IR = U_rot - U_R_rot;
-    fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
-    fixed32_t N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
-    
-    fixed32_t I_rot_I_exc = fixed32_mul((int64_t)I_rot, I_exc);
-    fixed32_t M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
     
     motor.rpm = N;
     motor.torque = M;
     
-    DRIVE_UPDATE_PARAM_FIXED(motor.param_rpm, N);
+    DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(N));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, M);
 }
 

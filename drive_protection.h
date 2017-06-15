@@ -515,6 +515,12 @@ extern bool drive_protection_is_allow(drive_pwr_check_res_t check_res);
 extern drive_pwr_check_res_t drive_protection_check_rot_zero_voltage(void);
 
 /**
+ * Выполняет проверку отсутствия тока якоря.
+ * @return Результат проверки.
+ */
+extern drive_pwr_check_res_t drive_protection_check_rot_zero_current(void);
+
+/**
  * Выполняет проверку отсутствия тока возбуждения.
  * @return Результат проверки.
  */
