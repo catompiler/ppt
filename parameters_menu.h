@@ -200,6 +200,16 @@ MENU_DESCRS(menu_descrs) {
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_2_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_2_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_3_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_3_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_4_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_4_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
+        // Наработка привода
+        MENU_DESCR(1, 0, TEXT(TR_ID_MENU_RUNTIMES), NULL, 0, 0, 0, 0),
+            // Время работы после последнего включения
+            MENU_DESCR(2, PARAM_ID_LAST_RUNTIME, TEXT(TR_ID_MENU_LAST_RUNTIME), NULL, 0, MENU_FLAG_VALUE, 0, 0),
+            // Время работы
+            MENU_DESCR(2, PARAM_ID_RUNTIME, TEXT(TR_ID_MENU_RUNTIME), NULL, 0, MENU_FLAG_VALUE, 0, 0),
+            // Время работы вентиляторов
+            MENU_DESCR(2, PARAM_ID_FAN_RUNTIME, TEXT(TR_ID_MENU_FAN_RUNTIME), NULL, 0, MENU_FLAG_VALUE, 0, 0),
+            // Время во вкл.состоянии (включая готовность)
+            MENU_DESCR(2, PARAM_ID_LIFETIME, TEXT(TR_ID_MENU_LIFETIME), NULL, 0, MENU_FLAG_VALUE, 0, 0),
     // Настройки интерфейса
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_GUI), NULL, 0, MENU_FLAG_ROOT, 0, 0),
         // Пароль администратора

@@ -255,6 +255,17 @@ TEXT_TR(TR_ID_MENU_DIGITAL_OUT_2_STATE, "Выход 2")
 TEXT_TR(TR_ID_MENU_DIGITAL_OUT_3_STATE, "Выход 3")
 TEXT_TR(TR_ID_MENU_DIGITAL_OUT_4_STATE, "Выход 4") 
         
+// Наработка привода
+TEXT_TR(TR_ID_MENU_RUNTIMES, "Наработка привода")
+// Время работы после последнего включения
+TEXT_TR(TR_ID_MENU_LAST_RUNTIME, "Работа последн. пуска")
+// Время работы
+TEXT_TR(TR_ID_MENU_RUNTIME, "Общая работа")
+// Время работы вентиляторов
+TEXT_TR(TR_ID_MENU_FAN_RUNTIME, "Работа вентиляторов")
+// Время во вкл.состоянии (включая готовность)
+TEXT_TR(TR_ID_MENU_LIFETIME, "Время включения")
+            
 //TEXT_TR(TR_ID_MENU_, "")
 //TEXT_TR(TR_ID_ENUM_, "")
 //TEXT_TR(TR_ID_, "")

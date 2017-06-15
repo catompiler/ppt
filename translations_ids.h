@@ -487,6 +487,16 @@
 #define TR_ID_MENU_DIGITAL_OUT_2_STATE                 542
 #define TR_ID_MENU_DIGITAL_OUT_3_STATE                 543
 #define TR_ID_MENU_DIGITAL_OUT_4_STATE                 544
+// Наработка привода
+#define TR_ID_MENU_RUNTIMES                             545
+// Время работы после последнего включения
+#define TR_ID_MENU_LAST_RUNTIME                         546
+// Время работы
+#define TR_ID_MENU_RUNTIME                              547
+// Время работы вентиляторов
+#define TR_ID_MENU_FAN_RUNTIME                          548
+// Время во вкл.состоянии (включая готовность)
+#define TR_ID_MENU_LIFETIME                             549
 
 #define TR_ID_HELP_POWER            550
 //! Сеть.
