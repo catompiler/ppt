@@ -109,6 +109,14 @@ MENU_VALUES(menu_enum_gui_digital_states,
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIGITAL_STATES_OFF)),      // Включен
     MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_DIGITAL_STATES_ON)),      // Выключен
 );
+//! Перечисления плиток для выбора отображения текста ошибок и предупреждений
+MENU_VALUES(menu_enum_gui_tiles_for_warnings,
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_GUI_TILE_1)),      // Плитка 1
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_GUI_TILE_2)),      // Плитка 2
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_GUI_TILE_3)),      // Плитка 3
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_GUI_TILE_4)),      // Плитка 4
+    MAKE_MENU_VALUE_STRING(TEXT(TR_ID_ENUM_GUI_TILE_NONE)),   // Не отображать
+);
 
 //! Перечисление .
 //MENU_VALUES(menu_enum_,
@@ -133,6 +141,7 @@ MENU_VALUE_ENUM(menu_val_gui_buzzer, 0, MENU_ENUM_LEN(menu_enum_gui_buzzer), men
 MENU_VALUE_ENUM(menu_val_gui_tiles, 0, MENU_ENUM_LEN(menu_enum_gui_tiles), menu_enum_gui_tiles);
 MENU_VALUE_ENUM(menu_val_gui_languages, 0, MENU_ENUM_LEN(menu_enum_gui_languages), menu_enum_gui_languages);
 MENU_VALUE_ENUM(menu_val_gui_digital_states, 0, MENU_ENUM_LEN(menu_enum_gui_digital_states), menu_enum_gui_digital_states);
+MENU_VALUE_ENUM(menu_val_gui_tiles_for_warnings, 0, MENU_ENUM_LEN(menu_enum_gui_tiles_for_warnings), menu_enum_gui_tiles_for_warnings);
 
 //MENU_VALUE_ENUM(menu_val_, 0, MENU_ENUM_LEN(menu_enum_), menu_enum_);
 
@@ -191,17 +200,23 @@ MENU_DESCRS(menu_descrs) {
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_2_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_2_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_3_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_3_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
             MENU_DESCR(2, PARAM_ID_DIGITAL_OUT_4_STATE, TEXT(TR_ID_MENU_DIGITAL_OUT_4_STATE), NULL, 0, MENU_FLAG_VALUE, 0, &menu_val_gui_digital_states),
-    // Настройки интерфеса
+    // Настройки интерфейса
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_GUI), NULL, 0, MENU_FLAG_ROOT, 0, 0),
+        // Пароль администратора
+        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ADMIN, TEXT(TR_ID_MENU_GUI_PASSWORD_ADMIN), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, 0),
+        // Пароль ROOT
+        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ROOT, TEXT(TR_ID_MENU_GUI_PASSWORD_ROOT), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ROOT, 0, 0),
+        // Звуковые оповещения
+        MENU_DESCR(1, PARAM_ID_GUI_BUZZER, TEXT(TR_ID_MENU_GUI_BUZZER), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_buzzer),
+        // Язык
         MENU_DESCR(1, PARAM_ID_GUI_LANGUAGE, TEXT(TR_ID_MENU_GUI_LANGUAGE), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_gui_languages),    
+        // Плитки
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_GUI_TILES), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, 0),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_1, TEXT(TR_ID_MENU_GUI_TILE_1), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_2, TEXT(TR_ID_MENU_GUI_TILE_2), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_3, TEXT(TR_ID_MENU_GUI_TILE_3), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),
             MENU_DESCR(2, PARAM_ID_GUI_TILE_4, TEXT(TR_ID_MENU_GUI_TILE_4), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_tiles),
-        MENU_DESCR(1, PARAM_ID_GUI_BUZZER, TEXT(TR_ID_MENU_GUI_BUZZER), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, &menu_val_gui_buzzer),
-        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ADMIN, TEXT(TR_ID_MENU_GUI_PASSWORD_ADMIN), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ADMIN, 0, 0),
-        MENU_DESCR(1, PARAM_ID_GUI_PASSWORD_ROOT, TEXT(TR_ID_MENU_GUI_PASSWORD_ROOT), NULL, 0, MENU_FLAG_DATA | MENU_FLAG_ROOT, 0, 0),
+        // Граничные значения цветовых предупреждений на плитках
         MENU_DESCR(1, 0, TEXT(TR_ID_MENU_GUI_TILE_VALUES), NULL, 0, MENU_FLAG_DATA, 0, 0),
             // Напряжение фазы
             MENU_DESCR(2, 0, TEXT(TR_ID_MENU_GUI_TILE_VALUE_POWER_U), NULL, 0, MENU_FLAG_DATA, 0, 0),
@@ -294,6 +309,8 @@ MENU_DESCRS(menu_descrs) {
                 MENU_DESCR(3, PARAM_ID_MOTOR_TORQUE_WARN_MIN, TEXT(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MIN), NULL, 0, MENU_FLAG_DATA, 0, 0),
                 MENU_DESCR(3, PARAM_ID_MOTOR_TORQUE_WARN_MAX, TEXT(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_WARN_MAX), NULL, 0, MENU_FLAG_DATA, 0, 0),
                 MENU_DESCR(3, PARAM_ID_MOTOR_TORQUE_ALARM_MAX, TEXT(TR_ID_MENU_GUI_TILE_VALUE_MOTOR_TORQUE_ALARM_MAX), NULL, 0, MENU_FLAG_DATA, 0, 0),
+        // Отображение текста ошибок и предупреждений на плитке
+        MENU_DESCR(1, PARAM_ID_MENU_GUI_TILE_WARNINGS, TEXT(TR_ID_MENU_GUI_TILE_WARNINGS), NULL, 0, MENU_FLAG_DATA, 0, &menu_val_gui_tiles_for_warnings),
     // Сеть.
     MENU_DESCR(0, 0, TEXT(TR_ID_MENU_SUPPLY_IN), TEXT(TR_ID_HELP_POWER_IN), 0, 0, 0, 0),
         MENU_DESCR(1, PARAM_ID_U_NOM, TEXT(TR_ID_MENU_U_NOM), TEXT(TR_ID_HELP_U_NOM), 0, MENU_FLAG_DATA, 0, 0),

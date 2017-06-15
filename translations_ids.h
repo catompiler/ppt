@@ -406,7 +406,9 @@
 #define TR_ID_MENU_HEATSINK_TEMP_PROT 465
 
 //! Меню интерфейса (GUI)
-#define TR_ID_MENU_GUI              471
+#define TR_ID_MENU_GUI              470
+//! Отображение текста ошибок и предупреждений на плитке
+#define TR_ID_MENU_GUI_TILE_WARNINGS    471
 //! Плитки (выбор отображаемых измерений)
 #define TR_ID_MENU_GUI_TILES        472
 #define TR_ID_MENU_GUI_TILE_1        473
@@ -568,6 +570,12 @@
 //! Состояния цифровых входов/выходов
 #define TR_ID_ENUM_DIGITAL_STATES_ON         760
 #define TR_ID_ENUM_DIGITAL_STATES_OFF        761
+//! Перечисления плиток для выбора отображения текста ошибок и предупреждений
+#define TR_ID_ENUM_GUI_TILE_1               770
+#define TR_ID_ENUM_GUI_TILE_2               771
+#define TR_ID_ENUM_GUI_TILE_3               772
+#define TR_ID_ENUM_GUI_TILE_4               773
+#define TR_ID_ENUM_GUI_TILE_NONE            774
 // /**
 //  * .
 //  */

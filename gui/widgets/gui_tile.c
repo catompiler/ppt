@@ -172,8 +172,8 @@ void gui_tile_on_repaint(gui_tile_t* tile, const rect_t* rect)
 void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
 {
     if (gui_widget_visible(GUI_WIDGET(tile))) {
-        // TODO: добавить получение индекса из параметра
-        uint8_t for_errors_id = 3; // индекс плитки для отоброжения ошибок
+        // получение индекса из параметра
+        uint32_t for_errors_id = settings_param_valueu(settings_param_by_id(PARAM_ID_MENU_GUI_TILE_WARNINGS));
         // отображать ошибки и предупреждения на этой плитке?
         bool for_show_errors = (tile->id == for_errors_id);
         drive_errors_t drive_errorsw = drive_errors();
@@ -198,6 +198,9 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
                 
                 // перерисовывается только при изменении статуса
                 gui_tile_set_status(tile, ch_status);
+                if (tile->last_error_update == 0) {
+                    gui_widget_repaint(GUI_WIDGET(tile), NULL);
+                }
             } else if (tile->update_errors) {
                 // циклическое отображение ошибок и предупреждений
                 counter_t cur = system_counter_ticks();
@@ -211,8 +214,15 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
             }
         }
         else {  // нет ошибок и предупреждений
-            tile->warnings = DRIVE_ERROR_NONE;
-            tile->errors = DRIVE_WARNING_NONE;
+            if (tile->warnings != DRIVE_WARNING_NONE || tile->errors != DRIVE_ERROR_NONE) {
+                tile->warnings = DRIVE_ERROR_NONE;
+                tile->errors = DRIVE_WARNING_NONE;
+                tile->show_error_break = 0;
+                tile->last_error_update = 0;
+                gui_widget_repaint(GUI_WIDGET(tile), NULL);
+                return;
+            }
+            
             if(drive_power_data_avail(DRIVE_POWER_CHANNELS)) {
                 char str[9];
 

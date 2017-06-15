@@ -9,6 +9,7 @@
 #include "translations_ids.h"
 #include "localization/localization.h"
 #include "settings.h"
+#include "gui/widgets/gui_home.h"
 
 //! Макрос для сокращения декларации дробного значения fixed32.
 #define F32(A, B) fixed32_make_from_fract(A, B)
@@ -18,7 +19,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 330
+#define PARAMETERS_REAL_COUNT 331
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 42
 // Общее число параметров.
@@ -325,6 +326,7 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     
     // Настройки интерфейса панели (GUI)
     PARAM_DESCR(PARAM_ID_GUI_LANGUAGE,     PARAM_TYPE_UINT, 0,  1,   0,  0,  NOUNITS),        
+    PARAM_DESCR(PARAM_ID_MENU_GUI_TILE_WARNINGS,     PARAM_TYPE_UINT, 0,  GUI_HOME_TILES_COUNT,   GUI_HOME_TILES_COUNT,  0,  NOUNITS),
     PARAM_DESCR(PARAM_ID_GUI_TILE_1,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  0,  0,  NOUNITS),  
     PARAM_DESCR(PARAM_ID_GUI_TILE_2,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  1,  0,  NOUNITS), 
     PARAM_DESCR(PARAM_ID_GUI_TILE_3,       PARAM_TYPE_UINT, GUI_TILE_TYPES_MIN, GUI_TILE_TYPES_MAX,  2,  0,  NOUNITS), 

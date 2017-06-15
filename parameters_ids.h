@@ -912,6 +912,10 @@
  */
 #define PARAM_ID_GUI_LANGUAGE 6050
 /**
+ * Вывод предупреждений на плитке
+ */
+#define PARAM_ID_MENU_GUI_TILE_WARNINGS 6070
+/**
  * Плитки (выбор отображаемых значений)
  */
 #define PARAM_ID_GUI_TILE_1 6101

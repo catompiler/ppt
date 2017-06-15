@@ -193,6 +193,7 @@ TEXT_TR(TR_ID_MENU_PHASES_SYNC_PROT, "Синхронизация с фазами
 TEXT_TR(TR_ID_MENU_ROT_BREAK_PROT, "Обрыв якоря")
 TEXT_TR(TR_ID_MENU_HEATSINK_TEMP_PROT, "Перегрев радиатора")
 TEXT_TR(TR_ID_MENU_GUI, "Настройки панели (GUI)")
+TEXT_TR(TR_ID_MENU_GUI_TILE_WARNINGS, "Вывод предупреждений")
 TEXT_TR(TR_ID_MENU_GUI_TILES, "Плитки")
 TEXT_TR(TR_ID_MENU_GUI_TILE_1, "Плитка 1")
 TEXT_TR(TR_ID_MENU_GUI_TILE_2, "Плитка 2")
@@ -314,6 +315,13 @@ TEXT_TR(TR_ID_ENUM_LANGUAGES_EN, "Английский (EN)")
 //! Состояния цифровых входов/выходов
 TEXT_TR(TR_ID_ENUM_DIGITAL_STATES_ON, "Включен (1)") 
 TEXT_TR(TR_ID_ENUM_DIGITAL_STATES_OFF, "Выключен (0)")  
+
+//! Перечисления плиток для выбора отображения текста ошибок и предупреждений
+TEXT_TR(TR_ID_ENUM_GUI_TILE_1, "Пл.1") 
+TEXT_TR(TR_ID_ENUM_GUI_TILE_2, "Пл.2") 
+TEXT_TR(TR_ID_ENUM_GUI_TILE_3, "Пл.3") 
+TEXT_TR(TR_ID_ENUM_GUI_TILE_4, "Пл.4") 
+TEXT_TR(TR_ID_ENUM_GUI_TILE_NONE, "Нет") 
         
 //! Напряжения фаз
 TEXT_TR(TR_ID_HOME_PHASE_A_VOLTAGE, "Напряжение\nфазы A")
