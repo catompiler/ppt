@@ -381,13 +381,13 @@ void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_
                 drive_event_index_t id = drive_events_index_by_number((size_t)number);
 
                 err_t err = E_NO_ERROR;
-                uint8_t k = 100;
                 do {
                     err = drive_events_read_event((drive_event_t*)&event, id);
-                    k--;
-                } while(err != E_NO_ERROR && k > 0);
+                } while(err == E_BUSY);
                 
-                gui_menu_draw_event(i, menu, &event, painter, theme, width, height, text_x, text_y);
+                if (err == E_NO_ERROR) {
+                    gui_menu_draw_event(i, menu, &event, painter, theme, width, height, text_x, text_y);
+                }
             }
             else {
                 if (mode_is_lines) {
