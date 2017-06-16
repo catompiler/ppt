@@ -75,7 +75,7 @@ TEXT_TR(TR_ID_MENU_MOTOR_I_EXC_NOM, "Номинальный I возбужден
 TEXT_TR(TR_ID_MENU_MOTOR_EFF_NOM, "Номинальный КПД")
 TEXT_TR(TR_ID_MENU_MOTOR_R_ROT_NOM, "Номинальное R якоря")
 
-TEXT_TR(TR_ID_MENU_EXCITATION, "Якорь")
+TEXT_TR(TR_ID_MENU_ROTOR, "Якорь")
 TEXT_TR(TR_ID_MENU_EXCITATION, "Возбуждение")
 TEXT_TR(TR_ID_MENU_I_EXC, "I возбуждения")
 TEXT_TR(TR_ID_MENU_EXC_PHASE, "Фаза возбуждения")

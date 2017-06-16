@@ -9,7 +9,6 @@
 #include "translations_ids.h"
 #include "localization/localization.h"
 #include "settings.h"
-#include "gui/widgets/gui_home.h"
 
 //! Макрос для сокращения декларации дробного значения fixed32.
 #define F32(A, B) fixed32_make_from_fract(A, B)

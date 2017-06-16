@@ -26,6 +26,7 @@
 #include "ramp.h"
 #include "fixed/fixed32.h"
 #include "gui/widgets/gui_tile.h"
+#include "gui/widgets/gui_home.h"
 #include "parameters_list.h"
 
 // Данные параметров.
