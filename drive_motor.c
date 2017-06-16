@@ -53,10 +53,10 @@ err_t drive_motor_update_settings(void)
     
     fixed32_t eff_f = settings_valuef(PARAM_ID_MOTOR_EFF_NOM) / 100; // % -> доли.
     
-    int64_t P_W_f = (int64_t)P_f * 1000;
+    int64_t P_W_f = (int64_t)P_f * 1000; // кВт -> Вт.
     
     if(eff_f == 0){
-        fixed32_t P_e = ((int64_t)U_rot * I_rot_f + (int64_t)U_exc * I_exc_f); // Вт -> кВт.
+        int64_t P_e = ((int64_t)U_rot * I_rot_f + (int64_t)U_exc * I_exc_f);
         eff_f = fixed32_div(P_W_f, P_e);
     }
     
@@ -65,7 +65,7 @@ err_t drive_motor_update_settings(void)
         return E_INVALID_VALUE;
     }
     
-    int64_t N_Irot_Iexc = N * I_rot_f;
+    int64_t N_Irot_Iexc = (int64_t)N * I_rot_f;
     N_Irot_Iexc = fixed32_mul(N_Irot_Iexc, I_exc_f);
     
     fixed32_t CeF = fixed32_div(P_W_f, N_Irot_Iexc);
