@@ -11,9 +11,9 @@
 #define MENU_DESCR_MACRO
 #define MENU_DESCRS_ATTRIBS static const
 #define MENU_ITEMS_ATTRIBS static
+#define MENU_ITEM_ATTRIBS static const
 
 #include "menu/menu.h"
-
 #include "gui/gui_metro.h"
 #include "gui/gui_widget.h"
 #include "errors/errors.h"

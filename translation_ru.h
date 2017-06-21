@@ -128,6 +128,8 @@ TEXT_TR(TR_ID_MENU_EXC_CURRENT, "Ток возбуждения")
 TEXT_TR(TR_ID_MENU_ZERO_DRIFT, "Отклонения нулей")
 TEXT_TR(TR_ID_MENU_CALCULATION, "Вычисления")
 TEXT_TR(TR_ID_MENU_CALC_PHASE_CURRENT, "Вычислять ток для фазы")
+TEXT_TR(TR_ID_MENU_CONFIGURATION, "Конфигурация")
+TEXT_TR(TR_ID_MENU_MAIN_CONFIG, "Общие")
 TEXT_TR(TR_ID_MENU_COMMUNICATION, "Коммуникация")
 TEXT_TR(TR_ID_MENU_MODBUS_BAUD, "Скорость Modbus RTU")
 TEXT_TR(TR_ID_MENU_MODBUS_ADDRESS, "Адрес Modbus RTU")
@@ -508,7 +510,9 @@ TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_SYNC, "W#20: Ошибка синхрониза
 TEXT_TR(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD, "W#40: Перегрев.")
 TEXT_TR(TR_ID_DRIVE_WARNING_FAN_FAIL, "W#100: Ошибка вентилятора.")
 TEXT_TR(TR_ID_DRIVE_WARNING_HEATSINK_TEMP, "W#200: Перегрев радиатора.")
-      
+
+TEXT_TR(TR_ID_MENU_VERSION, "Версия")    
+TEXT_TR(TR_ID_MENU_VERSION_DATE, "Дата прошивки") 
         
 TEXT_TRS_END()
 

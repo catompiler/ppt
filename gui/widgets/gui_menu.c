@@ -17,7 +17,7 @@
 #include <ctype.h>
 #include <errno.h>
 
-MENU_ITEMS(menu_items, menu_descrs);
+//MENU_ITEMS(menu_items, menu_descrs);
 
 err_t gui_menu_init(gui_menu_t* menu, gui_metro_t* gui)
 {
@@ -37,8 +37,10 @@ err_t gui_menu_init_parent(gui_menu_t* menu, gui_metro_t* gui, gui_widget_t* par
     
     gui_menu_init_counters(menu, gui);
     
-    menu_make_from_descrs(&(menu->menu), menu_items, MENU_ITEMS_COUNT(menu_items), menu_descrs, MENU_DESCRS_COUNT(menu_descrs), NULL);
-
+    //menu_make_from_descrs(&(menu->menu), menu_items, MENU_ITEMS_COUNT(menu_items), menu_descrs, MENU_DESCRS_COUNT(menu_descrs), NULL);
+    menu->menu.root = &m_item1;
+    menu->menu.current = &m_item1;
+    
     menu_explorer_init(&(menu->explorer), &(menu->menu));
     
     return E_NO_ERROR;
@@ -549,6 +551,7 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
     bool item_is_param = false;
     bool item_is_command = false;
     bool item_is_enum = false;
+    bool item_is_string = false;
     bool mode_is_lines = ((mode & GUI_MENU_DRAW_MODE_LINES) > 0);
     bool mode_is_values = false;
     bool mode_is_edit = false;
@@ -563,14 +566,16 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
             param = settings_param_by_id(menu_item->id);
             item_is_command = (menu_item->flags & MENU_FLAG_CMD);
             item_is_autoupdate = (menu_item->flags & MENU_FLAG_VALUE);
-            
             item_is_param = (param != NULL);
-            item_is_enum = (menu_item->value != NULL) && !item_is_command;
             mode_is_values = ((mode & GUI_MENU_DRAW_MODE_VALUES) > 0) || item_is_autoupdate;
             if (item_is_selected) {
                 if (menu_explorer_state_edit(&menu->explorer)) 
                     mode_is_edit = ((mode & GUI_MENU_DRAW_MODE_EDIT) > 0);
             }
+        }
+        if (!item_is_submenu && !item_is_command && (menu_item->value != NULL)) {
+            item_is_enum = item_is_param && (menu_item->value->type == MENU_VALUE_TYPE_ENUM);
+            item_is_string = (menu_item->value->type == MENU_VALUE_TYPE_STRING);
         }
     }
     
@@ -637,8 +642,11 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
             }
         }
     }
-    if (item_is_param) { // параметр (в т.ч. перечисление)
-        if (item_is_enum) { // перечисление
+    if (item_is_enum || item_is_string) { // перечисление
+        const char* str = "";
+        graphics_size_t wid = 0;
+        text_x = width - 25;
+        if (item_is_enum) {
             size_t val_cnt = menu_value_enum_count(menu_item->value);
             menu_value_t* values = menu_value_enum_values(menu_item->value);
 
@@ -648,83 +656,84 @@ void gui_menu_draw_item(gui_menu_t* menu, menu_item_t* menu_item, painter_t* pai
                 val = menu->explorer.edit_param;
             }
             if (val >= val_cnt) val = val_cnt - 1;
-                    
-            text_x = width - 25;
 
-            graphics_size_t wid = 0;
             int j;
             for (j = 0; j < val_cnt; j++) {
                 graphics_size_t w;
-                const char* str = TR(values[j].value_string);
+                str = TR(menu_value_string(&values[j]));
                 painter_string_size(painter, str, &w, NULL);
                 if (w > wid) wid = w;
             }
 
-            const char* str = TR(values[val].value_string);
-            
-            graphics_size_t w;
-            painter_string_size(painter, str, &w, NULL);
-
-            text_x = text_x - wid;
-
-            painter_set_pen_color(painter, color_value_font);
-            painter_set_brush_color(painter, color_value_back);
-            if (mode_is_values || mode_is_edit)
-                painter_draw_fillrect(painter, text_x - 12, text_y, text_x + wid + 18, text_y + MENU_ITEM_HEIGHT);
-
-            text_x = width - 22;
-            
-            if (item_is_selected && !item_is_autoupdate) {
-                painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
-                if (mode_is_values || mode_is_edit)
-                    painter_draw_string(painter, text_x, text_y, GUI_MENU_ENUM_VALUE_POSTFIX);
-                painter_set_pen_color(painter, color_value_font);
-            }
-            text_x = width - 25 - w;
-            if (mode_is_values || mode_is_edit)
-                painter_draw_string(painter, text_x, text_y, str);
+            str = TR(menu_value_string(&values[val]));
         }
-        else if (!item_is_command)  { // параметр
-            param_units_t unit = settings_param_units(param);
-            text_x = width - 8;
-            if (unit != NULL) {
-                text_x = text_x - 40;
+        else if (item_is_string) {
+            str = menu_value_string(menu_item->value);
+            painter_string_size(painter, str, &wid, NULL);
+        }
+
+        graphics_size_t w;
+        painter_string_size(painter, str, &w, NULL);
+
+        text_x = text_x - wid;
+
+        painter_set_pen_color(painter, color_value_font);
+        painter_set_brush_color(painter, color_value_back);
+        if (mode_is_values || mode_is_edit)
+            painter_draw_fillrect(painter, text_x - 12, text_y, text_x + wid + 18, text_y + MENU_ITEM_HEIGHT);
+
+        text_x = width - 22;
+
+        if (item_is_selected && !item_is_autoupdate) {
+            painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
+            if (mode_is_values || mode_is_edit)
+                painter_draw_string(painter, text_x, text_y, GUI_MENU_ENUM_VALUE_POSTFIX);
+            painter_set_pen_color(painter, color_value_font);
+        }
+        text_x = width - 25 - w;
+        if (mode_is_values || mode_is_edit)
+            painter_draw_string(painter, text_x, text_y, str);
+    }
+    else if (item_is_param)  { // параметр
+        param_units_t unit = settings_param_units(param);
+        text_x = width - 8;
+        if (unit != NULL) {
+            text_x = text_x - 40;
+        }
+        text_unit = text_x;
+
+        char str[9];
+        if (item_is_selected && menu_explorer_state_edit(&menu->explorer)) {
+            // редактируемое значение
+            gui_menu_param_value_to_string(param, str, &menu->explorer.edit_param);
+        }
+        else {
+            // отображение для чтения
+            gui_menu_param_value_to_string(param, str, NULL);
+        }
+
+
+        if (unit != NULL) {
+            const char* unit_text = TR(unit);
+            if (mode_is_lines) {
+                painter_draw_fillrect(painter, text_unit - 3, text_y, width , text_y + MENU_ITEM_HEIGHT);
+                painter_draw_string(painter, text_unit, text_y, unit_text);
             }
-            text_unit = text_x;
-            
-            char str[9];
+        }
+
+        graphics_size_t wid;
+        painter_string_size(painter, str, &wid, NULL);
+        text_x = text_x - wid - 10;
+
+        painter_set_pen_color(painter, color_value_font);
+        painter_set_brush_color(painter, color_value_back);
+        if (mode_is_values || mode_is_edit) {
+            painter_draw_fillrect(painter, text_x - 6, text_y, text_unit - 3, text_y + MENU_ITEM_HEIGHT);
             if (item_is_selected && menu_explorer_state_edit(&menu->explorer)) {
-                // редактируемое значение
-                gui_menu_param_value_to_string(param, str, &menu->explorer.edit_param);
+                gui_menu_edit_draw_string(painter, text_x, text_y, str, menu->explorer.edit_param_curdecim, is_param_fix);
             }
             else {
-                // отображение для чтения
-                gui_menu_param_value_to_string(param, str, NULL);
-            }
-
-
-            if (unit != NULL) {
-                const char* unit_text = TR(unit);
-                if (mode_is_lines) {
-                    painter_draw_fillrect(painter, text_unit - 3, text_y, width , text_y + MENU_ITEM_HEIGHT);
-                    painter_draw_string(painter, text_unit, text_y, unit_text);
-                }
-            }
-
-            graphics_size_t wid;
-            painter_string_size(painter, str, &wid, NULL);
-            text_x = text_x - wid - 10;
-
-            painter_set_pen_color(painter, color_value_font);
-            painter_set_brush_color(painter, color_value_back);
-            if (mode_is_values || mode_is_edit) {
-                painter_draw_fillrect(painter, text_x - 6, text_y, text_unit - 3, text_y + MENU_ITEM_HEIGHT);
-                if (item_is_selected && menu_explorer_state_edit(&menu->explorer)) {
-                    gui_menu_edit_draw_string(painter, text_x, text_y, str, menu->explorer.edit_param_curdecim, is_param_fix);
-                }
-                else {
-                    painter_draw_string(painter, text_x, text_y, str);
-                }
+                painter_draw_string(painter, text_x, text_y, str);
             }
         }
     }

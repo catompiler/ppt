@@ -35,9 +35,8 @@ err_t menu_explorer_init(menu_explorer_t* explorer, menu_t* menu)
     explorer->item_pos = menu_item_pos(explorer->sel_object);
     menu_item_t* obj = explorer->sel_object;
     for (i = 0; i < menu_explorer_displayed_cnt(explorer); i++) {
-        if (obj != NULL) {
-            explorer->displayed[i] = obj;
-        }
+        if (obj == NULL) break;
+        explorer->displayed[i] = obj;
         obj = menu_item_next(obj);
     }
     return E_NO_ERROR;

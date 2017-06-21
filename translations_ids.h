@@ -272,6 +272,10 @@
 #define TR_ID_MENU_CALCULATION      360
 //! Вычислять ток для фазы.
 #define TR_ID_MENU_CALC_PHASE_CURRENT 361
+//! Меню Конфигурация
+#define TR_ID_MENU_CONFIGURATION    363
+//! Общие
+#define TR_ID_MENU_MAIN_CONFIG      364
 //! Коммуникация.
 #define TR_ID_MENU_COMMUNICATION    365
 //! Скорость Modbus RTU.
@@ -781,6 +785,8 @@
 #define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
 #define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
 
-
+#define TR_ID_MENU_VERSION                            2500
+#define TR_ID_MENU_VERSION_DATE                       2501
+        
 #endif /* TRANSLATIONS_IDS_H */
 
