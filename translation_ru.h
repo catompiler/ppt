@@ -212,7 +212,8 @@ TEXT_TR(TR_ID_MENU_CMD_SETTINGS_SAVE, "Записать параметры в п
 TEXT_TR(TR_ID_MENU_CMD_STATE_SAVE, "Записать состояние в память")
 TEXT_TR(TR_ID_MENU_CMD_SETTINGS_DEFAULT, "Уст. настр. по умолч.")  
 TEXT_TR(TR_ID_MENU_CMD_TEST_LEDS, "Проверка светодиодов")  
-TEXT_TR(TR_ID_MENU_CMD_CLEAR_EVENTS, "Сброс ошибок")  
+TEXT_TR(TR_ID_MENU_CMD_CLEAR_ERRORS, "Сброс ошибок")  
+TEXT_TR(TR_ID_MENU_CMD_CLEAR_EVENTS, "Очистить историю событий") 
         
 TEXT_TR(TR_ID_MENU_STATUS, "Статус привода")
 TEXT_TR(TR_ID_MENU_EVENTS, "История событий")

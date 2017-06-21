@@ -65,6 +65,11 @@ bool command_clear_events(void) {
     return (drive_tasks_clear_events() == E_NO_ERROR);
 }
 
+bool command_clear_errors(void) {
+    drive_clear_errors();
+    return (true);
+}
+
 bool command_settings_default(void) {
     return (settings_default() == E_NO_ERROR);
 }

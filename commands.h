@@ -41,12 +41,14 @@ extern bool command_state_save(void);
 
 extern bool command_clear_events(void);
 
+extern bool command_clear_errors(void);
+
 extern bool command_settings_default(void);
 
 extern bool command_test_leds(void);
 
 // Количество команд меню.
-#define COMMANDS_COUNT 7
+#define COMMANDS_COUNT 8
 
 // Объявление команд меню.
 MENU_COMMANDS(menu_commands, COMMANDS_COUNT) {
@@ -55,6 +57,7 @@ MENU_COMMANDS(menu_commands, COMMANDS_COUNT) {
     MENU_COMMAND(CMD_ID_SETTINGS_SAVE, &command_settings_save),
     MENU_COMMAND(CMD_ID_STATE_SAVE, &command_state_save),
     MENU_COMMAND(CMD_ID_CLEAR_EVENTS, &command_clear_events),
+    MENU_COMMAND(CMD_ID_CLEAR_ERRORS, &command_clear_errors),
     MENU_COMMAND(CMD_ID_SETTINGS_DEFAULT, &command_settings_default),
     MENU_COMMAND(CMD_ID_TEST_LEDS, &command_test_leds),
 };

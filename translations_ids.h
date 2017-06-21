@@ -443,7 +443,9 @@
 //! Тест светодиодов
 #define TR_ID_MENU_CMD_TEST_LEDS        487
 //! Сброс ошибок
-#define TR_ID_MENU_CMD_CLEAR_EVENTS     488
+#define TR_ID_MENU_CMD_CLEAR_ERRORS     488
+//! Очистить историю событий
+#define TR_ID_MENU_CMD_CLEAR_EVENTS     489
 
 //! Меню Статус привода
 #define TR_ID_MENU_STATUS 490
