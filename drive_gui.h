@@ -95,4 +95,6 @@ extern bool drive_gui_menu_user_is(menu_user_t user);
 
 extern counter_t drive_gui_get_touch_menu_explorer();
 
+void drive_gui_tiles_init();
+
 #endif /* DRIVE_GUI_H */

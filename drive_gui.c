@@ -276,6 +276,7 @@ static void make_gui_struct(void) {
     gui_widget_resize(GUI_WIDGET(&gui.statusbar), TFT_WIDTH, GUI_STATUSBAR_HEIGHT);
     gui_widget_set_back_color(GUI_WIDGET(&gui.statusbar), theme.color_statusbar);
     gui_widget_set_visible(GUI_WIDGET(&gui.statusbar), true);
+    gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
     
     gui_home_init_parent(&gui.home, &gui.gui, &gui.root_widget);
     gui_widget_move(GUI_WIDGET(&gui.home), 0, GUI_STATUSBAR_HEIGHT);
@@ -284,30 +285,8 @@ static void make_gui_struct(void) {
     gui_widget_set_visible(GUI_WIDGET(&gui.home), true);
     gui_home_set_on_enter(&gui.home, GUI_HOME_ON_ENTER_PROC(drive_gui_home_on_enter));
     
-    int i;
-    graphics_pos_t x = GUI_TILE_SEP;
-    graphics_pos_t y = 0;
-    for (i = 0; i < GUI_HOME_TILES_WIDTH; i++) {
-        int j;
-        y = GUI_TILE_SEP;
-        for (j = 0; j < GUI_HOME_TILES_HEIGHT; j++) {
-            int k = i * GUI_HOME_TILES_WIDTH + j;
-            gui_tile_t* tile = &gui.tiles[k];
-            tile->id = k;
-            gui_tile_init_parent(tile, &gui.gui, GUI_WIDGET(&gui.home));
-            gui_widget_move(GUI_WIDGET(tile), x, y);
-            gui_widget_resize(GUI_WIDGET(tile), GUI_TILE_WIDTH, GUI_TILE_HEIGHT);
-            gui_widget_set_border(GUI_WIDGET(tile), GUI_BORDER_NONE);
-            gui_widget_set_back_color(GUI_WIDGET(tile), THEME_COLOR_BLUE_D);
-            gui_widget_set_visible(GUI_WIDGET(tile), true);
-            y += (GUI_TILE_HEIGHT + GUI_TILE_SEP);
-        }
-        x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
-    }
-
+    drive_gui_tiles_init();
     drive_gui_update_tiles();
-    
-    gui_statusbar_set_icons(&gui.statusbar, &gui.icons[0]);
     
     gui_menu_init_parent(&gui.menu, &gui.gui, &gui.root_widget);
     gui_menu_set_graphics(&gui.menu, &icon_statusbar_graphics, ICONS_STATUSBAR_COUNT);
@@ -317,7 +296,30 @@ static void make_gui_struct(void) {
     gui_widget_set_back_color(GUI_WIDGET(&gui.menu), THEME_COLOR_GRAY_L);
     gui_widget_set_visible(GUI_WIDGET(&gui.menu), false);
     gui_menu_set_on_home(&gui.menu, GUI_MENU_ON_HOME_PROC(drive_gui_menu_on_home));
-    
+}
+
+void drive_gui_tiles_init() 
+{
+    int i;
+    graphics_pos_t x = GUI_TILE_SEP;
+    graphics_pos_t y = GUI_TILE_SEP;
+    for (i = 0; i < GUI_HOME_TILES_HEIGHT; i++) {
+        int j;
+        x = GUI_TILE_SEP;
+        for (j = 0; j < GUI_HOME_TILES_WIDTH; j++) {
+            int k = i * GUI_HOME_TILES_HEIGHT + j;
+            gui_tile_t* tile = &gui.tiles[k];
+            tile->id = k;
+            gui_tile_init_parent(tile, &gui.gui, GUI_WIDGET(&gui.home));
+            gui_widget_move(GUI_WIDGET(tile), x, y);
+            gui_widget_resize(GUI_WIDGET(tile), GUI_TILE_WIDTH, GUI_TILE_HEIGHT);
+            gui_widget_set_border(GUI_WIDGET(tile), GUI_BORDER_NONE);
+            gui_widget_set_back_color(GUI_WIDGET(tile), THEME_COLOR_BLUE_D);
+            gui_widget_set_visible(GUI_WIDGET(tile), true);
+            x += (GUI_TILE_WIDTH + GUI_TILE_SEP);
+        }
+        y += (GUI_TILE_HEIGHT + GUI_TILE_SEP);
+    }
 }
 
 static void make_gui(void)
