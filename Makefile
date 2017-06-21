@@ -23,9 +23,15 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    crc16_ccitt bsqrt cordic32\
 	    usart_bus modbus_rtu timers lm75
 
+# Дата версии прошивки
+GIT_DATETIME=$(shell git show -s --format="%cd" --date=short)
+# Дата прошивки
+GIT_VERSION=$(shell git describe --long --first-parent --always)
+
 # Макросы.
 DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
-            USE_GRAPHICS_VIRTUAL_BUFFER ARM_MATH_CM3
+            USE_GRAPHICS_VIRTUAL_BUFFER ARM_MATH_CM3\
+	    __GIT_VERSION='\"$(GIT_VERSION)\"' __GIT_DATETIME='\"$(GIT_DATETIME)\"'
 
 # Стандартные драйвера периферии.
 # STD_PERIPH_DRIVERS += misc
