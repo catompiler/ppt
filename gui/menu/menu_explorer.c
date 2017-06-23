@@ -130,7 +130,14 @@ menu_item_t* menu_explorer_in(menu_explorer_t* explorer)
             break;  
         case MENU_EXPLORER_STATE_EDIT: 
             menu_explorer_edit_enter(explorer);
-            break;  
+            break; 
+        case MENU_EXPLORER_STATE_CMD_SUCCESS:
+        case MENU_EXPLORER_STATE_CMD_FAIL: 
+        {
+            explorer->state = MENU_EXPLORER_STATE_NAVI;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+        }
+            break;
         default: 
             break;  
     }
@@ -312,8 +319,15 @@ void menu_explorer_navi_in_command(menu_explorer_t* explorer)
 {
     command_menu_t* command = command_get_by_id(explorer->sel_object->id);
     if (command) {
-        command->callback();
-    }    
+        if(command->callback()) {
+            explorer->state = MENU_EXPLORER_STATE_CMD_SUCCESS;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+        }
+        else {
+            explorer->state = MENU_EXPLORER_STATE_CMD_FAIL;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+        }
+    }
 }
 
 menu_item_t* menu_explorer_navi_in(menu_explorer_t* explorer)
@@ -426,6 +440,14 @@ bool menu_explorer_out(menu_explorer_t* explorer)
         case MENU_EXPLORER_STATE_EDIT: 
             return menu_explorer_edit_esc(explorer);
             break;   
+        case MENU_EXPLORER_STATE_CMD_SUCCESS:
+        case MENU_EXPLORER_STATE_CMD_FAIL: 
+        {
+            explorer->state = MENU_EXPLORER_STATE_NAVI;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+            return true;
+        }
+            break;
         default: 
             break;  
     }
@@ -727,6 +749,11 @@ bool menu_explorer_state_navi(menu_explorer_t* explorer) {
 
 bool menu_explorer_state_edit(menu_explorer_t* explorer) {
     return explorer->state == MENU_EXPLORER_STATE_EDIT;
+}
+
+bool menu_explorer_state_command_result(menu_explorer_t* explorer) {
+    return (explorer->state == MENU_EXPLORER_STATE_CMD_SUCCESS) ||\
+            (explorer->state == MENU_EXPLORER_STATE_CMD_FAIL);
 }
 
 bool menu_explorer_state_home(menu_explorer_t* explorer) {

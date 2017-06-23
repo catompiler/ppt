@@ -648,6 +648,11 @@
 //! Сообщение: Нажмите Esc для выхода
 #define TR_ID_MENU_PASSWORD_REQUEST_ESC 1013
 
+//! Результат выполнения команды - ошибка 
+#define TR_ID_MENU_COMMAND_RESULT_FAIL 1021
+//! //! Запрос доступа к элементам меню - успех
+#define TR_ID_MENU_COMMAND_RESULT_SUCCESS 1022
+
 // Значения, отображаемые 
 #define TR_ID_MENU_GUI_TILE_VALUES                      1210
 // Напряжение фазы

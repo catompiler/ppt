@@ -372,7 +372,11 @@ TEXT_TR(TR_ID_MENU_HEADER_TITLE, "Меню")
 TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST, "Доступ по паролю:")
 // запрос пароля "Нажмите Esc чтобы выйти"
 TEXT_TR(TR_ID_MENU_PASSWORD_REQUEST_ESC, "Нажмите Esc чтобы выйти") 
-        
+// Ошибка выполнения команды
+TEXT_TR(TR_ID_MENU_COMMAND_RESULT_FAIL, "Ошибка выполнения")
+// Успешное выполнение команды
+TEXT_TR(TR_ID_MENU_COMMAND_RESULT_SUCCESS, "Команда выполнена")       
+     
 // Значения, отображаемые 
 TEXT_TR(TR_ID_MENU_GUI_TILE_VALUES, "Отображаемые значения")
 // Напряжение фазы

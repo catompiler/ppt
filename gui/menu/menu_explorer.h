@@ -25,6 +25,8 @@ typedef enum _Menu_Explorer_State {
     MENU_EXPLORER_STATE_HOME = 0,           // начальная страница
     MENU_EXPLORER_STATE_NAVI,               // навигация
     MENU_EXPLORER_STATE_PASSWORD_REQUEST,   // запрос доступа
+    MENU_EXPLORER_STATE_CMD_SUCCESS,        // успешное выполнение команды
+    MENU_EXPLORER_STATE_CMD_FAIL,           // неудачное выполнение команды
     MENU_EXPLORER_STATE_EDIT,               // редактирование
     MENU_EXPLORER_STATE_EVENTS,             // просмотр списка событий
     MENU_EXPLORER_STATE_EVENT,              // просмотр события
@@ -270,6 +272,13 @@ EXTERN menu_explorer_state_t menu_explorer_state(menu_explorer_t* explorer);
  * @return Состояние меню в режиме навигации
  */
 EXTERN bool menu_explorer_state_navi(menu_explorer_t* explorer);
+
+/**
+ * Возвращает флаг состояния меню Результат выполнения команды
+ * @param explorer Проводник меню
+ * @return Состояние меню в результате выполненения команды
+ */
+EXTERN bool menu_explorer_state_command_result(menu_explorer_t* explorer);
 
 /**
  * Возвращает флаг состояния меню Редактирование

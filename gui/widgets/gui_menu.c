@@ -77,7 +77,11 @@ void gui_menu_on_repaint(gui_menu_t* menu, const rect_t* rect)
 
         graphics_pos_t text_x, text_y;
          
-        if (menu_explorer_state_password_request(&menu->explorer)) {
+        if (menu_explorer_state_command_result(&menu->explorer)) { 
+            // результат выполнения программы
+            gui_menu_draw_command_result(menu, &painter, theme, width);
+        }
+        else if (menu_explorer_state_password_request(&menu->explorer)) {
             // запрос на редактирование пароля
             gui_menu_draw_password_request(menu, &painter, theme, width);
         }
@@ -421,6 +425,58 @@ void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_
     // краткое описание события
     if (menu->explorer.draw_mode & GUI_MENU_DRAW_MODE_HELP)
         gui_menu_draw_events_help(menu, painter, theme, width, height);
+}
+
+void gui_menu_draw_command_result(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width)
+{
+    graphics_pos_t text_x, text_y;
+    const char* title = TR(TR_ID_MENU_HEADER_TITLE);
+    if (menu->explorer.sel_object != NULL) {
+        title = TR(menu->explorer.sel_object->text);
+    }
+    painter_string_size(painter, title, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+
+    if (menu->explorer.state == MENU_EXPLORER_STATE_CMD_FAIL) {
+        painter_set_pen_color(painter, THEME_COLOR_WHITE);
+        painter_set_brush_color(painter, THEME_COLOR_RED_L);
+    }
+    else {
+        painter_set_pen_color(painter, THEME_COLOR_BLACK);
+        painter_set_brush_color(painter, THEME_COLOR_GREEN_L);
+    }
+
+    // наименование пункта меню с запросом доступа
+    painter_draw_fillrect(painter, 0, 0, width, MENU_ITEM_HEIGHT);
+    text_x = (width - text_x) / 2;
+    text_y = 0;//((graphics_pos_t)gui_widget_height(GUI_WIDGET(label)) - text_y) / 2;
+    painter_draw_string(painter, text_x, text_y, title);
+
+    // строка сообщение запроса доступа (пароля)
+    if (menu->explorer.state == MENU_EXPLORER_STATE_CMD_FAIL) {
+        painter_set_pen_color(painter, THEME_COLOR_WHITE);
+        painter_set_brush_color(painter, THEME_COLOR_RED_D);
+        title = TR(TR_ID_MENU_COMMAND_RESULT_FAIL);
+    }
+    else {
+        painter_set_pen_color(painter, THEME_COLOR_WHITE);
+        painter_set_brush_color(painter, THEME_COLOR_GREEN_D);
+        title = TR(TR_ID_MENU_COMMAND_RESULT_SUCCESS);
+    }
+    painter_draw_fillrect(painter, 0, MENU_ITEM_HEIGHT, width, TFT_HEIGHT);
+  
+    painter_string_size(painter, title, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+    text_x = (width - text_x) / 2;
+    text_y = 3 * MENU_ITEM_HEIGHT;
+    painter_draw_string(painter, text_x, text_y, title);
+
+    // строка "Нажмите Esc чтобы выйти"
+    painter_set_font(painter, theme->middle_font);
+    painter_set_pen_color(painter, THEME_COLOR_GRAY_L);
+    title = TR(TR_ID_MENU_PASSWORD_REQUEST_ESC);
+    painter_string_size(painter, title, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+    text_x = (width - text_x) / 2;
+    text_y = 5 * MENU_ITEM_HEIGHT;
+    painter_draw_string(painter, text_x, text_y, title);
 }
 
 void gui_menu_draw_password_request(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width)

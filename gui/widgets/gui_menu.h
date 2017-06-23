@@ -190,6 +190,8 @@ int gui_menu_get_f32_fract(int number, int decimals);
 
 void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
+void gui_menu_draw_command_result(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
+
 void gui_menu_draw_password_request(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
 void gui_menu_draw_title(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
