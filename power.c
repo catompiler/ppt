@@ -167,6 +167,10 @@ err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t
 
 static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
+    // Отфильтруем значение АЦП.
+    mid_filter3i_put(&channel->filter_mid_adc, adc_value);
+    adc_value = mid_filter3i_value(&channel->filter_mid_adc);
+    
     // Значение нуля АЦП.
     channel->sum_zero += adc_value;
     // Увеличим число измерений значения нуля.
@@ -412,6 +416,7 @@ err_t power_reset_channels(power_t* power, power_channels_t channels)
             power_channel_reset_sums(&power->channels[i]);
             power_filter_reset(&power->channels[i].filter_value);
             power_filter_reset(&power->channels[i].filter_zero);
+            mid_filter3i_reset(&power->channels[i].filter_mid_adc);
         }
     }
     

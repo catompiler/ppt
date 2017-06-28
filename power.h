@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "mid_filter/mid_filter3i.h"
 #include "fixed/fixed32.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
@@ -90,6 +91,7 @@ typedef struct _Power_Value {
     int32_t sum_zero; //!< Сумма значений для вычисления нуля.
     uint16_t count; //!< Число значений.
     uint16_t count_zero; //!< Число значений нуля.
+    mid_filter3i_t filter_mid_adc; //!< Медианный фильтр значений АЦП.
     power_filter_t filter_value; //!< Фильтр значенией.
     power_filter_t filter_zero; //!< Фильтр нуля.
     bool is_soft; //!< Флаг программного вычисления канала.
