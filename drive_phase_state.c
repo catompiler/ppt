@@ -1,4 +1,5 @@
 #include "drive_phase_state.h"
+#include "drive_phase_sync.h"
 #include "defs/defs.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -145,6 +146,11 @@ ALWAYS_INLINE static drive_phase_error_t drive_phase_state_get_time_error(phase_
     return phase_time_errors[phase - 1];
 }
 
+ALWAYS_INLINE static bool drive_phase_state_has_phase_timer(void)
+{
+    return state.timer_cnt != NULL;
+}
+
 ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
 {
     if(state.timer_cnt){
@@ -210,9 +216,15 @@ err_t drive_phase_state_set_timer(TIM_TypeDef* TIM)
 
 void drive_phase_state_handle(phase_t phase)
 {
-    drive_phase_state_stop_timer();
-    phase_time_t time = drive_phase_state_get_cur_time();
-    drive_phase_state_start_timer();
+    phase_time_t time = 0;
+    
+    if(drive_phase_state_has_phase_timer()){
+        drive_phase_state_stop_timer();
+        time = drive_phase_state_get_cur_time();
+        drive_phase_state_start_timer();
+    }else{
+        time = drive_phase_sync_delta(phase);
+    }
     
     // Если время равно нулю - скорее всего было
     // переполнение - установим время в максимум + 1.
