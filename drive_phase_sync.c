@@ -101,6 +101,7 @@ typedef struct _Phase_Sync_Fft_Value {
     fixed32_t offset_angle;
     fixed32_t delta_angle;
     int16_t offset_time;
+    int16_t delta_time;
     fixed32_t filter[FFT_FILTER_SIZE];
     fft_buffer_index_t filter_index;
     fft_buffer_index_t filter_count;
@@ -550,6 +551,17 @@ fixed32_t drive_phase_sync_offset_angle(phase_t phase)
     return fft_value->offset_angle;
 }
 
+int16_t drive_phase_sync_delta(phase_t phase)
+{
+    if(phase == PHASE_UNK) return 0;
+    
+    phase_sync_fft_value_t* fft_value = phase_sync_get_value(phase);
+    
+    if(!fft_value) return 0;
+    
+    return fft_value->delta_time;
+}
+
 fixed32_t drive_phase_sync_delta_angle(phase_t phase)
 {
     if(phase == PHASE_UNK) return 0;
@@ -783,7 +795,7 @@ static fixed32_t drive_phase_sync_calc_delta_angle(fixed32_t angle_a, fixed32_t 
     return (angle_b + CORDIC32_ANGLE_360) - angle_a;
 }
 
-bool drive_phase_sync_calc_delta_angles(void)
+bool drive_phase_sync_calc_deltas(void)
 {
     if(!drive_phase_sync_data_avail()) return false;
 
@@ -815,8 +827,18 @@ bool drive_phase_sync_calc_delta_angles(void)
     angle_b = drive_phase_sync_calc_delta_angle(angle_b, ref_angle_b);
     angle_c = drive_phase_sync_calc_delta_angle(angle_c, ref_angle_c);
     
+    fixed32_t offsetf = 0;
+    
+    offsetf = ANGLE_TO_US(angle_a);
+    phase_sync.values.value_a.delta_time = fixed32_get_int(offsetf);
     phase_sync.values.value_a.delta_angle = angle_a;
+    
+    offsetf = ANGLE_TO_US(angle_b);
+    phase_sync.values.value_b.delta_time = fixed32_get_int(offsetf);
     phase_sync.values.value_b.delta_angle = angle_b;
+    
+    offsetf = ANGLE_TO_US(angle_c);
+    phase_sync.values.value_c.delta_time = fixed32_get_int(offsetf);
     phase_sync.values.value_c.delta_angle = angle_c;
 
     return true;
@@ -833,7 +855,7 @@ bool drive_phase_sync_process(void)
     res = drive_phase_sync_calc_offsets();
     if(!res) return false;
     
-    res = drive_phase_sync_calc_delta_angles();
+    res = drive_phase_sync_calc_deltas();
     if(!res) return false;
     
     return true;

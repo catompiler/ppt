@@ -81,6 +81,14 @@ extern int16_t drive_phase_sync_offset(phase_t phase);
 extern fixed32_t drive_phase_sync_offset_angle(phase_t phase);
 
 /**
+ * Получает смещение (опережение) фазы относительно предыдущей фазы
+ * согласно направлению чередования фаз, мкс.
+ * @param phase Фаза.
+ * @return Смещение (опережение) фазы относительно предыдущей фазы.
+ */
+extern int16_t drive_phase_sync_delta(phase_t phase);
+
+/**
  * Получает угол фазы относительно предыдущей фазы
  * согласно направлению чередования фаз.
  * @param phase Фаза.
