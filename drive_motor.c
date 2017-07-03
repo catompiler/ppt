@@ -39,6 +39,15 @@ err_t drive_motor_init(void)
     return E_NO_ERROR;
 }
 
+static void drive_motor_update_calc_params(fixed32_t eff_f, fixed32_t R_rot)
+{
+    param_t* p_eff = settings_param_by_id(PARAM_ID_MOTOR_EFF);
+    DRIVE_UPDATE_PARAM_FIXED(p_eff, eff_f * 100);
+    
+    param_t* p_r = settings_param_by_id(PARAM_ID_MOTOR_R_ROT);
+    DRIVE_UPDATE_PARAM_FIXED(p_r, R_rot);
+}
+
 err_t drive_motor_update_settings(void)
 {
     fixed32_t P_f = settings_valuef(PARAM_ID_MOTOR_P_NOM); // кВт.
@@ -62,6 +71,7 @@ err_t drive_motor_update_settings(void)
     
     if(eff_f <= 0 || eff_f >= fixed32_make_from_int(1)){
         motor.valid = false;
+        drive_motor_update_calc_params(eff_f, 0);
         return E_INVALID_VALUE;
     }
     
@@ -83,6 +93,7 @@ err_t drive_motor_update_settings(void)
     
     if(R_rot == 0){
         motor.valid = false;
+        drive_motor_update_calc_params(eff_f, 0);
         return E_INVALID_VALUE;
     }
     
@@ -93,11 +104,7 @@ err_t drive_motor_update_settings(void)
     motor.Cm = CeM;
     motor.R_rot = R_rot75;
     
-    param_t* p_eff = settings_param_by_id(PARAM_ID_MOTOR_EFF);
-    DRIVE_UPDATE_PARAM_FIXED(p_eff, eff_f * 100);
-    
-    param_t* p_r = settings_param_by_id(PARAM_ID_MOTOR_R_ROT);
-    DRIVE_UPDATE_PARAM_FIXED(p_r, R_rot);
+    drive_motor_update_calc_params(eff_f, R_rot);
     
     motor.valid = true;
     
