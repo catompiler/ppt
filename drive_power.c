@@ -1,7 +1,11 @@
 #include "drive_power.h"
 #include "utils/utils.h"
+#include "utils/critical.h"
+#include "mid_filter/mid_filter3i.h"
 #include "settings.h"
 #include "drive_triacs.h"
+#include "drive_protection.h"
+#include "drive_tasks.h"
 #include <string.h>
 #include <arm_math.h>
 
@@ -35,20 +39,92 @@ typedef struct _Oscillogram_Buf {
     size_t skip_counter; //!< Счётчик числа пропущенных точек АЦП.
 } oscillogram_buf_t;
 
+
+/////////////////////////////
+// Диагностика тиристоров. //
+/////////////////////////////
+
+
+//! Количество открытий тиристора за период.
+#define TRIAC_NORMAL_OPENS_COUNT 2
+
+
+//! Структура диагностики пары тиристоров.
+typedef struct _Triac_Pair_Phase_Diag {
+    mid_filter3i_t filter_zero; //!< Медианный фильтр сырых значений тока.
+    mid_filter3i_t filter_val; //!< Медианный фильтр значений тока.
+    int32_t sum_zero_raw; //!< Сумма нулевых значений тока (сырая).
+    int32_t sum_count_raw; //!< Количество нулевых значний тока (сырых).
+    int16_t val_zero_raw; //!< Значение нуля (сырое).
+    fixed32_t val_zero; //!< Значение нуля, А.
+} triac_pairs_phase_diag_t;
+
+//! Структура диагностики тиристора.
+typedef struct _Triac_Diag {
+    triac_pair_number_t last_pair; //!< Пара тиристоров последнего детектирования открытия тиристора.
+    size_t cur_open_count; //!< Текущее число открытий тиристора в пределах периода.
+    bool cur_opened; //!< Флаг открытого тиристора в данный момент.
+    bool cur_closed; //!< Флаг закрытого тиристора в данный момент.
+    // Данные диагностики за последний период.
+    size_t open_count; //!< Число открытий за последний период.
+} triac_diag_t;
+
+// Пары тиристоров.
+//! Пара тиристоров фазы A.
+#define TRIAC_PAIR_PHASE_A 0
+//! Пара тиристоров фазы B.
+#define TRIAC_PAIR_PHASE_B 1
+//! Пара тиристоров фазы C.
+#define TRIAC_PAIR_PHASE_C 2
+//! Число пар тиристоров.
+#define TRIAC_PAIR_PHASES_COUNT 3
+
+//! Тип фазы пары тиристоров.
+typedef size_t phase_triac_pair_t;
+
+//! Структура диагностики тиристоров.
+typedef struct _Triacs_Diag {
+    triac_pairs_phase_diag_t pair_diags[TRIAC_PAIR_PHASES_COUNT];
+    triac_diag_t triac_diags[TRIACS_COUNT];
+    fixed32_t I_zero_noise; //!< Шум нуля АЦП.
+    triac_pair_number_t last_pair; //!< Последняя обработанная пара.
+    triac_pair_number_t period_pair; //!< Пара отсчёта периода.
+    bool fail; //!< Флаг ошибки тиристоров.
+} triacs_diag_t;
+
 //! Тип питания привода.
 typedef struct _Drive_Power {
     power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
     power_t power; //!< Питание.
     size_t processing_iters; //!< Число итераций для накопления и обработки данных.
     size_t iters_processed; //!< Число итераций обработки данных.
+    size_t period_iters; //!< Счётчик периода измерений АЦП.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
     phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
     // Вычисляемые значения.
     fixed32_t open_angle_voltage; //!< Напряжение согласно углу открытия тиристоров.
+    // Диагностика.
+    triacs_diag_t triacs_diag; //!< Диагностика тиристоров.
 } drive_power_t;
 
 //! Питание привода.
 static drive_power_t drive_power;
+
+
+
+static void drive_power_init_triacs_diag(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    triacs_diag->last_pair = TRIAC_PAIR_UNKNOWN;
+    triacs_diag->period_pair = TRIAC_PAIR_UNKNOWN;
+    
+    size_t i;
+    for(i = 0; i < TRIACS_COUNT; i ++){
+        triac_diag_t* triac_diag = &triacs_diag->triac_diags[i];
+        triac_diag->last_pair = TRIAC_PAIR_UNKNOWN;
+    }
+}
 
 
 err_t drive_power_init(void)
@@ -86,6 +162,51 @@ err_t drive_power_init(void)
     */
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
+    
+    drive_power_init_triacs_diag();
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_power_update_settings(void)
+{
+    drive_power.triacs_diag.I_zero_noise = settings_valuef(PARAM_ID_PROT_I_IN_IDLE_FAULT_LEVEL_VALUE);
+    
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ua));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ub));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Uc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Urot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ia));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ib));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ic));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Irot));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iref));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan));
+    
+    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ua));
+    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ub));
+    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Uc));
+    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Urot));
+    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ia));
+    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ib));
+    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ic));
+    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Irot));
+    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iexc));
+    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iref));
+    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ifan));
+    
+    drive_power_set_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ua));
+    drive_power_set_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ub));
+    drive_power_set_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Uc));
+    drive_power_set_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Urot));
+    drive_power_set_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ia));
+    drive_power_set_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ib));
+    drive_power_set_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ic));
+    drive_power_set_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Irot));
+    drive_power_set_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iexc));
+    drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
+    drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
     
     return E_NO_ERROR;
 }
@@ -269,26 +390,10 @@ static void drive_power_osc_buffer_put_data(void)
     size_t i = 0;
     for(; i < DRIVE_POWER_OSC_CHANNELS_COUNT; i ++){
         osc_value_t value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
-                    drive_power_osc_channels_nums[i]
-                ));
+                drive_power_osc_channels_nums[i]
+            ));
         drive_power.osc_buf.osc_channels[i].data[drive_power.osc_buf.index] = value;
     }
-
-/*
-    size_t i = 0;
-    osc_value_t value = 0;
-    osc_value_t new_value = 0;
-    static osc_value_t prev_value[DRIVE_POWER_OSC_CHANNELS_COUNT] = {0};
-    for(; i < DRIVE_POWER_OSC_CHANNELS_COUNT; i ++){
-        new_value = drive_power_osc_value_from_fixed32(drive_power_channel_real_value_inst(
-                    drive_power_osc_channels_nums[i]
-                ));
-        
-        value = (prev_value[i] + new_value) >> 1;
-        prev_value[i] = new_value;
-        drive_power.osc_buf.osc_channels[i].data[drive_power.osc_buf.index] = value;
-    }
-*/
     
     if(++ drive_power.osc_buf.index >= DRIVE_POWER_OSC_CHANNEL_LEN){
         drive_power.osc_buf.index = 0;
@@ -337,13 +442,215 @@ static void drive_power_calc_phase_current(void)
     }
 }
 
+/**
+ * Получает номер канала тока фазы.
+ * @param phase Фаза.
+ * @return Номер канала, -1 при неудаче.
+ */
+static int drive_power_phase_current_channel_number(phase_t phase)
+{
+    static const int8_t channel_number_table[PHASES_COUNT] = {
+        DRIVE_POWER_Ia, DRIVE_POWER_Ib, DRIVE_POWER_Ic
+    };
+    
+    if(phase == PHASE_UNK) return -1;
+    
+    return channel_number_table[phase - 1];
+}
+
+/**
+ * Получает номер защиты питания превышения тока нуля.
+ * @param phase Фаза.
+ * @return Номер защиты питания, -1 при неудаче.
+ */
+/*static int drive_power_phase_current_zero_prot_number(phase_t phase)
+{
+    static const int8_t prot_number_table[PHASES_COUNT] = {
+        DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ia,
+        DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ib,
+        DRIVE_PROT_PWR_ITEM_FAULT_IDLE_Ic
+    };
+    
+    if(phase == PHASE_UNK) return -1;
+    
+    return prot_number_table[phase - 1];
+}*/
+
+static bool drive_power_triacs_diag_triac_check(triac_pair_number_t pair_number, triac_number_t triac_number, bool open, bool has_current)
+{
+    //if(!TRIAC_PAIR_VALID(pair_number)) return false;
+    if(!TRIAC_VALID(triac_number)) return false;
+    
+    //fixed32_t abs_current = fixed_abs(current);
+    
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    triac_diag_t* triac_diag = &triacs_diag->triac_diags[triac_number];
+    
+    bool res = true;
+    bool opened = false;
+    bool closed = false;
+    
+    //if(abs_current > triacs_diag->I_zero_noise){
+    if(has_current){
+        
+        opened = true;
+        closed = false;
+        
+        if(!open) res = false;
+        
+        if(triac_diag->last_pair != pair_number){
+            triac_diag->cur_open_count ++;
+
+            triac_diag->last_pair = pair_number;
+        }
+    }else{
+        if(open) res = false;
+        
+        opened = false;
+        closed = true;
+    }
+    
+    triac_diag->cur_opened = opened;
+    triac_diag->cur_closed = closed;
+    
+    return res;
+}
+
+static void drive_power_triacs_diag_process_phase(triac_pair_number_t pair_number, phase_t phase)
+{
+    if(phase == PHASE_UNK) return;
+    
+    int channel_n = drive_power_phase_current_channel_number(phase);
+    if(channel_n == -1) return;
+    
+    //int pwr_prot_n = drive_power_phase_current_zero_prot_number(phase);
+    //if(pwr_prot_n == -1) return;
+    
+    phase_triac_pair_t phase_index = (phase_triac_pair_t)phase - 1;
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    triac_pairs_phase_diag_t* pair_diag = &triacs_diag->pair_diags[phase_index];
+    
+    fixed32_t I_cur = power_channel_real_value_inst(&drive_power.power, (size_t)channel_n);
+    int16_t I_cur_raw = power_channel_raw_value_inst(&drive_power.power, (size_t)channel_n);
+    
+    mid_filter3i_put(&pair_diag->filter_val, I_cur);
+    mid_filter3i_put(&pair_diag->filter_zero, (int32_t)I_cur_raw);
+    
+    triac_number_t triac_hi_number = drive_triacs_phase_triac_by_pos(phase, TRIAC_POS_HI);
+    triac_number_t triac_lo_number = drive_triacs_phase_triac_by_pos(phase, TRIAC_POS_LO);
+    
+    bool triac_hi_open = drive_triacs_triac_is_open(pair_number, triac_hi_number);
+    bool triac_lo_open = drive_triacs_triac_is_open(pair_number, triac_lo_number);
+    
+    if(mid_filter3i_full(&pair_diag->filter_val)){
+        fixed32_t I_filtered = mid_filter3i_value(&pair_diag->filter_val) - pair_diag->val_zero;
+        
+        bool has_current_hi = I_filtered > triacs_diag->I_zero_noise;
+        bool has_current_lo = I_filtered < -triacs_diag->I_zero_noise;
+        
+        bool triac_hi_check = drive_power_triacs_diag_triac_check(pair_number, triac_hi_number, triac_hi_open, has_current_hi);
+        bool triac_lo_check = drive_power_triacs_diag_triac_check(pair_number, triac_lo_number, triac_lo_open, has_current_lo);
+
+        if((triac_hi_check && triac_lo_check) &&
+           !(triac_hi_open || triac_lo_open)){
+            if(mid_filter3i_full(&pair_diag->filter_zero)){
+                pair_diag->sum_zero_raw += mid_filter3i_value(&pair_diag->filter_zero);
+                pair_diag->sum_count_raw ++;
+            }
+        }
+    }
+}
+
+static void drive_power_triacs_diag_reset_mid_buffers(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    size_t i;
+    for(i = 0; i < TRIAC_PAIR_PHASES_COUNT; i ++){
+        triac_pairs_phase_diag_t* pair_diag = &triacs_diag->pair_diags[i];
+        mid_filter3i_reset(&pair_diag->filter_val);
+        mid_filter3i_reset(&pair_diag->filter_zero);
+    }
+    for(i = 0; i < TRIACS_COUNT; i ++){
+        triac_diag_t* triac_diag = &triacs_diag->triac_diags[i];
+        triac_diag->last_pair = TRIAC_PAIR_UNKNOWN;
+    }
+}
+
+static void drive_power_triacs_diag_latch_opens_count(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    size_t i;
+    for(i = 0; i < TRIACS_COUNT; i ++){
+        triac_diag_t* triac_diag = &triacs_diag->triac_diags[i];
+        triac_diag->open_count = triac_diag->cur_open_count;
+        triac_diag->cur_open_count = 0;
+    }
+}
+
+static void drive_power_triacs_diag_process(void)
+{
+    triac_pair_number_t pair_number = drive_triacs_opened_pair();
+    
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    /*if((pair_number == triacs_diag->last_pair) && (pair_number != TRIAC_PAIR_UNKNOWN)){
+            drive_power_triacs_diag_process_phase(pair_number, PHASE_A);
+            drive_power_triacs_diag_process_phase(pair_number, PHASE_B);
+            drive_power_triacs_diag_process_phase(pair_number, PHASE_C);
+    }else{
+        if(pair_number != TRIAC_PAIR_UNKNOWN){
+            
+            if(triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN && TRIAC_PAIR_VALID(pair_number)){
+                triacs_diag->period_pair = pair_number;
+            }else if(pair_number == TRIAC_PAIR_NONE){
+                triacs_diag->period_pair = TRIAC_PAIR_UNKNOWN;
+            }
+            
+            if(triacs_diag->period_pair == pair_number || triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN){
+                drive_power_triacs_diag_latch_opens_count();
+            }
+        }
+        drive_power_triacs_diag_reset_mid_buffers();
+        triacs_diag->last_pair = pair_number;
+    }*/
+    
+    if(pair_number != triacs_diag->last_pair){
+        if(triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN && TRIAC_PAIR_VALID(pair_number)){
+            triacs_diag->period_pair = pair_number;
+        }else if(pair_number == TRIAC_PAIR_NONE){
+            triacs_diag->period_pair = TRIAC_PAIR_UNKNOWN;
+        }
+
+        //
+        if(triacs_diag->period_pair == pair_number || triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN){
+            drive_power_triacs_diag_latch_opens_count();
+        }
+        
+        drive_power_triacs_diag_reset_mid_buffers();
+        triacs_diag->last_pair = pair_number;
+    }
+    
+    if(pair_number != TRIAC_PAIR_UNKNOWN){
+        drive_power_triacs_diag_process_phase(pair_number, PHASE_A);
+        drive_power_triacs_diag_process_phase(pair_number, PHASE_B);
+        drive_power_triacs_diag_process_phase(pair_number, PHASE_C);
+    }
+    
+}
+
 err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
     err_t err = power_process_adc_values(&drive_power.power, channels, adc_values);
     
+    if(err != E_NO_ERROR) return err;
+    
     drive_power_calc_phase_current();
     
     drive_power_append_osc_data();
+    
+    drive_power_triacs_diag_process();
     
     return err;
 }
@@ -367,13 +674,8 @@ err_t drive_power_process_accumulated_data(power_channels_t channels)
     return false;
 }*/
 
-static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
+static void drive_power_calc_angle_voltage(void)
 {
-    err_t e = power_calc_values(&drive_power.power, channels);
-    if(err) *err = e;
-    
-    if(e != E_NO_ERROR) return;
-    
     fixed32_t Uin = (power_channel_real_value(&drive_power.power, DRIVE_POWER_Ua) +
                      power_channel_real_value(&drive_power.power, DRIVE_POWER_Ub) +
                      power_channel_real_value(&drive_power.power, DRIVE_POWER_Uc)) / 3;
@@ -398,18 +700,157 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
     drive_power.open_angle_voltage = fixed32_mul((int64_t)Ud0, open_angle_cos);
 }
 
+static void drive_power_triacs_diag_calc_zeros(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    size_t i;
+    for(i = 0; i < TRIAC_PAIR_PHASES_COUNT; i ++){
+        triac_pairs_phase_diag_t* pair_diag = &triacs_diag->pair_diags[i];
+        
+        int32_t sum = 0;
+        int32_t count = 0;
+        
+        CRITICAL_ENTER();
+        
+        count = pair_diag->sum_count_raw;
+        sum = pair_diag->sum_zero_raw;
+        
+        pair_diag->sum_count_raw = 0;
+        pair_diag->sum_zero_raw = 0;
+        
+        CRITICAL_EXIT();
+        
+        if(count){
+            phase_t pair_phase = (phase_t)i + 1;
+            
+            int pwr_ch = drive_power_phase_current_channel_number(pair_phase);
+            if(pwr_ch == -1) continue;
+            
+            fixed32_t adc_mult = power_adc_value_multiplier(&drive_power.power, pair_phase);
+            fixed32_t value_mult = power_value_multiplier(&drive_power.power, pair_phase);
+            
+            int64_t sum_real = (int64_t)sum * adc_mult;
+            sum_real = fixed32_mul(sum_real, value_mult);
+            
+            pair_diag->val_zero_raw = sum / count;
+            pair_diag->val_zero = sum_real / count;
+        }
+    }
+}
+
+static void drive_power_diag_triacs(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    bool fail = false;
+    
+    bool triacs_enabled = drive_triacs_pairs_enabled();
+    
+    size_t i;
+    for(i = 0; i < TRIACS_COUNT; i ++){
+        triac_diag_t* triac_diag = &triacs_diag->triac_diags[i];
+        if(triacs_enabled && triac_diag->open_count != TRIAC_NORMAL_OPENS_COUNT){
+            fail = true;
+        }
+        if(!triacs_enabled && triac_diag->open_count != 0){
+            fail = true;
+        }
+    }
+    
+    triacs_diag->fail = fail;
+}
+
+static void drive_power_diag_triacs_period_reset(void)
+{
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    if(drive_triacs_opened_pair() == TRIAC_PAIR_NONE){
+        
+        CRITICAL_ENTER();
+        
+        size_t i;
+        for(i = 0; i < TRIACS_COUNT; i ++){
+            triac_diag_t* triac_diag = &triacs_diag->triac_diags[i];
+            triac_diag->last_pair = TRIAC_PAIR_UNKNOWN;
+            triac_diag->open_count = triac_diag->cur_open_count;
+            triac_diag->cur_open_count = 0;
+        }
+        
+        CRITICAL_EXIT();
+    }
+}
+
+static void drive_power_diag_triac_pairs(void)
+{
+    drive_power_triacs_diag_calc_zeros();
+    
+    drive_power_diag_triacs();
+    
+    drive_power_diag_triacs_period_reset();
+    
+    /*triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    size_t opens_count = 0;
+    
+    opens_count += (triacs_diag->triac_diags[0].open_count + triacs_diag->triac_diags[1].open_count) * 1;
+    opens_count += (triacs_diag->triac_diags[2].open_count + triacs_diag->triac_diags[3].open_count) * 10;
+    opens_count += (triacs_diag->triac_diags[4].open_count + triacs_diag->triac_diags[5].open_count) * 100;
+    
+    param_t* p = NULL;
+    p = settings_param_by_id(PARAM_ID_DEBUG_2);
+    if(p) settings_param_set_valueu(p, opens_count);*/
+    
+    /*if(opens_count != 444 && drive_triacs_pairs_open_angle() > fixed32_make_from_int(30)){
+        drive_tasks_write_status_event();
+    }*/
+}
+
+bool drive_power_triacs_fail(void)
+{
+    return drive_power.triacs_diag.fail;
+}
+
+size_t drive_power_triac_open_count(triac_number_t triac_number)
+{
+    if(!TRIAC_VALID(triac_number)) return 0;
+    
+    triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
+    
+    return triacs_diag->triac_diags[triac_number].open_count;
+}
+
+static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
+{
+    err_t e = power_calc_values(&drive_power.power, channels);
+    if(err) *err = e;
+    
+    if(e != E_NO_ERROR) return;
+    
+    drive_power_calc_angle_voltage();
+}
+
 bool drive_power_calc_values(power_channels_t channels, err_t* err)
 {
+    bool res = false;
+    
     if(drive_power.processing_iters == 0){
         drive_power_calc_values_impl(channels, err);
-        return power_data_filter_filled(&drive_power.power, channels);
-    }
-    if(++ drive_power.iters_processed >= drive_power.processing_iters){
+        res = power_data_filter_filled(&drive_power.power, channels);
+    }else if(++ drive_power.iters_processed >= drive_power.processing_iters){
         drive_power.iters_processed = 0;
         drive_power_calc_values_impl(channels, err);
-        return power_data_filter_filled(&drive_power.power, channels);
+        res = power_data_filter_filled(&drive_power.power, channels);
     }
-    return false;
+    
+    // Если прошёл очередной период.
+    // И питание вычислено.
+    if(++ drive_power.period_iters >= DRIVE_POWER_PERIOD_ITERS){
+        drive_power.period_iters = 0;
+        drive_power_diag_triac_pairs();
+    }
+    
+    return res;
 }
 
 err_t drive_power_calibrate(power_channels_t channels)

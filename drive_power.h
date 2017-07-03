@@ -12,6 +12,7 @@
 #include "power.h"
 #include "errors/errors.h"
 #include "drive_phase_state.h"
+#include "drive_triacs.h"
 
 //! Питание.
 //! Число значений каналов АЦП.
@@ -54,6 +55,9 @@
 
 //! Частота сети.
 #define DRIVE_POWER_FREQ 50
+
+//! Число итераций накопления и обработки данных за период.
+#define DRIVE_POWER_PERIOD_ITERS 3
 
 //! Число итераций накопления и обработки данных по-умолчанию.
 #define DRIVE_POWER_PROCESSING_ITERS_DEFAULT 3
@@ -109,6 +113,12 @@ typedef struct _Drive_Power_Osc_Channel {
  * @return Код ошибки.
  */
 extern err_t drive_power_init(void);
+
+/**
+ * Обновляет настройки питания привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_power_update_settings(void);
 
 /**
  * Сбрасывает состояние питания привода.
@@ -261,6 +271,19 @@ extern err_t drive_power_process_adc_values(power_channels_t channels, uint16_t*
  * @return Код ошибки.
  */
 extern err_t drive_power_process_accumulated_data(power_channels_t channels);
+
+/**
+ * Получает флаг ошибки тиристоров.
+ * @return Флаг ошибки тиристоров.
+ */
+extern bool drive_power_triacs_fail(void);
+
+/**
+ * Получает количество открытий тиристора.
+ * @param triac_number Номер тиристора.
+ * @return Количество открытий тиристора.
+ */
+extern size_t drive_power_triac_open_count(triac_number_t triac_number);
 
 /**
  * Вычисляет значения каналов АЦП.
