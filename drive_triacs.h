@@ -15,9 +15,45 @@
 
 
 // Тиристоры.
+//! Число тиристоров.
+#define TRIACS_COUNT 6
+//! Тиристор неизвестен.
+#define TRIAC_UNKNOWN (-2)
+//! Тиристор отсутствует.
+#define TRIAC_NONE (-1)
+//! Тиристор 1.
+#define TRIAC_1 0
+//! Тиристор 2.
+#define TRIAC_2 1
+//! Тиристор 3.
+#define TRIAC_3 2
+//! Тиристор 4.
+#define TRIAC_4 3
+//! Тиристор 5.
+#define TRIAC_5 4
+//! Тиристор 6.
+#define TRIAC_6 5
+
+//! Проверка валидности номера тиристора.
+#define TRIAC_VALID(T) (((T) >= 0) && ((T) < TRIACS_COUNT))
+
+//! Тип номера тиристора.
+typedef int8_t triac_number_t;
+
+//! Тип положения тиристора в паре.
+typedef enum _Triac_Pos {
+    TRIAC_POS_HI = 0, //!< Верхний тиристор.
+    TRIAC_POS_LO = 1 //!< Нижний тиристор.
+} triac_pos_t;
+
+// Тиристорные пары.
 //! Число пар тиристоров.
 #define TRIAC_PAIRS_COUNT 6
 // Алиасы пар тиристоров.
+//! Пара неизвестна.
+#define TRIAC_PAIR_UNKNOWN (-2)
+//! Пара отсутствует.
+#define TRIAC_PAIR_NONE (-1)
 //! Пара 3 - 6.
 #define TRIAC_PAIR_3_6  0
 //! Пара 3 - 2.
@@ -31,8 +67,11 @@
 //! Пара 1 - 6.
 #define TRIAC_PAIR_1_6  5
 
-//! Тип номера тиристора.
-typedef size_t triac_pair_number_t;
+//! Проверка валидности номера тиристорной пары.
+#define TRIAC_PAIR_VALID(T) (((T) >= 0) && ((T) < TRIAC_PAIRS_COUNT))
+
+//! Тип номера тиристорной пары.
+typedef int8_t triac_pair_number_t;
 
 
 /**
@@ -162,6 +201,42 @@ typedef enum _Drive_Triacs_Exc_Mode {
 extern err_t drive_triacs_init(void);
 
 /**
+ * Получает фазы с соответсвующим состоянием тиристоров
+ * согласно текущей паре тиристоров.
+ * @param pair_number Пара тиристоров.
+ * @param open_hi Фаза с открытым верхним тиристором.
+ * @param open_lo Фаза с открытым нижним тиристором.
+ * @param closed Фаза с закрытыми тиристорами.
+ * @return Флаг получения фаз.
+ */
+extern bool drive_triacs_phases_by_pair(triac_pair_number_t pair_number, phase_t* open_hi, phase_t* open_lo, phase_t* closed);
+
+/**
+ * Получает флаг открытия тиристора по фазе и положению.
+ * @param pair_number Пара тиристоров.
+ * @param phase Фаза.
+ * @param pos Положение тиристора.
+ * @return Флаг открытия тиристора.
+ */
+extern bool drive_triacs_phase_triac_is_open(triac_pair_number_t pair_number, phase_t phase, triac_pos_t pos);
+
+/**
+ * Получает флаг открытия тиристора по номеру тиристора.
+ * @param pair_number Пара тиристоров.
+ * @param triac_number Номер тиристора.
+ * @return Флаг открытия тиристора.
+ */
+extern bool drive_triacs_triac_is_open(triac_pair_number_t pair_number, triac_number_t triac_number);
+
+/**
+ * Получает номер тиристора по фазе и положению.
+ * @param phase Фаза.
+ * @param pos Положение тиристора.
+ * @return Номер тиристора.
+ */
+extern triac_number_t drive_triacs_phase_triac_by_pos(phase_t phase, triac_pos_t pos);
+
+/**
  * Получает разрешение подачи импульсов на тиристорные пары.
  * @return Разрешение подачи импульсов на тиристорные пары.
  */
@@ -201,6 +276,18 @@ extern void drive_triacs_set_exc_mode(drive_triacs_exc_mode_t mode);
  * Останавливает открытие тиристоров.
  */
 extern void drive_triacs_stop(void);
+
+/**
+ * Получает открытую пару тиристоров.
+ * @return Открытая пара тиристоров.
+ */
+extern triac_pair_number_t drive_triacs_opened_pair(void);
+
+/**
+ * Получает последнюю открытую пару тиристоров.
+ * @return Последняя открытая пара тиристоров.
+ */
+extern triac_pair_number_t drive_triacs_last_opened_pair(void);
 
 /**
  * Устанавливает интервал углов открытия тиристорных пар.

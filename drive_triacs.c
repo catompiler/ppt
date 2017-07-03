@@ -90,6 +90,8 @@ typedef struct _Drive_Triacs {
     
     phase_t phase_exc; //!< Фаза возбуждения.
     drive_triacs_exc_mode_t exc_mode; //!< Режим возбуждения.
+    
+    triac_pair_number_t last_opened_pair; //!< Последняя открытая пара тиристоров.
 } drive_triacs_t;
 
 
@@ -110,7 +112,79 @@ err_t drive_triacs_init(void)
     drive_triacs.triacs_pairs_open_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     drive_triacs.triac_exc_open_ticks = TRIAC_EXC_TIM_OPEN_TIME_DEFAULT;
     
+    drive_triacs.last_opened_pair = TRIAC_PAIR_NONE;
+    
     return E_NO_ERROR;
+}
+
+bool drive_triacs_phases_by_pair(triac_pair_number_t pair_number, phase_t* open_hi, phase_t* open_lo, phase_t* closed)
+{
+    static const phase_t open_hi_table[TRIAC_PAIRS_COUNT] = {
+        PHASE_B, PHASE_B, PHASE_C, PHASE_C, PHASE_A, PHASE_A
+    };
+    static const phase_t open_lo_table[TRIAC_PAIRS_COUNT] = {
+        PHASE_C, PHASE_A, PHASE_A, PHASE_B, PHASE_B, PHASE_C
+    };
+    static const phase_t closed_table[TRIAC_PAIRS_COUNT] = {
+        PHASE_A, PHASE_C, PHASE_B, PHASE_A, PHASE_C, PHASE_B
+    };
+    
+    if(!TRIAC_PAIR_VALID(pair_number)) return false;
+    
+    if(open_hi) *open_hi = open_hi_table[pair_number];
+    if(open_lo) *open_lo = open_lo_table[pair_number];
+    if(closed) *closed = closed_table[pair_number];
+    
+    return true;
+}
+
+bool drive_triacs_phase_triac_is_open(triac_pair_number_t pair_number, phase_t phase, triac_pos_t pos)
+{
+    phase_t open_hi = PHASE_UNK;
+    phase_t open_lo = PHASE_UNK;
+    phase_t closed = PHASE_UNK;
+    
+    if(!drive_triacs_phases_by_pair(pair_number, &open_hi, &open_lo, &closed)) return false;
+    
+    if(phase == closed) return false;
+    
+    if(phase == open_hi && pos == TRIAC_POS_HI) return true;
+    if(phase == open_lo && pos == TRIAC_POS_LO) return true;
+    
+    return false;
+}
+
+bool drive_triacs_triac_is_open(triac_pair_number_t pair_number, triac_number_t triac_number)
+{
+    static const triac_number_t triacs_hi_table[TRIAC_PAIRS_COUNT] = {
+        TRIAC_3, TRIAC_3, TRIAC_5, TRIAC_5, TRIAC_1, TRIAC_1
+    };
+    static const triac_number_t triacs_lo_table[TRIAC_PAIRS_COUNT] = {
+        TRIAC_6, TRIAC_2, TRIAC_2, TRIAC_4, TRIAC_4, TRIAC_6
+    };
+    
+    if(!TRIAC_PAIR_VALID(pair_number)) return false;
+    if(!TRIAC_VALID(triac_number)) return false;
+    
+    if(triacs_hi_table[pair_number] == triac_number) return true;
+    if(triacs_lo_table[pair_number] == triac_number) return true;
+    
+    return false;
+}
+
+triac_number_t drive_triacs_phase_triac_by_pos(phase_t phase, triac_pos_t pos)
+{
+    if(phase == PHASE_UNK) return TRIAC_UNKNOWN;
+    
+    static const triac_number_t phase_triacs_hi_table[PHASES_COUNT] = {
+        TRIAC_1, TRIAC_3, TRIAC_5
+    };
+    static const triac_number_t phase_triacs_lo_table[PHASES_COUNT] = {
+        TRIAC_2, TRIAC_4, TRIAC_6
+    };
+    
+    if(pos == TRIAC_POS_HI) return phase_triacs_hi_table[phase - 1];
+    return phase_triacs_lo_table[phase - 1];
 }
 
 bool drive_triacs_pairs_enabled(void)
@@ -120,6 +194,7 @@ bool drive_triacs_pairs_enabled(void)
 
 void drive_triacs_set_pairs_enabled(bool enabled)
 {
+    if(enabled && !drive_triacs.pairs_enabled) drive_triacs.last_opened_pair = TRIAC_PAIR_NONE;
     drive_triacs.pairs_enabled = enabled;
 }
 
@@ -190,6 +265,18 @@ void drive_triacs_stop(void)
 {
     drive_triacs_stop_timers();
     drive_triacs_close_triacs();
+}
+
+triac_pair_number_t drive_triacs_opened_pair(void)
+{
+    if(!drive_triacs.pairs_enabled) return TRIAC_PAIR_NONE;
+    
+    return drive_triacs.last_opened_pair;
+}
+
+triac_pair_number_t drive_triacs_last_opened_pair(void)
+{
+    return drive_triacs.last_opened_pair;
 }
 
 err_t drive_triacs_clamp_pairs_open_angle(fixed32_t angle_min, fixed32_t angle_max)
@@ -336,7 +423,7 @@ err_t drive_triacs_set_exc_phase(phase_t phase)
 
 err_t drive_triacs_set_pair_gpio(triac_pair_number_t triac_pair, GPIO_TypeDef* GPIO_a, uint16_t pin_a, GPIO_TypeDef* GPIO_b, uint16_t pin_b)
 {
-    if(triac_pair >= TRIAC_PAIRS_COUNT) return E_OUT_OF_RANGE;
+    if(triac_pair >= TRIAC_PAIRS_COUNT || triac_pair < 0) return E_OUT_OF_RANGE;
     return triac_pair_init(&drive_triacs.triac_pairs[triac_pair], GPIO_a, pin_a, GPIO_b, pin_b);
 }
 
@@ -405,27 +492,39 @@ void drive_triacs_timer0_irq_handler(void)
         if(drive_triacs.pairs_enabled){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_a)
-                );}
+                );
+            //drive_triacs.last_opened_pair = tim_triacs->triacs_a;
+            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_a;
+        }
         TIM_ClearITPendingBit(TIM, TRIACS_A_OPEN_CHANNEL_IT);
     } // Если нужно закрыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM, TRIACS_A_CLOSE_CHANNEL_IT) != RESET){
-        triac_pair_close(
+            triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_a)
                 );
+            if(drive_triacs.pairs_enabled){
+                drive_triacs.last_opened_pair = tim_triacs->triacs_a;
+            }
         TIM_ClearITPendingBit(TIM, TRIACS_A_CLOSE_CHANNEL_IT);
     } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
         if(drive_triacs.pairs_enabled){
-        triac_pair_open(
+            triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_b)
-                );}
+                );
+            //drive_triacs.last_opened_pair = tim_triacs->triacs_b;
+            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_b;
+        }
         TIM_ClearITPendingBit(TIM, TRIACS_B_OPEN_CHANNEL_IT);
     } // Если нужно закрыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_CLOSE_CHANNEL_IT) != RESET){
-        triac_pair_close(
+            triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
+            if(drive_triacs.pairs_enabled){
+                drive_triacs.last_opened_pair = tim_triacs->triacs_b;
+            }
         TIM_ClearITPendingBit(TIM, TRIACS_B_CLOSE_CHANNEL_IT);
     }
 }
@@ -438,29 +537,41 @@ void drive_triacs_timer1_irq_handler(void)
     if(TIM_GetITStatus(TIM, TRIACS_A_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
         if(drive_triacs.pairs_enabled){
-        triac_pair_open(
+            triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_a)
-                );}
+                );
+            //drive_triacs.last_opened_pair = tim_triacs->triacs_a;
+            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_a;
+        }
         TIM_ClearITPendingBit(TIM, TRIACS_A_OPEN_CHANNEL_IT);
     } // Если нужно закрыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM, TRIACS_A_CLOSE_CHANNEL_IT) != RESET){
-        triac_pair_close(
+            triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_a)
                 );
+            if(drive_triacs.pairs_enabled){
+                drive_triacs.last_opened_pair = tim_triacs->triacs_a;
+            }
         TIM_ClearITPendingBit(TIM, TRIACS_A_CLOSE_CHANNEL_IT);
     } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
         if(drive_triacs.pairs_enabled){
-        triac_pair_open(
+            triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_b)
-                );}
+                );
+            //drive_triacs.last_opened_pair = tim_triacs->triacs_b;
+            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_b;
+        }
         TIM_ClearITPendingBit(TIM, TRIACS_B_OPEN_CHANNEL_IT);
     } // Если нужно закрыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_CLOSE_CHANNEL_IT) != RESET){
-        triac_pair_close(
+            triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
+            if(drive_triacs.pairs_enabled){
+                drive_triacs.last_opened_pair = tim_triacs->triacs_b;
+            }
         TIM_ClearITPendingBit(TIM, TRIACS_B_CLOSE_CHANNEL_IT);
     }
 }
