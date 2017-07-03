@@ -58,9 +58,15 @@ typedef struct _Drive_Fan_Prot {
 
 //! Структура защиты по температуре радиатора.
 typedef struct _Drive_Temp_Prot {
-    bool warn_enabled;
-    bool fault_enabled;
+    bool warn_enabled; //!< Разрешение предупреждения.
+    bool fault_enabled; //!< Разрешение ошибки.
 } drive_temp_prot_t;
+
+//! Структура защиты тиристоров.
+typedef struct _Drive_Triacs_Prot {
+    fixed32_t min_angle; //!< Минимальный угол контроля открытия тиристоров.
+    fixed32_t min_current; //!< Минимальный ток контроля открытия тиристоров.
+} drive_triacs_prot_t;
 
 /*
  * Защита питания.
@@ -354,6 +360,8 @@ static bool drive_prot_check_rot_break(drive_protection_item_t* item);
 static bool drive_prot_check_fan(drive_protection_item_t* item);
 // Проверка температуры радиатора.
 static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item);
+// Проверка тиристоров.
+static bool drive_prot_check_triacs(drive_protection_item_t* item);
 
 #define PROT_DESCR(arg_check_proc, arg_par_ena, arg_par_lvl, arg_par_time,\
                    arg_par_lch_ena, arg_par_act, arg_def_act)\
@@ -381,6 +389,8 @@ static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_C
                0, 0, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ACTION, 0),
     PROT_DESCR(drive_prot_check_heatsink_temp, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ENABLED, PARAM_ID_PROT_HEATSINK_TEMP_WARN_VALUE,
                0, 0, PARAM_ID_PROT_HEATSINK_TEMP_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_triacs, PARAM_ID_PROT_TRIACS_WARN_ENABLED, 0,
+               PARAM_ID_PROT_TRIACS_WARN_TIME_MS, PARAM_ID_PROT_TRIACS_WARN_LATCH_ENABLE, PARAM_ID_PROT_TRIACS_WARN_ACTION, 0),
 };
 
 
@@ -399,6 +409,7 @@ typedef struct _Drive_Protection {
     drive_power_warnings_t prot_cutoff_warn_mask; //!< Маска предупреждений защиты отсечки.
     drive_top_t top; //!< Тепловая защита.
     drive_fan_prot_t fan; //!< Защита вентилятора.
+    drive_triacs_prot_t triacs; //< Защита тиристоров.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
     drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
 } drive_protection_t;
@@ -799,9 +810,30 @@ static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item)
     return drive_temp_heatsink_temp() <= item->value_level;
 }
 
-/*
- * Защита вентилятора.
+/**
+ * Выполняет проверку тиристоров.
+ * @return Флаг допустимости элемента защиты.
  */
+static bool drive_prot_check_triacs(drive_protection_item_t* item)
+{
+    if(!drive_triacs_pairs_enabled()) return true;
+    
+    fixed32_t angle = drive_triacs_pairs_open_angle();
+    if(angle < drive_prot.triacs.min_angle) return true;
+    
+    fixed32_t Ia = drive_power_channel_real_value(DRIVE_POWER_Ia);
+    fixed32_t Ib = drive_power_channel_real_value(DRIVE_POWER_Ib);
+    fixed32_t Ic = drive_power_channel_real_value(DRIVE_POWER_Ic);
+    
+    if((Ia < drive_prot.triacs.min_current) &&
+       (Ib < drive_prot.triacs.min_current) &&
+       (Ic < drive_prot.triacs.min_current)){
+        return true;
+    }
+    
+    return !drive_power_triacs_fail();
+}
+
 /**
  * Обновляет настройки защиты вентилятора.
  */
@@ -810,6 +842,15 @@ void drive_protection_fan_update_settings(void)
     drive_prot.fan.I_fan_nom = settings_valuef(PARAM_ID_FAN_I_NOM);
     drive_prot.fan.I_fan_zero_noise = settings_valuef(PARAM_ID_FAN_I_ZERO_NOISE);
     drive_prot.fan.I_fan_ovf = drive_protection_get_ovf_level(drive_prot.fan.I_fan_nom, settings_valueu(PARAM_ID_FAN_PROT_OVF_LEVEL));
+}
+
+/**
+ * Обновляет настройки защиты тиристоров.
+ */
+void drive_protection_triacs_update_settings(void)
+{
+    drive_prot.triacs.min_angle = settings_valuef(PARAM_ID_PROT_TRIACS_WARN_MIN_ANGLE);
+    drive_prot.triacs.min_current = settings_valuef(PARAM_ID_PROT_TRIACS_WARN_MIN_CURRENT);
 }
 
 
@@ -837,6 +878,8 @@ void drive_protection_update_settings(void)
     drive_protection_update_top_settings();
     
     drive_protection_fan_update_settings();
+    
+    drive_protection_triacs_update_settings();
     
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
     

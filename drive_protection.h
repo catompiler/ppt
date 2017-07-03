@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 9
+#define DRIVE_PROT_ITEMS_COUNT 10
 
 /*
  * Индексы элементов защиты питания.
@@ -121,6 +121,7 @@
 #define DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP  7
 #define DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP   8
 
+#define DRIVE_PROT_ITEM_WARN_TRIACS          9
 
 //! Тип индекса элемента защиты.
 typedef size_t drive_prot_index_t;

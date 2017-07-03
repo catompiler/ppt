@@ -415,6 +415,24 @@
 //! Действие.
 #define PARAM_ID_PROT_HEATSINK_TEMP_WARN_ACTION 2262
 
+/*
+ * Защита тиристоров.
+ */
+/*
+ * Уровень предупреждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_TRIACS_WARN_ENABLED 2300
+//! Значение минимального угла.
+#define PARAM_ID_PROT_TRIACS_WARN_MIN_ANGLE 2301
+//! Значение минимального тока.
+#define PARAM_ID_PROT_TRIACS_WARN_MIN_CURRENT 2302
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_TRIACS_WARN_TIME_MS 2303
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_TRIACS_WARN_LATCH_ENABLE 2304
+//! Действие.
+#define PARAM_ID_PROT_TRIACS_WARN_ACTION 2305
 
 
 /////////////////////
