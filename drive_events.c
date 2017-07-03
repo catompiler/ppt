@@ -4,6 +4,11 @@
 #include "utils/utils.h"
 #include <time.h>
 #include "storage.h"
+#ifdef USE_ZERO_SENSORS
+#include "drive_phase_state.h"
+#else
+#include "drive_phase_sync.h"
+#endif
 
 
 //! Размер события в хранилище.
@@ -99,9 +104,16 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->power_warnings = drive_power_warnings();
     event->power_errors = drive_power_errors();
     event->phase_errors = drive_phase_errors();
+#ifdef USE_ZERO_SENSORS
     event->phase_a_time = drive_phase_state_phase_time(PHASE_A);
     event->phase_b_time = drive_phase_state_phase_time(PHASE_B);
     event->phase_c_time = drive_phase_state_phase_time(PHASE_C);
+#else
+    fixed32_t tmp_val = 0;
+    drive_phase_sync_angle(PHASE_A, &tmp_val); event->phase_a_angle = fixed32_get_int(tmp_val);//
+    drive_phase_sync_angle(PHASE_B, &tmp_val); event->phase_b_angle = fixed32_get_int(tmp_val);//
+    drive_phase_sync_angle(PHASE_C, &tmp_val); event->phase_c_angle = fixed32_get_int(tmp_val);//
+#endif //USE_ZERO_SENSORS
     event->time = (uint32_t)time(NULL);
     event->crc = 0;
 }

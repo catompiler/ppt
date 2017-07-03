@@ -51,9 +51,15 @@ typedef struct _Drive_Event {
     drive_power_warnings_t power_warnings; //!< Предупреждения питания привода.
     drive_power_errors_t power_errors; //!< Ошибки питания привода.
     drive_phase_errors_t phase_errors; //!< Ошибки фаз привода.
+#ifdef USE_ZERO_SENSORS
     phase_time_t phase_a_time; //!< Время фазы A.
     phase_time_t phase_b_time; //!< Время фазы B.
     phase_time_t phase_c_time; //!< Время фазы C.
+#else
+    int16_t phase_a_angle; //!< Угол фазы A.
+    int16_t phase_b_angle; //!< Угол фазы B.
+    int16_t phase_c_angle; //!< Угол фазы C.
+#endif //USE_ZERO_SENSORS
     uint32_t time; //!< Время возникновения события. 
     uint16_t crc; //!< Контрольная сумма.
 } drive_event_t;
