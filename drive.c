@@ -5,9 +5,10 @@
 #include "drive_regulator.h"
 #include "drive_protection.h"
 #include "drive_phase_sync.h"
+#include "drive_tasks.h"
+#include "drive_motor.h"
 #include <string.h>
 #include <stdio.h>
-#include "drive_motor.h"
 
 
 //! Минимальное значение PID-регулятора скорости.
@@ -342,8 +343,10 @@ static void drive_set_prot_masks(drive_state_t state)
        state == DRIVE_STATE_START ||
        state == DRIVE_STATE_STOP){
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, true);
     }else{
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, false);
     }
     
     drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAN, true);
@@ -1018,6 +1021,8 @@ static void drive_check_prots(void)
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, DRIVE_ERROR_NONE, DRIVE_WARNING_HEATSINK_TEMP));
     
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_WARN_TRIACS, DRIVE_ERROR_NONE, DRIVE_WARNING_TRIAC));
     
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
@@ -1749,41 +1754,7 @@ err_t drive_update_settings(void)
     
     drive_motor_update_settings();
     
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ua));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ub));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Uc));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Urot));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ia));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ib));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ic));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Irot));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iref));
-    drive_power_set_adc_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan));
-    
-    drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ua));
-    drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ub));
-    drive_power_set_calibration_data(DRIVE_POWER_Uc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Uc));
-    drive_power_set_calibration_data(DRIVE_POWER_Urot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Urot));
-    drive_power_set_calibration_data(DRIVE_POWER_Ia, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ia));
-    drive_power_set_calibration_data(DRIVE_POWER_Ib, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ib));
-    drive_power_set_calibration_data(DRIVE_POWER_Ic, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ic));
-    drive_power_set_calibration_data(DRIVE_POWER_Irot, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Irot));
-    drive_power_set_calibration_data(DRIVE_POWER_Iexc, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iexc));
-    drive_power_set_calibration_data(DRIVE_POWER_Iref, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Iref));
-    drive_power_set_calibration_data(DRIVE_POWER_Ifan, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ifan));
-    
-    drive_power_set_value_multiplier(DRIVE_POWER_Ua, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ua));
-    drive_power_set_value_multiplier(DRIVE_POWER_Ub, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ub));
-    drive_power_set_value_multiplier(DRIVE_POWER_Uc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Uc));
-    drive_power_set_value_multiplier(DRIVE_POWER_Urot, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Urot));
-    drive_power_set_value_multiplier(DRIVE_POWER_Ia, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ia));
-    drive_power_set_value_multiplier(DRIVE_POWER_Ib, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ib));
-    drive_power_set_value_multiplier(DRIVE_POWER_Ic, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ic));
-    drive_power_set_value_multiplier(DRIVE_POWER_Irot, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Irot));
-    drive_power_set_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iexc));
-    drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
-    drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
+    drive_power_update_settings();
     
     drive_dio_input_setup(DRIVE_DIO_INPUT_1, settings_valueu(PARAM_ID_DIGITAL_IN_1_TYPE),
                                              settings_valueu(PARAM_ID_DIGITAL_IN_1_INVERSION));
@@ -2061,9 +2032,14 @@ static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
        drive_phase_sync_synchronized()){
         drive_setup_triacs_open(phase, sensor_time);
     }
+    /*else{
+        drive_tasks_write_status_event();
+    }*/
     
     return E_NO_ERROR;
 }
+
+#ifdef USE_ZERO_SENSORS
 
 #ifdef DRIVE_PHASE_SYNC_DEBUG
 static int32_t zero_sens = 0;
@@ -2093,8 +2069,8 @@ err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
             zero_sens = diff_time;
 #endif
             if(diff_time >= drive.settings.zero_sensor_time){
-                return E_NO_ERROR;
-                //return drive_process_null_sensor_impl(phase, diff_time);
+                //return E_NO_ERROR;
+                return drive_process_null_sensor_impl(phase, diff_time);
             }
         }
     }
@@ -2104,6 +2080,8 @@ err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
     
     return E_NO_ERROR;
 }
+
+#endif //USE_ZERO_SENSORS
 
 #ifdef DRIVE_PHASE_SYNC_DEBUG
 static int32_t angle_phA = 0;

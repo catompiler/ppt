@@ -240,7 +240,11 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_NULL_SENSORS 1
 #define IRQ_PRIOR_ADC_DMA 2
 #define IRQ_PRIOR_NULL_TIMER 4
+
+#ifdef USE_ZERO_SENSORS
 #define IRQ_PRIOR_PHASES_TIMER 4
+#endif //USE_ZERO_SENSORS
+
 #define IRQ_PRIOR_MODBUS_USART 3
 #define IRQ_PRIOR_I2C1 5
 #define IRQ_PRIOR_I2C2 5
@@ -486,6 +490,8 @@ IRQ_ATTRIBS void EXTI9_5_IRQHandler(void)
     }
 }
 
+#ifdef USE_ZERO_SENSORS
+
 /**
  * Разрешает прерывание от заданных линий EXTI.
  * @param lines_mask Линии EXTI.
@@ -602,6 +608,8 @@ IRQ_ATTRIBS void EXTI15_10_IRQHandler(void)
         exti_clear_it(EXTI_PHASE_C_LINE);  // очищаем флаг прерывания 15
     }
 }
+
+#endif //USE_ZERO_SENSORS
 
 IRQ_ATTRIBS void TIM2_IRQHandler(void)
 {
@@ -765,7 +773,9 @@ static void init_periph_clock(void)
     // TIM5.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);    // Включаем тактирование General-purpose TIM5
     // TIM6.
+#ifdef USE_ZERO_SENSORS
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
+#endif //USE_ZERO_SENSORS
     // TIM7.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
     // TIM8.
@@ -1564,6 +1574,8 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
     TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
 }
 
+#ifdef USE_ZERO_SENSORS
+
 static void init_phases_timer(void)
 {
     TIM_DeInit(TIM6);
@@ -1584,6 +1596,8 @@ static void init_phases_timer(void)
     NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
     NVIC_EnableIRQ(TIM6_IRQn);
 }
+
+#endif //USE_ZERO_SENSORS
 
 static void init_null_timer(void)
 {
@@ -1681,6 +1695,8 @@ static void init_exti_pca9555(void)
     NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
 }
 
+#ifdef USE_ZERO_SENSORS
+
 static void init_exti_zero_sensors(void)
 {
     /*
@@ -1712,6 +1728,8 @@ static void init_exti_zero_sensors(void)
  
     NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
 }
+
+#endif //USE_ZERO_SENSORS
 
 static void init_gpio (void)
 {
@@ -2014,10 +2032,14 @@ int main(void)
     init_adc();
     init_adc_timer();
     
+#ifdef USE_ZERO_SENSORS
     init_phases_timer();
+#endif //USE_ZERO_SENSORS
     init_null_timer();
     
+#ifdef USE_ZERO_SENSORS
     init_exti_zero_sensors();
+#endif
     
     init_modbus_usart();
     init_modbus();

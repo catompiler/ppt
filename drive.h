@@ -134,7 +134,8 @@ typedef enum _Drive_Warning {
     DRIVE_WARNING_PHASE_SYNC       = 0x20, //!< Ошибка синхронизации фаз.
     DRIVE_WARNING_THERMAL_OVERLOAD = 0x40, //!< Перегрев.
     DRIVE_WARNING_FAN_FAIL         = 0x100, //!< Ошибка вентилятора.
-    DRIVE_WARNING_HEATSINK_TEMP    = 0x200 //!< Перегрев радиатора.
+    DRIVE_WARNING_HEATSINK_TEMP    = 0x200, //!< Перегрев радиатора.
+    DRIVE_WARNING_TRIAC            = 0x400 //!< Ошибка тиристоров.
 } drive_warning_t;
 
 //! Тип предупреждений привода.
@@ -616,6 +617,8 @@ extern void drive_triac_pairs_timer1_irq_handler(void);
  */
 extern void drive_triac_exc_timer_irq_handler(void);
 
+#ifdef USE_ZERO_SENSORS
+
 /**
  * Обрабатывает событие датчика нуля по заданной фазе.
  * Устаревшая функция, датчики нуля теперь
@@ -625,6 +628,8 @@ extern void drive_triac_exc_timer_irq_handler(void);
  * @return Код ошибки.
  */
 extern __attribute__ ((deprecated)) err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge);
+
+#endif //USE_ZERO_SENSORS
 
 /**
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
