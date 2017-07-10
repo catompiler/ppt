@@ -1197,12 +1197,27 @@ static void drive_process_top(void)
 }
 
 /**
+ * Получает флаг допустимости открытия тиристоров.
+ * @return Флаг допустимости открытия тиристоров.
+ */
+static bool drive_can_open_triacs(void)
+{
+    if(drive_phase_state_errors() != PHASE_NO_ERROR) return false;
+    if(!drive_phase_sync_synchronized()) return  false;
+    //if(drive_dio_output_type_state(DRIVE_DIO_OUT_USER) == DRIVE_DIO_ON) return false;
+    
+    return true;
+}
+
+/**
  * Регулировка привода.
  * @return Флаг регулировки привода.
  */
 static bool drive_regulate(void)
 {
-    if(drive_power_new_data_avail(DRIVE_POWER_CHANNELS) && drive_phase_state_errors() == PHASE_NO_ERROR){
+    if(!drive_power_new_data_avail(DRIVE_POWER_CHANNELS)) return false;
+    
+    if(drive_can_open_triacs()){
         fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
         fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
         fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
@@ -1225,6 +1240,8 @@ static bool drive_regulate(void)
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
         
         return true;
+    }else{
+        drive_regulator_adjust_current_reference();
     }
     
     return false;
@@ -2028,8 +2045,7 @@ static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
 {
     drive_phase_state_handle(phase);
 
-    if(drive_phase_state_errors() == PHASE_NO_ERROR &&
-       drive_phase_sync_synchronized()){
+    if(drive_can_open_triacs()){
         drive_setup_triacs_open(phase, sensor_time);
     }
     /*else{

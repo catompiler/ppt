@@ -35,8 +35,10 @@ typedef uint32_t ramp_reference_t;
 
 //! Минимальное задание.
 #define RAMP_REFERENCE_MIN 0
+#define RAMP_REFERENCE_MIN_F (fixed32_make_from_int(RAMP_REFERENCE_MIN))
 //! Максимальное задание.
 #define RAMP_REFERENCE_MAX 100
+#define RAMP_REFERENCE_MAX_F (fixed32_make_from_int(RAMP_REFERENCE_MAX))
 
 //! Тип времени разгона.
 typedef fixed32_t ramp_time_t;
@@ -213,6 +215,15 @@ extern bool ramp_inc_reference(ramp_t* ramp);
  * @return Флаг увеличения задания.
  */
 extern bool ramp_dec_reference(ramp_t* ramp);
+
+/**
+ * Устанавливает текущее задание согласно текущему
+ * значению питания.
+ * @param ramp Разгон.
+ * @param cur_val Текущее значение питания.
+ * @param max_val Значение при 100% задания.
+ */
+extern void ramp_adjust_current_reference(ramp_t* ramp, fixed32_t cur_val, fixed32_t max_val);
 
 /**
  * Вычисляет очередной шаг разгона.

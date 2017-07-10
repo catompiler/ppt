@@ -111,6 +111,12 @@ extern void drive_regulator_inc_reference(void);
 extern void drive_regulator_dec_reference(void);
 
 /**
+ * Подстраивает текущее значение разгона
+ * согласно выходному значению питания.
+ */
+extern void drive_regulator_adjust_current_reference(void);
+
+/**
  * Выполняет запуск.
  */
 extern void drive_regulator_start(void);

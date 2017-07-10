@@ -1,6 +1,7 @@
 #include "drive_regulator.h"
 #include "pid_controller/pid_controller.h"
 #include "utils/utils.h"
+#include "drive_power.h"
 #include <string.h>
 
 
@@ -131,6 +132,27 @@ void drive_regulator_dec_reference(void)
        regulator.state == DRIVE_REGULATOR_STATE_START){
         ramp_set_target_reference(&regulator.speed_ramp, fixed32_get_int(regulator.reference));
     }
+}
+
+void drive_regulator_adjust_current_reference(void)
+{
+    if(regulator.state == DRIVE_REGULATOR_STATE_IDLE) return;
+    
+    fixed32_t cur_val = 0;
+    fixed32_t max_val = 0;
+    
+    if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
+        cur_val = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        max_val = regulator.U_rot_nom;
+    }else{ //DRIVE_REGULATOR_MODE_TORQUE
+        cur_val = drive_power_channel_real_value(DRIVE_POWER_Irot);
+        max_val = regulator.I_rot_nom;
+    }
+    
+    ramp_adjust_current_reference(&regulator.speed_ramp, cur_val, max_val);
+    
+    pid_controller_reset(&regulator.spd_pid);
+    pid_controller_reset(&regulator.rot_pid);
 }
 
 void drive_regulator_start(void)

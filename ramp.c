@@ -93,10 +93,10 @@ err_t ramp_set_target_reference(ramp_t* ramp, ramp_reference_t reference)
 
 bool ramp_inc_reference(ramp_t* ramp)
 {
-    if(ramp->target_ref == RAMP_REFERENCE_MAX) return false;
+    if(ramp->target_ref == RAMP_REFERENCE_MAX_F) return false;
     
     fixed32_t new_ref = ramp->target_ref + ramp->reference_step;
-    if(new_ref > RAMP_REFERENCE_MAX) new_ref = RAMP_REFERENCE_MAX;
+    if(new_ref > RAMP_REFERENCE_MAX_F) new_ref = RAMP_REFERENCE_MAX_F;
     
     ramp->target_ref = new_ref;
     
@@ -105,14 +105,33 @@ bool ramp_inc_reference(ramp_t* ramp)
 
 bool ramp_dec_reference(ramp_t* ramp)
 {
-    if(ramp->target_ref == RAMP_REFERENCE_MIN) return false;
+    if(ramp->target_ref == RAMP_REFERENCE_MIN_F) return false;
     
     fixed32_t new_ref = ramp->target_ref - ramp->reference_step;
-    if(new_ref < RAMP_REFERENCE_MIN) new_ref = RAMP_REFERENCE_MIN;
+    if(new_ref < RAMP_REFERENCE_MIN_F) new_ref = RAMP_REFERENCE_MIN_F;
     
     ramp->target_ref = new_ref;
     
     return true;
+}
+
+void ramp_adjust_current_reference(ramp_t* ramp, fixed32_t cur_val, fixed32_t max_val)
+{
+    if(cur_val <= RAMP_REFERENCE_MIN_F){
+        ramp->current_ref = 0;
+        return;
+    }
+    if(cur_val >= max_val){
+        ramp->current_ref = RAMP_REFERENCE_MAX_F;
+        return;
+    }
+    
+    fixed32_t cur_calc_ref = fixed32_div((int64_t)cur_val, max_val);
+    cur_calc_ref = cur_calc_ref * 100;
+    
+    cur_calc_ref = CLAMP(cur_calc_ref, RAMP_REFERENCE_MIN_F, RAMP_REFERENCE_MAX_F);
+    
+    ramp->current_ref = cur_calc_ref;
 }
 
 bool ramp_calc_step(ramp_t* ramp)
