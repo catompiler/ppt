@@ -1718,6 +1718,9 @@ err_t drive_update_settings(void)
     drive_protection_update_settings();
 
     drive_power_set_phase_calc_current((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_CURRENT));
+    drive_power_set_phase_calc_voltage((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_VOLTAGE));
+    drive_power_set_rot_calc_current(settings_valueu(PARAM_ID_CALC_ROT_CURRENT));
+    drive_power_set_rot_calc_voltage(settings_valueu(PARAM_ID_CALC_ROT_VOLTAGE));
     
     drive.settings.stop_mode = settings_valueu(PARAM_ID_RAMP_STOP_MODE);
     drive.settings.stop_rot_iters = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_NULL_TIMER_FREQ;

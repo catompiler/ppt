@@ -74,6 +74,21 @@
 #define PARAM_ID_CALC_PHASE_CURRENT 1100
 
 /**
+ * Фаза для которой необходимо вычислять напряжение.
+ */
+#define PARAM_ID_CALC_PHASE_VOLTAGE 1101
+
+/**
+ * Необходимость вычисления тока якоря.
+ */
+#define PARAM_ID_CALC_ROT_CURRENT 1105
+
+/**
+ * Необходимость вычисления напряжения якоря.
+ */
+#define PARAM_ID_CALC_ROT_VOLTAGE 1106
+
+/**
  * Регулятор.
  */
 /**

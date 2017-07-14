@@ -101,6 +101,9 @@ typedef struct _Drive_Power {
     size_t period_iters; //!< Счётчик периода измерений АЦП.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
     phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
+    phase_t phase_calc_voltage; //!< Вычислять напряжение заданной фазы.
+    bool rot_calc_current; //!< Вычислять ток якоря.
+    bool rot_calc_voltage; //!< Вычислять напряжение якоря.
     // Вычисляемые значения.
     fixed32_t open_angle_voltage; //!< Напряжение согласно углу открытия тиристоров.
     // Диагностика.
@@ -222,6 +225,21 @@ phase_t drive_power_phase_calc_current(void)
     return drive_power.phase_calc_current;
 }
 
+phase_t drive_power_phase_calc_voltage(void)
+{
+    return drive_power.phase_calc_voltage;
+}
+
+bool drive_power_rot_calc_current(void)
+{
+    return drive_power.rot_calc_current;
+}
+
+bool drive_power_rot_calc_voltage(void)
+{
+    return drive_power.rot_calc_voltage;
+}
+
 ALWAYS_INLINE static bool drive_power_get_current_channel_by_phase(phase_t phase, size_t* channel)
 {
     switch(phase){
@@ -253,6 +271,53 @@ void drive_power_set_phase_calc_current(phase_t phase)
     if(drive_power_get_current_channel_by_phase(phase, &channel)){
         power_set_soft_channel(&drive_power.power, channel, true);
     }
+}
+
+ALWAYS_INLINE static bool drive_power_get_voltage_channel_by_phase(phase_t phase, size_t* channel)
+{
+    switch(phase){
+        default:
+            break;
+        case PHASE_A:
+            if(channel) *channel = DRIVE_POWER_Ua;
+            return true;
+        case PHASE_B:
+            if(channel) *channel = DRIVE_POWER_Ub;
+            return true;
+        case PHASE_C:
+            if(channel) *channel = DRIVE_POWER_Uc;
+            return true;
+    }
+    return false;
+}
+
+void drive_power_set_phase_calc_voltage(phase_t phase)
+{
+    size_t channel;
+    
+    if(drive_power_get_voltage_channel_by_phase(drive_power.phase_calc_voltage, &channel)){
+        power_set_soft_channel(&drive_power.power, channel, false);
+    }
+    
+    drive_power.phase_calc_voltage = phase;
+    
+    if(drive_power_get_voltage_channel_by_phase(phase, &channel)){
+        power_set_soft_channel(&drive_power.power, channel, true);
+    }
+}
+
+void drive_power_set_rot_calc_current(bool calc)
+{
+    drive_power.rot_calc_current = calc;
+    
+    power_set_soft_channel(&drive_power.power, DRIVE_POWER_Irot, calc);
+}
+
+void drive_power_set_rot_calc_voltage(bool calc)
+{
+    drive_power.rot_calc_voltage = calc;
+    
+    power_set_soft_channel(&drive_power.power, DRIVE_POWER_Urot, calc);
 }
 
 size_t drive_power_processing_iters(void)
@@ -442,6 +507,42 @@ static void drive_power_calc_phase_current(void)
     }
 }
 
+static void drive_power_calc_phase_voltage(void)
+{
+    fixed32_t U1 = 0, U2 = 0, U = 0;
+    switch(drive_power.phase_calc_voltage){
+        default:
+            break;
+        case PHASE_A:
+            U1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ub);
+            U2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Uc);
+            U = -(U1 + U2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Ua, U);
+            break;
+        case PHASE_B:
+            U1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ua);
+            U2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Uc);
+            U = -(U1 + U2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Ub, U);
+            break;
+        case PHASE_C:
+            U1 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ua);
+            U2 = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ub);
+            U = -(U1 + U2);
+            power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Uc, U);
+            break;
+    }
+}
+
+static void drive_power_calc_rot_voltage(void)
+{
+    if(!drive_power.rot_calc_voltage) return;
+    
+    fixed32_t Urot = drive_power.open_angle_voltage;
+    
+    power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Urot, Urot);
+}
+
 /**
  * Получает номер канала тока фазы.
  * @param phase Фаза.
@@ -456,6 +557,48 @@ static int drive_power_phase_current_channel_number(phase_t phase)
     if(phase == PHASE_UNK) return -1;
     
     return channel_number_table[phase - 1];
+}
+
+static void drive_power_calc_rot_current(void)
+{
+    if(!drive_power.rot_calc_current) return;
+    
+    triac_pair_number_t pair_number = drive_triacs_opened_pair();
+    
+    phase_t phase_hi = PHASE_UNK;
+    phase_t phase_lo = PHASE_UNK;
+    
+    int ch_hi = -1;
+    int ch_lo = -1;
+    
+    if(drive_triacs_phases_by_pair(pair_number, &phase_hi, &phase_lo, NULL)){
+        ch_hi = drive_power_phase_current_channel_number(phase_hi);
+        ch_lo = drive_power_phase_current_channel_number(phase_lo);
+    }
+    
+    // Если оба канала верные.
+    // Считаем ток по двум фазам.
+    if(ch_hi != -1 && ch_lo != -1){
+        
+        fixed32_t Ihi = power_channel_real_value_inst(&drive_power.power, (size_t)ch_hi);
+        fixed32_t Ilo = power_channel_real_value_inst(&drive_power.power, (size_t)ch_lo);
+        
+        Ihi = fixed_abs(Ihi);
+        Ilo = fixed_abs(Ilo);
+        
+        fixed32_t Irot = (Ihi + Ilo) / 2;
+        
+        power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Irot, Irot);
+        
+    }else{ // Считаем среднее по трём фазам.
+        fixed32_t Ia = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ia);
+        fixed32_t Ib = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ib);
+        fixed32_t Ic = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Ic);
+        
+        fixed32_t Irot = (Ia + Ib + Ic) / 3;
+        
+        power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Irot, Irot);
+    }
 }
 
 /**
@@ -647,6 +790,12 @@ err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_va
     if(err != E_NO_ERROR) return err;
     
     drive_power_calc_phase_current();
+    
+    drive_power_calc_phase_voltage();
+    
+    drive_power_calc_rot_current();
+    
+    drive_power_calc_rot_voltage();
     
     drive_power_append_osc_data();
     

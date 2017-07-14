@@ -132,10 +132,46 @@ extern void drive_power_reset(void);
 extern phase_t drive_power_phase_calc_current(void);
 
 /**
+ * Получает фазу для которой нужно вычислять напряжение.
+ * @return Фаза с вычислением напряжения.
+ */
+extern phase_t drive_power_phase_calc_voltage(void);
+
+/**
+ * Получает флаг вычисления тока якоря.
+ * @return Флаг вычисления тока якоря.
+ */
+extern bool drive_power_rot_calc_current(void);
+
+/**
+ * Получает флаг вычисления напряжения якоря.
+ * @return Флаг вычисления напряжения якоря.
+ */
+extern bool drive_power_rot_calc_voltage(void);
+
+/**
  * Устанавливает фазу для которой нужно вычислять ток.
  * @param phase Фаза с вычислением тока.
  */
 extern void drive_power_set_phase_calc_current(phase_t phase);
+
+/**
+ * Устанавливает фазу для которой нужно вычислять напряжение.
+ * @param phase Фаза с вычислением напряжения.
+ */
+extern void drive_power_set_phase_calc_voltage(phase_t phase);
+
+/**
+ * Устанавливает флаг вычисления тока якоря.
+ * @param Флаг вычисления тока якоря.
+ */
+extern void drive_power_set_rot_calc_current(bool calc);
+
+/**
+ * Устанавливает флаг вычисления напряжения якоря.
+ * @param Флаг вычисления напряжения якоря.
+ */
+extern void drive_power_set_rot_calc_voltage(bool calc);
 
 /**
  * Получает количество итераций накопления данных.
