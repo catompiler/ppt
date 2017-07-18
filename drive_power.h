@@ -150,6 +150,12 @@ extern bool drive_power_rot_calc_current(void);
 extern bool drive_power_rot_calc_voltage(void);
 
 /**
+ * Получает флаг вычисления тока возбуждения.
+ * @return Флаг вычисления тока возбуждения.
+ */
+extern bool drive_power_exc_calc_current(void);
+
+/**
  * Устанавливает фазу для которой нужно вычислять ток.
  * @param phase Фаза с вычислением тока.
  */
@@ -172,6 +178,12 @@ extern void drive_power_set_rot_calc_current(bool calc);
  * @param Флаг вычисления напряжения якоря.
  */
 extern void drive_power_set_rot_calc_voltage(bool calc);
+
+/**
+ * Устанавливает флаг вычисления тока возбуждения.
+ * @param Флаг вычисления тока возбуждения.
+ */
+extern void drive_power_set_exc_calc_current(bool calc);
 
 /**
  * Получает количество итераций накопления данных.

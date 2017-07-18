@@ -91,6 +91,10 @@ typedef struct _Drive_Parameters {
     param_t* param_digital_out_2;
     param_t* param_digital_out_3;
     param_t* param_digital_out_4;
+    // ПИДы.
+    param_t* param_pid_rot_spd_val;
+    param_t* param_pid_rot_cur_val;
+    param_t* param_pid_exc_cur_val;
 } drive_parameters_t;
 
 //! Структура привода.
@@ -1141,6 +1145,16 @@ static void drive_update_clibration_parameters(void)
 }
 
 /**
+ * Обновляет параметры со значениями ПИД-регуляторов.
+ */
+static void drive_update_pid_parameters(void)
+{
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pid_rot_spd_val, drive_regulator_rot_speed_current_ref());
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pid_rot_cur_val, drive_regulator_rot_open_angle());
+    DRIVE_UPDATE_PARAM_FIXED(drive.params.param_pid_exc_cur_val, drive_regulator_exc_open_angle());
+}
+
+/**
  * Обрабатывает цифровые входа привода.
  */
 static void drive_process_digital_inputs(void)
@@ -1232,12 +1246,14 @@ static bool drive_regulate(void)
         drive_triacs_set_exc_open_angle(exc_angle);
         //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
 
-        pid_controller_t* pid_spd = drive_regulator_spd_pid();
-        pid_controller_t* pid_rot = drive_regulator_rot_pid();
+        //pid_controller_t* pid_spd = drive_regulator_spd_pid();
+        //pid_controller_t* pid_rot = drive_regulator_rot_pid();
 
-        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), pid_spd->value);
-        settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_7), pid_rot->value);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), pid_spd->value);
+        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_7), pid_rot->value);
         //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
+        
+        //drive_update_pid_parameters();
         
         return true;
     }else{
@@ -1611,6 +1627,8 @@ static err_t drive_states_process(void)
     
     drive_update_digital_state_parameters();
     
+    drive_update_pid_parameters();
+    
     return E_NO_ERROR;
 }
 
@@ -1707,6 +1725,10 @@ err_t drive_init(void)
     drive.params.param_digital_out_3 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_3_STATE);
     drive.params.param_digital_out_4 = settings_param_by_id(PARAM_ID_DIGITAL_OUT_4_STATE);
     
+    drive.params.param_pid_rot_spd_val = settings_param_by_id(PARAM_ID_PID_ROT_SPEED);
+    drive.params.param_pid_rot_cur_val = settings_param_by_id(PARAM_ID_PID_ROT_CURRENT);
+    drive.params.param_pid_exc_cur_val = settings_param_by_id(PARAM_ID_PID_EXC_CURRENT);
+    
     //drive_set_state(DRIVE_STATE_INIT);
     drive.init_state = DRIVE_INIT_BEGIN;
     
@@ -1721,6 +1743,7 @@ err_t drive_update_settings(void)
     drive_power_set_phase_calc_voltage((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_VOLTAGE));
     drive_power_set_rot_calc_current(settings_valueu(PARAM_ID_CALC_ROT_CURRENT));
     drive_power_set_rot_calc_voltage(settings_valueu(PARAM_ID_CALC_ROT_VOLTAGE));
+    drive_power_set_exc_calc_current(settings_valueu(PARAM_ID_CALC_EXC_CURRENT));
     
     drive.settings.stop_mode = settings_valueu(PARAM_ID_RAMP_STOP_MODE);
     drive.settings.stop_rot_iters = settings_valueu(PARAM_ID_ROT_STOP_TIME) * DRIVE_NULL_TIMER_FREQ;

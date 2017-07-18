@@ -62,6 +62,10 @@
  * Номинальное сопротивление якоря.
  */
 #define PARAM_ID_MOTOR_R_ROT_NOM      215
+/**
+ * Номинальное сопротивление возбуждения.
+ */
+#define PARAM_ID_MOTOR_R_EXC_NOM      216
 
 
 ///////////////////////
@@ -87,6 +91,11 @@
  * Необходимость вычисления напряжения якоря.
  */
 #define PARAM_ID_CALC_ROT_VOLTAGE 1106
+
+/**
+ * Необходимость вычисления тока возбуждения.
+ */
+#define PARAM_ID_CALC_EXC_CURRENT 1107
 
 /**
  * Регулятор.
@@ -1371,18 +1380,42 @@
  */
 #define PARAM_ID_MOTOR_R_ROT      8451
 /**
+ * Вычисленное сопротивление возбуждения.
+ */
+#define PARAM_ID_MOTOR_R_EXC      8452
+/**
  * Вычисленные обороты.
  */
-#define PARAM_ID_MOTOR_RPM        8452
+#define PARAM_ID_MOTOR_RPM        8455
 /**
  * Вычисленный момент.
  */
-#define PARAM_ID_MOTOR_TORQUE     8453
+#define PARAM_ID_MOTOR_TORQUE     8456
 
 
 ///////////////////////////
 // Отладочные параметры. //
 ///////////////////////////
+
+/*
+ * ПИД
+ */
+/**
+ * ПИД синхронизации с фазами.
+ */
+#define PARAM_ID_PID_PHASE_SYNC 9050
+/**
+ * ПИД регулятора тока возбуждения.
+ */
+#define PARAM_ID_PID_EXC_CURRENT 9051
+/**
+ * ПИД регулятора скорости.
+ */
+#define PARAM_ID_PID_ROT_SPEED 9052
+/**
+ * ПИД регулятора тока якоря.
+ */
+#define PARAM_ID_PID_ROT_CURRENT 9053
 
 /**
  * Отладочный параметр 0

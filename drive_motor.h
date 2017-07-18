@@ -35,6 +35,18 @@ extern bool drive_motor_ready(void);
 extern void drive_motor_calculate(void);
 
 /**
+ * Получает сопротивление якоря.
+ * @return Сопротивление якоря.
+ */
+extern fixed32_t drive_motor_r_rot(void);
+
+/**
+ * Получает сопротивление возбуждения.
+ * @return Сопротивление возбуждения.
+ */
+extern fixed32_t drive_motor_r_exc(void);
+
+/**
  * Получает текущие обороты двигателя.
  * @return Текущие обороты двигателя.
  */

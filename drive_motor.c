@@ -12,6 +12,7 @@ typedef struct _Drive_Motor {
     bool valid; //!< Флаг допустимости параметров двигателя.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t R_rot; //!< Сопротивление якоря.
+    fixed32_t R_exc; //!< Сопротивление возбуждения.
     fixed32_t Cn; //!< Коэффициент для расчёта оборотов.
     fixed32_t Cm; //!< Коэффициент для расчёта момента.
     param_t* param_rpm; //!< Параметр с оборотами двигателя.
@@ -39,13 +40,16 @@ err_t drive_motor_init(void)
     return E_NO_ERROR;
 }
 
-static void drive_motor_update_calc_params(fixed32_t eff_f, fixed32_t R_rot)
+static void drive_motor_update_calc_params(fixed32_t eff_f, fixed32_t R_rot, fixed32_t R_exc)
 {
     param_t* p_eff = settings_param_by_id(PARAM_ID_MOTOR_EFF);
     DRIVE_UPDATE_PARAM_FIXED(p_eff, eff_f * 100);
     
-    param_t* p_r = settings_param_by_id(PARAM_ID_MOTOR_R_ROT);
-    DRIVE_UPDATE_PARAM_FIXED(p_r, R_rot);
+    param_t* p_r_rot = settings_param_by_id(PARAM_ID_MOTOR_R_ROT);
+    DRIVE_UPDATE_PARAM_FIXED(p_r_rot, R_rot);
+    
+    param_t* p_r_exc = settings_param_by_id(PARAM_ID_MOTOR_R_EXC);
+    DRIVE_UPDATE_PARAM_FIXED(p_r_exc, R_exc);
 }
 
 err_t drive_motor_update_settings(void)
@@ -64,6 +68,14 @@ err_t drive_motor_update_settings(void)
     
     int64_t P_W_f = (int64_t)P_f * 1000; // кВт -> Вт.
     
+    if(P_f == 0 || N == 0 ||
+       U_rot == 0 || I_rot_f == 0 ||
+       U_exc == 0 || I_exc_f == 0){
+        motor.valid = false;
+        drive_motor_update_calc_params(eff_f, 0, 0);
+        return E_INVALID_VALUE;
+    }
+    
     if(eff_f == 0){
         int64_t P_e = ((int64_t)U_rot * I_rot_f + (int64_t)U_exc * I_exc_f);
         eff_f = fixed32_div(P_W_f, P_e);
@@ -71,7 +83,7 @@ err_t drive_motor_update_settings(void)
     
     if(eff_f <= 0 || eff_f >= fixed32_make_from_int(1)){
         motor.valid = false;
-        drive_motor_update_calc_params(eff_f, 0);
+        drive_motor_update_calc_params(eff_f, 0, 0);
         return E_INVALID_VALUE;
     }
     
@@ -93,18 +105,32 @@ err_t drive_motor_update_settings(void)
     
     if(R_rot == 0){
         motor.valid = false;
-        drive_motor_update_calc_params(eff_f, 0);
+        drive_motor_update_calc_params(eff_f, 0, 0);
         return E_INVALID_VALUE;
     }
-    
     fixed32_t R_rot75 = fixed32_mul((int64_t)R_rot, K_R75);
+    
+    fixed32_t R_exc = settings_valuef(PARAM_ID_MOTOR_R_EXC_NOM);
+    
+    if(R_exc == 0){
+        fixed32_t U_exc_f = fixed32_make_from_int(U_exc);
+        R_exc = fixed32_div((int64_t)U_exc_f, I_exc_f);
+    }
+    
+    if(R_exc == 0){
+        motor.valid = false;
+        drive_motor_update_calc_params(eff_f, R_rot, 0);
+        return E_INVALID_VALUE;
+    }
+    fixed32_t R_exc75 = fixed32_mul((int64_t)R_exc, K_R75);
     
     motor.I_exc = I_exc_f;
     motor.Cn = CeF;
     motor.Cm = CeM;
     motor.R_rot = R_rot75;
+    motor.R_exc = R_exc75;
     
-    drive_motor_update_calc_params(eff_f, R_rot);
+    drive_motor_update_calc_params(eff_f, R_rot, R_exc);
     
     motor.valid = true;
     
@@ -160,6 +186,16 @@ void drive_motor_calculate(void)
     
     DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(N));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, M);
+}
+
+fixed32_t drive_motor_r_rot(void)
+{
+    return motor.R_rot;
+}
+
+fixed32_t drive_motor_r_exc(void)
+{
+    return motor.R_exc;
 }
 
 fixed32_t drive_motor_rpm(void)

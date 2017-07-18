@@ -10,6 +10,7 @@
 #include "cordic/cordic32.h"
 #include "pid_controller/pid_controller.h"
 #include "drive_power.h"
+#include "settings.h"
 
 
 
@@ -139,6 +140,8 @@ typedef struct _Drive_Phase_Sync {
     uint8_t calc_phases_counter; //!< Счётчик пропусков вычисления фаз.
     drive_phase_sync_pll_t pll; //!< ФАПЧ.
     fixed32_t accuracy_angle; //!< Точность синхронизации.
+    // Обновляемые параметры.
+    param_t* param_pid_val; //!< Значение ПИД-регулятора.
 } drive_phase_sync_t;
 
 //! Синхронизация с фазами.
@@ -153,6 +156,8 @@ err_t drive_phase_sync_init(void)
     
     phase_sync.put_buffers = 0;
     phase_sync.get_buffers = 1;
+    
+    phase_sync.param_pid_val = settings_param_by_id(PARAM_ID_PID_PHASE_SYNC);
     
     return E_NO_ERROR;
 }
@@ -657,7 +662,11 @@ bool drive_phase_sync_pll_regulate(void)
         angle_err = fixed_abs(angle_err);
     }
     
-    return pid_controller_calculate(&phase_sync.pll.pid, angle_err, PLL_PID_DT);
+    bool res = pid_controller_calculate(&phase_sync.pll.pid, angle_err, PLL_PID_DT);
+    
+    DRIVE_UPDATE_PARAM_FIXED(phase_sync.param_pid_val, pid_controller_value(&phase_sync.pll.pid));
+    
+    return res;
 }
 
  void drive_phase_sync_set_accuracy(fixed32_t angle)

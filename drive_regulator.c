@@ -317,6 +317,11 @@ fixed32_t drive_regulator_current_i_ref(void)
     return regulator.i_rot_ref;
 }
 
+fixed32_t drive_regulator_rot_speed_current_ref(void)
+{
+    return pid_controller_value(&regulator.spd_pid);
+}
+
 fixed32_t drive_regulator_rot_open_angle(void)
 {
     return pid_controller_value(&regulator.rot_pid);

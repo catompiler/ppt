@@ -6,6 +6,7 @@
 #include "drive_triacs.h"
 #include "drive_protection.h"
 #include "drive_tasks.h"
+#include "drive_motor.h"
 #include <string.h>
 #include <arm_math.h>
 
@@ -104,8 +105,11 @@ typedef struct _Drive_Power {
     phase_t phase_calc_voltage; //!< Вычислять напряжение заданной фазы.
     bool rot_calc_current; //!< Вычислять ток якоря.
     bool rot_calc_voltage; //!< Вычислять напряжение якоря.
+    bool exc_calc_current; //!< Вычислять ток возбуждения.
     // Вычисляемые значения.
     fixed32_t open_angle_voltage; //!< Напряжение согласно углу открытия тиристоров.
+    fixed32_t U_exc_calc; //!< Вычисленное значение напряжения возбуждения.
+    fixed32_t I_exc_calc; //!< Вычисленное значение тока возбуждения.
     // Диагностика.
     triacs_diag_t triacs_diag; //!< Диагностика тиристоров.
 } drive_power_t;
@@ -240,6 +244,11 @@ bool drive_power_rot_calc_voltage(void)
     return drive_power.rot_calc_voltage;
 }
 
+bool drive_power_exc_calc_current(void)
+{
+    return drive_power.exc_calc_current;
+}
+
 ALWAYS_INLINE static bool drive_power_get_current_channel_by_phase(phase_t phase, size_t* channel)
 {
     switch(phase){
@@ -318,6 +327,13 @@ void drive_power_set_rot_calc_voltage(bool calc)
     drive_power.rot_calc_voltage = calc;
     
     power_set_soft_channel(&drive_power.power, DRIVE_POWER_Urot, calc);
+}
+
+void drive_power_set_exc_calc_current(bool calc)
+{
+    drive_power.exc_calc_current = calc;
+    
+    power_set_soft_channel(&drive_power.power, DRIVE_POWER_Iexc, calc);
 }
 
 size_t drive_power_processing_iters(void)
@@ -541,6 +557,15 @@ static void drive_power_calc_rot_voltage(void)
     fixed32_t Urot = drive_power.open_angle_voltage;
     
     power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Urot, Urot);
+}
+
+static void drive_power_calc_exc_current_inst(void)
+{
+    if(!drive_power.exc_calc_current) return;
+    
+    fixed32_t Iexc = drive_power.I_exc_calc;
+    
+    power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Iexc, Iexc);
 }
 
 /**
@@ -797,6 +822,8 @@ err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_va
     
     drive_power_calc_rot_voltage();
     
+    drive_power_calc_exc_current_inst();
+    
     drive_power_append_osc_data();
     
     drive_power_triacs_diag_process();
@@ -847,6 +874,67 @@ static void drive_power_calc_angle_voltage(void)
     }
     
     drive_power.open_angle_voltage = fixed32_mul((int64_t)Ud0, open_angle_cos);
+}
+
+static void drive_power_calc_exc_current_rms(void)
+{
+    if(!drive_power.exc_calc_current) return;
+    
+    drive_triacs_exc_mode_t exc_mode = drive_triacs_exc_mode();
+    
+    // Внешнее возбуждение или не открытый симистор - измеряемый ток равен нулю.
+    if(exc_mode == DRIVE_TRIACS_EXC_EXTERNAL || !drive_triacs_exc_enabled()){
+        drive_power.I_exc_calc = 0;
+        drive_power.U_exc_calc = 0;
+        return;
+    }
+    
+    phase_t exc_phase = drive_triacs_exc_phase();
+    
+    fixed32_t Uin = 0;
+    
+    switch(exc_phase){
+        default:
+            Uin = (power_channel_real_value(&drive_power.power, DRIVE_POWER_Ua) +
+                   power_channel_real_value(&drive_power.power, DRIVE_POWER_Ub) +
+                   power_channel_real_value(&drive_power.power, DRIVE_POWER_Uc)) / 3;
+            break;
+        case PHASE_A:
+            Uin = power_channel_real_value(&drive_power.power, DRIVE_POWER_Ua);
+            break;
+        case PHASE_B:
+            Uin = power_channel_real_value(&drive_power.power, DRIVE_POWER_Ub);
+            break;
+        case PHASE_C:
+            Uin = power_channel_real_value(&drive_power.power, DRIVE_POWER_Uc);
+            break;
+    }
+    
+    fixed32_t U_exc = 0;
+    
+    // Регулируемое возбуждение - вычислим напряжение по углу открытия.
+    if(exc_mode == DRIVE_TRIACS_EXC_REGULATED){
+        fixed32_t open_angle = drive_triacs_exc_start_open_angle();
+        
+        q15_t open_angle_scaled = 0;
+        fixed32_t open_angle_cos = 0;
+
+        // 0...360 --[/360]-> 0...1(0...65536) --[>>1]-> 0...32768
+        open_angle_scaled = (q15_t)((open_angle / 360) >> 1);
+        open_angle_cos = fixed32_make_from_fract(1,2) + (fixed32_t)arm_cos_q15(open_angle_scaled);
+
+        //Uin = Uin / 2;
+        U_exc = fixed32_mul((int64_t)Uin, open_angle_cos);
+    }else{
+        U_exc = Uin;
+    }
+    
+    fixed32_t R_exc = drive_motor_r_exc();
+    
+    fixed32_t I_exc = fixed32_div((int64_t)U_exc, R_exc);
+    
+    drive_power.U_exc_calc = U_exc;
+    drive_power.I_exc_calc = I_exc;
 }
 
 static void drive_power_triacs_diag_calc_zeros(void)
@@ -977,6 +1065,8 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
     if(e != E_NO_ERROR) return;
     
     drive_power_calc_angle_voltage();
+    
+    drive_power_calc_exc_current_rms();
 }
 
 bool drive_power_calc_values(power_channels_t channels, err_t* err)

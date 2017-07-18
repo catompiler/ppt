@@ -277,6 +277,12 @@ extern fixed32_t drive_regulator_current_u_ref(void);
 extern fixed32_t drive_regulator_current_i_ref(void);
 
 /**
+ * Получает задание тока от регулятора скорости.
+ * @return Задание тока от регулятора скорости.
+ */
+extern fixed32_t drive_regulator_rot_speed_current_ref(void);
+
+/**
  * Получает угол открытия для ротора.
  * @return Угол открытия для ротора.
  */
