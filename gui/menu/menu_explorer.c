@@ -138,6 +138,12 @@ menu_item_t* menu_explorer_in(menu_explorer_t* explorer)
             explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
         }
             break;
+        case MENU_EXPLORER_STATE_EVENTS: 
+        {
+            explorer->state = MENU_EXPLORER_STATE_EVENT;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+        }
+            break;    
         default: 
             break;  
     }
@@ -433,6 +439,11 @@ bool menu_explorer_out(menu_explorer_t* explorer)
             explorer->state = MENU_EXPLORER_STATE_NAVI;
             explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
             return menu_explorer_navi_out_impl(explorer);
+            break;
+        case MENU_EXPLORER_STATE_EVENT:
+            explorer->state = MENU_EXPLORER_STATE_EVENTS;
+            explorer->draw_mode = GUI_MENU_DRAW_MODE_ALL;
+            return true;
             break;
         case MENU_EXPLORER_STATE_NAVI:  
             return menu_explorer_navi_out(explorer);
@@ -768,6 +779,11 @@ bool menu_explorer_state_password_request(menu_explorer_t* explorer)
 bool menu_explorer_state_events(menu_explorer_t* explorer)
 {
     return explorer->state == MENU_EXPLORER_STATE_EVENTS;
+}
+
+bool menu_explorer_state_event(menu_explorer_t* explorer)
+{
+    return explorer->state == MENU_EXPLORER_STATE_EVENT;
 }
 
 bool menu_explorer_user_change(menu_explorer_t* explorer, int32_t password)

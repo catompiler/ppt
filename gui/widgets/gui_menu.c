@@ -89,6 +89,10 @@ void gui_menu_on_repaint(gui_menu_t* menu, const rect_t* rect)
             // история событий
             gui_menu_draw_events(menu, &painter, theme, width);
         }
+        else if (menu_explorer_state_event(&menu->explorer)) {
+             // событие
+            gui_menu_draw_event_page(menu, &painter, theme, width);
+        }
         else { // параметры меню
         
             // заголовок меню
@@ -323,6 +327,205 @@ drive_event_type_t gui_menu_events_max_level(void)
         }
     }
     return type;
+}
+
+void gui_menu_draw_event_page(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width)
+{
+    gui_widget_t* widget = GUI_WIDGET(menu);
+    graphics_pos_t height = widget->rect.bottom - widget->rect.top;
+    
+    graphics_pos_t start_x, text_x, text_y;
+    start_x = 10;
+    const char* title = TR(TR_ID_MENU_EVENTS);
+    
+    // количество событий в памяти
+    size_t cnt = menu->explorer.count;
+    
+    painter_set_pen_color(painter, theme->color_menu_font);
+    painter_set_brush_color(painter, theme->color_menu);
+    
+    menu_explorer_t* explorer = &menu->explorer;
+    
+    gui_menu_draw_mode_t mode = explorer->draw_mode;
+    bool mode_is_lines = ((mode & GUI_MENU_DRAW_MODE_LINES) > 0);
+    
+    text_y = MENU_ITEM_HEIGHT;
+    if (cnt > 0) { // есть события
+        drive_event_t event;       
+        int8_t number = cnt - 1 - explorer->item_pos;
+        if (number >= 0) {
+            drive_event_index_t id = drive_events_index_by_number((size_t)number);
+
+            err_t err = E_NO_ERROR;
+            do {
+                err = drive_events_read_event((drive_event_t*)&event, id);
+            } while(err == E_BUSY);
+
+            if (err == E_NO_ERROR) {
+                graphics_color_t color_title_back = theme->color_menu_title;
+                graphics_color_t color_title_font = theme->color_menu_title_font;
+                graphics_color_t color_menu_font = THEME_COLOR_WHITE;
+                graphics_color_t color_menu_back = THEME_COLOR_GRAY;
+                
+                const char* text_status = TR(TR_ID_MENU_EVENT_STATUS);
+                const char* text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_INIT);
+                
+                if (event.type == DRIVE_EVENT_TYPE_ERROR) {
+                    color_title_font = THEME_COLOR_WHITE;
+                    color_title_back = THEME_COLOR_RED_L;
+                    color_menu_back = THEME_COLOR_RED_D;
+                    color_menu_font = THEME_COLOR_WHITE;
+                    text_status = TR(TR_ID_MENU_EVENT_ERROR);
+                }
+                else if (event.type == DRIVE_EVENT_TYPE_WARNING) {
+                    color_title_font = THEME_COLOR_BLACK;
+                    color_title_back = THEME_COLOR_YELLOW;
+                    color_menu_back = THEME_COLOR_ORANGE;
+                    color_menu_font = THEME_COLOR_WHITE;
+                    text_status = TR(TR_ID_MENU_EVENT_WARNING);
+                }
+
+                // заголовок меню
+                if (menu->explorer.draw_mode & GUI_MENU_DRAW_MODE_TITLE) {
+                    char title[GUI_MENU_EVENT_TITLE_SIZE];
+                    gui_menu_event_title(title, GUI_MENU_EVENT_TITLE_SIZE, GUI_MENU_EVENT_TITLE_FORMAT, &event);
+
+                    painter_string_size(painter, title, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+
+                    painter_set_pen_color(painter, color_title_font);
+                    painter_set_brush_color(painter, color_title_back);
+                    // наименование пункта меню
+                    painter_draw_fillrect(painter, 0, 0, width, MENU_ITEM_HEIGHT);
+                    text_x = (width - text_x) / 2;
+                    text_y = 0;//((graphics_pos_t)gui_widget_height(GUI_WIDGET(label)) - text_y) / 2;
+                    painter_draw_string(painter, text_x, text_y, title);
+                }
+                
+                text_x = start_x;
+                text_y = MENU_ITEM_HEIGHT;
+                
+                painter_set_font(painter, theme->small_font);
+                painter_set_pen_color(painter, color_menu_font);
+                painter_set_brush_color(painter, color_menu_back);
+                // фон элемента
+                if (mode_is_lines) {
+                    painter_draw_fillrect(painter, 0, text_y, width, height);
+                }
+
+                text_y += 5;
+                
+                switch(event.state) {
+                    case DRIVE_STATE_INIT: //!< Инициализация.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_INIT);
+                        break;
+                    case DRIVE_STATE_CALIBRATION: //!< Калибровка питания.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_CALIBRATION);
+                        break;
+                    case DRIVE_STATE_IDLE: //!< Простой (готовность).
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_IDLE);
+                        break;
+                    case DRIVE_STATE_STOP: //!< Останов.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_STOP);
+                        break;
+                    case DRIVE_STATE_START: //!< Запуск.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_START);
+                        break;
+                    case DRIVE_STATE_RUN: //!< Работа.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_RUN);
+                        break;
+                    case DRIVE_STATE_STOP_ERROR: //!< Останов при ошибке.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_STOP_ERROR);
+                        break;
+                    case DRIVE_STATE_ERROR:  //!< Ошибка.
+                        text_state = TR(TR_ID_MENU_EVENT_DRIVE_STATE_ERROR);
+                        break;
+                }
+
+                /*
+                // иконки
+                text_x = start_x + GUI_MENU_EVENT_HELP_ICONS_SEP;
+                text_y = start_y + GUI_MENU_EVENT_HELP_ICONS_SEP;
+                size_t icon_width = (menu->icon_graphics->width / menu->icon_count);
+                size_t icon_height = menu->icon_graphics->height;
+                uint8_t j = 1;
+                int i;
+                for (i = 0; i < GUI_EVENT_ICON_CONDITIONS_COUNT; i++) {
+                    if (gui_event_icon_conditions[i].callback(&event, gui_event_icon_conditions[i].param)) {
+                        painter_set_brush_color(painter, gui_event_icon_conditions[i].color);
+                        uint8_t val = gui_event_icon_conditions[i].icon;
+                        if (val != ICONS_STATUSBAR_VAL_NOTHING) {
+                            painter_bitblt(painter, text_x, text_y, menu->icon_graphics, icon_width * val, 0, icon_width, icon_height);
+                        }
+                        else {
+                            painter_draw_fillrect(painter, text_x, text_y, text_x + icon_width, text_y + icon_height);
+                        }
+
+                        text_x += icon_width + GUI_MENU_EVENT_HELP_ICONS_SEP;
+                        if (j == GUI_MENU_EVENT_HELP_ICONS_W) {
+                            text_y += icon_height + GUI_MENU_EVENT_HELP_ICONS_SEP;
+                            text_x = start_x + GUI_MENU_EVENT_HELP_ICONS_SEP;
+                        }
+                        if (j >= GUI_MENU_EVENT_HELP_ICONS_W * 2) break;
+                        j++;
+                    }
+                }
+
+                */
+                
+                painter_set_pen_color(painter, color_menu_font);
+                painter_set_brush_color(painter, color_menu_back);
+
+                // text_x = start_x + (icon_width + GUI_MENU_EVENT_HELP_ICONS_SEP) * GUI_MENU_EVENT_HELP_ICONS_W + 5;
+                // text_y = start_y + GUI_MENU_EVENT_HELP_ICONS_SEP;
+
+                graphics_size_t item_h = theme->small_font->char_height;
+                
+                // Тип события
+                painter_draw_string(painter, text_x, text_y, text_status);
+                text_y += item_h;
+                
+                // Состояние привода
+                painter_draw_string(painter, text_x, text_y, text_state);
+                text_y += item_h;
+                
+                // Состояние привода
+                const char* ref_str = TR(TR_ID_MENU_EVENT_DRIVE_REFERENCE_FORMAT);
+                painter_draw_string(painter, text_x, text_y, ref_str);
+                graphics_size_t w;
+                painter_string_size(painter, ref_str, &w, NULL);
+                text_x += w;
+                char str[5];
+                snprintf(str, 5, "%d%%", (int)event.reference);
+                painter_draw_string(painter, text_x, text_y, str); 
+                text_y += item_h;
+                
+                // Список ошибок и предупреждений
+                // Ошибки event.errors
+                // Ошибки питания event.power_errors
+                // Предупреждения event.warnings  
+                // Предупреждения питания event.power_warnings
+                text_x = start_x;
+                int i;
+                for (i = 0; i < GUI_EVENT_TEXT_CONDITIONS_COUNT; i++) {
+                    if (gui_event_text_conditions[i].callback(&event, gui_event_text_conditions[i].param)) {
+                        painter_draw_string(painter, text_x, text_y, TR(gui_event_text_conditions[i].text)); 
+                        text_y += item_h;
+                    }
+                }
+            }
+        }
+    }
+    else { // нет событий
+        if (mode_is_lines) {
+            title = TR(TR_ID_MENU_EVENTS_NONE);
+            painter_draw_fillrect(painter, 0, MENU_ITEM_HEIGHT, width, TFT_HEIGHT);
+
+            painter_string_size(painter, title, (graphics_size_t*)&text_x, (graphics_size_t*)&text_y);
+            text_x = (width - text_x) / 2;
+            text_y = 4 * MENU_ITEM_HEIGHT;
+            painter_draw_string(painter, text_x, text_y, title);
+        }
+    }
 }
 
 void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width)

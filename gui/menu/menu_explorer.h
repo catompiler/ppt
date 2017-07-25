@@ -309,6 +309,13 @@ EXTERN bool menu_explorer_state_password_request(menu_explorer_t* explorer);
 EXTERN bool menu_explorer_state_events(menu_explorer_t* explorer);
 
 /**
+ * Возвращает флаг состояния меню Событие
+ * @param explorer
+ * @return 
+ */
+EXTERN bool menu_explorer_state_event(menu_explorer_t* explorer);
+
+/**
  * Возвращает параметр текущего элемента меню
  * @param explorer Проводник меню
  * @return Параметр текущего элемента меню

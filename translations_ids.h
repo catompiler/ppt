@@ -784,6 +784,35 @@
 #define TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD      2107 //!< Тепловая защита.
 #define TR_ID_DRIVE_ERROR_ROT_BREAK             2108 //!< Обрыв якоря.
 #define TR_ID_DRIVE_ERROR_HEATSINK_TEMP         2109 //!< Перегрев радиатора.
+//! Описание ошибок питания привода
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ua            2121 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ua             2122 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ub            2123 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ub             2124 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Uc            2125 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Uc             2126 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Urot          2127 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Urot           2128 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ia            2129 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ia             2130 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ib            2131 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ib             2132 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ic            2133 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ic             2134 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Irot          2135 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Irot           2136 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Iexc          2137 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Iexc           2138 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ifan          2139 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ifan           2140 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Iref          2141 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Iref           2142 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Ia                 2143 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Ib                 2144 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Ic                 2145 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Urot               2146 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Irot               2147 //!< 
+#define TR_ID_DRIVE_POWER_ERROR_IDLE_Iexc               2148 //!< 
 //! Описание предупреждений привода
 #define TR_ID_DRIVE_WARNING_POWER                     2202 //!< Предупреждение по питанию.
 #define TR_ID_DRIVE_WARNING_PHASE_ANGLE               2203 //!< Ошибка угла между фазами.
@@ -791,6 +820,35 @@
 #define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
 #define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
 #define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
+//! Описание предупреждений питания привода
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua          2221 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua           2222 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ub          2223 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ub           2224 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Uc          2225 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Uc           2226 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Urot        2227 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Urot         2228 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ia          2229 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ia           2230 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ib          2231 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ib           2232 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ic          2233 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ic           2234 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Irot        2235 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Irot         2236 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Iexc        2237 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Iexc         2238 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ifan        2239 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ifan         2240 //!<
+#define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Iref        2241 //!<
+#define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Iref         2242 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Ia               2243 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Ib               2244 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Ic               2245 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Urot             2246 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Irot             2247 //!<
+#define TR_ID_DRIVE_POWER_WARNING_IDLE_Iexc             2248 //!<
 
 #define TR_ID_MENU_VERSION                            2500
 #define TR_ID_MENU_VERSION_DATE                       2501

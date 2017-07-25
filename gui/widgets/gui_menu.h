@@ -25,6 +25,8 @@
 #include "gui_icon_conditions.h"
 #include "gui/bitmaps/icons_statusbar.h"
 #include "gui/resources/resources_colors.h"
+#include "localization/localization.h"
+#include "translations_ids.h"
 
 typedef struct _Gui_Menu gui_menu_t;
 
@@ -47,6 +49,25 @@ typedef struct _Gui_Menu gui_menu_t;
 #define GUI_MENU_EVENT_ICONS_COUNT 3
 #define GUI_MENU_EVENT_HELP_ICONS_W 3
 #define GUI_MENU_EVENT_HELP_ICONS_SEP 2
+
+
+typedef bool (*gui_event_text_condition_callback_t)();
+
+//! Тип дескриптора текста ошибки (условия отображения).
+typedef struct _Gui_Event_Text_Condition {
+    gui_event_text_condition_callback_t callback; // функция-условие отображения иконки
+    uint32_t param;             // параметр функции условия
+    const char* text;               // текст ошибки
+} gui_event_text_condition_t;
+
+//! Начинает список условий отображения текста ошибки.
+#define GUI_EVENT_TEXT_CONDITIONS(arg_name, arg_count)\
+        static const gui_event_text_condition_t arg_name[arg_count] = 
+
+//! Описывает дескриптор условия отображения текста ошибки.
+#define GUI_EVENT_TEXT_CONDITION(arg_callback, arg_param, arg_text)\
+        { .callback = (gui_event_text_condition_callback_t)arg_callback, .param = (uint32_t)arg_param, .text = arg_text}
+
 
 typedef bool (*gui_event_icon_condition_callback_t)();
 
@@ -96,6 +117,86 @@ GUI_EVENT_ICON_CONDITIONS(gui_event_icon_conditions, GUI_EVENT_ICON_CONDITIONS_C
     GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_OVERHEAT,         ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_FAN_FAIL,         ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_ORANGE),
+};
+
+//! Таблица отображения текста ошибок и предупреждений события в зависимости от условий
+#define GUI_EVENT_TEXT_CONDITIONS_COUNT 71
+GUI_EVENT_TEXT_CONDITIONS(gui_event_text_conditions, GUI_EVENT_TEXT_CONDITIONS_COUNT) {
+    // ошибки
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_POWER_DATA_NOT_AVAIL, TEXT(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL)), //!< Данные питания не поступают с АЦП.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_POWER_INVALID, TEXT(TR_ID_DRIVE_ERROR_POWER_INVALID)), //!< Неправильные значения питания, см. drive_power_error_t.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_EMERGENCY_STOP, TEXT(TR_ID_DRIVE_ERROR_EMERGENCY_STOP)), //!< Аварийный останов (Грибок).
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_PHASE, TEXT(TR_ID_DRIVE_ERROR_PHASE)), //!< Ошибка состояния фаз.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_PHASE_ANGLE, TEXT(TR_ID_DRIVE_ERROR_PHASE_ANGLE)), //!< Ошибка угла между фазами.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_PHASE_SYNC, TEXT(TR_ID_DRIVE_ERROR_PHASE_SYNC)), //!< Ошибка синхронизации фаз.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_THERMAL_OVERLOAD, TEXT(TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD)), //!< Тепловая защита.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_ROT_BREAK, TEXT(TR_ID_DRIVE_ERROR_ROT_BREAK)), //!< Обрыв якоря.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_HEATSINK_TEMP, TEXT(TR_ID_DRIVE_ERROR_HEATSINK_TEMP)), //!< Перегрев радиатора.
+    // ошибки питания
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ua)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ua)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ub, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ub)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ub, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ub)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Uc, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Uc)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Uc, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Uc)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Urot, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Urot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Urot, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Urot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ia, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ia)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ia, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ia)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ib, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ib)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ib, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ib)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ic, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ic)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ic, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ic)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Irot, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Irot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Irot, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Irot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Iexc, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Iexc)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Iexc, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Iexc)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ifan, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ifan)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ifan, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ifan)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Iref, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Iref)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Iref, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Iref)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Ia, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Ia)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Ib, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Ib)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Ic, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Ic)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Urot, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Urot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Irot, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Irot)),
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_IDLE_Iexc, TEXT(TR_ID_DRIVE_POWER_ERROR_IDLE_Iexc)),
+    // предупреждения
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_POWER, TEXT(TR_ID_DRIVE_WARNING_POWER)),//!< Предупреждение по питанию.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_PHASE_ANGLE, TEXT(TR_ID_DRIVE_WARNING_PHASE_ANGLE)),//!< Ошибка угла между фазами.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_PHASE_SYNC, TEXT(TR_ID_DRIVE_WARNING_PHASE_SYNC)),//!< Ошибка синхронизации фаз.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_THERMAL_OVERLOAD, TEXT(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD)),//!< Перегрев.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_FAN_FAIL, TEXT(TR_ID_DRIVE_WARNING_FAN_FAIL)),//!< Ошибка вентилятора.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_HEATSINK_TEMP, TEXT(TR_ID_DRIVE_WARNING_HEATSINK_TEMP)),//!< Перегрев радиатора.
+    // предупреждения питания
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ub, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ub)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ub, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ub)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Uc, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Uc)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Uc, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Uc)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Urot, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Urot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Urot, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Urot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ia, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ia)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ia, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ia)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ib, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ib)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ib, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ib)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ic, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ic)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ic, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ic)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Irot, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Irot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Irot, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Irot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Iexc, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Iexc)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Iexc, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Iexc)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ifan, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ifan)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ifan, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ifan)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Iref, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Iref)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Iref, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Iref)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Ia, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Ia)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Ib, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Ib)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Ic, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Ic)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Urot, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Urot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Irot, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Irot)),//!< 
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_IDLE_Iexc, TEXT(TR_ID_DRIVE_POWER_WARNING_IDLE_Iexc)),//!<        
 };
 
 struct _Gui_Menu {
@@ -189,6 +290,8 @@ EXTERN void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui);
 int gui_menu_get_f32_fract(int number, int decimals);
 
 void gui_menu_draw_events(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
+
+void gui_menu_draw_event_page(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
 void gui_menu_draw_command_result(gui_menu_t* menu, painter_t* painter, gui_metro_theme_t* theme, graphics_pos_t width);
 
