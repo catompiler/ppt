@@ -110,6 +110,8 @@ typedef struct _Drive {
     drive_power_errors_t power_errors; //!< Ошибки питания.
     drive_power_warnings_t power_warnings; //!< Предупреждения питания.
     drive_power_errors_t power_cutoff_errors; //!< Ошибки отсечки питания.
+    drive_sensor_errors_t sensor_errors; //!< Ошибки датчиков.
+    drive_sensor_warnings_t sensor_warnings; //!< Предупреждения датчиков.
     //drive_phase_angle_errors_t phase_angle_errors; //!< Ошибки углов между фазами.
     //drive_phase_angle_warnings_t phase_angle_warnings; //!< Предупреждения углов между фазами.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
@@ -310,6 +312,38 @@ ALWAYS_INLINE static drive_state_t drive_get_state(void)
     return drive.state;
 }
 
+static void drive_set_static_prot_masks(void)
+{
+    drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAN, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, true);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ua, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ub, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Uc, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ua, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ub, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Uc, true);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ia, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ib, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ic, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ia, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ib, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ic, true);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Urot, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Urot, true);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Irot, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Irot, true);
+    
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Iexc, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc, true);
+}
+
 /**
  * Устанавливает маски ошибок и предупреждений питания.
  * @param state Состояние привода.
@@ -352,10 +386,6 @@ static void drive_set_prot_masks(drive_state_t state)
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, false);
     }
-    
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAN, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, true);
 }
 
 /**
@@ -607,6 +637,45 @@ static void drive_set_power_cutoff_error(drive_power_errors_t error)
     }
 }*/
 
+/**
+ * Установка ошибки датчиков.
+ * @param error Ошибка.
+ */
+static void drive_set_sensor_error(drive_sensor_errors_t error)
+{
+    drive.sensor_errors |= error;
+    drive_set_error(DRIVE_ERROR_SENSOR);
+}
+
+/**
+ * Снятие ошибки датчиков.
+ * @param error Ошибка.
+ */
+static void drive_clear_sensor_error(drive_sensor_errors_t error)
+{
+    drive.sensor_errors &= ~error;
+    if(drive.sensor_errors == DRIVE_SENSOR_ERROR_NONE) drive_clear_error(DRIVE_ERROR_SENSOR);
+}
+
+/**
+ * Установка предупреждения датчиков.
+ * @param error Предупреждение.
+ */
+static void drive_set_sensor_warning(drive_sensor_warnings_t warning)
+{
+    drive.sensor_warnings |= warning;
+    drive_set_warning(DRIVE_WARNING_SENSOR);
+}
+
+/**
+ * Снятие предупреждения датчиков.
+ * @param warning Предупреждение.
+ */
+static void drive_clear_sensor_warning(drive_sensor_warnings_t warning)
+{
+    drive.sensor_warnings &= ~warning;
+    if(drive.sensor_warnings == DRIVE_SENSOR_WARNING_NONE) drive_clear_warning(DRIVE_WARNING_SENSOR);
+}
 
 /**
  * Установка ошибки углов между фазами.
@@ -1037,15 +1106,220 @@ static void drive_check_prots(void)
 }
 
 /**
+ * Выполняет проверку элемента защиты датчиков.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @param action результирующее действие.
+ * @return Флаг срабатывания элемента защиты.
+ */
+static bool drive_check_sensor_prot_item(drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning, drive_prot_action_t* action)
+{
+    if(drive_protection_check_item(item)){
+        if(error != DRIVE_SENSOR_ERROR_NONE) drive_set_sensor_error(error);
+        if(warning != DRIVE_SENSOR_WARNING_NONE) drive_set_sensor_warning(warning);
+        
+        if(action) *action = drive_protection_item_action(item);
+        
+        return true;
+        
+    }else if(!drive_protection_item_active(item)){
+        if(error != DRIVE_SENSOR_ERROR_NONE) drive_clear_sensor_error(error);
+        if(warning != DRIVE_SENSOR_WARNING_NONE) drive_clear_sensor_warning(warning);
+    }
+    
+    if(action) *action = DRIVE_PROT_ACTION_IGNORE;
+    
+    return false;
+}
+
+/**
+ * Выполняет проверку элемента защиты датчиков напряжения сети.
+ * @param phase Фаза.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return Результирующее действие.
+ */
+static drive_prot_action_t drive_check_sensor_u_in(phase_t phase, drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning)
+{
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
+        if(drive_protection_sensor_u_in_emulation_enabled()){
+            if(drive_power_phase_can_calc_voltage(phase)){
+                drive_power_set_phase_calc_voltage(phase);
+            }
+        }
+    }
+    
+    return res_action;
+}
+
+/**
+ * Выполняет проверку элемента защиты датчиков тока сети.
+ * @param phase Фаза.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return Результирующее действие.
+ */
+static drive_prot_action_t drive_check_sensor_i_in(phase_t phase, drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning)
+{
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
+        if(drive_protection_sensor_i_in_emulation_enabled()){
+            if(drive_power_phase_can_calc_current(phase)){
+                drive_power_set_phase_calc_current(phase);
+            }
+        }
+    }
+    
+    return res_action;
+}
+
+/**
+ * Выполняет проверку элемента защиты датчика напряжения якоря.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return Результирующее действие.
+ */
+static drive_prot_action_t drive_check_sensor_u_rot(drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning)
+{
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
+        if(drive_protection_sensor_u_rot_emulation_enabled()){
+            if(drive_power_rot_can_calc_voltage()){
+                drive_power_set_rot_calc_voltage(true);
+            }
+        }
+    }
+    
+    return res_action;
+}
+
+/**
+ * Выполняет проверку элемента защиты датчика тока якоря.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return Результирующее действие.
+ */
+static drive_prot_action_t drive_check_sensor_i_rot(drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning)
+{
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
+        if(drive_protection_sensor_i_rot_emulation_enabled()){
+            if(drive_power_rot_can_calc_current()){
+                drive_power_set_rot_calc_current(true);
+            }
+        }
+    }
+    
+    return res_action;
+}
+
+/**
+ * Выполняет проверку элемента защиты датчика тока возбуждения.
+ * @param item Элемент защиты.
+ * @param error Ошибка элемента защиты.
+ * @param warning Предупреждение элемента защиты.
+ * @return Результирующее действие.
+ */
+static drive_prot_action_t drive_check_sensor_i_exc(drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning)
+{
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
+        if(drive_protection_sensor_i_exc_emulation_enabled()){
+            if(drive_power_exc_can_calc_current()){
+                drive_power_set_exc_calc_current(true);
+            }
+        }
+    }
+    
+    return res_action;
+}
+
+/**
+ * Проверяет датчики питания.
+ */
+static void drive_check_sensors_inst(void)
+{
+    // Наиболее жёсткое действие.
+    drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_WARN_Ua, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ua));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_WARN_Ub, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ub));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_WARN_Uc, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Uc));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_FAULT_Ua, DRIVE_SENSOR_ERROR_Ua, DRIVE_SENSOR_WARNING_NONE));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_FAULT_Ub, DRIVE_SENSOR_ERROR_Ub, DRIVE_SENSOR_WARNING_NONE));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_FAULT_Uc, DRIVE_SENSOR_ERROR_Uc, DRIVE_SENSOR_WARNING_NONE));
+    
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_WARN_Ia, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ia));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_WARN_Ib, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ib));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_WARN_Ic, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ic));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_FAULT_Ia, DRIVE_SENSOR_ERROR_Ia, DRIVE_SENSOR_WARNING_NONE));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_FAULT_Ib, DRIVE_SENSOR_ERROR_Ib, DRIVE_SENSOR_WARNING_NONE));
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_FAULT_Ic, DRIVE_SENSOR_ERROR_Ic, DRIVE_SENSOR_WARNING_NONE));
+    
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_rot(DRIVE_PROT_ITEM_SENSOR_WARN_Urot, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Urot));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_u_rot(DRIVE_PROT_ITEM_SENSOR_FAULT_Urot, DRIVE_SENSOR_ERROR_Urot, DRIVE_SENSOR_WARNING_NONE));
+    
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_rot(DRIVE_PROT_ITEM_SENSOR_WARN_Irot, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Irot));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_rot(DRIVE_PROT_ITEM_SENSOR_FAULT_Irot, DRIVE_SENSOR_ERROR_Irot, DRIVE_SENSOR_WARNING_NONE));
+    
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_exc(DRIVE_PROT_ITEM_SENSOR_WARN_Iexc, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Iexc));
+    
+    res_action = drive_prot_get_hard_action(res_action,
+            drive_check_sensor_i_exc(DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc, DRIVE_SENSOR_ERROR_Iexc, DRIVE_SENSOR_WARNING_NONE));
+    
+    
+    // Если требуется действие.
+    if(res_action != DRIVE_PROT_ACTION_IGNORE){
+        if(drive_prot_event_by_action(res_action)){
+            drive_prot_stop_by_action(res_action);
+        }
+    }
+}
+
+/**
  * Проверяет значение входов питания на момент получения данных АЦП.
  */
 static void drive_check_power_inst(void)
 {
     drive_power_errors_t errors = DRIVE_POWER_ERROR_NONE;
-    //drive_power_warnings_t warnings = DRIVE_POWER_WARNING_NONE;
     
-    drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
-    //drive_protection_power_set_cutoff_warn_mask(PROT_CUTOFF_ITEMS_WARNINGS_MASK);
+    //drive_protection_power_set_cutoff_errs_mask(PROT_CUTOFF_ITEMS_ERRORS_MASK);
     
     if(drive_protection_power_check_items(drive_prot_cutoff_items, DRIVE_CHECK_CUTOFF_PROT_ITEMS_COUNT, NULL, &errors)){
         
@@ -1055,6 +1329,15 @@ static void drive_check_power_inst(void)
             drive_error_stop_cutoff();
         }
     }
+}
+
+/**
+ * Проверяет защиты, действующие каждый тик АЦП.
+ */
+static void drive_check_prots_inst(void)
+{
+    drive_check_sensors_inst();
+    drive_check_power_inst();
 }
 
 
@@ -1696,6 +1979,8 @@ err_t drive_init(void)
     
     drive_update_settings();
     
+    drive_set_static_prot_masks();
+    
     drive_update_prot_masks();
     
     drive.params.param_u_a = settings_param_by_id(PARAM_ID_POWER_U_A);
@@ -1884,6 +2169,26 @@ drive_power_warnings_t drive_power_warnings(void)
     return drive.power_warnings;
 }
 
+bool drive_sensor_error(drive_sensor_error_t error)
+{
+    return (drive.sensor_errors & error) != 0;
+}
+
+drive_sensor_errors_t drive_sensor_errors(void)
+{
+    return drive.sensor_errors;
+}
+
+bool drive_sensor_warning(drive_sensor_warning_t warning)
+{
+    return (drive.sensor_warnings & warning) != 0;
+}
+
+drive_sensor_warnings_t drive_sensor_warnings(void)
+{
+    return drive.sensor_warnings;
+}
+
 /*drive_phase_angle_errors_t drive_phase_angle_errors(void)
 {
     return drive.phase_angle_errors;
@@ -2005,6 +2310,9 @@ void drive_clear_errors(void)
     drive.warnings = DRIVE_WARNING_NONE;
     drive.power_warnings = DRIVE_POWER_WARNING_NONE;
     drive.power_cutoff_errors = DRIVE_POWER_ERROR_NONE;
+    
+    drive.sensor_errors = DRIVE_SENSOR_ERROR_NONE;
+    drive.sensor_warnings = DRIVE_SENSOR_WARNING_NONE;
     
     //drive.phase_angle_errors = DRIVE_PHASE_ANGLE_NO_ERROR;
     //drive.phase_angle_warnings = DRIVE_PHASE_ANGLE_NO_WARNING;
@@ -2181,7 +2489,7 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
 {
     err_t err = drive_power_process_adc_values(channels, adc_values);
     
-    drive_check_power_inst();
+    drive_check_prots_inst();
     
     drive_phase_sync_append_data();
     

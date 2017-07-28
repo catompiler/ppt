@@ -458,6 +458,94 @@
 //! Действие.
 #define PARAM_ID_PROT_TRIACS_WARN_ACTION 2305
 
+/*
+ * Защита датчиков.
+ */
+/*
+ * Защита датчиков напряжения сети.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_SENSORS_U_IN_ENABLED 2500
+//! Нижняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_U_IN_ADC_RANGE_MIN 2501
+//! Верхняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_U_IN_ADC_RANGE_MAX 2502
+//! Программное вычисление.
+#define PARAM_ID_PROT_SENSORS_U_IN_EMULATION_ENABLED 2503
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE 2504
+//! Действие уровня предупреждения.
+#define PARAM_ID_PROT_SENSORS_U_IN_WARN_ACTION 2505
+//! Действие уровня ошибки.
+#define PARAM_ID_PROT_SENSORS_U_IN_FAULT_ACTION 2506
+/*
+ * Защита датчиков тока сети.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_SENSORS_I_IN_ENABLED 2510
+//! Нижняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_IN_ADC_RANGE_MIN 2511
+//! Верхняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_IN_ADC_RANGE_MAX 2512
+//! Программное вычисление.
+#define PARAM_ID_PROT_SENSORS_I_IN_EMULATION_ENABLED 2513
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE 2514
+//! Действие уровня предупреждения.
+#define PARAM_ID_PROT_SENSORS_I_IN_WARN_ACTION 2515
+//! Действие уровня ошибки.
+#define PARAM_ID_PROT_SENSORS_I_IN_FAULT_ACTION 2516
+/*
+ * Защита датчика напряжения якоря.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_SENSORS_U_ROT_ENABLED 2520
+//! Нижняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_U_ROT_ADC_RANGE_MIN 2521
+//! Верхняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_U_ROT_ADC_RANGE_MAX 2522
+//! Программное вычисление.
+#define PARAM_ID_PROT_SENSORS_U_ROT_EMULATION_ENABLED 2523
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_SENSORS_U_ROT_LATCH_ENABLE 2524
+//! Действие уровня предупреждения.
+#define PARAM_ID_PROT_SENSORS_U_ROT_WARN_ACTION 2525
+//! Действие уровня ошибки.
+#define PARAM_ID_PROT_SENSORS_U_ROT_FAULT_ACTION 2526
+/*
+ * Защита датчика тока якоря.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_SENSORS_I_ROT_ENABLED 2530
+//! Нижняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_ROT_ADC_RANGE_MIN 2531
+//! Верхняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_ROT_ADC_RANGE_MAX 2532
+//! Программное вычисление.
+#define PARAM_ID_PROT_SENSORS_I_ROT_EMULATION_ENABLED 2533
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_SENSORS_I_ROT_LATCH_ENABLE 2534
+//! Действие уровня предупреждения.
+#define PARAM_ID_PROT_SENSORS_I_ROT_WARN_ACTION 2535
+//! Действие уровня ошибки.
+#define PARAM_ID_PROT_SENSORS_I_ROT_FAULT_ACTION 2536
+/*
+ * Защита датчика тока возбуждения.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_SENSORS_I_EXC_ENABLED 2540
+//! Нижняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_EXC_ADC_RANGE_MIN 2541
+//! Верхняя граница значений АЦП.
+#define PARAM_ID_PROT_SENSORS_I_EXC_ADC_RANGE_MAX 2542
+//! Программное вычисление.
+#define PARAM_ID_PROT_SENSORS_I_EXC_EMULATION_ENABLED 2543
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_SENSORS_I_EXC_LATCH_ENABLE 2544
+//! Действие уровня предупреждения.
+#define PARAM_ID_PROT_SENSORS_I_EXC_WARN_ACTION 2545
+//! Действие уровня ошибки.
+#define PARAM_ID_PROT_SENSORS_I_EXC_FAULT_ACTION 2546
 
 /////////////////////
 // Защита питания. //

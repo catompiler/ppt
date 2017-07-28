@@ -83,6 +83,7 @@ typedef struct _Power_Value {
     fixed32_t value_mult; //!< Коэффициент пропорциональности значений.
     int16_t raw_zero_cal; //!< Калиброванное значение нуля.
     int16_t raw_zero_cur; //!< Текущее значение нуля.
+    uint16_t raw_adc_value_inst; //!< Сырое значение АЦП без учёта средней точки (мгновенное).
     int16_t raw_value_inst; //!< Сырое значение с АЦП (мгновенное).
     int16_t raw_value; //!< Сырое значение с АЦП.
     fixed32_t real_value_inst; //!< Значение в СИ (мгновенное).
@@ -320,6 +321,18 @@ ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t 
 ALWAYS_INLINE static bool power_channel_data_filter_filled(const power_t* power, size_t channel)
 {
     return power->channels[channel].filter_value.count == POWER_FILTER_SIZE;
+}
+
+/**
+ * Получает сырое последнее мгновенное значение канала АЦП.
+ * Без учёта средней точки.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @return Сырое последнее мгновенное значение канала АЦП.
+ */
+ALWAYS_INLINE static uint16_t power_channel_raw_adc_value_inst(const power_t* power, size_t channel)
+{
+    return power->channels[channel].raw_adc_value_inst;
 }
 
 /**

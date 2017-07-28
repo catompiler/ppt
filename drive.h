@@ -84,7 +84,8 @@ typedef enum _Drive_Error {
     DRIVE_ERROR_PHASE_SYNC           = 0x20, //!< Ошибка синхронизации фаз.
     DRIVE_ERROR_THERMAL_OVERLOAD     = 0x40, //!< Тепловая защита.
     DRIVE_ERROR_ROT_BREAK            = 0x80, //!< Обрыв якоря.
-    DRIVE_ERROR_HEATSINK_TEMP        = 0x200 //!< Перегрев радиатора.
+    DRIVE_ERROR_HEATSINK_TEMP        = 0x200, //!< Перегрев радиатора.
+    DRIVE_ERROR_SENSOR               = 0x800  //!< Ошибка датчиков.
 } drive_error_t;
 
 //! Тип ошибок привода.
@@ -127,6 +128,23 @@ typedef enum _Drive_Power_Error {
 //! Тип ошибок питания привода.
 typedef uint32_t drive_power_errors_t;
 
+//! Тип ошибки датчиков привода.
+typedef enum _Drive_Sensor_Error {
+    DRIVE_SENSOR_ERROR_NONE  = 0x0,
+    DRIVE_SENSOR_ERROR_Ua    = 0x1,
+    DRIVE_SENSOR_ERROR_Ub    = 0x2,
+    DRIVE_SENSOR_ERROR_Uc    = 0x4,
+    DRIVE_SENSOR_ERROR_Ia    = 0x8,
+    DRIVE_SENSOR_ERROR_Ib    = 0x10,
+    DRIVE_SENSOR_ERROR_Ic    = 0x20,
+    DRIVE_SENSOR_ERROR_Urot  = 0x40,
+    DRIVE_SENSOR_ERROR_Irot  = 0x80,
+    DRIVE_SENSOR_ERROR_Iexc  = 0x100
+} drive_sensor_error_t;
+
+//! Тип ошибок датчиков привода.
+typedef uint32_t drive_sensor_errors_t;
+
 typedef enum _Drive_Warning {
     DRIVE_WARNING_NONE             = 0x0, //!< Нет предупреждений.
     DRIVE_WARNING_POWER            = 0x2,  //!< Предупреждение по питанию.
@@ -135,12 +153,14 @@ typedef enum _Drive_Warning {
     DRIVE_WARNING_THERMAL_OVERLOAD = 0x40, //!< Перегрев.
     DRIVE_WARNING_FAN_FAIL         = 0x100, //!< Ошибка вентилятора.
     DRIVE_WARNING_HEATSINK_TEMP    = 0x200, //!< Перегрев радиатора.
-    DRIVE_WARNING_TRIAC            = 0x400 //!< Ошибка тиристоров.
+    DRIVE_WARNING_TRIAC            = 0x400, //!< Ошибка тиристоров.
+    DRIVE_WARNING_SENSOR           = 0x800  //!< Ошибка датчиков.
 } drive_warning_t;
 
 //! Тип предупреждений привода.
 typedef uint32_t drive_warnings_t;
 
+//! Тип предупреждения питания привода.
 typedef enum _Drive_Power_Warning {
     DRIVE_POWER_WARNING_NONE           = 0x0,
     DRIVE_POWER_WARNING_UNDERFLOW_Ua   = 0x1,
@@ -176,6 +196,23 @@ typedef enum _Drive_Power_Warning {
 
 //! Тип предупреждений питания привода.
 typedef uint32_t drive_power_warnings_t;
+
+//! Тип предупреждения датчиков привода.
+typedef enum _Drive_Sensor_Warning {
+    DRIVE_SENSOR_WARNING_NONE  = 0x0,
+    DRIVE_SENSOR_WARNING_Ua    = 0x1,
+    DRIVE_SENSOR_WARNING_Ub    = 0x2,
+    DRIVE_SENSOR_WARNING_Uc    = 0x4,
+    DRIVE_SENSOR_WARNING_Ia    = 0x8,
+    DRIVE_SENSOR_WARNING_Ib    = 0x10,
+    DRIVE_SENSOR_WARNING_Ic    = 0x20,
+    DRIVE_SENSOR_WARNING_Urot  = 0x40,
+    DRIVE_SENSOR_WARNING_Irot  = 0x80,
+    DRIVE_SENSOR_WARNING_Iexc  = 0x100
+} drive_sensor_warning_t;
+
+//! Тип предупреждений датчиков привода.
+typedef uint32_t drive_sensor_warnings_t;
 
 /*
 //! Тип ошибки углов фаз.
@@ -365,6 +402,32 @@ extern bool drive_power_warning(drive_power_warning_t warning);
  * @return Предупреждения питания привода.
  */
 extern drive_power_warnings_t drive_power_warnings(void);
+
+/**
+ * Получает наличие ошибки датчиков привода.
+ * @param error Ошибка датчиков привода.
+ * @return Наличие ошибки датчиков привода.
+ */
+extern bool drive_sensor_error(drive_sensor_error_t error);
+
+/**
+ * Получает ошибки датчиков привода.
+ * @return Ошибки датчиков привода.
+ */
+extern drive_sensor_errors_t drive_sensor_errors(void);
+
+/**
+ * Получает наличие предупреждения датчиков привода.
+ * @param warning Предупреждение датчиков привода.
+ * @return Наличие предупреждения датчиков привода.
+ */
+extern bool drive_sensor_warning(drive_sensor_warning_t warning);
+
+/**
+ * Получает предупреждения датчиков привода.
+ * @return Предупреждения датчиков привода.
+ */
+extern drive_sensor_warnings_t drive_sensor_warnings(void);
 
 /**
  * Получает ошибки углов между фазами.

@@ -51,7 +51,7 @@
                               POWER_CHANNEL_9 | POWER_CHANNEL_10)
 
 //! Частота измерений АЦП.
-#define DRIVE_POWER_ADC_FREQ 6400
+#define DRIVE_POWER_ADC_FREQ 3200
 
 //! Частота сети.
 #define DRIVE_POWER_FREQ 50
@@ -154,6 +154,38 @@ extern bool drive_power_rot_calc_voltage(void);
  * @return Флаг вычисления тока возбуждения.
  */
 extern bool drive_power_exc_calc_current(void);
+
+/**
+ * Получает флаг возможности вычислять ток фазы.
+ * @param phase Фаза с вычислением тока.
+ * @return Флаг возможности вычислять ток фазы.
+ */
+extern bool drive_power_phase_can_calc_current(phase_t phase);
+
+/**
+ * Получает флаг возможности вычислять напряжение фазы.
+ * @param phase Фаза с вычислением напряжения.
+ * @return Флаг возможности вычислять напряжение фазы.
+ */
+extern bool drive_power_phase_can_calc_voltage(phase_t phase);
+
+/**
+ * Получает флаг возможности вычисления тока якоря.
+ * @return Флаг возможности вычисления тока якоря.
+ */
+extern bool drive_power_rot_can_calc_current(void);
+
+/**
+ * Получает флаг возможности вычисления напряжения якоря.
+ * @return Флаг возможности вычисления напряжения якоря.
+ */
+extern bool drive_power_rot_can_calc_voltage(void);
+
+/**
+ * Получает флаг возможности вычисления тока возбуждения.
+ * @return Флаг возможности вычисления тока возбуждения.
+ */
+extern bool drive_power_exc_can_calc_current(void);
 
 /**
  * Устанавливает фазу для которой нужно вычислять ток.
@@ -417,6 +449,14 @@ extern bool drive_power_new_data_avail(power_channels_t channels);
  * @return Код ошибки.
  */
 extern err_t drive_power_reset_channels(power_channels_t channels);
+
+/**
+ * Получает сырое последнее мгновенное значение канала АЦП.
+ * Без учёта средней точки.
+ * @param channel Номер канала.
+ * @return Сырое последнее мгновенное значение канала АЦП.
+ */
+extern uint16_t drive_power_channel_raw_adc_value_inst(size_t channel);
 
 /**
  * Получает сырое последнее мгновенное значение канала АЦП.

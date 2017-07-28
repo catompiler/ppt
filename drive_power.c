@@ -249,6 +249,33 @@ bool drive_power_exc_calc_current(void)
     return drive_power.exc_calc_current;
 }
 
+bool drive_power_phase_can_calc_current(phase_t phase)
+{
+    return drive_power.phase_calc_current == PHASE_UNK ||
+           drive_power.phase_calc_current == phase;
+}
+
+bool drive_power_phase_can_calc_voltage(phase_t phase)
+{
+    return drive_power.phase_calc_voltage == PHASE_UNK ||
+           drive_power.phase_calc_voltage == phase;
+}
+
+bool drive_power_rot_can_calc_current(void)
+{
+    return true;
+}
+
+bool drive_power_rot_can_calc_voltage(void)
+{
+    return true;
+}
+
+bool drive_power_exc_can_calc_current(void)
+{
+    return true;
+}
+
 ALWAYS_INLINE static bool drive_power_get_current_channel_by_phase(phase_t phase, size_t* channel)
 {
     switch(phase){
@@ -1145,6 +1172,11 @@ bool drive_power_new_data_avail(power_channels_t channels)
 err_t drive_power_reset_channels(power_channels_t channels)
 {
     return power_reset_channels(&drive_power.power, channels);
+}
+
+uint16_t drive_power_channel_raw_adc_value_inst(size_t channel)
+{
+    return power_channel_raw_adc_value_inst(&drive_power.power, channel);
 }
 
 int16_t drive_power_channel_raw_value_inst(size_t channel)

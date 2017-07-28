@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 10
+#define DRIVE_PROT_ITEMS_COUNT 28
 
 /*
  * Индексы элементов защиты питания.
@@ -122,6 +122,37 @@
 #define DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP   8
 
 #define DRIVE_PROT_ITEM_WARN_TRIACS          9
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ua     10
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Ua      11
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ub     12
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Ub      13
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Uc     14
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Uc      15
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ia     16
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Ia      17
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ib     18
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Ib      19
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ic     20
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Ic      21
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Urot   22
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Urot    23
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Irot   24
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Irot    25
+
+#define DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc   26
+#define DRIVE_PROT_ITEM_SENSOR_WARN_Iexc    27
+
+// Макросы для массива элементов защиты датчиков.
+#define DRIVE_PROT_ITEMS_SENSOR_BEGIN       DRIVE_PROT_ITEM_SENSOR_FAULT_Ua
+#define DRIVE_PROT_ITEMS_SENSOR_END         DRIVE_PROT_ITEM_SENSOR_WARN_Iexc
 
 //! Тип индекса элемента защиты.
 typedef size_t drive_prot_index_t;
@@ -491,6 +522,37 @@ extern bool drive_protection_item_allow(drive_prot_index_t index);
  */
 extern bool drive_protection_item_active(drive_prot_index_t index);
 
+/*
+ * Данные проверки датчиков.
+ */
+/**
+ * Получает флаг разрешения эмуляции датчика напряжения сети.
+ * @return Флаг разрешения эмуляции датчика напряжения сети.
+ */
+extern bool drive_protection_sensor_u_in_emulation_enabled(void);
+
+/**
+ * Получает флаг разрешения эмуляции датчика тока сети.
+ * @return Флаг разрешения эмуляции датчика тока сети.
+ */
+extern bool drive_protection_sensor_i_in_emulation_enabled(void);
+/**
+ * Получает флаг разрешения эмуляции датчика напряжения якоря.
+ * @return Флаг разрешения эмуляции датчика напряжения якоря.
+ */
+extern bool drive_protection_sensor_u_rot_emulation_enabled(void);
+
+/**
+ * Получает флаг разрешения эмуляции датчика тока якоря.
+ * @return Флаг разрешения эмуляции датчика тока якоря.
+ */
+extern bool drive_protection_sensor_i_rot_emulation_enabled(void);
+
+/**
+ * Получает флаг разрешения эмуляции датчика тока возбуждения.
+ * @return Флаг разрешения эмуляции датчика тока возбуждения.
+ */
+extern bool drive_protection_sensor_i_exc_emulation_enabled(void);
 
 /*
  * Прочие проверки.
