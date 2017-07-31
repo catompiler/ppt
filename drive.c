@@ -11,8 +11,6 @@
 #include <stdio.h>
 
 
-//! Минимальное значение PID-регулятора скорости.
-#define DRIVE_SPD_PID_VALUE_MIN 0
 
 //! Максимальное значение PID-регулятора напряжения якоря.
 #define DRIVE_ROT_PID_VALUE_MAX TRIACS_PAIRS_ANGLE_MAX_F // 120.0
@@ -2049,7 +2047,7 @@ err_t drive_update_settings(void)
     drive_triacs_clamp_pairs_open_angle(rot_angle_min, rot_angle_max);
     drive_triacs_clamp_exc_open_angle(exc_angle_min, exc_angle_max);
     
-    drive_regulator_spd_pid_clamp(DRIVE_SPD_PID_VALUE_MIN, settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
+    drive_regulator_spd_pid_clamp(0, settings_valuef(PARAM_ID_MOTOR_I_ROT_MAX));
     drive_regulator_rot_pid_clamp(rot_angle_min, rot_angle_max);
     drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     
