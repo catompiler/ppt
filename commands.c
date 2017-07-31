@@ -40,9 +40,10 @@ bool command_start_stop(void) {
         case DRIVE_STATE_START: //!< Запуск.
         case DRIVE_STATE_RUN: //!< Работа.
             return drive_stop();
-            break;
         case DRIVE_STATE_STOP_ERROR: //!< Останов при ошибке.
         case DRIVE_STATE_ERROR:  //!< Ошибка.
+            break;
+        default:
             break;
     }
     return false;

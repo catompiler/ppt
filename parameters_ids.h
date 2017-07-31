@@ -353,6 +353,21 @@
 //! Действие.
 #define PARAM_ID_PROT_ROT_BREAK_ACTION 2134
 
+
+/*
+ * Обрыв измерения якоря.
+ */
+//! Разрешение.
+#define PARAM_ID_PROT_ROT_MEASURE_BREAK_ENABLED 2140
+//! Значение.
+#define PARAM_ID_PROT_ROT_MEASURE_BREAK_VALUE 2141
+//! Время отклонения, мс.
+#define PARAM_ID_PROT_ROT_MEASURE_BREAK_TIME_MS 2142
+//! Разрешение защёлки.
+#define PARAM_ID_PROT_ROT_MEASURE_BREAK_LATCH_ENABLE 2143
+//! Действие.
+#define PARAM_ID_PROT_ROT_MEASURE_BREAK_ACTION 2144
+
 /*
  * Время между фазами.
  */

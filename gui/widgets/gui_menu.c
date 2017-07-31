@@ -38,8 +38,8 @@ err_t gui_menu_init_parent(gui_menu_t* menu, gui_metro_t* gui, gui_widget_t* par
     gui_menu_init_counters(menu, gui);
     
     //menu_make_from_descrs(&(menu->menu), menu_items, MENU_ITEMS_COUNT(menu_items), menu_descrs, MENU_DESCRS_COUNT(menu_descrs), NULL);
-    menu->menu.root = &m_item1;
-    menu->menu.current = &m_item1;
+    menu->menu.root = (menu_item_t*)&m_item1;
+    menu->menu.current = (menu_item_t*)&m_item1;
     
     menu_explorer_init(&(menu->explorer), &(menu->menu));
     

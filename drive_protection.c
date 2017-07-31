@@ -373,6 +373,8 @@ static bool drive_prot_check_phases_angles(drive_protection_item_t* item);
 static bool drive_prot_check_phases_sync(drive_protection_item_t* item);
 // Проверка обрыва якоря.
 static bool drive_prot_check_rot_break(drive_protection_item_t* item);
+// Проверка обрыва измерения якоря.
+static bool drive_prot_check_rot_measure_break(drive_protection_item_t* item);
 // Проверка вентилятора.
 static bool drive_prot_check_fan(drive_protection_item_t* item);
 // Проверка температуры радиатора.
@@ -417,6 +419,8 @@ static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_C
                PARAM_ID_PROT_PHASES_SYNC_WARN_TIME_MS, PARAM_ID_PROT_PHASES_SYNC_WARN_LATCH_ENABLE, PARAM_ID_PROT_PHASES_SYNC_WARN_ACTION, 0),
     PROT_DESCR(drive_prot_check_rot_break, PARAM_ID_PROT_ROT_BREAK_ENABLED, PARAM_ID_PROT_ROT_BREAK_VALUE,
                PARAM_ID_PROT_ROT_BREAK_TIME_MS, PARAM_ID_PROT_ROT_BREAK_LATCH_ENABLE, PARAM_ID_PROT_ROT_BREAK_ACTION, 0),
+    PROT_DESCR(drive_prot_check_rot_measure_break, PARAM_ID_PROT_ROT_MEASURE_BREAK_ENABLED, PARAM_ID_PROT_ROT_MEASURE_BREAK_VALUE,
+               PARAM_ID_PROT_ROT_MEASURE_BREAK_TIME_MS, PARAM_ID_PROT_ROT_MEASURE_BREAK_LATCH_ENABLE, PARAM_ID_PROT_ROT_MEASURE_BREAK_ACTION, 0),
     PROT_DESCR(drive_prot_check_fan, PARAM_ID_FAN_CONTROL_ENABLE, 0, PARAM_ID_FAN_PROT_TIME, 0, 0, DRIVE_PROT_ACTION_WARNING),
     PROT_DESCR(drive_prot_check_heatsink_temp, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ENABLED, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_VALUE,
                0, 0, PARAM_ID_PROT_HEATSINK_TEMP_FAULT_ACTION, 0),
@@ -837,6 +841,18 @@ static bool drive_prot_check_rot_break(drive_protection_item_t* item)
     fixed32_t Irot = drive_power_channel_real_value(DRIVE_POWER_Irot);
     
     return Urot <= item->value_level || Irot > drive_prot.I_rot_idle;
+}
+
+/**
+ * Выполняет проверку обрыва измерения якоря.
+ * @return Флаг допустимости элемента защиты.
+ */
+static bool drive_prot_check_rot_measure_break(drive_protection_item_t* item)
+{
+    fixed32_t Urot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+    fixed32_t Irot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+    
+    return Irot <= item->value_level || Urot > drive_prot.U_rot_idle;
 }
 
 /**

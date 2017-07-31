@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 19
+#define DRIVE_PROT_ITEMS_COUNT 20
 
 /*
  * Индексы элементов защиты питания.
@@ -116,22 +116,24 @@
 
 #define DRIVE_PROT_ITEM_ROT_BREAK            5
 
-#define DRIVE_PROT_ITEM_FAN                  6
+#define DRIVE_PROT_ITEM_ROT_MEASURE_BREAK    6
 
-#define DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP  7
-#define DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP   8
+#define DRIVE_PROT_ITEM_FAN                  7
 
-#define DRIVE_PROT_ITEM_WARN_TRIACS          9
+#define DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP  8
+#define DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP   9
 
-#define DRIVE_PROT_ITEM_SENSOR_Ua      10
-#define DRIVE_PROT_ITEM_SENSOR_Ub      11
-#define DRIVE_PROT_ITEM_SENSOR_Uc      12
-#define DRIVE_PROT_ITEM_SENSOR_Ia      13
-#define DRIVE_PROT_ITEM_SENSOR_Ib      14
-#define DRIVE_PROT_ITEM_SENSOR_Ic      15
-#define DRIVE_PROT_ITEM_SENSOR_Urot    16
-#define DRIVE_PROT_ITEM_SENSOR_Irot    17
-#define DRIVE_PROT_ITEM_SENSOR_Iexc    18
+#define DRIVE_PROT_ITEM_WARN_TRIACS          10
+
+#define DRIVE_PROT_ITEM_SENSOR_Ua      11
+#define DRIVE_PROT_ITEM_SENSOR_Ub      12
+#define DRIVE_PROT_ITEM_SENSOR_Uc      13
+#define DRIVE_PROT_ITEM_SENSOR_Ia      14
+#define DRIVE_PROT_ITEM_SENSOR_Ib      15
+#define DRIVE_PROT_ITEM_SENSOR_Ic      16
+#define DRIVE_PROT_ITEM_SENSOR_Urot    17
+#define DRIVE_PROT_ITEM_SENSOR_Irot    18
+#define DRIVE_PROT_ITEM_SENSOR_Iexc    19
 
 // Макросы для массива элементов защиты датчиков.
 #define DRIVE_PROT_ITEMS_SENSOR_BEGIN       DRIVE_PROT_ITEM_SENSOR_Ua

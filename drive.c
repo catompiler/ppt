@@ -1075,6 +1075,9 @@ static void drive_check_prots(void)
             drive_check_prot_item(DRIVE_PROT_ITEM_ROT_BREAK, DRIVE_ERROR_ROT_BREAK, DRIVE_WARNING_NONE));
     
     res_action = drive_prot_get_hard_action(res_action,
+            drive_check_prot_item(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, DRIVE_ERROR_ROT_MEASURE_BREAK, DRIVE_WARNING_NONE));
+    
+    res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_FAN, DRIVE_ERROR_NONE, DRIVE_WARNING_FAN_FAIL));
     
     res_action = drive_prot_get_hard_action(res_action,
