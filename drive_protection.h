@@ -100,7 +100,7 @@
  */
 
 //! Количество элементов защиты питания.
-#define DRIVE_PROT_ITEMS_COUNT 28
+#define DRIVE_PROT_ITEMS_COUNT 19
 
 /*
  * Индексы элементов защиты питания.
@@ -123,36 +123,19 @@
 
 #define DRIVE_PROT_ITEM_WARN_TRIACS          9
 
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ua     10
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Ua      11
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ub     12
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Ub      13
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Uc     14
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Uc      15
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ia     16
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Ia      17
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ib     18
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Ib      19
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Ic     20
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Ic      21
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Urot   22
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Urot    23
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Irot   24
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Irot    25
-
-#define DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc   26
-#define DRIVE_PROT_ITEM_SENSOR_WARN_Iexc    27
+#define DRIVE_PROT_ITEM_SENSOR_Ua      10
+#define DRIVE_PROT_ITEM_SENSOR_Ub      11
+#define DRIVE_PROT_ITEM_SENSOR_Uc      12
+#define DRIVE_PROT_ITEM_SENSOR_Ia      13
+#define DRIVE_PROT_ITEM_SENSOR_Ib      14
+#define DRIVE_PROT_ITEM_SENSOR_Ic      15
+#define DRIVE_PROT_ITEM_SENSOR_Urot    16
+#define DRIVE_PROT_ITEM_SENSOR_Irot    17
+#define DRIVE_PROT_ITEM_SENSOR_Iexc    18
 
 // Макросы для массива элементов защиты датчиков.
-#define DRIVE_PROT_ITEMS_SENSOR_BEGIN       DRIVE_PROT_ITEM_SENSOR_FAULT_Ua
-#define DRIVE_PROT_ITEMS_SENSOR_END         DRIVE_PROT_ITEM_SENSOR_WARN_Iexc
+#define DRIVE_PROT_ITEMS_SENSOR_BEGIN       DRIVE_PROT_ITEM_SENSOR_Ua
+#define DRIVE_PROT_ITEMS_SENSOR_END         DRIVE_PROT_ITEM_SENSOR_Iexc
 
 //! Тип индекса элемента защиты.
 typedef size_t drive_prot_index_t;

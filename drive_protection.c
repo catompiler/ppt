@@ -381,28 +381,19 @@ static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item);
 static bool drive_prot_check_triacs(drive_protection_item_t* item);
 // Проверки датчиков.
 // Напряжения сети.
-static bool drive_prot_check_sensor_fault_u_a(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_u_a(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_fault_u_b(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_u_b(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_fault_u_c(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_u_c(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_u_a(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_u_b(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_u_c(drive_protection_item_t* item);
 // Токи сети.
-static bool drive_prot_check_sensor_fault_i_a(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_i_a(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_fault_i_b(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_i_b(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_fault_i_c(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_i_c(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_i_a(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_i_b(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_i_c(drive_protection_item_t* item);
 // Напряжение якоря.
-static bool drive_prot_check_sensor_fault_u_rot(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_u_rot(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_u_rot(drive_protection_item_t* item);
 // Ток якоря.
-static bool drive_prot_check_sensor_fault_i_rot(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_i_rot(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_i_rot(drive_protection_item_t* item);
 // Ток возбуждения.
-static bool drive_prot_check_sensor_fault_i_exc(drive_protection_item_t* item);
-static bool drive_prot_check_sensor_warn_i_exc(drive_protection_item_t* item);
+static bool drive_prot_check_sensor_i_exc(drive_protection_item_t* item);
 
 
 #define PROT_DESCR(arg_check_proc, arg_par_ena, arg_par_lvl, arg_par_time,\
@@ -435,46 +426,28 @@ static const drive_protection_descr_t drive_prot_items_descrs[DRIVE_PROT_ITEMS_C
                PARAM_ID_PROT_TRIACS_WARN_TIME_MS, PARAM_ID_PROT_TRIACS_WARN_LATCH_ENABLE, PARAM_ID_PROT_TRIACS_WARN_ACTION, 0),
     // Защита датчиков.
     // Напряжения сети.
-    PROT_DESCR(drive_prot_check_sensor_fault_u_a, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_u_a, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_WARN_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_fault_u_b, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_u_b, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_WARN_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_fault_u_c, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_u_c, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_u_a, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_u_b, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_u_c, PARAM_ID_PROT_SENSORS_U_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_IN_ACTION, 0),
     // Токи сети.
-    PROT_DESCR(drive_prot_check_sensor_fault_i_a, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_i_a, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_WARN_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_fault_i_b, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_i_b, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_WARN_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_fault_i_c, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_i_c, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_i_a, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_i_b, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_i_c, PARAM_ID_PROT_SENSORS_I_IN_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_IN_ACTION, 0),
     // Напряжение якоря.
-    PROT_DESCR(drive_prot_check_sensor_fault_u_rot, PARAM_ID_PROT_SENSORS_U_ROT_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_ROT_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_u_rot, PARAM_ID_PROT_SENSORS_U_ROT_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_U_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_ROT_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_u_rot, PARAM_ID_PROT_SENSORS_U_ROT_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_U_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_U_ROT_ACTION, 0),
     // Ток якоря.
-    PROT_DESCR(drive_prot_check_sensor_fault_i_rot, PARAM_ID_PROT_SENSORS_I_ROT_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_ROT_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_i_rot, PARAM_ID_PROT_SENSORS_I_ROT_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_ROT_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_i_rot, PARAM_ID_PROT_SENSORS_I_ROT_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_I_ROT_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_ROT_ACTION, 0),
     // Ток возбуждения.
-    PROT_DESCR(drive_prot_check_sensor_fault_i_exc, PARAM_ID_PROT_SENSORS_I_EXC_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_EXC_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_EXC_FAULT_ACTION, 0),
-    PROT_DESCR(drive_prot_check_sensor_warn_i_exc, PARAM_ID_PROT_SENSORS_I_EXC_ENABLED, 0, 0,
-              PARAM_ID_PROT_SENSORS_I_EXC_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_EXC_WARN_ACTION, 0),
+    PROT_DESCR(drive_prot_check_sensor_i_exc, PARAM_ID_PROT_SENSORS_I_EXC_ENABLED, 0, 0,
+              PARAM_ID_PROT_SENSORS_I_EXC_LATCH_ENABLE, PARAM_ID_PROT_SENSORS_I_EXC_ACTION, 0),
 };
 
 
@@ -920,10 +893,10 @@ static bool drive_prot_check_triacs(drive_protection_item_t* item)
 }
 
 /**
- * Выполняет проверку работоспособности датчика уровня предупреждения.
+ * Выполняет проверку работоспособности датчика.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_warn(drive_protection_item_t* item, bool in_range, bool cur_calc, bool emu_ena, bool can_calc)
+ALWAYS_INLINE static bool drive_prot_check_sensor(drive_protection_item_t* item, bool in_range, bool cur_calc)
 {
     if(in_range) return true;
     if(cur_calc) return true;
@@ -932,24 +905,11 @@ static bool drive_prot_check_sensor_warn(drive_protection_item_t* item, bool in_
 }
 
 /**
- * Выполняет проверку работоспособности датчика уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика напряжения фазы A.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault(drive_protection_item_t* item, bool in_range, bool cur_calc, bool emu_ena, bool can_calc)
-{
-    if(in_range) return true;
-    if(cur_calc) return true;
-    if(emu_ena && can_calc) return true;
-    
-    return false;
-}
-
-/**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы A уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_u_a(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_u_a(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ua);
     
@@ -958,40 +918,15 @@ static bool drive_prot_check_sensor_warn_u_a(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_voltage() == PHASE_A;
     
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_A);
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы A уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика напряжения фазы B.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_u_a(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ua);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_u_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_u_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_voltage() == PHASE_A;
-    
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_A);
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы B уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_u_b(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_u_b(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ub);
     
@@ -1000,40 +935,15 @@ static bool drive_prot_check_sensor_warn_u_b(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_voltage() == PHASE_B;
     
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_B);
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы B уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика напряжения фазы C.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_u_b(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ub);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_u_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_u_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_voltage() == PHASE_B;
-    
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_B);
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы C уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_u_c(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_u_c(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Uc);
     
@@ -1042,40 +952,15 @@ static bool drive_prot_check_sensor_warn_u_c(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_voltage() == PHASE_C;
     
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_C);
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика напряжения
- * фазы C уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика тока фазы A.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_u_c(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Uc);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_u_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_u_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_voltage() == PHASE_C;
-    
-    bool emu_ena = drive_prot.sensors.sensor_u_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_voltage(PHASE_C);
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * фазы A уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_i_a(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_i_a(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ia);
     
@@ -1084,40 +969,15 @@ static bool drive_prot_check_sensor_warn_i_a(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_current() == PHASE_A;
     
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_A);
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика тока
- * фазы A уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика тока фазы B.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_i_a(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ia);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_i_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_i_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_current() == PHASE_A;
-    
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_A);
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * фазы B уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_i_b(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_i_b(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ib);
     
@@ -1126,50 +986,15 @@ static bool drive_prot_check_sensor_warn_i_b(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_current() == PHASE_B;
     
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_B);
-    
-    // DEBUG!
-    //bool res =  drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
-    //if(!res) item->value_level = adc_val;
-    //return res;
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика тока
- * фазы B уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика тока фазы C.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_i_b(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ib);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_i_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_i_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_current() == PHASE_B;
-    
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_B);
-    
-    // DEBUG!
-    //bool res =  drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-    //if(!res) item->value_level = adc_val;
-    //return res;
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * фазы C уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_i_c(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_i_c(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ic);
     
@@ -1178,40 +1003,15 @@ static bool drive_prot_check_sensor_warn_i_c(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_phase_calc_current() == PHASE_C;
     
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_C);
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика тока
- * фазы C уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика напряжения якоря.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_i_c(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Ic);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_i_in.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_i_in.adc_range_max);
-    
-    bool cur_calc = drive_power_phase_calc_current() == PHASE_C;
-    
-    bool emu_ena = drive_prot.sensors.sensor_i_in.emulation_enabled;
-    
-    bool can_calc = drive_power_phase_can_calc_current(PHASE_C);
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика напряжения
- * якоря уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_u_rot(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_u_rot(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Urot);
     
@@ -1220,40 +1020,15 @@ static bool drive_prot_check_sensor_warn_u_rot(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_rot_calc_voltage();
     
-    bool emu_ena = drive_prot.sensors.sensor_u_rot.emulation_enabled;
-    
-    bool can_calc = drive_power_rot_can_calc_voltage();
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика напряжения
- * якоря уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика тока якоря.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_u_rot(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Urot);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_u_rot.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_u_rot.adc_range_max);
-    
-    bool cur_calc = drive_power_rot_calc_voltage();
-    
-    bool emu_ena = drive_prot.sensors.sensor_u_rot.emulation_enabled;
-    
-    bool can_calc = drive_power_rot_can_calc_voltage();
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * якоря уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_i_rot(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_i_rot(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Irot);
     
@@ -1262,40 +1037,15 @@ static bool drive_prot_check_sensor_warn_i_rot(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_rot_calc_current();
     
-    bool emu_ena = drive_prot.sensors.sensor_i_rot.emulation_enabled;
-    
-    bool can_calc = drive_power_rot_can_calc_current();
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**
- * Выполняет проверку работоспособности датчика тока
- * якоря уровня ошибки.
+ * Выполняет проверку работоспособности
+ * датчика тока возбуждения.
  * @return Флаг допустимости элемента защиты.
  */
-static bool drive_prot_check_sensor_fault_i_rot(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Irot);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_i_rot.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_i_rot.adc_range_max);
-    
-    bool cur_calc = drive_power_rot_calc_current();
-    
-    bool emu_ena = drive_prot.sensors.sensor_i_rot.emulation_enabled;
-    
-    bool can_calc = drive_power_rot_can_calc_current();
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * возбуждения уровня предупреждения.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_warn_i_exc(drive_protection_item_t* item)
+static bool drive_prot_check_sensor_i_exc(drive_protection_item_t* item)
 {
     uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Iexc);
     
@@ -1304,32 +1054,7 @@ static bool drive_prot_check_sensor_warn_i_exc(drive_protection_item_t* item)
     
     bool cur_calc = drive_power_exc_calc_current();
     
-    bool emu_ena = drive_prot.sensors.sensor_i_exc.emulation_enabled;
-    
-    bool can_calc = drive_power_exc_can_calc_current();
-    
-    return drive_prot_check_sensor_warn(item, in_range, cur_calc, emu_ena, can_calc);
-}
-
-/**
- * Выполняет проверку работоспособности датчика тока
- * возбуждения уровня ошибки.
- * @return Флаг допустимости элемента защиты.
- */
-static bool drive_prot_check_sensor_fault_i_exc(drive_protection_item_t* item)
-{
-    uint16_t adc_val = drive_power_channel_raw_adc_value_inst(DRIVE_POWER_Iexc);
-    
-    bool in_range = (adc_val >=  drive_prot.sensors.sensor_i_exc.adc_range_min &&
-       adc_val <= drive_prot.sensors.sensor_i_exc.adc_range_max);
-    
-    bool cur_calc = drive_power_exc_calc_current();
-    
-    bool emu_ena = drive_prot.sensors.sensor_i_exc.emulation_enabled;
-    
-    bool can_calc = drive_power_exc_can_calc_current();
-    
-    return drive_prot_check_sensor_fault(item, in_range, cur_calc, emu_ena, can_calc);
+    return drive_prot_check_sensor(item, in_range, cur_calc);
 }
 
 /**

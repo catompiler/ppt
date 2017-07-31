@@ -474,10 +474,8 @@
 #define PARAM_ID_PROT_SENSORS_U_IN_EMULATION_ENABLED 2503
 //! Разрешение защёлки.
 #define PARAM_ID_PROT_SENSORS_U_IN_LATCH_ENABLE 2504
-//! Действие уровня предупреждения.
-#define PARAM_ID_PROT_SENSORS_U_IN_WARN_ACTION 2505
-//! Действие уровня ошибки.
-#define PARAM_ID_PROT_SENSORS_U_IN_FAULT_ACTION 2506
+//! Действие.
+#define PARAM_ID_PROT_SENSORS_U_IN_ACTION 2505
 /*
  * Защита датчиков тока сети.
  */
@@ -491,10 +489,8 @@
 #define PARAM_ID_PROT_SENSORS_I_IN_EMULATION_ENABLED 2513
 //! Разрешение защёлки.
 #define PARAM_ID_PROT_SENSORS_I_IN_LATCH_ENABLE 2514
-//! Действие уровня предупреждения.
-#define PARAM_ID_PROT_SENSORS_I_IN_WARN_ACTION 2515
-//! Действие уровня ошибки.
-#define PARAM_ID_PROT_SENSORS_I_IN_FAULT_ACTION 2516
+//! Действие.
+#define PARAM_ID_PROT_SENSORS_I_IN_ACTION 2515
 /*
  * Защита датчика напряжения якоря.
  */
@@ -508,10 +504,8 @@
 #define PARAM_ID_PROT_SENSORS_U_ROT_EMULATION_ENABLED 2523
 //! Разрешение защёлки.
 #define PARAM_ID_PROT_SENSORS_U_ROT_LATCH_ENABLE 2524
-//! Действие уровня предупреждения.
-#define PARAM_ID_PROT_SENSORS_U_ROT_WARN_ACTION 2525
-//! Действие уровня ошибки.
-#define PARAM_ID_PROT_SENSORS_U_ROT_FAULT_ACTION 2526
+//! Действие.
+#define PARAM_ID_PROT_SENSORS_U_ROT_ACTION 2525
 /*
  * Защита датчика тока якоря.
  */
@@ -525,10 +519,8 @@
 #define PARAM_ID_PROT_SENSORS_I_ROT_EMULATION_ENABLED 2533
 //! Разрешение защёлки.
 #define PARAM_ID_PROT_SENSORS_I_ROT_LATCH_ENABLE 2534
-//! Действие уровня предупреждения.
-#define PARAM_ID_PROT_SENSORS_I_ROT_WARN_ACTION 2535
-//! Действие уровня ошибки.
-#define PARAM_ID_PROT_SENSORS_I_ROT_FAULT_ACTION 2536
+//! Действие.
+#define PARAM_ID_PROT_SENSORS_I_ROT_ACTION 2535
 /*
  * Защита датчика тока возбуждения.
  */
@@ -542,10 +534,9 @@
 #define PARAM_ID_PROT_SENSORS_I_EXC_EMULATION_ENABLED 2543
 //! Разрешение защёлки.
 #define PARAM_ID_PROT_SENSORS_I_EXC_LATCH_ENABLE 2544
-//! Действие уровня предупреждения.
-#define PARAM_ID_PROT_SENSORS_I_EXC_WARN_ACTION 2545
-//! Действие уровня ошибки.
-#define PARAM_ID_PROT_SENSORS_I_EXC_FAULT_ACTION 2546
+//! Действие.
+#define PARAM_ID_PROT_SENSORS_I_EXC_ACTION 2545
+
 
 /////////////////////
 // Защита питания. //

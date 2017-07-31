@@ -320,28 +320,19 @@ static void drive_set_static_prot_masks(void)
     drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_HEATSINK_TEMP, true);
     drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_HEATSINK_TEMP, true);
     
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ua, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ub, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Uc, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ua, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ub, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Uc, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Ua, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Ub, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Uc, true);
     
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ia, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ib, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Ic, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ia, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ib, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Ic, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Ia, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Ib, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Ic, true);
     
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Urot, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Urot, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Urot, true);
     
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Irot, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Irot, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Irot, true);
     
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_WARN_Iexc, true);
-    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc, true);
+    drive_protection_item_set_masked(DRIVE_PROT_ITEM_SENSOR_Iexc, true);
 }
 
 /**
@@ -1108,18 +1099,23 @@ static void drive_check_prots(void)
 /**
  * Выполняет проверку элемента защиты датчиков.
  * @param item Элемент защиты.
+ * @param can_emu Флаг допустимости вычисления.
  * @param error Ошибка элемента защиты.
  * @param warning Предупреждение элемента защиты.
  * @param action результирующее действие.
  * @return Флаг срабатывания элемента защиты.
  */
-static bool drive_check_sensor_prot_item(drive_prot_index_t item, drive_sensor_error_t error, drive_sensor_warning_t warning, drive_prot_action_t* action)
+static bool drive_check_sensor_prot_item(drive_prot_index_t item, bool can_emu, drive_sensor_error_t error, drive_sensor_warning_t warning, drive_prot_action_t* action)
 {
     if(drive_protection_check_item(item)){
-        if(error != DRIVE_SENSOR_ERROR_NONE) drive_set_sensor_error(error);
-        if(warning != DRIVE_SENSOR_WARNING_NONE) drive_set_sensor_warning(warning);
         
-        if(action) *action = drive_protection_item_action(item);
+        if(!can_emu){
+            if(error != DRIVE_SENSOR_ERROR_NONE) drive_set_sensor_error(error);
+            if(action) *action = drive_protection_item_action(item);
+        }else{
+            if(warning != DRIVE_SENSOR_WARNING_NONE) drive_set_sensor_warning(warning);
+            if(action) *action = DRIVE_PROT_ACTION_WARNING;
+        }
         
         return true;
         
@@ -1145,11 +1141,12 @@ static drive_prot_action_t drive_check_sensor_u_in(phase_t phase, drive_prot_ind
 {
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
-    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
-        if(drive_protection_sensor_u_in_emulation_enabled()){
-            if(drive_power_phase_can_calc_voltage(phase)){
-                drive_power_set_phase_calc_voltage(phase);
-            }
+    bool can_emu = drive_protection_sensor_u_in_emulation_enabled() &&
+                   drive_power_phase_can_calc_voltage(phase);
+    
+    if(drive_check_sensor_prot_item(item, can_emu, error, warning, &res_action)){
+        if(can_emu){
+            drive_power_set_phase_calc_voltage(phase);
         }
     }
     
@@ -1168,11 +1165,12 @@ static drive_prot_action_t drive_check_sensor_i_in(phase_t phase, drive_prot_ind
 {
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
-    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
-        if(drive_protection_sensor_i_in_emulation_enabled()){
-            if(drive_power_phase_can_calc_current(phase)){
-                drive_power_set_phase_calc_current(phase);
-            }
+    bool can_emu = drive_protection_sensor_i_in_emulation_enabled() &&
+                   drive_power_phase_can_calc_current(phase);
+    
+    if(drive_check_sensor_prot_item(item, can_emu, error, warning, &res_action)){
+        if(can_emu){
+            drive_power_set_phase_calc_current(phase);
         }
     }
     
@@ -1190,11 +1188,12 @@ static drive_prot_action_t drive_check_sensor_u_rot(drive_prot_index_t item, dri
 {
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
-    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
-        if(drive_protection_sensor_u_rot_emulation_enabled()){
-            if(drive_power_rot_can_calc_voltage()){
-                drive_power_set_rot_calc_voltage(true);
-            }
+    bool can_emu = drive_protection_sensor_u_rot_emulation_enabled() &&
+                   drive_power_rot_can_calc_voltage();
+    
+    if(drive_check_sensor_prot_item(item, can_emu, error, warning, &res_action)){
+        if(can_emu){
+            drive_power_set_rot_calc_voltage(true);
         }
     }
     
@@ -1212,11 +1211,12 @@ static drive_prot_action_t drive_check_sensor_i_rot(drive_prot_index_t item, dri
 {
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
-    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
-        if(drive_protection_sensor_i_rot_emulation_enabled()){
-            if(drive_power_rot_can_calc_current()){
-                drive_power_set_rot_calc_current(true);
-            }
+    bool can_emu = drive_protection_sensor_i_rot_emulation_enabled() &&
+                   drive_power_rot_can_calc_current();
+    
+    if(drive_check_sensor_prot_item(item, can_emu, error, warning, &res_action)){
+        if(can_emu){
+            drive_power_set_rot_calc_current(true);
         }
     }
     
@@ -1234,11 +1234,12 @@ static drive_prot_action_t drive_check_sensor_i_exc(drive_prot_index_t item, dri
 {
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
-    if(drive_check_sensor_prot_item(item, error, warning, &res_action)){
-        if(drive_protection_sensor_i_exc_emulation_enabled()){
-            if(drive_power_exc_can_calc_current()){
-                drive_power_set_exc_calc_current(true);
-            }
+    bool can_emu = drive_protection_sensor_i_exc_emulation_enabled() &&
+                   drive_power_exc_can_calc_current();
+    
+    if(drive_check_sensor_prot_item(item, can_emu, error, warning, &res_action)){
+        if(can_emu){
+            drive_power_set_exc_calc_current(true);
         }
     }
     
@@ -1254,54 +1255,31 @@ static void drive_check_sensors_inst(void)
     drive_prot_action_t res_action = DRIVE_PROT_ACTION_IGNORE;
     
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_WARN_Ua, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ua));
+            drive_check_sensor_u_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_Ua, DRIVE_SENSOR_ERROR_Ua, DRIVE_SENSOR_WARNING_Ua));
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_WARN_Ub, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ub));
+            drive_check_sensor_u_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_Ub, DRIVE_SENSOR_ERROR_Ub, DRIVE_SENSOR_WARNING_Ub));
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_WARN_Uc, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Uc));
-    
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_FAULT_Ua, DRIVE_SENSOR_ERROR_Ua, DRIVE_SENSOR_WARNING_NONE));
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_FAULT_Ub, DRIVE_SENSOR_ERROR_Ub, DRIVE_SENSOR_WARNING_NONE));
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_FAULT_Uc, DRIVE_SENSOR_ERROR_Uc, DRIVE_SENSOR_WARNING_NONE));
+            drive_check_sensor_u_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_Uc, DRIVE_SENSOR_ERROR_Uc, DRIVE_SENSOR_WARNING_Uc));
     
     
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_WARN_Ia, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ia));
+            drive_check_sensor_i_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_Ia, DRIVE_SENSOR_ERROR_Ia, DRIVE_SENSOR_WARNING_Ia));
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_WARN_Ib, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ib));
+            drive_check_sensor_i_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_Ib, DRIVE_SENSOR_ERROR_Ib, DRIVE_SENSOR_WARNING_Ib));
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_WARN_Ic, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Ic));
-    
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_A, DRIVE_PROT_ITEM_SENSOR_FAULT_Ia, DRIVE_SENSOR_ERROR_Ia, DRIVE_SENSOR_WARNING_NONE));
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_B, DRIVE_PROT_ITEM_SENSOR_FAULT_Ib, DRIVE_SENSOR_ERROR_Ib, DRIVE_SENSOR_WARNING_NONE));
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_FAULT_Ic, DRIVE_SENSOR_ERROR_Ic, DRIVE_SENSOR_WARNING_NONE));
+            drive_check_sensor_i_in(PHASE_C, DRIVE_PROT_ITEM_SENSOR_Ic, DRIVE_SENSOR_ERROR_Ic, DRIVE_SENSOR_WARNING_Ic));
     
     
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_rot(DRIVE_PROT_ITEM_SENSOR_WARN_Urot, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Urot));
-    
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_u_rot(DRIVE_PROT_ITEM_SENSOR_FAULT_Urot, DRIVE_SENSOR_ERROR_Urot, DRIVE_SENSOR_WARNING_NONE));
+            drive_check_sensor_u_rot(DRIVE_PROT_ITEM_SENSOR_Urot, DRIVE_SENSOR_ERROR_Urot, DRIVE_SENSOR_WARNING_Urot));
     
     
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_rot(DRIVE_PROT_ITEM_SENSOR_WARN_Irot, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Irot));
-    
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_rot(DRIVE_PROT_ITEM_SENSOR_FAULT_Irot, DRIVE_SENSOR_ERROR_Irot, DRIVE_SENSOR_WARNING_NONE));
+            drive_check_sensor_i_rot(DRIVE_PROT_ITEM_SENSOR_Irot, DRIVE_SENSOR_ERROR_Irot, DRIVE_SENSOR_WARNING_Irot));
     
     
     res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_exc(DRIVE_PROT_ITEM_SENSOR_WARN_Iexc, DRIVE_SENSOR_ERROR_NONE, DRIVE_SENSOR_WARNING_Iexc));
-    
-    res_action = drive_prot_get_hard_action(res_action,
-            drive_check_sensor_i_exc(DRIVE_PROT_ITEM_SENSOR_FAULT_Iexc, DRIVE_SENSOR_ERROR_Iexc, DRIVE_SENSOR_WARNING_NONE));
+            drive_check_sensor_i_exc(DRIVE_PROT_ITEM_SENSOR_Iexc, DRIVE_SENSOR_ERROR_Iexc, DRIVE_SENSOR_WARNING_Iexc));
     
     
     // Если требуется действие.
