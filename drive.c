@@ -60,6 +60,8 @@ typedef struct _Drive_Settings {
     uint16_t start_exc_iters; //!< Время остановки возбуждения в итерациях.
     uint16_t check_phases_iters; //!< Время проверки состояния фаз сети.
     uint16_t zero_sensor_time; //!< Время срабатывания датчика нуля.
+    bool zero_speed_exc_off_enabled; //!< Разрешение выключения возбуждения при 0.
+    uint32_t zero_speed_exc_off_iters; //!< Время выключения возбуждения при 0 в итерациях.
 } drive_settings_t;
 
 //! Тип структуры обновляемых параметров.
@@ -102,6 +104,7 @@ typedef struct _Drive {
     drive_flags_t flags; //!< Флаги.
     drive_status_t status; //!< Статус.
     drive_state_t state; //!< Состояние.
+    bool state_changed; //!< Флаг изменения состояния.
     drive_state_t saved_state; //!< Сохранённое состояние.
     drive_errors_t errors; //!< Ошибки.
     drive_warnings_t warnings; //!< Предупреждения.
@@ -120,7 +123,7 @@ typedef struct _Drive {
     drive_err_stopping_t err_stopping_state; //!< Состояние останова привода при ошибке.
     drive_settings_t settings; //!< Настройки.
     drive_parameters_t params; //!< Обновляемые параметры.
-    uint16_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
+    uint32_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
     drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
 } drive_t;
@@ -276,6 +279,9 @@ static const size_t drive_prot_cutoff_items[] = {
 // ERROR
 #define PROT_ITEMS_ERROR_ERRORS_MASK    DRIVE_POWER_ERROR_NONE
 #define PROT_ITEMS_ERROR_WARNINGS_MASK  DRIVE_POWER_WARNING_NONE
+// ZERO SPEED
+#define PROT_ITEMS_ZERO_SPEED_ERRORS_MASK      PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | DRIVE_POWER_ERROR_OVERFLOW_Iexc
+#define PROT_ITEMS_ZERO_SPEED_WARNINGS_MASK    PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | DRIVE_POWER_WARNING_OVERFLOW_Iexc
 
 // External exc inverse mask.
 // Errors.
@@ -292,7 +298,8 @@ static const drive_prot_data_t drive_prot_data[] = {
     {PROT_ITEMS_RUN_ERRORS_MASK,            PROT_ITEMS_RUN_WARNINGS_MASK}, // Run
     {PROT_ITEMS_STOP_ERRORS_MASK,           PROT_ITEMS_STOP_WARNINGS_MASK}, // Stop
     {PROT_ITEMS_STOP_ERROR_ERRORS_MASK,     PROT_ITEMS_STOP_ERROR_WARNINGS_MASK}, // Stop error
-    {PROT_ITEMS_ERROR_ERRORS_MASK,          PROT_ITEMS_ERROR_WARNINGS_MASK}  // Error
+    {PROT_ITEMS_ERROR_ERRORS_MASK,          PROT_ITEMS_ERROR_WARNINGS_MASK},  // Error
+    {PROT_ITEMS_ZERO_SPEED_ERRORS_MASK,     PROT_ITEMS_ZERO_SPEED_WARNINGS_MASK}, // Zero speed
 };
 #define DRIVE_PROT_DATA_COUNT ARRAY_LEN(drive_prot_data)
 
@@ -368,11 +375,14 @@ static void drive_set_prot_masks(drive_state_t state)
     
     if(state == DRIVE_STATE_RUN ||
        state == DRIVE_STATE_START ||
-       state == DRIVE_STATE_STOP){
+       state == DRIVE_STATE_STOP ||
+       state == DRIVE_STATE_ZERO_SPEED){
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, true);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, true);
     }else{
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, false);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, false);
     }
 }
@@ -400,10 +410,13 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     bool from_stop = (state_from == DRIVE_STATE_STOP);
     bool to_start = (state_to == DRIVE_STATE_START);
     
+    bool from_zero_speed = (state_from == DRIVE_STATE_ZERO_SPEED);
+    
     bool start_to_stop = from_start && to_stop;
     bool stop_to_start = from_stop && to_start;
+    bool zero_speed_to_stop = from_zero_speed && to_stop;
     
-    if(!(start_to_stop || stop_to_start)){
+    if(!(start_to_stop || stop_to_start || zero_speed_to_stop)){
         drive_set_prot_masks(state_to);
     }
 }
@@ -419,6 +432,7 @@ static void drive_set_state(drive_state_t state)
     drive_change_prot_masks(drive.state, state);
     
     drive.state = state;
+    drive.state_changed = true;
     
     switch(drive.state){
         case DRIVE_STATE_INIT:
@@ -448,6 +462,9 @@ static void drive_set_state(drive_state_t state)
             break;
         case DRIVE_STATE_ERROR:
             drive.status = DRIVE_STATUS_ERROR;
+            break;
+        case DRIVE_STATE_ZERO_SPEED:
+            drive.status = DRIVE_STATUS_RUN;
             break;
     }
 }
@@ -1551,6 +1568,61 @@ static err_t drive_state_process_running(void)
 {
     drive_regulate();
     
+    // Если задание нулевое и
+    // отсутствует напряжение на выходе.
+    if(drive_regulator_reference() == 0 &&
+       drive_protection_is_allow(drive_protection_check_rot_zero_voltage())){
+        // Отключим регулятор скорости / тока якоря.
+        drive_regulator_set_rot_enabled(false);
+        // Запретим открытие тиристорных пар.
+        drive_triacs_set_pairs_enabled(false);
+        // Перейдём в состояние нулевой скорости.
+        drive_set_state(DRIVE_STATE_ZERO_SPEED);
+    }
+    
+    return E_NO_ERROR;
+}
+
+static err_t drive_state_process_zero_speed(void)
+{
+    // Если состояние изменилось.
+    if(drive.state_changed){
+        // Сбросим счётчик.
+        drive.iters_counter = 0;
+    }
+    
+    drive_regulate();
+    
+    // Если задание не нулевое.
+    if(drive_regulator_reference() != 0){
+        // Если включено возбуждение и
+        // ток возбуждения в допустимом диапазоне.
+        if(drive_regulator_exc_enabled() &&
+           drive_protection_is_normal(drive_protection_check_exc())){
+            // Включим регулятор скорости / тока якоря.
+            drive_regulator_set_rot_enabled(true);
+            // Разрешим открытие тиристорных пар.
+            drive_triacs_set_pairs_enabled(true);
+            // Перейдём в состояние работы.
+            drive_set_state(DRIVE_STATE_RUN);
+        }else{
+            // Перейдём в состояние запуска.
+            drive_set_state(DRIVE_STATE_START);
+        }
+    } // Если разрешено отключение возбуждения и оно не выключено.
+    else if(drive.settings.zero_speed_exc_off_enabled && drive_regulator_exc_enabled()){
+        // Если время до отключения истекло.
+        if(drive.iters_counter >= drive.settings.zero_speed_exc_off_iters){
+            // Отключим регулятор возбуждения
+            drive_regulator_set_exc_enabled(false);
+            // и подачу импульсов.
+            drive_triacs_set_exc_enabled(false);
+        }else{
+            // Иначе инкремент счётчика.
+            drive.iters_counter ++;
+        }
+    }
+    
     return E_NO_ERROR;
 }
 
@@ -1879,6 +1951,9 @@ static err_t drive_states_process(void)
         case DRIVE_STATE_ERROR:
             drive_state_process_error();
             break;
+        case DRIVE_STATE_ZERO_SPEED:
+            drive_state_process_zero_speed();
+            break;
     }
     
     drive_process_digital_inputs();
@@ -1890,6 +1965,8 @@ static err_t drive_states_process(void)
     drive_update_digital_state_parameters();
     
     drive_update_pid_parameters();
+    
+    drive.state_changed = false;
     
     return E_NO_ERROR;
 }
@@ -1995,6 +2072,7 @@ err_t drive_init(void)
     
     //drive_set_state(DRIVE_STATE_INIT);
     drive.init_state = DRIVE_INIT_BEGIN;
+    drive.state_changed = true;
     
     return E_NO_ERROR;
 }
@@ -2016,6 +2094,8 @@ err_t drive_update_settings(void)
     drive.settings.check_phases_iters =
             settings_valueu(PARAM_ID_PHASES_CHECK_TIME) * DRIVE_NULL_TIMER_FREQ / 1000;
     drive.settings.zero_sensor_time = settings_valueu(PARAM_ID_ZERO_SENSOR_TIME);
+    drive.settings.zero_speed_exc_off_enabled = settings_valueu(PARAM_ID_ZERO_SPEED_EXC_OFF_ENABLED);
+    drive.settings.zero_speed_exc_off_iters = settings_valueu(PARAM_ID_ZERO_SPEED_EXC_OFF_TIMEOUT) * DRIVE_NULL_TIMER_FREQ;
     
     drive_triacs_set_exc_mode(settings_valueu(PARAM_ID_EXC_MODE));
     drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
@@ -2233,7 +2313,8 @@ bool drive_start(void)
 bool drive_stop(void)
 {
     if(drive.state == DRIVE_STATE_RUN ||
-       drive.state == DRIVE_STATE_START){
+       drive.state == DRIVE_STATE_START ||
+       drive.state == DRIVE_STATE_ZERO_SPEED){
         switch(drive.settings.stop_mode){
             case DRIVE_STOP_MODE_NORMAL:
                 drive_stop_normal();

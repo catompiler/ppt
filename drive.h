@@ -70,7 +70,8 @@ typedef enum _Drive_State {
     DRIVE_STATE_RUN         = 4, //!< Работа.
     DRIVE_STATE_STOP        = 5, //!< Останов.
     DRIVE_STATE_STOP_ERROR  = 6, //!< Останов при ошибке.
-    DRIVE_STATE_ERROR       = 7  //!< Ошибка.
+    DRIVE_STATE_ERROR       = 7, //!< Ошибка.
+    DRIVE_STATE_ZERO_SPEED  = 8  //!< Нулевое задание.
 } drive_state_t;
 
 //! Тип ошибки привода.

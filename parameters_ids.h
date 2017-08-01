@@ -232,6 +232,17 @@
  * Время срабатывания датчика нуля, мкс.
  */
 #define PARAM_ID_ZERO_SENSOR_TIME 1310
+/**
+ * Отключение возбуждения при нулевой скорости.
+ */
+/**
+ * Разрешение.
+ */
+#define PARAM_ID_ZERO_SPEED_EXC_OFF_ENABLED 1320
+/**
+ * Таймаут.
+ */
+#define PARAM_ID_ZERO_SPEED_EXC_OFF_TIMEOUT 1321
 
 /*
  * Тиристоры - время открытия.
