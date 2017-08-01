@@ -341,9 +341,9 @@
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE 2120
 /**
- * Время срабатывания тепловой защиты при шестикратном перегрузе по току.
+ * Время срабатывания тепловой защиты при двухкратном перегрузе по току.
  */
-#define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I 2121
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_2I 2121
 /**
  * Действие при срабатывании тепловой защиты по току.
  */

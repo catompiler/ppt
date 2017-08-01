@@ -35,7 +35,7 @@ typedef struct _Drive_Prot_Base_Item {
 
 
 //! Перегруз по току, при котором задано время срабатывания.
-#define DRIVE_TOP_NOMINAL_OVERCURRENT 6
+#define DRIVE_TOP_NOMINAL_OVERCURRENT 2
 
 //! Структура тепловой защиты.
 typedef struct _Drive_TOP {
@@ -767,7 +767,7 @@ static void drive_protection_update_top_settings(void)
 {
     drive_prot.top.k_pie_max =
             (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1)
-            * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_6I);
+            * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_2I);
     
     drive_prot.top.enabled = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE);
     
