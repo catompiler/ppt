@@ -106,7 +106,9 @@ static void drive_temp_regulate_fan(void)
     
         if(drive_running() || !drive_temp.fan_eco_mode){
 
-            if(drive_temp.heatsink_temp <= drive_temp.fan_temp_min){
+            if(!drive_temp.heatsink_temp_avail){
+                rpm = DRIVE_TEMP_FAN_RPM_MAX;
+            }else if(drive_temp.heatsink_temp <= drive_temp.fan_temp_min){
                 rpm = drive_temp.fan_rpm_min;
             }else if(drive_temp.heatsink_temp >= drive_temp.fan_temp_max){
                 rpm = DRIVE_TEMP_FAN_RPM_MAX;
