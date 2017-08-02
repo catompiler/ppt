@@ -126,6 +126,7 @@ typedef struct _Drive {
     uint32_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
     drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
+    drive_reset_callback_t on_reset_callback; //!< Каллбэк при сбросе.
 } drive_t;
 
 //! Состояние привода.
@@ -344,7 +345,7 @@ static void drive_set_static_prot_masks(void)
  * Устанавливает маски ошибок и предупреждений питания.
  * @param state Состояние привода.
  */
-static void drive_set_prot_masks(drive_state_t state)
+static void drive_set_prot_power_masks(drive_state_t state)
 {
     drive_power_errors_t errors_mask = DRIVE_POWER_ERROR_ALL;
     drive_power_warnings_t warnings_mask = DRIVE_POWER_WARNING_ALL;
@@ -361,7 +362,14 @@ static void drive_set_prot_masks(drive_state_t state)
     
     drive_protection_power_set_errs_mask(errors_mask);
     drive_protection_power_set_warn_mask(warnings_mask);
-    
+}
+
+/**
+ * Устанавливает маски общих ошибок и предупреждений.
+ * @param state Состояние привода.
+ */
+static void drive_set_prot_general_masks(drive_state_t state)
+{
     if(state == DRIVE_STATE_INIT ||
        state == DRIVE_STATE_ERROR){
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_FAULT_PHASE_STATE, false);
@@ -377,14 +385,31 @@ static void drive_set_prot_masks(drive_state_t state)
        state == DRIVE_STATE_START ||
        state == DRIVE_STATE_STOP ||
        state == DRIVE_STATE_ZERO_SPEED){
-        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, true);
+    }else{
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, false);
+    }
+    
+    if(state == DRIVE_STATE_RUN ||
+       state == DRIVE_STATE_START ||
+       state == DRIVE_STATE_ZERO_SPEED){
+        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, true);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, true);
     }else{
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_BREAK, false);
-        drive_protection_item_set_masked(DRIVE_PROT_ITEM_ROT_MEASURE_BREAK, false);
         drive_protection_item_set_masked(DRIVE_PROT_ITEM_WARN_TRIACS, false);
     }
+}
+
+/**
+ * Устанавливает маски ошибок и предупреждений.
+ * @param state Состояние привода.
+ */
+static void drive_set_prot_masks(drive_state_t state)
+{
+    drive_set_prot_power_masks(state);
+    
+    drive_set_prot_general_masks(state);
 }
 
 /**
@@ -418,6 +443,8 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     
     if(!(start_to_stop || stop_to_start || zero_speed_to_stop)){
         drive_set_prot_masks(state_to);
+    }else{
+        drive_set_prot_general_masks(state_to);
     }
 }
 
@@ -761,6 +788,16 @@ static void drive_on_warning(void)
         if(drive.on_warning_occured){
             drive.on_warning_occured();
         }
+    }
+}
+
+/**
+ * Обработчик сброса.
+ */
+static void drive_on_reset(void)
+{
+    if(drive.on_reset_callback){
+        drive.on_reset_callback();
     }
 }
 
@@ -1595,10 +1632,10 @@ static err_t drive_state_process_zero_speed(void)
     
     // Если задание не нулевое.
     if(drive_regulator_reference() != 0){
-        // Если включено возбуждение и
+        // Если возбуждение внешнее, либо оно включено и
         // ток возбуждения в допустимом диапазоне.
-        if(drive_regulator_exc_enabled() &&
-           drive_protection_is_normal(drive_protection_check_exc())){
+        if((drive_triacs_exc_mode() == DRIVE_TRIACS_EXC_EXTERNAL) ||
+           (drive_triacs_exc_enabled() && drive_protection_is_normal(drive_protection_check_exc()))){
             // Включим регулятор скорости / тока якоря.
             drive_regulator_set_rot_enabled(true);
             // Разрешим открытие тиристорных пар.
@@ -1609,8 +1646,9 @@ static err_t drive_state_process_zero_speed(void)
             // Перейдём в состояние запуска.
             drive_set_state(DRIVE_STATE_START);
         }
-    } // Если разрешено отключение возбуждения и оно не выключено.
-    else if(drive.settings.zero_speed_exc_off_enabled && drive_regulator_exc_enabled()){
+    } // Если возбуждение управляется, разрешено отключение возбуждения и оно не выключено.
+    else if((drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL) &&
+             drive.settings.zero_speed_exc_off_enabled && drive_triacs_exc_enabled()){
         // Если время до отключения истекло.
         if(drive.iters_counter >= drive.settings.zero_speed_exc_off_iters){
             // Отключим регулятор возбуждения
@@ -2384,6 +2422,8 @@ void drive_clear_errors(void)
     if(drive.state == DRIVE_STATE_ERROR){
         drive_set_state(DRIVE_STATE_INIT);
     }
+    
+    drive_on_reset();
 }
 
 drive_error_callback_t drive_error_callback(void)
@@ -2404,6 +2444,16 @@ drive_warning_callback_t drive_warning_callback(void)
 void drive_set_warning_callback(drive_warning_callback_t callback)
 {
     drive.on_warning_occured = callback;
+}
+
+drive_reset_callback_t drive_reset_callback(void)
+{
+    return drive.on_reset_callback;
+}
+
+void drive_set_reset_callback(drive_reset_callback_t callback)
+{
+    drive.on_reset_callback = callback;
 }
 
 err_t drive_set_null_timer(TIM_TypeDef* TIM)

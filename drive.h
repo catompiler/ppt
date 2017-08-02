@@ -315,6 +315,9 @@ typedef void (*drive_error_callback_t)(void);
 //! Каллбэк возникновения предупреждения привода.
 typedef void (*drive_warning_callback_t)(void);
 
+//! Каллбэк сброса ошибок привода.
+typedef void (*drive_reset_callback_t)(void);
+
 
 /**
  * Инициализирует привод.
@@ -579,6 +582,18 @@ extern drive_warning_callback_t drive_warning_callback(void);
  * @param callback Каллбэк при возникновении предупреждения.
  */
 extern void drive_set_warning_callback(drive_warning_callback_t callback);
+
+/**
+ * Получает каллбэк при сбросе.
+ * @return Каллбэк при сбросе.
+ */
+extern drive_reset_callback_t drive_reset_callback(void);
+
+/**
+ * Устанавливает каллбэк при сбросе.
+ * @param callback Каллбэк при сбросе.
+ */
+extern void drive_set_reset_callback(drive_reset_callback_t callback);
 
 /**
  * Устанавливает порт ввода-вывода для цифрового входа.
