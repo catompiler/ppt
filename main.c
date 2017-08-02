@@ -1445,11 +1445,13 @@ static void init_tft_simple(void)
     tft9341_init(&tft, &tft_init);
 }
 
+static void on_drive_reset(void);
 static void init_drive(void)
 {
     drive_init();
     drive_set_error_callback((drive_error_callback_t)drive_tasks_write_error_event);
     drive_set_warning_callback((drive_warning_callback_t)drive_tasks_write_warning_event);
+    drive_set_reset_callback(on_drive_reset);
 }
 
 static void init_drive_ui(void)
@@ -1975,6 +1977,26 @@ static void* drive_temp_task(void* arg)
     drive_temp_update();
     
     return NULL;
+}
+
+static void* drive_temp_reinit_gui_task(void* arg)
+{
+    init_drive_ui();
+    
+    return NULL;
+}
+
+static void on_drive_reset(void)
+{
+    dma_channel_unlock(DMA1_Channel4);
+    dma_channel_unlock(DMA1_Channel5);
+    
+    modbus_rs485_set_input();
+    
+    reset_i2c1();
+    reset_i2c2();
+    
+    scheduler_add_task(drive_temp_reinit_gui_task, 1, NULL, TASK_RUN_ONCE, NULL);
 }
 
 
