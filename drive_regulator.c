@@ -2,6 +2,7 @@
 #include "pid_controller/pid_controller.h"
 #include "utils/utils.h"
 #include "drive_power.h"
+#include "drive_motor.h"
 #include <string.h>
 
 
@@ -346,6 +347,14 @@ static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_rot_
         
         fixed32_t u_rot_e = 0;
         fixed32_t i_rot_e = 0;
+        
+        fixed32_t R_rot_wires = drive_motor_r_rot() + drive_motor_r_wires();
+        fixed32_t U_wires = fixed32_mul((int64_t)i_rot_back, R_rot_wires);
+        
+        // IR.
+        if(U_wires > 0 && u_rot_back > U_wires){
+            u_rot_back = u_rot_back - U_wires;
+        }
         
         u_rot_e = regulator.u_rot_ref - u_rot_back;
         pid_controller_calculate(&regulator.spd_pid, u_rot_e, DRIVE_PID_DT);

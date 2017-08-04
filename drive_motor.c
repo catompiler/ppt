@@ -13,6 +13,7 @@ typedef struct _Drive_Motor {
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t R_rot; //!< Сопротивление якоря.
     fixed32_t R_exc; //!< Сопротивление возбуждения.
+    fixed32_t R_wires; //!< Сопротивление проводов до двигателя.
     fixed32_t Cn; //!< Коэффициент для расчёта оборотов.
     fixed32_t Cm; //!< Коэффициент для расчёта момента.
     param_t* param_rpm; //!< Параметр с оборотами двигателя.
@@ -124,11 +125,14 @@ err_t drive_motor_update_settings(void)
     }
     fixed32_t R_exc75 = fixed32_mul((int64_t)R_exc, K_R75);
     
+    fixed32_t R_wires = settings_valuef(PARAM_ID_MOTOR_R_WIRES);
+    
     motor.I_exc = I_exc_f;
     motor.Cn = CeF;
     motor.Cm = CeM;
     motor.R_rot = R_rot75;
     motor.R_exc = R_exc75;
+    motor.R_wires = R_wires;
     
     drive_motor_update_calc_params(eff_f, R_rot, R_exc);
     
@@ -155,6 +159,8 @@ void drive_motor_calculate(void)
         fixed32_t U_rot = 0;
         fixed32_t I_rot = 0;
         fixed32_t I_exc = 0;
+        fixed32_t R_rot_wires = motor.R_rot + motor.R_wires;
+        fixed32_t U_wires = 0;
     
         bool u_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_voltage());
         bool i_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_current());
@@ -162,6 +168,13 @@ void drive_motor_calculate(void)
         
         if(!u_rot_zero) U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
         if(!i_rot_zero) I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+        
+        U_wires = fixed32_mul((int64_t)I_rot, R_rot_wires);
+        
+        // IR.
+        if(U_wires > 0 && U_rot > U_wires){
+            U_rot = U_rot - U_wires;
+        }
 
         if(drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL){
             i_exc_zero = drive_protection_is_allow(drive_protection_check_exc_zero_current());
@@ -196,6 +209,11 @@ fixed32_t drive_motor_r_rot(void)
 fixed32_t drive_motor_r_exc(void)
 {
     return motor.R_exc;
+}
+
+fixed32_t drive_motor_r_wires(void)
+{
+    return motor.R_wires;
 }
 
 fixed32_t drive_motor_rpm(void)

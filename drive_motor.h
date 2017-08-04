@@ -47,6 +47,12 @@ extern fixed32_t drive_motor_r_rot(void);
 extern fixed32_t drive_motor_r_exc(void);
 
 /**
+ * Получает сопротивление проводов до двигателя.
+ * @return Сопротивление проводов до двигателя.
+ */
+extern fixed32_t drive_motor_r_wires(void);
+
+/**
  * Получает текущие обороты двигателя.
  * @return Текущие обороты двигателя.
  */

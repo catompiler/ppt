@@ -18,7 +18,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 380
+#define PARAMETERS_REAL_COUNT 381
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 48
 // Общее число параметров.
@@ -42,6 +42,7 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_MOTOR_R_ROT_NOM,  PARAM_TYPE_FRACT_100, F32I(0),   F32I(20),   F32I(0),  0, TEXT(TR_ID_UNITS_OHM)),
     PARAM_DESCR(PARAM_ID_MOTOR_R_EXC_NOM,  PARAM_TYPE_FRACT_100, F32I(0),   F32I(20),   F32I(0),  0, TEXT(TR_ID_UNITS_OHM)),
     PARAM_DESCR(PARAM_ID_MOTOR_I_ROT_MAX,  PARAM_TYPE_FRACT_10,  F32I(0),   F32I(800),  F32I(100),0, TEXT(TR_ID_UNITS_A)),
+    PARAM_DESCR(PARAM_ID_MOTOR_R_WIRES,    PARAM_TYPE_FRACT_100, F32I(0),   F32I(10),  F32(5,100),0, TEXT(TR_ID_UNITS_OHM)),
     
     // Параметры работы.
     // Вычисления.

@@ -114,6 +114,16 @@ err_t drive_dio_output_setup(drive_dio_output_t output,
     if(output >= DRIVE_DIO_OUTPUTS_COUNT) return E_OUT_OF_RANGE;
     
     drive_dio_out_t* out = &dio.outputs[output];
+    
+    // Если изменился тип.
+    if(out->type != type){
+        // Если установлен порт.
+        if(out->io.GPIO){
+            // Сбросим пин в 0.
+            out->io.GPIO->BRR = out->io.pin;
+        }
+    }
+    
     out->type = type;
     out->io.inversion = inversion;
     
