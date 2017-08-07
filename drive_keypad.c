@@ -2,6 +2,7 @@
 #include "input/key_input.h"
 #include "utils/utils.h"
 #include "counter/counter.h"
+#include "timers/timers.h"
 #include "i2c/i2c.h"
 #include <stddef.h>
 
@@ -19,7 +20,6 @@ typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
     counter_t last_update_time; //!< Последнее время обновления клавиатуры.
-    counter_t last_async_io_time; //!< Последнее время обмена данными с PCA9555.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
     drive_kpd_kbd_upd_state_t kbd_upd_state; //!< Состояние обновления клавиатуры.
     counter_t last_key_pressed_time; //!< Последнее время нажатия клавиши.
@@ -33,13 +33,11 @@ static drive_keypad_t keypad;
 //! Число попыток обмена данными с PCA9555.
 #define DRIVE_KEYPAD_IO_RETRIES_COUNT 10
 
+//! Тайм-аут обмена данными с PCA9555.
+#define DRIVE_KEYPAD_IO_TIMEOUT_US 100000
 
-static counter_t drive_keypad_io_timeout(void)
-{
-    static counter_t timeout = 0;
-    if(timeout == 0) timeout = system_counter_ticks_per_sec() >> 6; // 15 мс.
-    return timeout;
-}
+
+
 
 static counter_t drive_keypad_update_timeout(void)
 {
@@ -48,85 +46,62 @@ static counter_t drive_keypad_update_timeout(void)
     return timeout;
 }
 
-ALWAYS_INLINE static bool drive_keypad_async_io_done(void)
-{
-    return pca9555_done(keypad.ioport);
-}
-
-ALWAYS_INLINE static err_t drive_keypad_async_io_error(void)
-{
-    return pca9555_error(keypad.ioport);
-}
-
-ALWAYS_INLINE static bool drive_keypad_async_io_timeout(void)
-{
-    return system_counter_diff(&keypad.last_async_io_time) >= drive_keypad_io_timeout();
-}
-
 ALWAYS_INLINE static bool drive_keypad_kbd_update_timeout(void)
 {
     return system_counter_diff(&keypad.last_update_time) >= drive_keypad_update_timeout();
 }
 
-ALWAYS_INLINE static void drive_keypad_async_io_reset(void)
+ALWAYS_INLINE static void drive_keypad_io_reset(void)
 {
-    pca9555_reset(keypad.ioport);
-    if(keypad.reset_i2c_bus_proc) keypad.reset_i2c_bus_proc();
-    else i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
-}
-
-static err_t drive_keypad_wait_safe(void)
-{
-    counter_t counter = system_counter_ticks();
-    
-    while(i2c_bus_busy(pca9555_i2c_bus(keypad.ioport)) || pca9555_busy(keypad.ioport)){
-        if(system_counter_diff(&counter) >= drive_keypad_io_timeout()){
-            drive_keypad_async_io_reset();
-            return E_BUSY;
-        }
+    if(keypad.reset_i2c_bus_proc){
+        keypad.reset_i2c_bus_proc();
+    }else{
+        pca9555_timeout(keypad.ioport);
+        i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
     }
-    
-    return pca9555_error(keypad.ioport);
 }
 
-/*
-static err_t drive_keypad_try_safe_async(err_t (*pca9555_io_proc)(pca9555_t*))
+static void* drive_keypad_reset_ioport_task(void* arg)
 {
-    drive_keypad_wait_safe();
+    drive_keypad_io_reset();
     
-    err_t err;
-    size_t i;
-    for(i = 0; i < DRIVE_KEYPAD_IO_RETRIES_COUNT; i ++){
-        err = pca9555_io_proc(keypad.ioport);
-        
-        if(err == E_NO_ERROR){
-            keypad.last_async_io_time = system_counter_ticks();
-            return E_NO_ERROR;
-        }
-    }
-    return err;
+    return NULL;
 }
-*/
 
-static err_t drive_keypad_try_safe_sync(err_t (*pca9555_io_proc)(pca9555_t*))
+static err_t drive_keypad_try_safe(err_t (*pca9555_io_proc)(pca9555_t*))
 {
-    drive_keypad_wait_safe();
+    // Текущее время.
+    struct timeval cur_time = {0};
+    // Идентификатор таймера.
+    timer_id_t tid = INVALID_TIMER_ID;
+    // Тайм-аут.
+    struct timeval timeout = {0, DRIVE_KEYPAD_IO_TIMEOUT_US};
+    // Время истечения тайм-аута.
+    struct timeval timeout_time = {0, 0};
     
-    err_t err;
+    err_t err = E_IO_ERROR;
     size_t i;
     for(i = 0; i < DRIVE_KEYPAD_IO_RETRIES_COUNT; i ++){
         
-        err = pca9555_io_proc(keypad.ioport);
-        if(err != E_NO_ERROR) continue;
+        // Получим время истечения тайм-аута.
+        gettimeofday(&cur_time, NULL);
+        timeradd(&cur_time, &timeout, &timeout_time);
         
-        err = drive_keypad_wait_safe();
-        if(err == E_NO_ERROR) return E_NO_ERROR;
+        tid = timers_add_timer(drive_keypad_reset_ioport_task, &timeout_time, NULL, NULL, NULL);
+        if(tid != INVALID_TIMER_ID){
+            
+            err = pca9555_io_proc(keypad.ioport);
+            if(err == E_NO_ERROR){
+                err = pca9555_wait(keypad.ioport);
+            }
+            
+            timers_remove_timer(tid);
+        }
+        
+        if(err == E_NO_ERROR) break;
     }
     return err;
 }
-
-#define drive_keypad_try_safe(proc) drive_keypad_try_safe_sync(proc)
-
 
 static err_t drive_keypad_ioport_init(void)
 {
@@ -134,14 +109,14 @@ static err_t drive_keypad_ioport_init(void)
     pca9555_set_pins_direction(keypad.ioport, DRIVE_KPD_LED_ALL, PCA9555_PIN_OUTPUT);
     pca9555_set_pins_direction(keypad.ioport, DRIVE_KPD_PIN_ALL, PCA9555_PIN_OUTPUT);
     
-    RETURN_ERR_IF_FAIL(drive_keypad_try_safe_sync(pca9555_write_pins_direction));
+    RETURN_ERR_IF_FAIL(drive_keypad_try_safe(pca9555_write_pins_direction));
     
     pca9555_set_pins_state(keypad.ioport, PCA9555_PIN_ALL, PCA9555_PIN_ON);
     pca9555_set_pins_state(keypad.ioport, DRIVE_KPD_PIN_BUZZ, PCA9555_PIN_OFF);
     
-    RETURN_ERR_IF_FAIL(drive_keypad_try_safe_sync(pca9555_write_pins_state));
+    RETURN_ERR_IF_FAIL(drive_keypad_try_safe(pca9555_write_pins_state));
     
-    return E_NO_ERROR;//drive_keypad_try_safe_sync(pca9555_read_pins_state);
+    return E_NO_ERROR;
 }
 
 err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
@@ -151,7 +126,6 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
     
     keypad.ioport = keypad_is->ioport;
     keypad.reset_i2c_bus_proc = keypad_is->reset_i2c_bus_proc;
-    keypad.last_async_io_time = 0;
     keypad.last_update_time = 0;
     keypad.kbd_need_update = true;
     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NONE;
@@ -166,7 +140,7 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
 
 err_t drive_keypad_wait(void)
 {
-    return drive_keypad_wait_safe();
+    return drive_keypad_try_safe(pca9555_wait);
 }
 
 drive_kpd_leds_t drive_keypad_leds(void)
@@ -356,40 +330,6 @@ void drive_keypad_repeat(void)
     drive_keypad_update_repeat_time();
 }
 
-/*
-static bool drive_keypad_update_async(void)
-{
-    switch(keypad.kbd_upd_state){
-        case DRIVE_KPD_KBD_UPD_NONE:
-        case DRIVE_KPD_KBD_UPD_UPDATED:
-            if(keypad.kbd_need_update == false) break;
-            keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
-            //keypad.kbd_need_update = false;
-        case DRIVE_KPD_KBD_UPD_NEED_UPDATE:
-            if(drive_keypad_try_safe_async(pca9555_read_pins_state) == E_NO_ERROR){
-                keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATING;
-            }
-            break;
-        case DRIVE_KPD_KBD_UPD_UPDATING:
-            if(drive_keypad_async_io_done()){
-                if(drive_keypad_async_io_error() == E_NO_ERROR){
-                    keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
-                    keypad.kbd_need_update = false;
-                    return true;
-                }else{
-                    keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
-                }
-            }else if(drive_keypad_async_io_timeout()){
-                drive_keypad_async_io_reset();
-                keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
-            }
-            break;
-    }
-    
-    return false;
-}
-*/
-
 static bool drive_keypad_update_sync(void)
 {
     switch(keypad.kbd_upd_state){
@@ -402,7 +342,7 @@ static bool drive_keypad_update_sync(void)
             keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NEED_UPDATE;
             //keypad.kbd_need_update = false;
         case DRIVE_KPD_KBD_UPD_NEED_UPDATE:
-            if(drive_keypad_try_safe_sync(pca9555_read_pins_state) == E_NO_ERROR){
+            if(drive_keypad_try_safe(pca9555_read_pins_state) == E_NO_ERROR){
                 keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATING;
             }else{
                 break;

@@ -66,13 +66,13 @@ static counter_t counter_ms_gtod = 0;
 
 //! Планеровщик задач.
 //! Максимум задач.
-#define SCHEDULER_TASKS_MAX 5
+#define SCHEDULER_TASKS_MAX 10
 //! Буфер задач.
 static TASKS_BUFFER(tasks_buffer, SCHEDULER_TASKS_MAX);
 
 //! Таймеры.
 //! Максимум таймеров.
-#define TIMERS_COUNT_MAX 5
+#define TIMERS_COUNT_MAX 10
 //! Буфер таймеров.
 static TIMERS_BUFFER(timers_buf, TIMERS_COUNT_MAX);
 //! Константы таймера таймеров.
@@ -256,8 +256,8 @@ static unsigned int adc_data_measured = 0;
 #define IRQ_PRIOR_DMA_CH3 5 // spi1
 #define IRQ_PRIOR_DMA_CH4 5 // spi2 usart1 (modbus)
 #define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus) i2c2
-#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 (modbus) i2c2
-#define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2 (modbus)
+#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 i2c2
+#define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2
 #define IRQ_PRIOR_KEYPAD 6
 #define IRQ_PRIOR_RTC_ALARM 6
 #define IRQ_PRIOR_TIMERS_TIMER 7
@@ -1145,8 +1145,8 @@ static void reset_i2c1_slave(void)
 
 static void reset_i2c1(void)
 {
-    i2c_bus_reset(&i2c1);
     i2c_device_reset(I2C1);
+    i2c_bus_reset(&i2c1);
     
     I2C_Cmd(I2C1, DISABLE);
     
@@ -1219,8 +1219,8 @@ static void reset_i2c2_slave(void)
 
 static void reset_i2c2(void)
 {
-    i2c_bus_reset(&i2c2);
     i2c_device_reset(I2C2);
+    i2c_bus_reset(&i2c2);
     
     I2C_Cmd(I2C2, DISABLE);
     
@@ -1454,6 +1454,19 @@ static void init_drive(void)
     drive_set_reset_callback(on_drive_reset);
 }
 
+static void reset_ioport(void)
+{
+    pca9555_timeout(&ioport);
+    reset_i2c1();
+    
+    // pca9555 resets counter.
+    /*param_t* p = settings_param_by_id(PARAM_ID_DEBUG_2);
+    if(p){
+        unsigned int rst_cnt = settings_param_valueu(p);
+        settings_param_set_valueu(p, rst_cnt + 1);
+    }*/
+}
+
 static void init_drive_ui(void)
 {
     init_ioport_simple();
@@ -1463,7 +1476,7 @@ static void init_drive_ui(void)
     
     ui_is.ioport = &ioport;
     ui_is.tft = &tft;
-    ui_is.reset_i2c_bus_proc = reset_i2c1;
+    ui_is.reset_i2c_bus_proc = reset_ioport;
     
     drive_ui_init(&ui_is);
 }
@@ -1932,6 +1945,13 @@ static void reset_heatsink_sensor(void)
 {
     lm75_timeout(&heatsink_sensor);
     reset_i2c2();
+    
+    // LM75 resets counter.
+    /*param_t* p = settings_param_by_id(PARAM_ID_DEBUG_3);
+    if(p){
+        unsigned int rst_cnt = settings_param_valueu(p);
+        settings_param_set_valueu(p, rst_cnt + 1);
+    }*/
 }
 
 static void fan_pwm_set_value(uint32_t rpm_percents)
@@ -1988,6 +2008,7 @@ static void* drive_temp_reinit_gui_task(void* arg)
 
 static void on_drive_reset(void)
 {
+    // unlock rs485 dma channels.
     dma_channel_unlock(DMA1_Channel4);
     dma_channel_unlock(DMA1_Channel5);
     
