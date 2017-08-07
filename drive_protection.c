@@ -881,7 +881,7 @@ static bool drive_prot_check_fan(drive_protection_item_t* item)
  */
 static bool drive_prot_check_heatsink_temp(drive_protection_item_t* item)
 {
-    return drive_temp_heatsink_temp() <= item->value_level;
+    return !drive_temp_heatsink_temp_avail() || drive_temp_heatsink_temp() <= item->value_level;
 }
 
 /**
