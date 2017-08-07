@@ -211,19 +211,27 @@ static err_t drive_tasks_write_event(bool need_osc, drive_event_type_t type, tas
     if(event_item == NULL) return E_OUT_OF_MEMORY;
     
     task_proc_t task_proc = drive_tasks_write_event_task;
+    bool osc_paused = false;
     
     if(need_osc){
         CRITICAL_ENTER();
         if(!drive_power_oscillogram_is_paused()){
             drive_power_oscillogram_half_pause();
             task_proc = drive_tasks_write_event_osc_task;
+            osc_paused = true;
         }
         CRITICAL_EXIT();
     }
     
     drive_events_make_event(&event_item->event, type);
     
-    return TID_TO_ERR(scheduler_add_task(task_proc, priority, (void*)event_item, TASK_RUN_ONCE, NULL));
+    task_id_t tid = scheduler_add_task(task_proc, priority, (void*)event_item, TASK_RUN_ONCE, NULL);
+    
+    if(tid == INVALID_TASK_ID && osc_paused){
+        drive_power_oscillogram_resume();
+    }
+    
+    return TID_TO_ERR(tid);
 }
 
 err_t drive_tasks_write_error_event(void)
