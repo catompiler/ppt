@@ -1991,7 +1991,7 @@ static void on_drive_reset(void)
     dma_channel_unlock(DMA1_Channel4);
     dma_channel_unlock(DMA1_Channel5);
     
-    modbus_rs485_set_input();
+    //modbus_rs485_set_input();
     
     reset_i2c1();
     reset_i2c2();

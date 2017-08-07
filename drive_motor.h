@@ -53,6 +53,18 @@ extern fixed32_t drive_motor_r_exc(void);
 extern fixed32_t drive_motor_r_wires(void);
 
 /**
+ * Получает падение напряжения на проводах до двигателя.
+ * @return Падение напряжения на проводах до двигателя.
+ */
+extern fixed32_t drive_motor_u_wires(void);
+
+/**
+ * Получает напряжение на якоре с учётом проводов.
+ * @return Напряжение на якоре с учётом проводов.
+ */
+extern fixed32_t drive_motor_u_rot_wires(void);
+
+/**
  * Получает текущие обороты двигателя.
  * @return Текущие обороты двигателя.
  */

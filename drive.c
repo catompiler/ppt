@@ -1548,7 +1548,8 @@ static bool drive_regulate(void)
     if(!drive_power_new_data_avail(DRIVE_POWER_CHANNELS)) return false;
     
     if(drive_can_open_triacs()){
-        fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        //fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        fixed32_t U_rot = drive_motor_u_rot_wires();
         fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
         fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
 

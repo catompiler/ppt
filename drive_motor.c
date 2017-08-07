@@ -18,8 +18,12 @@ typedef struct _Drive_Motor {
     fixed32_t Cm; //!< Коэффициент для расчёта момента.
     param_t* param_rpm; //!< Параметр с оборотами двигателя.
     param_t* param_torque; //!< Параметр с моментом двигателя.
+    param_t* param_u_wires; //!< Параметр с напряжением на проводах.
+    param_t* param_u_rot_wires; //!< Параметр с напряжением якоря с учётом проводов.
     fixed32_t rpm; //!< Текущие обороты двигателя.
     fixed32_t torque; //!< Текущий момент двигателя.
+    fixed32_t U_wires; //!< Падение напряжения на проводах.
+    fixed32_t U_rot_wires; //!< Напряжение на якоре с учётом проводов.
 } drive_motor_t;
 
 
@@ -37,6 +41,8 @@ err_t drive_motor_init(void)
     
     motor.param_rpm = settings_param_by_id(PARAM_ID_MOTOR_RPM);
     motor.param_torque = settings_param_by_id(PARAM_ID_MOTOR_TORQUE);
+    motor.param_u_wires = settings_param_by_id(PARAM_ID_POWER_U_WIRES);
+    motor.param_u_rot_wires = settings_param_by_id(PARAM_ID_POWER_U_ROT_WIRES);
     
     return E_NO_ERROR;
 }
@@ -152,53 +158,48 @@ void drive_motor_calculate(void)
     
     fixed32_t N = 0;
     fixed32_t M = 0;
+    fixed32_t U_wires = 0;
+    fixed32_t U_rot_wires = 0;
     
-    //bool i_exc_allow = drive_protection_is_allow(drive_protection_check_exc());
+    fixed32_t U_rot = 0;
+    fixed32_t I_rot = 0;
+    fixed32_t I_exc = 0;
+    fixed32_t R_rot_wires = motor.R_wires;
     
-    if(drive_running()){
-        fixed32_t U_rot = 0;
-        fixed32_t I_rot = 0;
-        fixed32_t I_exc = 0;
-        fixed32_t R_rot_wires = motor.R_rot + motor.R_wires;
-        fixed32_t U_wires = 0;
+    U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
+    I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
     
-        bool u_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_voltage());
-        bool i_rot_zero = drive_protection_is_allow(drive_protection_check_rot_zero_current());
-        bool i_exc_zero = false;
-        
-        if(!u_rot_zero) U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
-        if(!i_rot_zero) I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
-        
-        U_wires = fixed32_mul((int64_t)I_rot, R_rot_wires);
-        
-        // IR.
-        if(U_wires > 0 && U_rot > U_wires){
-            U_rot = U_rot - U_wires;
-        }
-
-        if(drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL){
-            i_exc_zero = drive_protection_is_allow(drive_protection_check_exc_zero_current());
-            if(!i_exc_zero) I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
-        }else{
-            I_exc = motor.I_exc;
-        }
-        
-        if(!i_exc_zero){
-            fixed32_t U_R_rot = fixed32_mul((int64_t)I_rot, motor.R_rot);
-            fixed32_t U_minus_IR = U_rot - U_R_rot;
-            fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
-            N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
-
-            fixed32_t I_rot_I_exc = fixed32_mul((int64_t)I_rot, I_exc);
-            M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
-        }
+    U_wires = fixed32_mul((int64_t)I_rot, R_rot_wires);
+    U_rot_wires = U_rot - U_wires;
+    
+    bool i_exc_zero = false;
+    
+    if(drive_triacs_exc_mode() != DRIVE_TRIACS_EXC_EXTERNAL){
+        i_exc_zero = drive_protection_is_allow(drive_protection_check_exc_zero_current());
+        if(!i_exc_zero) I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
+    }else{
+        I_exc = motor.I_exc;
     }
+    
+    if(!i_exc_zero){
+        fixed32_t U_R_rot = fixed32_mul((int64_t)I_rot, motor.R_rot);
+        fixed32_t U_minus_IR = U_rot - U_R_rot - U_wires;
+        fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
+        N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
+
+        fixed32_t I_rot_I_exc = fixed32_mul((int64_t)I_rot, I_exc);
+        M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
+    } 
     
     motor.rpm = N;
     motor.torque = M;
+    motor.U_wires = U_wires;
+    motor.U_rot_wires = U_rot_wires;
     
     DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(N));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, M);
+    DRIVE_UPDATE_PARAM_FIXED(motor.param_u_wires, U_wires);
+    DRIVE_UPDATE_PARAM_FIXED(motor.param_u_rot_wires, U_rot_wires);
 }
 
 fixed32_t drive_motor_r_rot(void)
@@ -214,6 +215,16 @@ fixed32_t drive_motor_r_exc(void)
 fixed32_t drive_motor_r_wires(void)
 {
     return motor.R_wires;
+}
+
+fixed32_t drive_motor_u_wires(void)
+{
+    return motor.U_wires;
+}
+
+fixed32_t drive_motor_u_rot_wires(void)
+{
+    return motor.U_rot_wires;
 }
 
 fixed32_t drive_motor_rpm(void)
