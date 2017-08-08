@@ -5,6 +5,7 @@
 #include "timers/timers.h"
 #include "i2c/i2c.h"
 #include <stddef.h>
+#include <string.h>
 
 
 //! Тип состояния обновления клавиатуры.
@@ -18,6 +19,7 @@ typedef enum _Drive_Kpd_Upd_KbdState {
 //! Тип кейпада привода.
 typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
+    struct timeval ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
     counter_t last_update_time; //!< Последнее время обновления клавиатуры.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
@@ -34,7 +36,7 @@ static drive_keypad_t keypad;
 #define DRIVE_KEYPAD_IO_RETRIES_COUNT 10
 
 //! Тайм-аут обмена данными с PCA9555.
-#define DRIVE_KEYPAD_IO_TIMEOUT_US 100000
+#define DRIVE_KEYPAD_IO_TIMEOUT_DEFAULT_US 100000
 
 
 
@@ -74,10 +76,8 @@ static err_t drive_keypad_try_safe(err_t (*pca9555_io_proc)(pca9555_t*))
     struct timeval cur_time = {0};
     // Идентификатор таймера.
     timer_id_t tid = INVALID_TIMER_ID;
-    // Тайм-аут.
-    struct timeval timeout = {0, DRIVE_KEYPAD_IO_TIMEOUT_US};
     // Время истечения тайм-аута.
-    struct timeval timeout_time = {0, 0};
+    struct timeval timeout = {0, 0};
     
     err_t err = E_IO_ERROR;
     size_t i;
@@ -85,9 +85,9 @@ static err_t drive_keypad_try_safe(err_t (*pca9555_io_proc)(pca9555_t*))
         
         // Получим время истечения тайм-аута.
         gettimeofday(&cur_time, NULL);
-        timeradd(&cur_time, &timeout, &timeout_time);
+        timeradd(&cur_time, &keypad.ioport_timeout, &timeout);
         
-        tid = timers_add_timer(drive_keypad_reset_ioport_task, &timeout_time, NULL, NULL, NULL);
+        tid = timers_add_timer(drive_keypad_reset_ioport_task, &timeout, NULL, NULL, NULL);
         if(tid != INVALID_TIMER_ID){
             
             err = pca9555_io_proc(keypad.ioport);
@@ -131,6 +131,13 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NONE;
     keypad.last_key_pressed_time = 0;
     keypad.last_key_repeat_time = 0;
+    
+    if(keypad_is->ioport_timeout){
+        memcpy(&keypad.ioport_timeout, keypad_is->ioport_timeout, sizeof(struct timeval));
+    }else{
+        keypad.ioport_timeout.tv_sec = 0;
+        keypad.ioport_timeout.tv_usec = DRIVE_KEYPAD_IO_TIMEOUT_DEFAULT_US;
+    }
     
     RETURN_ERR_IF_FAIL(drive_keypad_ioport_init());
     RETURN_ERR_IF_FAIL(key_input_init());

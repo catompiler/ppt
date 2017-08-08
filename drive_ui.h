@@ -10,6 +10,8 @@
 #include "tft9341/tft9341.h"
 #include "drive_keypad.h"
 #include "drive_gui.h"
+#include <sys/time.h>
+
 
 // период обновления зуммера при аварии
 #define DRIVE_UI_BUZZER_SEQUECE_ALARM 5
@@ -28,8 +30,10 @@ typedef enum _Drive_Ui_Buzzer_State {
 typedef struct _Drive_Ui_Init {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     tft9341_t* tft; //!< TFT.
+    struct timeval* ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_ui_init_t;
+
 
 extern void* drive_ui_update_buzzer(void* arg);
 

@@ -9,6 +9,7 @@
 #include "errors/errors.h"
 #include "pca9555/pca9555.h"
 #include "input/keys.h"
+#include <sys/time.h>
 
 
 //! Синоним для обозначения кнопки старт.
@@ -67,6 +68,7 @@ typedef void (*reset_i2c_bus_proc_t)(void);
 //! Структура инициализации кейпада привода.
 typedef struct _Drive_Keypad_Init {
     pca9555_t* ioport; //!< Порт ввода-вывода.
+    struct timeval* ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_keypad_init_t;
 

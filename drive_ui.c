@@ -25,6 +25,7 @@ static err_t drive_ui_init_keypad(drive_ui_init_t* ui_is)
     drive_keypad_init_t keypad_is;
     
     keypad_is.ioport = ui_is->ioport;
+    keypad_is.ioport_timeout = ui_is->ioport_timeout;
     keypad_is.reset_i2c_bus_proc = ui_is->reset_i2c_bus_proc;
     
     return drive_keypad_init(&keypad_is);

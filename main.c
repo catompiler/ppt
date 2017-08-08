@@ -137,7 +137,7 @@ static lm75_t heatsink_sensor;
 //! Адрес датчика температуры радиатора.
 #define HEATSINK_SENSOR_ADDRESS (LM75_I2C_DEFAULT_ADDRESS | 0x1)
 //! Таймаут обмена данными с датчиком температуры радиатора, мкс.
-#define HEATSINK_SENSOR_IO_TIMEOUT_US (100000)
+#define HEATSINK_SENSOR_IO_TIMEOUT_US (200000)
 //! Период обновления температуры, сек.
 #define DRIVE_TEMP_UPDATE_PERIOD_S (10)
 
@@ -151,6 +151,8 @@ static lm75_t heatsink_sensor;
 
 //! Расширитель ввода-вывода.
 static pca9555_t ioport;
+//! Таймаут обмена данными с расширителем ввода-вывода, мкс.
+#define IOPORT_IO_TIMEOUT_US (200000)
 
 //! TFT9341.
 static tft9341_t tft;
@@ -1474,8 +1476,11 @@ static void init_drive_ui(void)
     
     drive_ui_init_t ui_is;
     
+    struct timeval timeout = {0, IOPORT_IO_TIMEOUT_US};
+    
     ui_is.ioport = &ioport;
     ui_is.tft = &tft;
+    ui_is.ioport_timeout = &timeout;
     ui_is.reset_i2c_bus_proc = reset_ioport;
     
     drive_ui_init(&ui_is);
