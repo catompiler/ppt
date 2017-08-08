@@ -1,4 +1,5 @@
 #include "drive_dio.h"
+#include "defs/defs.h"
 #include <string.h>
 #include <stddef.h>
 
@@ -16,6 +17,7 @@ typedef struct _Drive_Dio_In {
     drive_dio_input_type_t type;
     fixed32_t time; //!< Время с момента изменения сигнала.
     drive_dio_state_t state; //!< Текущее состояние.
+    bool state_changed; //!< Флаг изменения состояния.
 } drive_dio_in_t;
 
 //! Структура цифрового выхода.
@@ -155,16 +157,23 @@ void drive_dio_process_inputs(fixed32_t dt)
             if(input->time >= dio.dead_time){
                 input->state = state;
                 input->time = 0;
+                input->state_changed = true;
             }
         }else{
             input->time = 0;
+            input->state_changed = false;
         }
     }
 }
 
-static drive_dio_state_t drive_din_state(drive_dio_in_t* input)
+ALWAYS_INLINE static drive_dio_state_t drive_din_state(drive_dio_in_t* input)
 {
     return input->state;
+}
+
+ALWAYS_INLINE static bool drive_din_state_changed(drive_dio_in_t* input)
+{
+    return input->state_changed;
 }
 
 static drive_dio_state_t drive_dout_state(drive_dio_out_t* output)
@@ -195,6 +204,13 @@ drive_dio_state_t drive_dio_input_state(drive_dio_input_t input)
     return drive_din_state(&dio.inputs[input]);
 }
 
+bool drive_dio_input_state_changed(drive_dio_input_t input)
+{
+    if(input >= DRIVE_DIO_INPUTS_COUNT) return false;
+    
+    return drive_din_state_changed(&dio.inputs[input]);
+}
+
 drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type)
 {
     size_t i;
@@ -205,6 +221,18 @@ drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type)
         }
     }
     return DRIVE_DIO_OFF;
+}
+
+bool drive_dio_input_type_state_changed(drive_dio_input_type_t type)
+{
+    size_t i;
+    for(i = 0; i < DRIVE_DIO_INPUTS_COUNT; i ++){
+        drive_dio_in_t* input = &dio.inputs[i];
+        if(input->type == type && drive_din_state_changed(input)){
+            return true;
+        }
+    }
+    return false;
 }
 
 bool drive_dio_input_get_type_state(drive_dio_input_type_t type, drive_dio_state_t* state)

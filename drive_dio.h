@@ -173,11 +173,25 @@ extern void drive_dio_process_inputs(fixed32_t dt);
 extern drive_dio_state_t drive_dio_input_state(drive_dio_input_t input);
 
 /**
+ * Получает флаг изменения состояния заданного цифрового входа.
+ * @param input Цифровой вход.
+ * @return Флаг изменения состояния цифрового входа.
+ */
+extern bool drive_dio_input_state_changed(drive_dio_input_t input);
+
+/**
  * Получает состояние типа цифрового входа.
  * @param type Тип цифрового входа.
  * @return Состояние типа цифрового входа.
  */
 extern drive_dio_state_t drive_dio_input_type_state(drive_dio_input_type_t type);
+
+/**
+ * Получает изменения состояния типа цифрового входа.
+ * @param type Тип цифрового входа.
+ * @return Флаг изменения состояния типа цифрового входа.
+ */
+extern bool drive_dio_input_type_state_changed(drive_dio_input_type_t type);
 
 /**
  * Получает состояние типа цифрового входа.
