@@ -138,6 +138,8 @@ static lm75_t heatsink_sensor;
 #define HEATSINK_SENSOR_ADDRESS (LM75_I2C_DEFAULT_ADDRESS | 0x1)
 //! Таймаут обмена данными с датчиком температуры радиатора, мкс.
 #define HEATSINK_SENSOR_IO_TIMEOUT_US (200000)
+//! Таймаут попыток обмена данными с датчиком температуры радиатора, с.
+#define HEATSINK_SENSOR_TIMEOUT_S (25)
 //! Период обновления температуры, сек.
 #define DRIVE_TEMP_UPDATE_PERIOD_S (10)
 
@@ -1462,11 +1464,13 @@ static void reset_ioport(void)
     reset_i2c1();
     
     // pca9555 resets counter.
-    /*param_t* p = settings_param_by_id(PARAM_ID_DEBUG_2);
+#ifdef DEBUG_RESET_I2C
+    param_t* p = settings_param_by_id(PARAM_ID_DEBUG_2);
     if(p){
         unsigned int rst_cnt = settings_param_valueu(p);
         settings_param_set_valueu(p, rst_cnt + 1);
-    }*/
+    }
+#endif
 }
 
 static void init_drive_ui(void)
@@ -1952,11 +1956,13 @@ static void reset_heatsink_sensor(void)
     reset_i2c2();
     
     // LM75 resets counter.
-    /*param_t* p = settings_param_by_id(PARAM_ID_DEBUG_3);
+#ifdef DEBUG_RESET_I2C
+    param_t* p = settings_param_by_id(PARAM_ID_DEBUG_3);
     if(p){
         unsigned int rst_cnt = settings_param_valueu(p);
         settings_param_set_valueu(p, rst_cnt + 1);
-    }*/
+    }
+#endif
 }
 
 static void fan_pwm_set_value(uint32_t rpm_percents)
@@ -1978,10 +1984,12 @@ static void init_drive_temp(void)
     drive_temp_init_t temp_is;
     
     struct timeval temp_interval = { DRIVE_TEMP_UPDATE_PERIOD_S, 0 };
-    struct timeval timeout = {0, HEATSINK_SENSOR_IO_TIMEOUT_US};
+    struct timeval io_timeout = {0, HEATSINK_SENSOR_IO_TIMEOUT_US};
+    struct timeval timeout = {HEATSINK_SENSOR_TIMEOUT_S, 0};
     
     temp_is.heatsink_sensor = &heatsink_sensor;
     temp_is.heatsink_sensor_reset_proc = reset_heatsink_sensor;
+    temp_is.heatsink_sensor_io_timeout = &io_timeout;
     temp_is.heatsink_sensor_timeout = &timeout;
     temp_is.update_interval = &temp_interval;
     temp_is.set_fan_rpm_proc = fan_pwm_set_value;

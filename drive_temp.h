@@ -24,7 +24,8 @@ typedef void(*drive_temp_set_fan_rpm_proc_t)(uint32_t rpm_percents);
 typedef struct _Drive_Temp_Init {
     lm75_t* heatsink_sensor; //!< Датчик температуры радиатора.
     drive_temp_sensor_reset_proc_t heatsink_sensor_reset_proc; //!< Функция сброса датчика температуры радиатора.
-    struct timeval* heatsink_sensor_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    struct timeval* heatsink_sensor_io_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    struct timeval* heatsink_sensor_timeout; //!< Таймаут попыток обмена данными с датчиком температуры радиатора.
     struct timeval* update_interval; //!< Интервал обновления температур.
     drive_temp_set_fan_rpm_proc_t set_fan_rpm_proc; //!< Функция установки оборотов вентилятора.
 } drive_temp_init_t;

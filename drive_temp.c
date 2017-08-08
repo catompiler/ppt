@@ -10,7 +10,10 @@
 
 
 //! Таймаут обмена данными по-умолчанию, мкс.
-#define DRIVE_TEMP_TIMEOUT_DEFAULT_US 100000
+#define DRIVE_TEMP_IO_TIMEOUT_DEFAULT_US 100000
+
+//! Таймаут попыток обмена данными по-умолчанию, мкс.
+#define DRIVE_TEMP_TIMEOUT_DEFAULT_S 1
 
 //! Обороты останова вентилятора.
 #define DRIVE_TEMP_FAN_RPM_STOP 0
@@ -22,7 +25,8 @@
 typedef struct _Drive_Temp {
     lm75_t* heatsink_sensor; //!< Датчик температуры радиатора.
     drive_temp_sensor_reset_proc_t heatsink_sensor_reset; //!< Функция сброса датчика температуры радиатора.
-    struct timeval heatsink_sensor_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    struct timeval heatsink_sensor_io_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    struct timeval heatsink_sensor_timeout; //!< Таймаут попыток обмена данными с датчиком температуры радиатора.
     
     struct timeval update_interval; //!< Интервал обновления температуры.
     struct timeval update_time; //!< Время следующего обновления температуры.
@@ -39,6 +43,7 @@ typedef struct _Drive_Temp {
     uint16_t fan_rpm; //!< Обороты вентилятора, %.
     
     bool heatsink_temp_avail; //!< Доступность температуры радиатора.
+    struct timeval heatsink_temp_time; //!< Время последнего чтения температуры радиатора.
     fixed32_t heatsink_temp; //!< Температура радиатора.
     param_t* heatsink_temp_param; //!< Параметр для записи температуры радиатора.
     param_t* heatsink_fan_rpm_param; //!< Параметр для записи оборотов вентилятора.
@@ -69,11 +74,18 @@ err_t drive_temp_init(drive_temp_init_t* temp_is)
         memcpy(&drive_temp.update_interval, temp_is->update_interval, sizeof(struct timeval));
     }
     
+    if(temp_is->heatsink_sensor_io_timeout){
+        memcpy(&drive_temp.heatsink_sensor_io_timeout, temp_is->heatsink_sensor_io_timeout, sizeof(struct timeval));
+    }else{
+        drive_temp.heatsink_sensor_io_timeout.tv_sec = 0;
+        drive_temp.heatsink_sensor_io_timeout.tv_usec = DRIVE_TEMP_IO_TIMEOUT_DEFAULT_US;
+    }
+    
     if(temp_is->heatsink_sensor_timeout){
         memcpy(&drive_temp.heatsink_sensor_timeout, temp_is->heatsink_sensor_timeout, sizeof(struct timeval));
     }else{
-        drive_temp.heatsink_sensor_timeout.tv_sec = 0;
-        drive_temp.heatsink_sensor_timeout.tv_usec = DRIVE_TEMP_TIMEOUT_DEFAULT_US;
+        drive_temp.heatsink_sensor_timeout.tv_sec = DRIVE_TEMP_TIMEOUT_DEFAULT_S;
+        drive_temp.heatsink_sensor_timeout.tv_usec = 0;
     }
     
     drive_temp.set_fan_rpm = temp_is->set_fan_rpm_proc;
@@ -103,10 +115,17 @@ static void drive_temp_regulate_fan(void)
     uint32_t rpm = DRIVE_TEMP_FAN_RPM_STOP;
     
     if(drive_temp.fan_enable){
+        
+        struct timeval cur_tv = {0};
+        gettimeofday(&cur_tv, NULL);
+
+        struct timeval diff_tv = {0};
     
         if(drive_running() || !drive_temp.fan_eco_mode){
+            
+            timersub(&cur_tv, &drive_temp.heatsink_temp_time, &diff_tv);
 
-            if(!drive_temp.heatsink_temp_avail){
+            if(!drive_temp.heatsink_temp_avail && timercmp(&diff_tv, &drive_temp.heatsink_sensor_timeout, >)){
                 rpm = DRIVE_TEMP_FAN_RPM_MAX;
             }else if(drive_temp.heatsink_temp <= drive_temp.fan_temp_min){
                 rpm = drive_temp.fan_rpm_min;
@@ -126,10 +145,6 @@ static void drive_temp_regulate_fan(void)
                 rpm = CLAMP(rpm, drive_temp.fan_rpm_min, DRIVE_TEMP_FAN_RPM_MAX);
             }
         }else{// eco mode
-            struct timeval cur_tv = {0};
-            gettimeofday(&cur_tv, NULL);
-
-            struct timeval diff_tv = {0};
             timersub(&cur_tv, &drive_temp.last_run_time, &diff_tv);
 
             struct timeval eco_tv = {drive_temp.fan_eco_time, 0};
@@ -181,8 +196,6 @@ bool drive_temp_update(void)
         drive_temp.last_run_time.tv_usec = cur_time.tv_usec;
     }
     
-    drive_temp_regulate_fan();
-    
     // Если задан интервал обновления.
     if(drive_temp.updated && timerisset(&drive_temp.update_interval)){
         
@@ -200,7 +213,7 @@ bool drive_temp_update(void)
     
     if(drive_temp.updated || !drive_temp.heatsink_temp_avail){
         
-        timeradd(&cur_time, &drive_temp.heatsink_sensor_timeout, &timeout);
+        timeradd(&cur_time, &drive_temp.heatsink_sensor_io_timeout, &timeout);
         
         tid = timers_add_timer(drive_temp_reset_sensor_task, &timeout, NULL, (void*)drive_temp.heatsink_sensor_reset, NULL);
         
@@ -208,6 +221,7 @@ bool drive_temp_update(void)
                 lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
             drive_temp.heatsink_temp_avail = true;
             drive_temp.heatsink_temp = fixed16_to_32(temp16);
+            memcpy(&drive_temp.heatsink_temp_time, &cur_time, sizeof(struct timeval));
         }else{
             drive_temp.heatsink_temp_avail = false;
             update_success = false;
@@ -217,13 +231,12 @@ bool drive_temp_update(void)
     }
     
     if(update_success && timerisset(&drive_temp.update_interval)){
-        if(!timerisset(&cur_time)){
-            gettimeofday(&cur_time, NULL);
-        }
         timeradd(&cur_time, &drive_temp.update_interval, &drive_temp.update_time);
     }
     
     drive_temp.updated = update_success;
+    
+    drive_temp_regulate_fan();
     
     drive_temp_update_params();
     
