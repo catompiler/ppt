@@ -1483,7 +1483,8 @@ static void drive_process_digital_inputs(void)
         if(state) drive_emergency_stop();
     }
     
-    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_START_STOP, &state)){
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_START_STOP, &state) &&
+       drive_dio_input_type_state_changed(DRIVE_DIO_IN_START_STOP)){
         if(state){
             drive_start();
         }else{ //DRIVE_DIO_OFF
@@ -1499,7 +1500,8 @@ static void drive_process_digital_inputs(void)
         if(state) drive_regulator_dec_reference();
     }
     
-    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_CLEAR_ERRORS, &state)){
+    if(drive_dio_input_get_type_state(DRIVE_DIO_IN_CLEAR_ERRORS, &state) &&
+       drive_dio_input_type_state_changed(DRIVE_DIO_IN_CLEAR_ERRORS)){
         if(state) drive_clear_errors();
     }
 }
