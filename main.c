@@ -351,8 +351,14 @@ IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
     i2c_bus_dma_tx_channel_irq_handler(&i2c2);
 }
 
+ALWAYS_INLINE static void modbus_rs485_set_input(void);
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
+    // Установка интерфейса rs485 (Modbus RTU)
+    // на приём данных с целью предотвращения его
+    // ошибочной установки на передачу.
+    modbus_rs485_set_input();
+    
     usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2) ||
     i2c_bus_dma_rx_channel_irq_handler(&i2c2);
