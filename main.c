@@ -2001,6 +2001,7 @@ static void* drive_temp_task(void* arg)
 
 static void* drive_temp_reinit_gui_task(void* arg)
 {
+    drive_ui_deinit();
     init_drive_ui();
     
     return NULL;

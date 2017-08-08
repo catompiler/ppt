@@ -13,6 +13,7 @@ typedef struct _Drive_Ui {
     counter_t update_period;
     counter_t last_update_time;
     bool need_update;
+    timer_id_t upd_buz_tid;
 } drive_ui_t;
 
 //! Интерфейс привода.
@@ -114,7 +115,7 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     gettimeofday(&tv, NULL);
     timeradd(&tv, &timeout, &tv);
     
-    timers_add_timer(drive_ui_update_buzzer, &tv, &timeout, NULL, NULL);/**/
+    ui.upd_buz_tid = timers_add_timer(drive_ui_update_buzzer, &tv, &timeout, NULL, NULL);/**/
     
     ui.need_update = true;
     ui.last_update_time = 0;
@@ -123,6 +124,13 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     return E_NO_ERROR;
 }
 
+void drive_ui_deinit(void)
+{
+    if(ui.upd_buz_tid != INVALID_TIMER_ID){
+        timers_remove_timer(ui.upd_buz_tid);
+        ui.upd_buz_tid = INVALID_TIMER_ID;
+    }
+}
 
 ALWAYS_INLINE static void drive_ui_update_update_time(void)
 {

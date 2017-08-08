@@ -46,6 +46,11 @@ extern void* drive_ui_buzzer_beep(void* arg);
 extern err_t drive_ui_init(drive_ui_init_t* ui_is);
 
 /**
+ * Уничтожает интерфейс привода.
+ */
+extern void drive_ui_deinit(void);
+
+/**
  * Управляет обновлением интерфейса пользователя.
  */
 extern void drive_ui_process(void);
