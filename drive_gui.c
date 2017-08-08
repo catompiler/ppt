@@ -42,7 +42,7 @@
 #define gui_statusbar_icon_pos(pos) pos * ICONS_STATUSBAR_HEIGHT
 
 // список доступных языков интерфейса
-GUI_TILE_LANGUAGES(gui_languages, GUI_TILE_TYPES_COUNT) {
+GUI_TILE_LANGUAGES(gui_languages, GUI_TILE_LANGUAGES_COUNT) {
     GUI_TILE_LANGUAGE(TR_LANG_ID_RU),
     GUI_TILE_LANGUAGE(TR_LANG_ID_EN),    
 };
@@ -328,6 +328,8 @@ static void make_gui(void)
     localization_init(trs_main, TRANSLATIONS_COUNT(trs_main));
     localization_set_default_lang(TR_LANG_ID_RU);
     localization_set_default_text("No translation");
+    
+    gui.language = localization_lang();
     
     drive_gui_check_language();
         
