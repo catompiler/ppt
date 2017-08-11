@@ -1,11 +1,11 @@
 #include "drive_keypad.h"
 #include "input/key_input.h"
 #include "utils/utils.h"
-#include "counter/counter.h"
 #include "timers/timers.h"
 #include "i2c/i2c.h"
 #include <stddef.h>
 #include <string.h>
+#include <sys/time.h>
 
 
 //! Тип состояния обновления клавиатуры.
@@ -21,36 +21,64 @@ typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     struct timeval ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
-    counter_t last_update_time; //!< Последнее время обновления клавиатуры.
+    struct timeval last_update_time; //!< Последнее время обновления клавиатуры.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
     drive_kpd_kbd_upd_state_t kbd_upd_state; //!< Состояние обновления клавиатуры.
-    counter_t last_key_pressed_time; //!< Последнее время нажатия клавиши.
-    counter_t last_key_repeat_time; //!< Последнее время повтора нажатия клавиши.
+    struct timeval last_key_pressed_time; //!< Последнее время нажатия клавиши.
+    struct timeval last_key_repeat_time; //!< Последнее время повтора нажатия клавиши.
 } drive_keypad_t;
 
 //! Кейпад привода.
 static drive_keypad_t keypad;
 
 
+//! Таймаут обновления, с.
+#define DRIVE_KEYPAD_UPDATE_TIMEOUT_S 0
+//! Таймаут обновления, мкс.
+#define DRIVE_KEYPAD_UPDATE_TIMEOUT_US 15000
+
+
+//! Таймаут нажатия, с.
+#define DRIVE_KEYPAD_KEY_PRESSED_TIMEOUT_S 1
+//! Таймаут нажатия, мкс.
+#define DRIVE_KEYPAD_KEY_PRESSED_TIMEOUT_US 0
+
+//! Таймаут повторения нажатия, с.
+#define DRIVE_KEYPAD_KEY_REPEAT_TIMEOUT_S 0
+//! Таймаут повторения нажатия, мкс.
+#define DRIVE_KEYPAD_KEY_REPEAT_TIMEOUT_US 250000
+
 //! Число попыток обмена данными с PCA9555.
 #define DRIVE_KEYPAD_IO_RETRIES_COUNT 10
 
-//! Тайм-аут обмена данными с PCA9555.
+//! Таймаут обмена данными с PCA9555.
 #define DRIVE_KEYPAD_IO_TIMEOUT_DEFAULT_US 100000
 
 
 
 
-static counter_t drive_keypad_update_timeout(void)
+ALWAYS_INLINE static void drive_keypad_update_timeout(struct timeval* timeout)
 {
-    static counter_t timeout = 0;
-    if(timeout == 0) timeout = system_counter_ticks_per_sec() >> 3; // 15 мс.
-    return timeout;
+    timeout->tv_sec = DRIVE_KEYPAD_UPDATE_TIMEOUT_S;
+    timeout->tv_usec = DRIVE_KEYPAD_UPDATE_TIMEOUT_US;
 }
 
-ALWAYS_INLINE static bool drive_keypad_kbd_update_timeout(void)
+ALWAYS_INLINE static void drive_keypad_update_last_update_time(void)
 {
-    return system_counter_diff(&keypad.last_update_time) >= drive_keypad_update_timeout();
+    gettimeofday(&keypad.last_update_time, NULL);
+}
+
+static bool drive_keypad_kbd_update_timeout(void)
+{
+    struct timeval tv = {0, 0};
+    struct timeval timeout = {0, 0};
+    
+    drive_keypad_update_timeout(&timeout);
+    gettimeofday(&tv, NULL);
+    
+    timersub(&tv, &keypad.last_update_time, &tv);
+    
+    return timercmp(&tv, &timeout, >);
 }
 
 ALWAYS_INLINE static void drive_keypad_io_reset(void)
@@ -124,13 +152,12 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
     if(keypad_is == NULL) return E_NULL_POINTER;
     if(keypad_is->ioport == NULL) return E_NULL_POINTER;
     
+    memset(&keypad, 0x0, sizeof(drive_keypad_t));
+    
     keypad.ioport = keypad_is->ioport;
     keypad.reset_i2c_bus_proc = keypad_is->reset_i2c_bus_proc;
-    keypad.last_update_time = 0;
     keypad.kbd_need_update = true;
     keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_NONE;
-    keypad.last_key_pressed_time = 0;
-    keypad.last_key_repeat_time = 0;
     
     if(keypad_is->ioport_timeout){
         memcpy(&keypad.ioport_timeout, keypad_is->ioport_timeout, sizeof(struct timeval));
@@ -245,38 +272,52 @@ void drive_keypad_pressed(void)
     keypad.kbd_need_update = true;
 }
 
-static counter_t drive_keypad_repeat_timeout(void)
+ALWAYS_INLINE static void drive_keypad_repeat_timeout(struct timeval* timeout)
 {
-    static counter_t timeout = 0;
-    if(timeout == 0) timeout = system_counter_ticks_per_sec() >> 2; // 250 мс.
-    return timeout;
+    timeout->tv_sec = DRIVE_KEYPAD_KEY_REPEAT_TIMEOUT_S;
+    timeout->tv_usec = DRIVE_KEYPAD_KEY_REPEAT_TIMEOUT_US;
 }
 
-static counter_t drive_keypad_pressed_timeout(void)
+ALWAYS_INLINE static void drive_keypad_pressed_timeout(struct timeval* timeout)
 {
-    static counter_t timeout = 0;
-    if(timeout == 0) timeout = system_counter_ticks_per_sec(); // 1000 мс.
-    return timeout;
+    timeout->tv_sec = DRIVE_KEYPAD_KEY_PRESSED_TIMEOUT_S;
+    timeout->tv_usec = DRIVE_KEYPAD_KEY_PRESSED_TIMEOUT_US;
 }
 
 ALWAYS_INLINE static void drive_keypad_update_repeat_time(void)
 {
-    keypad.last_key_repeat_time = system_counter_ticks();
+    gettimeofday(&keypad.last_key_repeat_time, NULL);
 }
 
 ALWAYS_INLINE static void drive_keypad_update_pressed_time(void)
 {
-    keypad.last_key_pressed_time = system_counter_ticks();
+    gettimeofday(&keypad.last_key_pressed_time, NULL);
 }
 
-ALWAYS_INLINE static bool drive_keypad_repeat_is_timeout(void)
+static bool drive_keypad_repeat_is_timeout(void)
 {
-    return system_counter_diff(&keypad.last_key_repeat_time) >= drive_keypad_repeat_timeout();
+    struct timeval tv = {0, 0};
+    struct timeval timeout = {0, 0};
+    
+    drive_keypad_repeat_timeout(&timeout);
+    gettimeofday(&tv, NULL);
+    
+    timersub(&tv, &keypad.last_key_repeat_time, &tv);
+    
+    return timercmp(&tv, &timeout, >);
 }
 
-ALWAYS_INLINE static bool drive_keypad_pressed_is_timeout(void)
+static bool drive_keypad_pressed_is_timeout(void)
 {
-    return system_counter_diff(&keypad.last_key_pressed_time) >= drive_keypad_pressed_timeout();
+    struct timeval tv = {0, 0};
+    struct timeval timeout = {0, 0};
+    
+    drive_keypad_pressed_timeout(&timeout);
+    gettimeofday(&tv, NULL);
+    
+    timersub(&tv, &keypad.last_key_pressed_time, &tv);
+    
+    return timercmp(&tv, &timeout, >);
 }
 
 void drive_keypad_process(void)
@@ -357,7 +398,7 @@ static bool drive_keypad_update_sync(void)
         case DRIVE_KPD_KBD_UPD_UPDATING:
             keypad.kbd_upd_state = DRIVE_KPD_KBD_UPD_UPDATED;
             keypad.kbd_need_update = false;
-            keypad.last_update_time = system_counter_ticks();
+            drive_keypad_update_last_update_time();
             return true;
     }
     
