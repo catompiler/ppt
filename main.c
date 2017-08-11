@@ -139,7 +139,7 @@ static lm75_t heatsink_sensor;
 //! Таймаут обмена данными с датчиком температуры радиатора, мкс.
 #define HEATSINK_SENSOR_IO_TIMEOUT_US (200000)
 //! Таймаут попыток обмена данными с датчиком температуры радиатора, с.
-#define HEATSINK_SENSOR_TIMEOUT_S (25)
+#define HEATSINK_SENSOR_TIMEOUT_S (35)
 //! Период обновления температуры, сек.
 #define DRIVE_TEMP_UPDATE_PERIOD_S (10)
 
@@ -155,6 +155,12 @@ static lm75_t heatsink_sensor;
 static pca9555_t ioport;
 //! Таймаут обмена данными с расширителем ввода-вывода, мкс.
 #define IOPORT_IO_TIMEOUT_US (200000)
+
+
+// Watchdog работы задач IDLE.
+//! Время до сброса панельки / датчиков i2c.
+#define IDLE_WATCHDOG_TIMEOUT_S (5)
+
 
 //! TFT9341.
 static tft9341_t tft;
@@ -188,7 +194,8 @@ static tft9341_t tft;
 #define EXTI_PCA9555_Pin GPIO_Pin_7
 //! Линия PCA9555.
 #define EXTI_PCA9555_LINE EXTI_Line7
-
+//! Линия RTC Alarm.
+#define EXTI_RTC_ALARM_LINE EXTI_Line17
 
 //! Длина буфера ADC 1 и 2 в трансферах 32 бит.
 #define ADC12_RAW_BUFFER_DMA_TRANSFERS 4
@@ -394,14 +401,17 @@ IRQ_ATTRIBS void I2C2_ER_IRQHandler(void)
     i2c_bus_error_irq_handler(&i2c2);
 }
 
-IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
-{
-    rtc_alarm_interrupt_handler();
-}
-
 IRQ_ATTRIBS void RTC_IRQHandler(void)
 {
     rtc_interrupt_handler();
+}
+
+IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_RTC_ALARM_LINE) != RESET){
+        EXTI_ClearITPendingBit(EXTI_RTC_ALARM_LINE);
+    }
+    rtc_alarm_interrupt_handler();
 }
 
 /*
@@ -423,6 +433,15 @@ static void rtc_on_second(void)
     }
     
     drive_nvdata_update_time_params();
+}
+
+/*
+ * RTC alarm callback.
+ */
+static void idle_watchdog_reset_idle_tasks_hangs(void);
+static void rtc_on_alarm(void)
+{
+    idle_watchdog_reset_idle_tasks_hangs();
 }
 
 /*
@@ -826,6 +845,17 @@ static void init_PDR(void)
     PWR->CR |= PWR_CR_PVDE;
 }
 
+static void init_rtc_alarm_exti_line(void)
+{
+    EXTI_InitTypeDef EXTI_InitStructure;
+    EXTI_InitStructure.EXTI_Line = EXTI_RTC_ALARM_LINE;
+    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+    
+    EXTI_Init(&EXTI_InitStructure);
+}
+
 static void init_rtc_nvdata(void)
 {
     drive_nvdata_init();
@@ -854,6 +884,10 @@ static void init_rtc_nvdata(void)
     }
     
     rtc_set_second_callback(rtc_on_second);
+    
+    init_rtc_alarm_exti_line();
+    rtc_set_alarm_callback(rtc_on_alarm);
+    rtc_set_alarm_interrupt_enabled(false);
     
     NVIC_SetPriority(RTC_IRQn, IRQ_PRIOR_RTC);
     NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
@@ -2003,21 +2037,6 @@ static void init_drive_temp(void)
     drive_temp_init(&temp_is);
 }
 
-
-static void* main_task(void* arg)
-{
-    drive_ui_process();
-    
-    return NULL;
-}
-
-static void* drive_temp_task(void* arg)
-{
-    drive_temp_update();
-    
-    return NULL;
-}
-
 static void* drive_temp_reinit_gui_task(void* arg)
 {
     drive_ui_deinit();
@@ -2026,7 +2045,13 @@ static void* drive_temp_reinit_gui_task(void* arg)
     return NULL;
 }
 
-static void on_drive_reset(void)
+static void idle_watchdog_reset(void)
+{
+    time_t t = time(NULL) + IDLE_WATCHDOG_TIMEOUT_S;
+    rtc_set_alarm(&t);
+}
+
+static void reset_idle_tasks_hangs(void)
 {
     // unlock rs485 dma channels.
     dma_channel_unlock(DMA1_Channel4);
@@ -2034,11 +2059,53 @@ static void on_drive_reset(void)
     
     //modbus_rs485_set_input();
     
-    reset_i2c1();
-    reset_i2c2();
+    reset_ioport();
+    reset_heatsink_sensor();
+}
+
+static void idle_watchdog_reset_idle_tasks_hangs(void)
+{
+    reset_idle_tasks_hangs();
+    idle_watchdog_reset();
     
+    // Resets counters.
+#ifdef DEBUG_RESET_I2C
+    param_t* p_pca = settings_param_by_id(PARAM_ID_DEBUG_2);
+    if(p_pca){
+        unsigned int rst_cnt = settings_param_valueu(p_pca);
+        settings_param_set_valueu(p_pca, rst_cnt + 999);
+    }
+    param_t* p_lm = settings_param_by_id(PARAM_ID_DEBUG_3);
+    if(p_lm){
+        unsigned int rst_cnt = settings_param_valueu(p_lm);
+        settings_param_set_valueu(p_lm, rst_cnt + 999);
+    }
+#endif
+}
+
+static void* main_task(void* arg)
+{
+    idle_watchdog_reset();
+    drive_ui_process();
+    
+    return NULL;
+}
+
+static void* drive_temp_task(void* arg)
+{
+    idle_watchdog_reset();
+    drive_temp_update();
+    drive_temp_regulate_fan();
+    
+    return NULL;
+}
+
+static void on_drive_reset(void)
+{
+    reset_idle_tasks_hangs();
     scheduler_add_task(drive_temp_reinit_gui_task, 1, NULL, TASK_RUN_ONCE, NULL);
 }
+
 
 
 int main(void)
@@ -2116,8 +2183,6 @@ int main(void)
     init_heatsink_sensor();
     init_fan_pwm();
     init_drive_temp();
-    
-    //drive_set_reference(REFERENCE_MAX);
     
     scheduler_add_task(main_task, 0, NULL, 0, NULL);
     scheduler_add_task(drive_temp_task, 0, NULL, 0, NULL);
