@@ -50,6 +50,11 @@ extern void drive_temp_update_settings(void);
 extern bool drive_temp_update(void);
 
 /**
+ * Выполняет регулирование оборотов вентилятора.
+ */
+extern void drive_temp_regulate_fan(void);
+
+/**
  * Получает доступность температуры радиатора.
  * @return Доступность температуры радиатора.
  */

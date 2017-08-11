@@ -108,7 +108,7 @@ void drive_temp_update_settings(void)
     drive_temp.fan_eco_time = settings_valueu(PARAM_ID_FAN_ECO_COOLING_TIME);
 }
 
-static void drive_temp_regulate_fan(void)
+void drive_temp_regulate_fan(void)
 {
     if(!drive_temp.set_fan_rpm) return;
     
@@ -235,8 +235,6 @@ bool drive_temp_update(void)
     }
     
     drive_temp.updated = update_success;
-    
-    drive_temp_regulate_fan();
     
     drive_temp_update_params();
     
