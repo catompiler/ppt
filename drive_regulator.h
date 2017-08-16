@@ -184,6 +184,18 @@ extern bool drive_regulator_exc_enabled(void);
 extern void drive_regulator_set_exc_enabled(bool enabled);
 
 /**
+ * Получает разрешение IR-компенсации.
+ * @return Разрешение IR-компенсации.
+ */
+extern bool drive_regulator_ir_compensation_enabled(void);
+
+/**
+ * Устанавливает разрешение IR-компенсации.
+ * @param enabled Разрешение IR-компенсации.
+ */
+extern void drive_regulator_set_ir_compensation_enabled(bool enabled);
+
+/**
  * Устанавливает коэффициенты ПИД-регулятора скорости.
  * @param kp Коэффициент пропорционального звена.
  * @param ki Коэффициент интегрального звена.
@@ -296,11 +308,8 @@ extern fixed32_t drive_regulator_exc_open_angle(void);
 
 /**
  * Выполняет ПИД-регулирование.
- * @param dt Интервал времени с прошлого регулирования.
- * @param u_rot_back Напряжения ротора по обратной связи.
- * @param i_exc_back Ток возбуждения по обратной связи.
  * @return Флаг регулировки.
  */
-extern bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_rot_back, fixed32_t i_exc_back);
+extern bool drive_regulator_regulate(void);
 
 #endif /* DRIVE_REGULATOR_H */

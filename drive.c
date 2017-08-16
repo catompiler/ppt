@@ -1550,29 +1550,14 @@ static bool drive_regulate(void)
     if(!drive_power_new_data_avail(DRIVE_POWER_CHANNELS)) return false;
     
     if(drive_can_open_triacs()){
-        //fixed32_t U_rot = drive_power_channel_real_value(DRIVE_POWER_Urot);
-        fixed32_t U_rot = drive_motor_u_rot_wires();
-        fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
-        fixed32_t I_exc = drive_power_channel_real_value(DRIVE_POWER_Iexc);
 
-        drive_regulator_regulate(U_rot, I_rot, I_exc);
+        drive_regulator_regulate();
 
         fixed32_t rot_angle = drive_regulator_rot_open_angle();
         fixed32_t exc_angle = drive_regulator_exc_open_angle();// + DRIVE_EXC_PID_VALUE_DELTA;
 
         drive_triacs_set_pairs_open_angle(rot_angle);
-        //drive_triacs_set_pairs_open_angle(fixed32_make_from_int(30));
         drive_triacs_set_exc_open_angle(exc_angle);
-        //drive_triacs_set_exc_open_angle(fixed32_make_from_int(90));
-
-        //pid_controller_t* pid_spd = drive_regulator_spd_pid();
-        //pid_controller_t* pid_rot = drive_regulator_rot_pid();
-
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_6), pid_spd->value);
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_7), pid_rot->value);
-        //settings_param_set_valuef(settings_param_by_id(PARAM_ID_DEBUG_0), pid->prev_i);
-        
-        //drive_update_pid_parameters();
         
         return true;
     }else{
@@ -2153,6 +2138,7 @@ err_t drive_update_settings(void)
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM));
     drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
+    drive_regulator_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
                                 settings_valuef(PARAM_ID_ROT_PID_K_I),
                                 settings_valuef(PARAM_ID_ROT_PID_K_D));

@@ -26,6 +26,8 @@ typedef struct _Drive_Regulator {
     bool rot_enabled; //!< Разрешение регулирования якоря.
     bool exc_enabled; //!< Разрешение регулирования возбуждения.
     
+    bool ir_comp_enabled; //!< Разрешение IR-компенсации.
+    
     fixed32_t U_rot_nom; //!< Номинальное напряжение якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
@@ -242,6 +244,16 @@ void drive_regulator_set_exc_enabled(bool enabled)
     }
 }
 
+bool drive_regulator_ir_compensation_enabled(void)
+{
+    return regulator.ir_comp_enabled;
+}
+
+void drive_regulator_set_ir_compensation_enabled(bool enabled)
+{
+    regulator.ir_comp_enabled = enabled;
+}
+
 void drive_regulator_set_spd_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
 {
     pid_controller_set_kp(&regulator.spd_pid, kp);
@@ -336,9 +348,19 @@ fixed32_t drive_regulator_exc_open_angle(void)
     return pid_controller_value(&regulator.exc_pid);
 }
 
-static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_rot_back, fixed32_t i_exc_back)
+static void drive_regulator_regulate_impl(void)
 {
     if(regulator.rot_enabled){
+        fixed32_t u_rot_back = 0;
+        
+        if(regulator.ir_comp_enabled){
+            u_rot_back = drive_motor_u_rot_wires();
+        }else{
+            u_rot_back = drive_power_channel_real_value(DRIVE_POWER_Urot);
+        }
+        
+        fixed32_t i_rot_back = drive_power_channel_real_value(DRIVE_POWER_Irot);
+        
         ramp_calc_step(&regulator.speed_ramp);
         fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / 100;
         
@@ -360,28 +382,29 @@ static void drive_regulator_regulate_impl(fixed32_t u_rot_back, fixed32_t i_rot_
     }
     
     if(regulator.exc_enabled){
+        fixed32_t i_exc_back = drive_power_channel_real_value(DRIVE_POWER_Iexc);
         fixed32_t i_exc_e = regulator.I_exc - i_exc_back;
         pid_controller_calculate(&regulator.exc_pid, i_exc_e, DRIVE_PID_DT);
     }
 }
 
-bool drive_regulator_regulate(fixed32_t u_rot_back, fixed32_t i_rot_back, fixed32_t i_exc_back)
+bool drive_regulator_regulate(void)
 {
     switch(regulator.state){
         default:
         case DRIVE_REGULATOR_STATE_IDLE:
             return false;
         case DRIVE_REGULATOR_STATE_START:
-            drive_regulator_regulate_impl(u_rot_back, i_rot_back, i_exc_back);
+            drive_regulator_regulate_impl();
             if(ramp_current_reference(&regulator.speed_ramp) >= regulator.reference){
                 regulator.state = DRIVE_REGULATOR_STATE_RUN;
             }
             break;
         case DRIVE_REGULATOR_STATE_RUN:
-            drive_regulator_regulate_impl(u_rot_back, i_rot_back, i_exc_back);
+            drive_regulator_regulate_impl();
             break;
         case DRIVE_REGULATOR_STATE_STOP:
-            drive_regulator_regulate_impl(u_rot_back, i_rot_back, i_exc_back);
+            drive_regulator_regulate_impl();
             if(ramp_done(&regulator.speed_ramp)){
                 regulator.state = DRIVE_REGULATOR_STATE_IDLE;
             }

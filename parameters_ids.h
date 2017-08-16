@@ -112,6 +112,10 @@
  * Режим регулятора.
  */
 #define PARAM_ID_REGULATOR_MODE 1125
+/**
+ * Разрешение IR-компенсации.
+ */
+#define PARAM_ID_REGULATOR_IR_COMPENSATION 1130
 
 /*
  * Возбуждение.
