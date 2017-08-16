@@ -165,7 +165,12 @@
 #define TR_ID_MENU_MOTOR_EFF_NOM         269
 //! Ном. сопротивление якоря.
 #define TR_ID_MENU_MOTOR_R_ROT_NOM       270
-
+//! Номинальное сопротивление возбуждения
+#define TR_ID_MENU_MOTOR_R_EXC_NOM  271
+//! Максимальный ток якоря.
+#define TR_ID_MENU_MOTOR_I_ROT_MAX  272
+//! Сопротивление проводов до двигателя.
+#define TR_ID_MENU_MOTOR_R_WIRES  273
 //! Якорь.
 #define TR_ID_MENU_ROTOR            274
 //! Возбуждение.
@@ -253,7 +258,7 @@
 //! Тепловая защита.
 #define TR_ID_MENU_THERMAL_OVERLOAD_PROT 340
 //! Время работы при перегрузе 6x.
-#define TR_ID_MENU_THERMAL_OVERLOAD_PROT_TIME_6I 341
+#define TR_ID_MENU_THERMAL_OVERLOAD_PROT_TIME_2I 341
 //! Экстренный останов.
 #define TR_ID_MENU_EMERGENCY_STOP   342
 //! Напряжение сети.
@@ -566,11 +571,12 @@
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ib     723 
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Uc     724
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ic     725     
-#define TR_ID_ENUM_TILES_DRIVE_POWER_Urot   726   
+#define TR_ID_ENUM_TILES_DRIVE_POWER_Urot   726
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Irot   727 
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iexc   728
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
+#define TR_ID_ENUM_TILES_DRIVE_POWER_U_ROT_WIRES  731
 #define TR_ID_ENUM_TILES_HEATSINK_TEMP            740
 #define TR_ID_ENUM_TILES_HEATSINK_FAN_RPM         741
 #define TR_ID_ENUM_TILES_TRIACS_PAIRS_OPEN_ANGLE  742
@@ -614,6 +620,8 @@
 #define TR_ID_HOME_PHASE_C_CURRENT 908
 //! Напряжение якоря
 #define TR_ID_HOME_ANCHOR_VOLTAGE 910
+//! Напряжение на якоре с учётом падения напряжения на проводах.
+#define TR_ID_HOME_U_ROT_WIRES    915
 //! Ток якоря
 #define TR_ID_HOME_ANCHOR_CURRENT 920
 //! Ток возбуждения

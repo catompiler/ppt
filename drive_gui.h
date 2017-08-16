@@ -14,7 +14,7 @@
 //! Список доступных языков интерфейса
 #define GUI_TILE_LANGUAGES_COUNT 2
 #define GUI_TILE_LANGUAGES_MIN 0
-#define GUI_TILE_LANGUAGES_MAX (GUI_TILE_TYPES_COUNT - 1)
+#define GUI_TILE_LANGUAGES_MAX (GUI_TILE_LANGUAGES_COUNT - 1)
 #define GUI_TILE_LANGUAGES(arg_name, arg_count)\
         static const lang_id_t arg_name[arg_count] = 
 #define GUI_TILE_LANGUAGE(lang_id) lang_id
