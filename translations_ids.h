@@ -784,6 +784,8 @@
 #define TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD      2107 //!< Тепловая защита.
 #define TR_ID_DRIVE_ERROR_ROT_BREAK             2108 //!< Обрыв якоря.
 #define TR_ID_DRIVE_ERROR_HEATSINK_TEMP         2109 //!< Перегрев радиатора.
+#define TR_ID_DRIVE_ERROR_ROT_MEASURE_BREAK     2110 //!< Обрыв измерения якоря.
+#define TR_ID_DRIVE_ERROR_SENSOR                2111 //!< Ошибка датчиков.
 //! Описание ошибок питания привода
 #define TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ua            2121 //!< 
 #define TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ua             2122 //!< 
@@ -820,6 +822,8 @@
 #define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
 #define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
 #define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
+#define TR_ID_DRIVE_WARNING_TRIAC                     2108 //!< Ошибка тиристоров.
+#define TR_ID_DRIVE_WARNING_SENSOR                    2109 //!< Ошибка датчиков.
 //! Описание предупреждений питания привода
 #define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua          2221 //!<
 #define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua           2222 //!<

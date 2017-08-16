@@ -96,7 +96,7 @@ bool gui_menu_event_power_error (drive_event_t* event, drive_power_error_t error
 bool gui_menu_event_power_warning(drive_event_t* event, drive_power_warning_t warning);
 
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_EVENT_ICON_CONDITIONS_COUNT 16
+#define GUI_EVENT_ICON_CONDITIONS_COUNT 17
 GUI_EVENT_ICON_CONDITIONS(gui_event_icon_conditions, GUI_EVENT_ICON_CONDITIONS_COUNT) {
     // ошибки
     GUI_EVENT_ICON_CONDITION(gui_menu_event_error,         DRIVE_ERROR_ETC,            ICONS_STATUSBAR_VAL_WARNING,    THEME_COLOR_RED_L),
@@ -115,12 +115,13 @@ GUI_EVENT_ICON_CONDITIONS(gui_event_icon_conditions, GUI_EVENT_ICON_CONDITIONS_C
     GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_I,          ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Ifan,       ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_OVERHEAT,         ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_ORANGE),
+    GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_TRIAC,            ICONS_STATUSBAR_VAL_TRIAC,      THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_warning,       DRIVE_WARNING_FAN_FAIL,         ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_ORANGE),
     GUI_EVENT_ICON_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_ORANGE),
 };
 
 //! Таблица отображения текста ошибок и предупреждений события в зависимости от условий
-#define GUI_EVENT_TEXT_CONDITIONS_COUNT 71
+#define GUI_EVENT_TEXT_CONDITIONS_COUNT 75
 GUI_EVENT_TEXT_CONDITIONS(gui_event_text_conditions, GUI_EVENT_TEXT_CONDITIONS_COUNT) {
     // ошибки
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_POWER_DATA_NOT_AVAIL, TEXT(TR_ID_DRIVE_ERROR_POWER_DATA_NOT_AVAIL)), //!< Данные питания не поступают с АЦП.
@@ -132,6 +133,8 @@ GUI_EVENT_TEXT_CONDITIONS(gui_event_text_conditions, GUI_EVENT_TEXT_CONDITIONS_C
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_THERMAL_OVERLOAD, TEXT(TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD)), //!< Тепловая защита.
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_ROT_BREAK, TEXT(TR_ID_DRIVE_ERROR_ROT_BREAK)), //!< Обрыв якоря.
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_HEATSINK_TEMP, TEXT(TR_ID_DRIVE_ERROR_HEATSINK_TEMP)), //!< Перегрев радиатора.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_ROT_MEASURE_BREAK, TEXT(TR_ID_DRIVE_ERROR_ROT_MEASURE_BREAK)), //
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_error, DRIVE_ERROR_SENSOR, TEXT(TR_ID_DRIVE_ERROR_SENSOR)), //
     // ошибки питания
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_UNDERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ua)),
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_error, DRIVE_POWER_ERROR_OVERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ua)),
@@ -168,6 +171,8 @@ GUI_EVENT_TEXT_CONDITIONS(gui_event_text_conditions, GUI_EVENT_TEXT_CONDITIONS_C
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_THERMAL_OVERLOAD, TEXT(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD)),//!< Перегрев.
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_FAN_FAIL, TEXT(TR_ID_DRIVE_WARNING_FAN_FAIL)),//!< Ошибка вентилятора.
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_HEATSINK_TEMP, TEXT(TR_ID_DRIVE_WARNING_HEATSINK_TEMP)),//!< Перегрев радиатора.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_SENSOR, TEXT(TR_ID_DRIVE_WARNING_SENSOR)),//!< Ошибка датчиков.
+    GUI_EVENT_TEXT_CONDITION(gui_menu_event_warning, DRIVE_WARNING_TRIAC, TEXT(TR_ID_DRIVE_WARNING_TRIAC)),//!< Ошибка тиристоров.
     // предупреждения питания
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_UNDERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua)),//!< 
     GUI_EVENT_TEXT_CONDITION(gui_menu_event_power_warning, DRIVE_POWER_WARNING_OVERFLOW_Ua, TEXT(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua)),//!< 

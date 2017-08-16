@@ -54,7 +54,7 @@ typedef struct _Gui_Icon_Condition {
 EXTERN bool gui_statusbar_drive_ready();
 
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_ICON_CONDITIONS_COUNT 23
+#define GUI_ICON_CONDITIONS_COUNT 24
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // состояние
     GUI_ICON_CONDITION(gui_statusbar_drive_ready,     NULL,   0,  THEME_COLOR_BLUE_L,    &icons_statusbar_anim_ready),
@@ -76,6 +76,7 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_I,          ICONS_STATUSBAR_VAL_FAULT_I,    THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Ifan,       ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_OVERHEAT,         ICONS_STATUSBAR_VAL_OVERHEAT,   THEME_COLOR_YELLOW, NULL),
+    GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_TRIAC,            ICONS_STATUSBAR_VAL_TRIAC,      THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_warning,       DRIVE_WARNING_FAN_FAIL,         ICONS_STATUSBAR_VAL_FAN,        THEME_COLOR_YELLOW, NULL),
     GUI_ICON_CONDITION(drive_power_warning, DRIVE_POWER_WARNING_Iref,       ICONS_STATUSBAR_VAL_LOOP_BREAK, THEME_COLOR_YELLOW, NULL),
  

@@ -3,8 +3,12 @@
 
 // другие ошибки
 #define DRIVE_ERROR_ETC     DRIVE_ERROR_ROT_BREAK |\
+                            DRIVE_ERROR_ROT_MEASURE_BREAK |\
                             DRIVE_ERROR_POWER_DATA_NOT_AVAIL |\
-                            DRIVE_ERROR_PHASE
+                            DRIVE_ERROR_PHASE |\
+                            DRIVE_ERROR_SENSOR |\
+                            DRIVE_ERROR_PHASE_ANGLE |\
+                            DRIVE_ERROR_PHASE_SYNC
 
 // ошибки по перегреву
 #define DRIVE_ERROR_OVERHEAT    DRIVE_ERROR_THERMAL_OVERLOAD |\

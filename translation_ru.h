@@ -508,6 +508,8 @@ TEXT_TR(TR_ID_DRIVE_ERROR_PHASE_SYNC, "E#20: Ошибка синхронизац
 TEXT_TR(TR_ID_DRIVE_ERROR_THERMAL_OVERLOAD, "E#40: Тепловая защита.")
 TEXT_TR(TR_ID_DRIVE_ERROR_ROT_BREAK, "E#80: Обрыв якоря.")
 TEXT_TR(TR_ID_DRIVE_ERROR_HEATSINK_TEMP, "E#200: Перегрев радиатора.")
+TEXT_TR(TR_ID_DRIVE_ERROR_ROT_MEASURE_BREAK, "E#100: Обрыв измерения якоря.")
+TEXT_TR(TR_ID_DRIVE_ERROR_SENSOR, "E#400: Ошибка датчиков.")        
 // питания
 TEXT_TR(TR_ID_DRIVE_POWER_ERROR_UNDERFLOW_Ua, "EP#1: Низкое напряжение фазы A.")
 TEXT_TR(TR_ID_DRIVE_POWER_ERROR_OVERFLOW_Ua, "EP#2: Высокое напряжение фазы A.")
@@ -544,6 +546,8 @@ TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_SYNC, "W#20: Ошибка синхрониза
 TEXT_TR(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD, "W#40: Перегрев.")
 TEXT_TR(TR_ID_DRIVE_WARNING_FAN_FAIL, "W#100: Ошибка вентилятора.")
 TEXT_TR(TR_ID_DRIVE_WARNING_HEATSINK_TEMP, "W#200: Перегрев радиатора.")
+TEXT_TR(TR_ID_DRIVE_WARNING_TRIAC, "W#1000: Ошибка тиристоров.")
+TEXT_TR(TR_ID_DRIVE_WARNING_SENSOR, "W#400: Ошибка датчиков.")
 // питания
 TEXT_TR(TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua, "WP#1: Низкое напряжение фазы A.")
 TEXT_TR(TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua, "WP#2: Высокое напряжение фазы A.")
