@@ -546,7 +546,7 @@ TEXT_TR(TR_ID_DRIVE_WARNING_POWER, "W#2: Предупреждение по пи�
 TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_ANGLE, "W#10: Ошибка угла между фазами.")
 TEXT_TR(TR_ID_DRIVE_WARNING_PHASE_SYNC, "W#20: Ошибка синхронизации фаз.")
 TEXT_TR(TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD, "W#40: Перегрев.")
-TEXT_TR(TR_ID_DRIVE_WARNING_FAN_FAIL, "W#100: Ошибка вентилятора.")
+TEXT_TR(TR_ID_DRIVE_WARNING_FAN_FAIL, "W#800: Ошибка вентилятора.")
 TEXT_TR(TR_ID_DRIVE_WARNING_HEATSINK_TEMP, "W#200: Перегрев радиатора.")
 TEXT_TR(TR_ID_DRIVE_WARNING_TRIAC, "W#1000: Ошибка тиристоров.")
 TEXT_TR(TR_ID_DRIVE_WARNING_SENSOR, "W#400: Ошибка датчиков.")
