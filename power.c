@@ -7,15 +7,23 @@
 #include "bsqrt.h"
 
 
-//! Число отбрасываемых минимальных значений.
-#define POWER_FILTER_SKIP_MIN 1
-//! Число отбрасываемых максимальных значений.
-#define POWER_FILTER_SKIP_MAX 1
-
 
 static void power_filter_reset(power_filter_t* filter)
 {
-    memset(filter, 0x0, sizeof(power_filter_t));
+    memset(filter->buffer, 0x0, sizeof(power_filter_value_t) * POWER_FILTER_SIZE_MAX);
+    filter->index = 0;
+    filter->count = 0;
+}
+
+static void power_filter_init(power_filter_t* filter, size_t max_size)
+{
+    if(max_size > POWER_FILTER_SIZE_MAX) max_size = POWER_FILTER_SIZE_MAX;
+    if(max_size == 0) max_size = 1;
+    
+    memset(filter->buffer, 0x0, sizeof(power_filter_value_t) * POWER_FILTER_SIZE_MAX);
+    filter->index = 0;
+    filter->count = 0;
+    filter->size = (uint16_t)max_size;
 }
 
 static void power_filter_put(power_filter_t* filter, int32_t sum, uint16_t count)
@@ -23,59 +31,23 @@ static void power_filter_put(power_filter_t* filter, int32_t sum, uint16_t count
     filter->buffer[filter->index].sum = sum;
     filter->buffer[filter->index].count = count;
     
-    if(filter->count < POWER_FILTER_SIZE) filter->count ++;
-    if(++ filter->index >= POWER_FILTER_SIZE) filter->index = 0;
-}
-
-static void power_filter_copy_values(power_filter_t* filter, power_filter_value_t* values, size_t count, size_t index)
-{
-    size_t i = 0;
-    size_t j = 0;
-    
-    for(; i < count; i ++){
-        if(i != index){
-            memcpy(&values[j ++], &filter->buffer[i], sizeof(power_filter_value_t));
-        }
-    }
-}
-
-static int power_filter_cmp(const void* a, const void* b)
-{
-    return (((const power_filter_value_t*)a)->sum - ((const power_filter_value_t*)b)->sum);
+    if(filter->count < filter->size) filter->count ++;
+    if(++ filter->index >= filter->size) filter->index = 0;
 }
 
 static int32_t power_filter_calculate(power_filter_t* filter, int32_t* ret_count)
 {
-    if(filter->count <= 1) return 0;
+    if(filter->count == 0) return 0;
     
-    CRITICAL_ENTER();
-    
-    size_t count = filter->count - 1;
-    size_t index = filter->index;
-    
-    CRITICAL_EXIT();
-    
-    power_filter_value_t buffer[count];
-    
-    //memcpy(buffer, filter->buffer, sizeof(power_filter_value_t) * filter->count);
-    power_filter_copy_values(filter, buffer, count, index);
-    
-    qsort(buffer, count, sizeof(power_filter_value_t), power_filter_cmp);
+    size_t count = filter->count;
     
     int32_t val = 0;
     int32_t count_val = 0;
-    size_t from = 0;
-    size_t to = count;
     
-    if(count > (POWER_FILTER_SKIP_MIN + POWER_FILTER_SKIP_MAX)){
-        from += POWER_FILTER_SKIP_MIN;
-        to -= POWER_FILTER_SKIP_MAX;
-    }
-    
-    while(from < to){
-        val       += buffer[from].sum;
-        count_val += buffer[from].count;
-        from ++;
+    size_t i;
+    for(i = 0; i < count; i ++){
+        val       += filter->buffer[i].sum;
+        count_val += filter->buffer[i].count;
     }
     
     if(!ret_count){
@@ -87,14 +59,12 @@ static int32_t power_filter_calculate(power_filter_t* filter, int32_t* ret_count
     return val;
 }
 
-/*static bool power_filter_filled(power_filter_t* filter)
-{
-    return filter->count == POWER_FILTER_SIZE;
-}*/
-
-err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k)
+err_t power_value_init(power_value_t* value, power_channel_type_t type, size_t filter_size, fixed32_t k)
 {
     memset(value, 0x0, sizeof(power_value_t));
+    
+    power_filter_init(&value->filter_value, filter_size);
+    power_filter_init(&value->filter_zero, filter_size);
     
     value->type = type;
     value->adc_mult = k;
@@ -121,39 +91,6 @@ err_t power_set_soft_channel(power_t* power, size_t channel, bool is_soft)
     
     return E_NO_ERROR;
 }
-
-/*ALWAYS_INLINE static int16_t power_value_soft_to_raw(fixed32_t value)
-{
-    return  (int16_t)(value >> 10);
-}
-
-ALWAYS_INLINE static fixed32_t power_value_raw_to_soft(int16_t value)
-{
-    return ((fixed32_t)value) << 10;
-}*/
-
-/*static void power_channel_set_soft_value(power_value_t* channel, fixed32_t value)
-{
-    // Упакованное значение.
-    int32_t raw_value = power_value_soft_to_raw(value);
-    
-    // Мгновенное сырое значение канала АЦП.
-    channel->raw_value_inst = raw_value;
-    // Мгновенное реальное значение канала АЦП.
-    channel->real_value_inst = value;
-    
-    // Увеличим число значений в сумме.
-    channel->count ++;
-    
-    // Если канал питания - AC.
-    if(channel->type == POWER_CHANNEL_AC){
-        // Квадрат значения для RMS.
-        channel->sum += raw_value * raw_value;
-    }else{
-        // Значение для среднего.
-        channel->sum += raw_value;
-    }
-}*/
 
 static void power_channel_set_soft_value(power_value_t* channel, fixed32_t value)
 {
@@ -189,16 +126,6 @@ static void power_channel_set_soft_value(power_value_t* channel, fixed32_t value
         // Значение для среднего.
         channel->sum += raw_value;
     }
-    
-    // Значение АЦП.
-    /*int32_t adc_value = raw_value + channel->raw_zero_cal;
-    
-    channel->raw_adc_value_inst = (uint16_t)adc_value;
-    
-    // Значение нуля АЦП.
-    channel->sum_zero += adc_value;
-    // Увеличим число измерений значения нуля.
-    channel->count_zero ++;*/
 }
 
 err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t value)

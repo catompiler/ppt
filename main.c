@@ -207,12 +207,10 @@ static tft9341_t tft;
 #define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS)
 //! Буфер ADC.
 static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
-//! Число измерений ADC.
-#define ADC_MEASUREMENTS_PER_PERIOD (DRIVE_POWER_ADC_FREQ / DRIVE_POWER_FREQ)
 //! Число измерений ADC для вычисления питания.
-#define ADC_MEASUREMENTS_FOR_CALCULATION (ADC_MEASUREMENTS_PER_PERIOD / 2)
+//#define ADC_MEASUREMENTS_FOR_CALCULATION (POWER_ADC_MEASUREMENTS_PER_PERIOD / 2)
 //! Число выполненных измерений ADC.
-static unsigned int adc_data_measured = 0;
+//static unsigned int adc_data_measured = 0;
 
 
 // Константы для цифровых входов-выходов.
@@ -499,11 +497,11 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
         
         drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
         
-        if(++ adc_data_measured >= ADC_MEASUREMENTS_FOR_CALCULATION){
+        /*if(++ adc_data_measured >= ADC_MEASUREMENTS_FOR_CALCULATION){
             adc_data_measured = 0;
             
             drive_process_power_accumulated_data(DRIVE_POWER_CHANNELS);
-        }
+        }*/
     }
 }
 
@@ -1535,13 +1533,15 @@ static void init_adc_timer(void)
 {
     TIM_DeInit(TIM1);
     
+#define ADC_TIM_PRESCALER 10
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = 20-1;                    // Делитель (0000...FFFF)
+            tim1_is.TIM_Prescaler = ADC_TIM_PRESCALER-1;                    // Делитель (0000...FFFF)
             tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim1_is.TIM_Period = 1125-1;                     // Значение периода (0000...FFFF)
+            tim1_is.TIM_Period = (72000000 / ADC_TIM_PRESCALER / POWER_ADC_FREQ)-1;                     // Значение периода (0000...FFFF)
             tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
     TIM_TimeBaseInit(TIM1, &tim1_is);
+#undef ADC_TIM_PRESCALER
 
     TIM_OCInitTypeDef tim1_oc_is;
     TIM_OCStructInit(&tim1_oc_is);

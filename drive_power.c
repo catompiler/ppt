@@ -29,7 +29,7 @@ static const uint16_t drive_power_osc_channels_nums[DRIVE_POWER_OSC_CHANNELS_COU
  * Делитель измерений АЦП.
  * Число точек за период осцилограммы = Число измерений за период ADC / (делитель измерений АЦП + 1).
  */
-#define DRIVE_POWER_OSC_ADC_DIVIDER 1
+#define DRIVE_POWER_OSC_ADC_DIVIDER (POWER_ADC_MEASUREMENTS_PER_PERIOD / DRIVE_POWER_OSC_PERIOD_POINTS - 1)
 
 //! Тип буфера для хранения осцилограмм.
 typedef struct _Oscillogram_Buf {
@@ -93,9 +93,29 @@ typedef struct _Triacs_Diag {
     bool fail; //!< Флаг ошибки тиристоров.
 } triacs_diag_t;
 
+
+//! Максимальный размер фильтра канала питания.
+#define CHANNEL_FILTER_MAX_SIZE 30 // 200 мс.
+
+//! Максимальное время усреднения фильтра.
+#define CHANNEL_FILTER_MAX_TIME_MS 200
+
+//! Размер фильтра канала питания по-умолчанию.
+#define CHANNEL_FILTER_DEFAULT_SIZE 1 // 6.67 мс.
+
+//! Фильтр значений каналов АЦП.
+typedef struct _Channel_Filter {
+    fixed32_t buffer[CHANNEL_FILTER_MAX_SIZE]; //!< Сумма значений канала питания.
+    fixed32_t value; //!< Вычисленное значение фильтра.
+    uint16_t count; //!< Количество значений канала питания.
+    uint16_t index; //!< Индекс текущего элемента в фильтре.
+    uint16_t size;  //!< Размер буфера фильтра.
+} channel_filter_t;
+
 //! Тип питания привода.
 typedef struct _Drive_Power {
     power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
+    channel_filter_t channel_filters[DRIVE_POWER_CHANNELS_COUNT]; //!< Фильтры каналов АЦП.
     power_t power; //!< Питание.
     size_t processing_iters; //!< Число итераций для накопления и обработки данных.
     size_t iters_processed; //!< Число итераций обработки данных.
@@ -117,6 +137,89 @@ typedef struct _Drive_Power {
 //! Питание привода.
 static drive_power_t drive_power;
 
+
+static void channel_filter_reset(channel_filter_t* filter)
+{
+    memset(filter->buffer, 0x0, sizeof(fixed32_t) * CHANNEL_FILTER_MAX_SIZE);
+    filter->index = 0;
+    filter->count = 0;
+}
+
+static void channel_filter_resize(channel_filter_t* filter, size_t size)
+{
+    if(size > CHANNEL_FILTER_MAX_SIZE) size = CHANNEL_FILTER_MAX_SIZE;
+    if(size == 0) size = 1;
+    
+    filter->size = (uint16_t)size;
+    if(filter->count > filter->size) filter->count = filter->size;
+    if(filter->index >= filter->size) filter->index = 0;
+}
+
+static void channel_filter_resize_ms(channel_filter_t* filter, uint32_t time_ms)
+{
+    size_t size = (time_ms * CHANNEL_FILTER_MAX_SIZE +
+                   CHANNEL_FILTER_MAX_TIME_MS / 2) / CHANNEL_FILTER_MAX_TIME_MS;
+    
+    channel_filter_resize(filter, size);
+}
+
+static void channel_filter_init(channel_filter_t* filter, size_t size)
+{
+    memset(filter->buffer, 0x0, sizeof(fixed32_t) * CHANNEL_FILTER_MAX_SIZE);
+    filter->index = 0;
+    filter->count = 0;
+    
+    channel_filter_resize(filter, size);
+}
+
+static void channel_filter_put(channel_filter_t* filter, fixed32_t value)
+{
+    filter->buffer[filter->index] = value;
+    
+    if(filter->count < filter->size) filter->count ++;
+    if(++ filter->index >= filter->size) filter->index = 0;
+}
+
+static void channel_filter_calculate(channel_filter_t* filter)
+{
+    size_t count = filter->count;
+    
+    fixed32_t sum_val = 0;
+    
+    size_t i;
+    for(i = 0; i < count; i ++){
+        sum_val += filter->buffer[i];
+    }
+    
+    if(count > 1) sum_val /= count;
+    
+    filter->value = sum_val;
+}
+
+
+static void drive_power_reset_channel_filters(void)
+{
+    size_t i;
+    for(i = 0; i < DRIVE_POWER_CHANNELS_COUNT; i ++){
+        channel_filter_reset(&drive_power.channel_filters[i]);
+    }
+}
+
+static void drive_power_calc_channel_filter(size_t channel)
+{
+    channel_filter_t* filter = &drive_power.channel_filters[channel];
+    
+    channel_filter_put(filter, power_channel_real_value(&drive_power.power, channel));
+    channel_filter_calculate(filter);
+}
+
+static void drive_power_calc_channel_filters(void)
+{
+    size_t i;
+    for(i = 0; i < DRIVE_POWER_CHANNELS_COUNT; i ++){
+        drive_power_calc_channel_filter(i);
+    }
+}
 
 
 static void drive_power_init_triacs_diag(void)
@@ -142,31 +245,29 @@ err_t drive_power_init(void)
     
     drive_power.processing_iters = DRIVE_POWER_PROCESSING_ITERS_DEFAULT;
     
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x10000); // Ua //0x4478
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x10000); // Ia
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x10000); // Ub //0x44ac
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x10000); // Ib
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x10000); // Uc //0x450b
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x10000); // Ic
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0x10000); // Urot //0x6861
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x10000); // Irot //0x2e14
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x10000); // Iexc //0x1bd
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ua //0x4478
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ia
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ub //0x44ac
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ib
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Uc //0x450b
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ic
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Urot //0x6861
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Irot //0x2e14
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Iexc //0x1bd
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Iref
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Ifan
     
-    /*
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, 0x6FE1); // Ua //0x4478
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, 0x5f11); // Ia
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, 0x7037); // Ub //0x44ac
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ib],POWER_CHANNEL_AC, 0x5f11); // Ib
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Uc],POWER_CHANNEL_AC, 0x70D2); // Uc //0x450b
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ic],POWER_CHANNEL_AC, 0x5f11); // Ic
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Urot],POWER_CHANNEL_DC, 0xA5A0); // Urot //0x6861
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Irot],POWER_CHANNEL_DC, 0x5f11); // Irot //0x2e14
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, 0x321); // Iexc //0x1bd
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, 0x10000); // Iref
-    power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, 0x10000); // Ifan
-    */
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ub], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ib], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Uc], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ic], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Urot], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Irot], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], CHANNEL_FILTER_DEFAULT_SIZE);
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
     
@@ -215,12 +316,23 @@ err_t drive_power_update_settings(void)
     drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
     drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
     
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ua], settings_valueu(PARAM_ID_AVERAGING_TIME_Ua));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ia], settings_valueu(PARAM_ID_AVERAGING_TIME_Ia));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ub], settings_valueu(PARAM_ID_AVERAGING_TIME_Ub));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ib], settings_valueu(PARAM_ID_AVERAGING_TIME_Ib));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Uc], settings_valueu(PARAM_ID_AVERAGING_TIME_Uc));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ic], settings_valueu(PARAM_ID_AVERAGING_TIME_Ic));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Urot], settings_valueu(PARAM_ID_AVERAGING_TIME_Urot));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Irot], settings_valueu(PARAM_ID_AVERAGING_TIME_Irot));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Iexc], settings_valueu(PARAM_ID_AVERAGING_TIME_Iexc));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Iref], settings_valueu(PARAM_ID_AVERAGING_TIME_Iref));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ifan], settings_valueu(PARAM_ID_AVERAGING_TIME_Ifan));
+    
     return E_NO_ERROR;
 }
 
 void drive_power_reset(void)
 {
-    drive_power.processing_iters = DRIVE_POWER_PROCESSING_ITERS_DEFAULT;
     drive_power.iters_processed = 0;
 }
 
@@ -525,6 +637,8 @@ static void drive_power_append_osc_data(void)
 
 static void drive_power_calc_phase_current(void)
 {
+    if(drive_power.phase_calc_current == PHASE_UNK) return;
+    
     fixed32_t I1 = 0, I2 = 0, I = 0;
     switch(drive_power.phase_calc_current){
         default:
@@ -552,6 +666,8 @@ static void drive_power_calc_phase_current(void)
 
 static void drive_power_calc_phase_voltage(void)
 {
+    if(drive_power.phase_calc_voltage == PHASE_UNK) return;
+    
     fixed32_t U1 = 0, U2 = 0, U = 0;
     switch(drive_power.phase_calc_voltage){
         default:
@@ -790,27 +906,6 @@ static void drive_power_triacs_diag_process(void)
     
     triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
     
-    /*if((pair_number == triacs_diag->last_pair) && (pair_number != TRIAC_PAIR_UNKNOWN)){
-            drive_power_triacs_diag_process_phase(pair_number, PHASE_A);
-            drive_power_triacs_diag_process_phase(pair_number, PHASE_B);
-            drive_power_triacs_diag_process_phase(pair_number, PHASE_C);
-    }else{
-        if(pair_number != TRIAC_PAIR_UNKNOWN){
-            
-            if(triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN && TRIAC_PAIR_VALID(pair_number)){
-                triacs_diag->period_pair = pair_number;
-            }else if(pair_number == TRIAC_PAIR_NONE){
-                triacs_diag->period_pair = TRIAC_PAIR_UNKNOWN;
-            }
-            
-            if(triacs_diag->period_pair == pair_number || triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN){
-                drive_power_triacs_diag_latch_opens_count();
-            }
-        }
-        drive_power_triacs_diag_reset_mid_buffers();
-        triacs_diag->last_pair = pair_number;
-    }*/
-    
     if(pair_number != triacs_diag->last_pair){
         if(triacs_diag->period_pair == TRIAC_PAIR_UNKNOWN && TRIAC_PAIR_VALID(pair_number)){
             triacs_diag->period_pair = pair_number;
@@ -864,18 +959,6 @@ err_t drive_power_process_accumulated_data(power_channels_t channels)
     
     return err;
 }
-
-/*bool drive_power_calc_values(power_channels_t channels, phase_t phase, err_t* err)
-{
-    if(phase != drive_power.power_phase) return false;
-    if(++ drive_power.periods_processed >= drive_power.processing_periods){
-        drive_power.periods_processed = 0;
-        err_t e = power_calc_values(&drive_power.power, channels);
-        if(err) *err = e;
-        return true;
-    }
-    return false;
-}*/
 
 static void drive_power_calc_angle_voltage(void)
 {
@@ -1052,22 +1135,6 @@ static void drive_power_diag_triac_pairs(void)
     drive_power_diag_triacs();
     
     drive_power_diag_triacs_period_reset();
-    
-    /*triacs_diag_t* triacs_diag = &drive_power.triacs_diag;
-    
-    size_t opens_count = 0;
-    
-    opens_count += (triacs_diag->triac_diags[0].open_count + triacs_diag->triac_diags[1].open_count) * 1;
-    opens_count += (triacs_diag->triac_diags[2].open_count + triacs_diag->triac_diags[3].open_count) * 10;
-    opens_count += (triacs_diag->triac_diags[4].open_count + triacs_diag->triac_diags[5].open_count) * 100;
-    
-    param_t* p = NULL;
-    p = settings_param_by_id(PARAM_ID_DEBUG_2);
-    if(p) settings_param_set_valueu(p, opens_count);*/
-    
-    /*if(opens_count != 444 && drive_triacs_pairs_open_angle() > fixed32_make_from_int(30)){
-        drive_tasks_write_status_event();
-    }*/
 }
 
 bool drive_power_triacs_fail(void)
@@ -1089,7 +1156,7 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
     err_t e = power_calc_values(&drive_power.power, channels);
     if(err) *err = e;
     
-    if(e != E_NO_ERROR) return;
+    drive_power_calc_channel_filters();
     
     drive_power_calc_angle_voltage();
     
@@ -1111,7 +1178,7 @@ bool drive_power_calc_values(power_channels_t channels, err_t* err)
     
     // Если прошёл очередной период.
     // И питание вычислено.
-    if(++ drive_power.period_iters >= DRIVE_POWER_PERIOD_ITERS){
+    if(++ drive_power.period_iters >= POWER_PERIOD_ITERS){
         drive_power.period_iters = 0;
         drive_power_diag_triac_pairs();
     }
@@ -1171,6 +1238,7 @@ bool drive_power_new_data_avail(power_channels_t channels)
 
 err_t drive_power_reset_channels(power_channels_t channels)
 {
+    drive_power_reset_channel_filters();
     return power_reset_channels(&drive_power.power, channels);
 }
 
@@ -1196,7 +1264,9 @@ fixed32_t drive_power_channel_real_value_inst(size_t channel)
 
 fixed32_t drive_power_channel_real_value(size_t channel)
 {
-    return power_channel_real_value(&drive_power.power, channel);
+    if(channel >= DRIVE_POWER_CHANNELS_COUNT) return 0;
+    return drive_power.channel_filters[channel].value;
+    //return power_channel_real_value(&drive_power.power, channel);
 }
 
 fixed32_t drive_power_open_angle_voltage(void)

@@ -41,6 +41,27 @@
 //! Обороты (сокр.).
 #define TR_ID_UNITS_RPM_SHORT 136
 
+//! Коэффициент P регулятора скорости.
+#define TR_ID_UNITS_SPEED_PID_P 140
+//! Коэффициент I регулятора скорости.
+#define TR_ID_UNITS_SPEED_PID_I 141
+//! Коэффициент D регулятора скорости.
+#define TR_ID_UNITS_SPEED_PID_D 142
+
+//! Коэффициент P регулятора тока.
+#define TR_ID_UNITS_CURRENT_PID_P 143
+//! Коэффициент I регулятора тока.
+#define TR_ID_UNITS_CURRENT_PID_I 144
+//! Коэффициент D регулятора тока.
+#define TR_ID_UNITS_CURRENT_PID_D 145
+
+//! Коэффициент P регулятора тока возбуждения.
+#define TR_ID_UNITS_EXC_CURRENT_PID_P 146
+//! Коэффициент I регулятора тока возбуждения.
+#define TR_ID_UNITS_EXC_CURRENT_PID_I 147
+//! Коэффициент D регулятора тока возбуждения.
+#define TR_ID_UNITS_EXC_CURRENT_PID_D 148
+
 /**
  * Перечисления меню.
  */

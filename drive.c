@@ -7,6 +7,7 @@
 #include "drive_phase_sync.h"
 #include "drive_tasks.h"
 #include "drive_motor.h"
+#include "utils/critical.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -2139,15 +2140,15 @@ err_t drive_update_settings(void)
     drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
     drive_regulator_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
-    drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
-                                settings_valuef(PARAM_ID_ROT_PID_K_I),
-                                settings_valuef(PARAM_ID_ROT_PID_K_D));
-    drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
-                                settings_valuef(PARAM_ID_EXC_PID_K_I),
-                                settings_valuef(PARAM_ID_EXC_PID_K_D));
     drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
-                                settings_valuef(PARAM_ID_SPD_PID_K_I),
-                                settings_valuef(PARAM_ID_SPD_PID_K_D));
+                                settings_valuef(PARAM_ID_SPD_PID_K_I) * 1000,  // ms -> s
+                                settings_valuef(PARAM_ID_SPD_PID_K_D) / 1000); // ms -> s
+    drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
+                                settings_valuef(PARAM_ID_ROT_PID_K_I) * 1000,  // ms -> s
+                                settings_valuef(PARAM_ID_ROT_PID_K_D) / 1000); // ms -> s
+    drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
+                                settings_valuef(PARAM_ID_EXC_PID_K_I) * 1000,  // ms -> s
+                                settings_valuef(PARAM_ID_EXC_PID_K_D) / 1000); // ms -> s
     
     fixed32_t rot_angle_min = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN);
     fixed32_t rot_angle_max = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX);
@@ -2598,6 +2599,11 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
 bool drive_calculate_power(void)
 {
     err_t err = E_NO_ERROR;
+    
+    CRITICAL_ENTER();
+    drive_process_power_accumulated_data(DRIVE_POWER_CHANNELS);
+    CRITICAL_EXIT();
+    
     if(drive_power_calc_values(DRIVE_POWER_CHANNELS, &err)){
 
         if(err == E_NO_ERROR && drive_power_data_avail(DRIVE_POWER_CHANNELS)){

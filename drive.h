@@ -33,7 +33,7 @@
 //! Предделитель.
 #define DRIVE_NULL_TIMER_CNT_PRESCALER (12 - 1)
 //! Частота срабатывания таймера нуля.
-#define DRIVE_NULL_TIMER_FREQ (DRIVE_POWER_FREQ * 3)
+#define DRIVE_NULL_TIMER_FREQ (POWER_FREQ * 3)
 //! Угол таймера нуля.
 #define DRIVE_NULL_TIMER_ANGLE (120)
 //! Отклонение таймера нуля для синхронизации.

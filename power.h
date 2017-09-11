@@ -14,6 +14,19 @@
 #include "defs/defs.h"
 
 
+//! Частота измерений АЦП.
+#define POWER_ADC_FREQ 3200
+
+//! Частота сети.
+#define POWER_FREQ 50
+
+//! Число измерений ADC за период.
+#define POWER_ADC_MEASUREMENTS_PER_PERIOD (POWER_ADC_FREQ / POWER_FREQ)
+
+//! Число итераций накопления и обработки данных за период.
+#define POWER_PERIOD_ITERS 3
+
+
 #define POWER_IGNORE_BITS 0
 #if POWER_IGNORE_BITS != 0
 #define POWER_IGNORE_BITS_MASK (~((1<<(POWER_IGNORE_BITS)) - 1))
@@ -23,7 +36,7 @@
 
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE (10 + 1)
+#define POWER_FILTER_SIZE_MAX (POWER_PERIOD_ITERS)
 
 /**
  * Перечисление каналов АЦП.
@@ -69,9 +82,10 @@ typedef struct _Power_Filter_Value {
  * Структура фильтра значений.
  */
 typedef struct _Power_Filter {
-    power_filter_value_t buffer[POWER_FILTER_SIZE]; //!< Буфер значений.
+    power_filter_value_t buffer[POWER_FILTER_SIZE_MAX]; //!< Буфер значений.
     uint16_t index; //!< Текущий индекс.
     uint16_t count; //!< Число элементов в буфере.
+    uint16_t size; //!< Максимальное число элементов в буфере.
 } power_filter_t;
 
 /**
@@ -127,10 +141,11 @@ typedef struct _Power{
  * Инициализирует канал АЦП.
  * @param channel Канал АЦП.
  * @param type Тип канала АЦП.
+ * @param filter_size Размер фильтра накомления значений.
  * @param k Коэффициент пропорциональности LSB^-1.
  * @return Код ошибки.
  */
-extern err_t power_value_init(power_value_t* value, power_channel_type_t type, fixed32_t k);
+extern err_t power_value_init(power_value_t* value, power_channel_type_t type, size_t filter_size, fixed32_t k);
 
 /**
  * Инициализирует структуру питания.
@@ -320,7 +335,7 @@ ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t 
  */
 ALWAYS_INLINE static bool power_channel_data_filter_filled(const power_t* power, size_t channel)
 {
-    return power->channels[channel].filter_value.count == POWER_FILTER_SIZE;
+    return power->channels[channel].filter_value.count == power->channels[channel].filter_value.size;
 }
 
 /**

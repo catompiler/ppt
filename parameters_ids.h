@@ -1342,6 +1342,53 @@
  * Множитель данных канала Ifan.
  */
 #define PARAM_ID_VALUE_MULTIPLIER_Ifan 7150
+/*
+ * Усреднение действующих значений.
+ */
+/**
+ * Время усреднения канала Ua.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ua 7160
+/**
+ * Время усреднения канала Ub.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ub 7161
+/**
+ * Время усреднения канала Uc.
+ */
+#define PARAM_ID_AVERAGING_TIME_Uc 7162
+/**
+ * Время усреднения канала Urot.
+ */
+#define PARAM_ID_AVERAGING_TIME_Urot 7163
+/**
+ * Время усреднения канала Ia.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ia 7164
+/**
+ * Время усреднения канала Ib.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ib 7165
+/**
+ * Время усреднения канала Ic.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ic 7166
+/**
+ * Время усреднения канала Irot.
+ */
+#define PARAM_ID_AVERAGING_TIME_Irot 7167
+/**
+ * Время усреднения канала Iexc.
+ */
+#define PARAM_ID_AVERAGING_TIME_Iexc 7168
+/**
+ * Время усреднения канала Iref.
+ */
+#define PARAM_ID_AVERAGING_TIME_Iref 7169
+/**
+ * Время усреднения канала Ifan.
+ */
+#define PARAM_ID_AVERAGING_TIME_Ifan 7170
 
 
 ////////////////////////////

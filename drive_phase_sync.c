@@ -31,7 +31,7 @@
 #define FFT_BUFFER_FIRST_VALUE_IMAG 3
 
 //! Максимальное значение счётчика пропусков значений АЦП.
-#define FFT_ADC_PRESCALER (DRIVE_POWER_ADC_FREQ / DRIVE_POWER_FREQ / FFT_SIZE)
+#define FFT_ADC_PRESCALER (POWER_ADC_FREQ / POWER_FREQ / FFT_SIZE)
 
 //! Размер фильтра FFT.
 #define FFT_FILTER_SIZE 7

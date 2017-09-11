@@ -50,17 +50,15 @@
                               POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
                               POWER_CHANNEL_9 | POWER_CHANNEL_10)
 
-//! Частота измерений АЦП.
-#define DRIVE_POWER_ADC_FREQ 3200
-
-//! Частота сети.
-#define DRIVE_POWER_FREQ 50
-
-//! Число итераций накопления и обработки данных за период.
-#define DRIVE_POWER_PERIOD_ITERS 3
-
 //! Число итераций накопления и обработки данных по-умолчанию.
 #define DRIVE_POWER_PROCESSING_ITERS_DEFAULT 3
+
+
+//! Количество элементов фильтра каналов AC.
+#define DRIVE_POWER_AC_DEFAULT_FILTER_SIZE 3
+
+//! Количество элементов фильтра каналов DC.
+#define DRIVE_POWER_DC_DEFAULT_FILTER_SIZE 1
 
 
 //! Тип значения в осциллограмме (fixed11_5_t).
@@ -90,6 +88,9 @@ typedef int16_t osc_value_t;
 #define DRIVE_POWER_OSC_CHANNEL_Irot 7
 //! Осциллограмма Iexc.
 #define DRIVE_POWER_OSC_CHANNEL_Iexc 8
+
+//! Количество точек осциллограммы за период.
+#define DRIVE_POWER_OSC_PERIOD_POINTS (32)
 
 //! Длина канала осциллограммы (3.5 периода до и после аварии).
 #define DRIVE_POWER_OSC_CHANNEL_LEN (225) // (0.7 * 2) / (0.0003125 * 2) + 1
