@@ -31,7 +31,7 @@ GIT_VERSION=$(shell git describe --long --first-parent --always)
 # Макросы.
 DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
             USE_GRAPHICS_VIRTUAL_BUFFER ARM_MATH_CM3\
-	    __GIT_VERSION="\"$(GIT_VERSION)\"" __GIT_DATETIME="\"$(GIT_DATETIME)\""
+	    __GIT_VERSION="$(GIT_VERSION)" __GIT_DATETIME="$(GIT_DATETIME)"
 
 # Стандартные драйвера периферии.
 # STD_PERIPH_DRIVERS += misc
