@@ -39,7 +39,7 @@ static int32_t power_filter_calculate(power_filter_t* filter, int32_t* ret_count
 {
     if(filter->count == 0) return 0;
     
-    size_t count = filter->count;
+    int32_t count = (int32_t)filter->count;
     
     int32_t val = 0;
     int32_t count_val = 0;

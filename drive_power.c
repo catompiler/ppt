@@ -182,7 +182,7 @@ static void channel_filter_put(channel_filter_t* filter, fixed32_t value)
 
 static void channel_filter_calculate(channel_filter_t* filter)
 {
-    size_t count = filter->count;
+    int32_t count = (int32_t)filter->count;
     
     fixed32_t sum_val = 0;
     
