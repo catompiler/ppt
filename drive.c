@@ -2163,8 +2163,8 @@ err_t drive_update_settings(void)
     drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
-                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
-                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I) * 1000,  // ms -> s
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D) / 1000); // ms -> s
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
     
     drive_motor_update_settings();
