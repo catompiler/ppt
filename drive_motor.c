@@ -111,11 +111,13 @@ err_t drive_motor_update_settings(void)
         return E_INVALID_VALUE;
     }
     
-    int64_t N_Irot_Iexc = (int64_t)RPM_nom * I_rot_f;
-    N_Irot_Iexc = fixed32_mul(N_Irot_Iexc, I_exc_f);
+    int64_t N_Irot = (int64_t)RPM_nom * I_rot_f;
     
-    fixed32_t CeF = fixed32_div(P_W_f, N_Irot_Iexc);
+    fixed32_t CeF = fixed32_div(P_W_f, N_Irot);
     fixed32_t CmF = fixed32_mul((int64_t)CeF, _30_div_PI);
+    
+    fixed32_t CeF_Iexc = fixed32_div((int64_t)CeF, I_exc_f);
+    fixed32_t CmF_Iexc = fixed32_div((int64_t)CmF, I_exc_f);
     
     fixed32_t R_rot = settings_valuef(PARAM_ID_MOTOR_R_ROT_NOM);
     
@@ -173,8 +175,8 @@ err_t drive_motor_update_settings(void)
     
     motor.Eff = eff_f;
     motor.I_exc = I_exc_f;
-    motor.Cn = CeF;
-    motor.Cm = CmF;
+    motor.Cn = CeF_Iexc;
+    motor.Cm = CmF_Iexc;
     motor.R_rot = R_rot75;
     motor.R_exc = R_exc75;
     motor.L_rot = L_rot;
