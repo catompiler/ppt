@@ -79,6 +79,7 @@ typedef struct _Drive_Parameters {
     param_t* param_i_ref;
     param_t* param_i_fan;
     param_t* param_calc_u_rot;
+    param_t* param_e_rot;
     param_t* param_pairs_angle;
     param_t* param_exc_angle;
     // цифровые входа
@@ -1401,6 +1402,7 @@ static void drive_update_virtual_parameters(void)
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_exc, DRIVE_POWER_Iexc);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_ref, DRIVE_POWER_Iref);
     DRIVE_UPDATE_POWER_PARAM(drive.params.param_i_fan, DRIVE_POWER_Ifan);
+    DRIVE_UPDATE_POWER_PARAM(drive.params.param_e_rot, DRIVE_POWER_Erot);
     
     DRIVE_UPDATE_PARAM_FIXED(drive.params.param_calc_u_rot, drive_power_open_angle_voltage());
     
@@ -2078,6 +2080,7 @@ err_t drive_init(void)
     drive.params.param_i_ref = settings_param_by_id(PARAM_ID_POWER_I_REF);
     drive.params.param_i_fan = settings_param_by_id(PARAM_ID_POWER_I_FAN);
     drive.params.param_calc_u_rot = settings_param_by_id(PARAM_ID_POWER_CALC_U_ROT);
+    drive.params.param_e_rot = settings_param_by_id(PARAM_ID_POWER_E_ROT);
     drive.params.param_pairs_angle = settings_param_by_id(PARAM_ID_TRIACS_PAIRS_OPEN_ANGLE);
     drive.params.param_exc_angle = settings_param_by_id(PARAM_ID_TRIAC_EXC_OPEN_ANGLE);
     
@@ -2139,16 +2142,15 @@ err_t drive_update_settings(void)
     drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM));
     drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
     drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
-    drive_regulator_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
-                                settings_valuef(PARAM_ID_SPD_PID_K_I) * 1000,  // ms -> s
-                                settings_valuef(PARAM_ID_SPD_PID_K_D) / 1000); // ms -> s
+                                settings_valuef(PARAM_ID_SPD_PID_K_I),
+                                settings_valuef(PARAM_ID_SPD_PID_K_D));
     drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
-                                settings_valuef(PARAM_ID_ROT_PID_K_I) * 1000,  // ms -> s
-                                settings_valuef(PARAM_ID_ROT_PID_K_D) / 1000); // ms -> s
+                                settings_valuef(PARAM_ID_ROT_PID_K_I),
+                                settings_valuef(PARAM_ID_ROT_PID_K_D));
     drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
-                                settings_valuef(PARAM_ID_EXC_PID_K_I) * 1000,  // ms -> s
-                                settings_valuef(PARAM_ID_EXC_PID_K_D) / 1000); // ms -> s
+                                settings_valuef(PARAM_ID_EXC_PID_K_I),
+                                settings_valuef(PARAM_ID_EXC_PID_K_D));
     
     fixed32_t rot_angle_min = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN);
     fixed32_t rot_angle_max = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX);
@@ -2163,11 +2165,12 @@ err_t drive_update_settings(void)
     drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
-                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I) * 1000,  // ms -> s
-                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D) / 1000); // ms -> s
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
+                                 settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
     
     drive_motor_update_settings();
+    drive_motor_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     
     drive_power_update_settings();
     

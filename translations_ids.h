@@ -16,6 +16,8 @@
 #define TR_ID_UNITS_OHM 102
 //! Ом Ω.
 #define TR_ID_UNITS_OHM_SHORT 103
+//! мГн.
+#define TR_ID_UNITS_MH 104
 //! кВт.
 #define TR_ID_UNITS_KW 105
 //! Н•м.
@@ -597,7 +599,7 @@
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iexc   728
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Iref   729
 #define TR_ID_ENUM_TILES_DRIVE_POWER_Ifan   730 
-#define TR_ID_ENUM_TILES_DRIVE_POWER_U_ROT_WIRES  731
+#define TR_ID_ENUM_TILES_MOTOR_E            731
 #define TR_ID_ENUM_TILES_HEATSINK_TEMP            740
 #define TR_ID_ENUM_TILES_HEATSINK_FAN_RPM         741
 #define TR_ID_ENUM_TILES_TRIACS_PAIRS_OPEN_ANGLE  742
@@ -641,8 +643,8 @@
 #define TR_ID_HOME_PHASE_C_CURRENT 908
 //! Напряжение якоря
 #define TR_ID_HOME_ANCHOR_VOLTAGE 910
-//! Напряжение на якоре с учётом падения напряжения на проводах.
-#define TR_ID_HOME_U_ROT_WIRES    915
+//! ЭДС Двигателя.
+#define TR_ID_HOME_MOTOR_E    915
 //! Ток якоря
 #define TR_ID_HOME_ANCHOR_CURRENT 920
 //! Ток возбуждения

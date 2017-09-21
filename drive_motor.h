@@ -30,15 +30,51 @@ extern err_t drive_motor_update_settings(void);
 extern bool drive_motor_ready(void);
 
 /**
+ * Получает разрешение IR-компенсации.
+ * @return Разрешение IR-компенсации.
+ */
+extern bool drive_motor_ir_compensation_enabled(void);
+
+/**
+ * Устанавливает разрешение IR-компенсации.
+ * @param enabled Разрешение IR-компенсации.
+ */
+extern void drive_motor_set_ir_compensation_enabled(bool enabled);
+
+/**
  * Выполняет расчёт.
  */
 extern void drive_motor_calculate(void);
+
+/**
+ * Получает номинальную ЭДС двигателя.
+ * @return Номинальная ЭДС двигателя.
+ */
+extern fixed32_t drive_motor_e_nom(void);
+
+/**
+ * Получает номинальные обороты двигателя.
+ * @return Номинальные обороты двигателя.
+ */
+extern fixed32_t drive_motor_rpm_nom(void);
+
+/**
+ * Получает номинальный момент двигателя.
+ * @return Номинальный момент двигателя.
+ */
+extern fixed32_t drive_motor_m_nom(void);
 
 /**
  * Получает сопротивление якоря.
  * @return Сопротивление якоря.
  */
 extern fixed32_t drive_motor_r_rot(void);
+
+/**
+ * Получает индуктивность якоря.
+ * @return Индуктивность якоря.
+ */
+extern fixed32_t drive_motor_l_rot(void);
 
 /**
  * Получает сопротивление возбуждения.
@@ -59,12 +95,6 @@ extern fixed32_t drive_motor_r_wires(void);
 extern fixed32_t drive_motor_u_wires(void);
 
 /**
- * Получает напряжение на якоре с учётом проводов.
- * @return Напряжение на якоре с учётом проводов.
- */
-extern fixed32_t drive_motor_u_rot_wires(void);
-
-/**
  * Получает текущие обороты двигателя.
  * @return Текущие обороты двигателя.
  */
@@ -75,6 +105,12 @@ extern fixed32_t drive_motor_rpm(void);
  * @return Текущий момент двигателя.
  */
 extern fixed32_t drive_motor_torque(void);
+
+/**
+ * Получает ЭДС двигателя.
+ * @return ЭДС двигателя.
+ */
+extern fixed32_t drive_motor_e_rot(void);
 
 #endif /* DRIVE_MOTOR_H */
 

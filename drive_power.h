@@ -16,7 +16,7 @@
 
 //! Питание.
 //! Число значений каналов АЦП.
-#define DRIVE_POWER_CHANNELS_COUNT 11
+#define DRIVE_POWER_CHANNELS_COUNT 12
 
 // Алиасы значений токов и напряжений.
 #define DRIVE_POWER_Ua 0
@@ -30,6 +30,7 @@
 #define DRIVE_POWER_Iexc 8
 #define DRIVE_POWER_Iref 9
 #define DRIVE_POWER_Ifan 10
+#define DRIVE_POWER_Erot 11
 
 // Алиасы каналов значений токов и напряжений.
 #define DRIVE_POWER_CHANNEL_Ua POWER_CHANNEL_0
@@ -43,12 +44,19 @@
 #define DRIVE_POWER_CHANNEL_Iexc POWER_CHANNEL_8
 #define DRIVE_POWER_CHANNEL_Iref POWER_CHANNEL_9
 #define DRIVE_POWER_CHANNEL_Ifan POWER_CHANNEL_10
+#define DRIVE_POWER_CHANNEL_Erot POWER_CHANNEL_11
 
 //! Каналы АЦП.
+#define DRIVE_POWER_ADC_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
+                                  POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
+                                  POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
+                                  POWER_CHANNEL_9 | POWER_CHANNEL_10)
+
+//! Каналы питания.
 #define DRIVE_POWER_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
                               POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
                               POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
-                              POWER_CHANNEL_9 | POWER_CHANNEL_10)
+                              POWER_CHANNEL_9 | POWER_CHANNEL_10 | POWER_CHANNEL_11)
 
 //! Число итераций накопления и обработки данных по-умолчанию.
 #define DRIVE_POWER_PROCESSING_ITERS_DEFAULT 3

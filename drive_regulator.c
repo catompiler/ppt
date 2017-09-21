@@ -26,12 +26,10 @@ typedef struct _Drive_Regulator {
     bool rot_enabled; //!< Разрешение регулирования якоря.
     bool exc_enabled; //!< Разрешение регулирования возбуждения.
     
-    bool ir_comp_enabled; //!< Разрешение IR-компенсации.
-    
     fixed32_t U_rot_nom; //!< Номинальное напряжение якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
-    fixed32_t u_rot_ref; //!< Текущее напряжение задания.
+    fixed32_t rpm_rot_ref; //!< Текущие обороты задания.
     fixed32_t i_rot_ref; //!< Текущий ток задания.
     
     pid_controller_t spd_pid; //!< ПИД-регулятор скорости.
@@ -244,16 +242,6 @@ void drive_regulator_set_exc_enabled(bool enabled)
     }
 }
 
-bool drive_regulator_ir_compensation_enabled(void)
-{
-    return regulator.ir_comp_enabled;
-}
-
-void drive_regulator_set_ir_compensation_enabled(bool enabled)
-{
-    regulator.ir_comp_enabled = enabled;
-}
-
 void drive_regulator_set_spd_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
 {
     pid_controller_set_kp(&regulator.spd_pid, kp);
@@ -320,9 +308,9 @@ void drive_regulator_set_exc_current(fixed32_t current)
     regulator.I_exc = current;
 }
 
-fixed32_t drive_regulator_current_u_ref(void)
+fixed32_t drive_regulator_current_rpm_ref(void)
 {
-    return regulator.u_rot_ref;
+    return regulator.rpm_rot_ref;
 }
 
 fixed32_t drive_regulator_current_i_ref(void)
@@ -351,27 +339,22 @@ fixed32_t drive_regulator_exc_open_angle(void)
 static void drive_regulator_regulate_impl(void)
 {
     if(regulator.rot_enabled){
-        fixed32_t u_rot_back = 0;
+        fixed32_t rpm_rot_nom = drive_motor_rpm_nom();
         
-        if(regulator.ir_comp_enabled){
-            u_rot_back = drive_motor_u_rot_wires();
-        }else{
-            u_rot_back = drive_power_channel_real_value(DRIVE_POWER_Urot);
-        }
-        
+        fixed32_t rpm_rot_back = drive_motor_rpm();
         fixed32_t i_rot_back = drive_power_channel_real_value(DRIVE_POWER_Irot);
         
         ramp_calc_step(&regulator.speed_ramp);
-        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / 100;
-        
-        regulator.u_rot_ref = fixed32_mul((int64_t)regulator.U_rot_nom, ramp_cur_ref);
+        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / RAMP_REFERENCE_MAX;
+            
+        regulator.rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_nom, ramp_cur_ref);
         regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_nom, ramp_cur_ref);
         
-        fixed32_t u_rot_e = 0;
+        fixed32_t rpm_rot_e = 0;
         fixed32_t i_rot_e = 0;
         
-        u_rot_e = regulator.u_rot_ref - u_rot_back;
-        pid_controller_calculate(&regulator.spd_pid, u_rot_e, DRIVE_PID_DT);
+        rpm_rot_e = regulator.rpm_rot_ref - rpm_rot_back;
+        pid_controller_calculate(&regulator.spd_pid, rpm_rot_e, DRIVE_PID_DT);
         
         if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
             i_rot_e = pid_controller_value(&regulator.spd_pid) - i_rot_back;

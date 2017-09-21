@@ -256,6 +256,7 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iexc],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Iexc //0x1bd
     power_value_init(&drive_power.power_values[DRIVE_POWER_Iref],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Iref
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Ifan
+    power_value_init(&drive_power.power_values[DRIVE_POWER_Erot],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Erot
     
     channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], CHANNEL_FILTER_DEFAULT_SIZE);
     channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], CHANNEL_FILTER_DEFAULT_SIZE);
@@ -268,8 +269,11 @@ err_t drive_power_init(void)
     channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], CHANNEL_FILTER_DEFAULT_SIZE);
     channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], CHANNEL_FILTER_DEFAULT_SIZE);
     channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Erot], CHANNEL_FILTER_DEFAULT_SIZE);
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
+    
+    power_set_soft_channel(&drive_power.power, DRIVE_POWER_Erot, true);
     
     drive_power_init_triacs_diag();
     
@@ -291,6 +295,7 @@ err_t drive_power_update_settings(void)
     drive_power_set_adc_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iexc));
     drive_power_set_adc_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Iref));
     drive_power_set_adc_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_ADC_VALUE_MULTIPLIER_Ifan));
+    drive_power_set_adc_value_multiplier(DRIVE_POWER_Erot, 0x10000);
     
     drive_power_set_calibration_data(DRIVE_POWER_Ua, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ua));
     drive_power_set_calibration_data(DRIVE_POWER_Ub, settings_valueu(PARAM_ID_ADC_CALIBRATION_DATA_Ub));
@@ -315,6 +320,7 @@ err_t drive_power_update_settings(void)
     drive_power_set_value_multiplier(DRIVE_POWER_Iexc, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iexc));
     drive_power_set_value_multiplier(DRIVE_POWER_Iref, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Iref));
     drive_power_set_value_multiplier(DRIVE_POWER_Ifan, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Ifan));
+    drive_power_set_value_multiplier(DRIVE_POWER_Erot, settings_valuef(PARAM_ID_VALUE_MULTIPLIER_Erot));
     
     channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ua], settings_valueu(PARAM_ID_AVERAGING_TIME_Ua));
     channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ia], settings_valueu(PARAM_ID_AVERAGING_TIME_Ia));
@@ -327,6 +333,7 @@ err_t drive_power_update_settings(void)
     channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Iexc], settings_valueu(PARAM_ID_AVERAGING_TIME_Iexc));
     channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Iref], settings_valueu(PARAM_ID_AVERAGING_TIME_Iref));
     channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Ifan], settings_valueu(PARAM_ID_AVERAGING_TIME_Ifan));
+    channel_filter_resize_ms(&drive_power.channel_filters[DRIVE_POWER_Erot], settings_valueu(PARAM_ID_AVERAGING_TIME_Erot));
     
     return E_NO_ERROR;
 }
@@ -930,11 +937,33 @@ static void drive_power_triacs_diag_process(void)
     
 }
 
+static void drive_power_calc_e_rot(void)
+{
+    static fixed32_t Irot_prev = 0;
+    
+    fixed32_t Urot = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Urot);
+    fixed32_t Irot = power_channel_real_value_inst(&drive_power.power, DRIVE_POWER_Irot);
+    fixed32_t Rrot = drive_motor_r_rot();
+    fixed32_t Lrot = drive_motor_l_rot();
+    fixed32_t dt = POWER_ADC_DT_F;
+    
+    fixed32_t IR = fixed32_mul((int64_t)Irot, Rrot);
+    fixed32_t dI = Irot - Irot_prev;
+    int64_t dIdt = fixed32_div((int64_t)dI, dt);
+    fixed32_t LdIdt = fixed32_mul((int64_t)dIdt, Lrot);
+    
+    fixed32_t Erot = Urot - IR - LdIdt;
+    
+    Irot_prev = Irot;
+    
+    power_process_soft_channel_value(&drive_power.power, DRIVE_POWER_Erot, Erot);
+}
+
 err_t drive_power_process_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
     err_t err = power_process_adc_values(&drive_power.power, channels, adc_values);
     
-    if(err != E_NO_ERROR) return err;
+    drive_power_calc_e_rot();
     
     drive_power_calc_phase_current();
     

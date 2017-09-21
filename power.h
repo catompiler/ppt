@@ -23,6 +23,9 @@
 //! Число измерений ADC за период.
 #define POWER_ADC_MEASUREMENTS_PER_PERIOD (POWER_ADC_FREQ / POWER_FREQ)
 
+//! Время между измерениями ADC.
+#define POWER_ADC_DT_F (fixed32_make_from_fract(1, POWER_ADC_FREQ))
+
 //! Число итераций накопления и обработки данных за период.
 #define POWER_PERIOD_ITERS 3
 

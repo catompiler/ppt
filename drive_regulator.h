@@ -184,18 +184,6 @@ extern bool drive_regulator_exc_enabled(void);
 extern void drive_regulator_set_exc_enabled(bool enabled);
 
 /**
- * Получает разрешение IR-компенсации.
- * @return Разрешение IR-компенсации.
- */
-extern bool drive_regulator_ir_compensation_enabled(void);
-
-/**
- * Устанавливает разрешение IR-компенсации.
- * @param enabled Разрешение IR-компенсации.
- */
-extern void drive_regulator_set_ir_compensation_enabled(bool enabled);
-
-/**
  * Устанавливает коэффициенты ПИД-регулятора скорости.
  * @param kp Коэффициент пропорционального звена.
  * @param ki Коэффициент интегрального звена.
@@ -277,10 +265,10 @@ extern fixed32_t drive_regulator_exc_current(void);
 extern void drive_regulator_set_exc_current(fixed32_t current);
 
 /**
- * Получает значение текущего напряжения задания (с учётом разгона).
+ * Получает значение текущей ЭДС задания (с учётом разгона).
  * @return Текущее напряжение задания.
  */
-extern fixed32_t drive_regulator_current_u_ref(void);
+extern fixed32_t drive_regulator_current_rpm_ref(void);
 
 /**
  * Получает значение текущего тока задания (с учётом разгона).

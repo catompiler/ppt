@@ -39,6 +39,10 @@
  */
 #define PARAM_ID_MOTOR_RPM_MAX  202
 /**
+ * Число полюсов.
+ */
+#define PARAM_ID_MOTOR_POLES  205
+/**
  * Номинальное напряжение якоря двигателя, В.
  */
 #define PARAM_ID_MOTOR_U_ROT_NOM      210
@@ -66,6 +70,10 @@
  * Номинальное сопротивление возбуждения.
  */
 #define PARAM_ID_MOTOR_R_EXC_NOM      216
+/**
+ * Номинальная индуктивность якоря.
+ */
+#define PARAM_ID_MOTOR_L_ROT_NOM      217
 /**
  * Максимальный ток якоря.
  */
@@ -1342,6 +1350,10 @@
  * Множитель данных канала Ifan.
  */
 #define PARAM_ID_VALUE_MULTIPLIER_Ifan 7150
+/**
+ * Множитель данных канала Erot.
+ */
+#define PARAM_ID_VALUE_MULTIPLIER_Erot 7151
 /*
  * Усреднение действующих значений.
  */
@@ -1389,6 +1401,10 @@
  * Время усреднения канала Ifan.
  */
 #define PARAM_ID_AVERAGING_TIME_Ifan 7170
+/**
+ * Время усреднения канала Erot.
+ */
+#define PARAM_ID_AVERAGING_TIME_Erot 7171
 
 
 ////////////////////////////
@@ -1452,9 +1468,9 @@
  */
 #define PARAM_ID_POWER_U_WIRES 8155
 /**
- * Напряжение на якоре с учётом падения напряжения на проводах.
+ * Вычисленная ЭДС двигателя.
  */
-#define PARAM_ID_POWER_U_ROT_WIRES 8156
+#define PARAM_ID_POWER_E_ROT 8160
 
 /**
  * Температура радиатора.
@@ -1556,13 +1572,29 @@
  */
 #define PARAM_ID_MOTOR_R_EXC      8452
 /**
+ * Вычисленная индуктивность якоря.
+ */
+#define PARAM_ID_MOTOR_L_ROT      8453
+/**
+ * Номинальная ЭДС двигателя.
+ */
+#define PARAM_ID_MOTOR_E_NOM      8454
+/**
+ * Номинальный момент двигателя.
+ */
+#define PARAM_ID_MOTOR_M_NOM      8455
+/**
  * Вычисленные обороты.
  */
-#define PARAM_ID_MOTOR_RPM        8455
+#define PARAM_ID_MOTOR_RPM        8500
 /**
  * Вычисленный момент.
  */
-#define PARAM_ID_MOTOR_TORQUE     8456
+#define PARAM_ID_MOTOR_TORQUE     8501
+/**
+ * Вычисленная ЭДС двигателя.
+ */
+#define PARAM_ID_MOTOR_E          8502
 
 
 ///////////////////////////

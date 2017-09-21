@@ -207,10 +207,6 @@ static tft9341_t tft;
 #define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS)
 //! Буфер ADC.
 static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
-//! Число измерений ADC для вычисления питания.
-//#define ADC_MEASUREMENTS_FOR_CALCULATION (POWER_ADC_MEASUREMENTS_PER_PERIOD / 2)
-//! Число выполненных измерений ADC.
-//static unsigned int adc_data_measured = 0;
 
 
 // Константы для цифровых входов-выходов.
@@ -495,13 +491,7 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
-        drive_process_power_adc_values(DRIVE_POWER_CHANNELS, (uint16_t*)adc_raw_buffer);
-        
-        /*if(++ adc_data_measured >= ADC_MEASUREMENTS_FOR_CALCULATION){
-            adc_data_measured = 0;
-            
-            drive_process_power_accumulated_data(DRIVE_POWER_CHANNELS);
-        }*/
+        drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
     }
 }
 
