@@ -1405,6 +1405,14 @@
  * Время усреднения канала Erot.
  */
 #define PARAM_ID_AVERAGING_TIME_Erot 7171
+/**
+ * Время усреднения канала оборотов.
+ */
+#define PARAM_ID_AVERAGING_TIME_RPM 7180
+/**
+ * Время усреднения канала момента.
+ */
+#define PARAM_ID_AVERAGING_TIME_TORQUE 7181
 
 
 ////////////////////////////

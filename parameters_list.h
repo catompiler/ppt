@@ -18,7 +18,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 397
+#define PARAMETERS_REAL_COUNT 399
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 54
 // Общее число параметров.
@@ -528,6 +528,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_AVERAGING_TIME_Iref,  PARAM_TYPE_UINT,  1,    200,     60,    0, TEXT(TR_ID_UNITS_MS)),
     PARAM_DESCR(PARAM_ID_AVERAGING_TIME_Ifan,  PARAM_TYPE_UINT,  1,    200,     60,    0, TEXT(TR_ID_UNITS_MS)),
     PARAM_DESCR(PARAM_ID_AVERAGING_TIME_Erot,  PARAM_TYPE_UINT,  1,    200,     60,    0, TEXT(TR_ID_UNITS_MS)),
+    PARAM_DESCR(PARAM_ID_AVERAGING_TIME_RPM,   PARAM_TYPE_UINT,  1,    1000,     60,    0, TEXT(TR_ID_UNITS_MS)),
+    PARAM_DESCR(PARAM_ID_AVERAGING_TIME_TORQUE,  PARAM_TYPE_UINT,  1,    1000,     60,    0, TEXT(TR_ID_UNITS_MS)),
     
     // Виртуальные параметры.
             

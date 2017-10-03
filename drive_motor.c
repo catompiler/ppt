@@ -5,6 +5,13 @@
 #include "drive.h"
 #include <string.h>
 #include "settings.h"
+#include "channel_filter.h"
+
+
+//! Ёмкость фильтра оборотов двигателя.
+#define DRIVE_MOTOR_RPM_FILTER_CAPACITY 150 // 1000 ms.
+//! Ёмкость фильтра момента двигателя.
+#define DRIVE_MOTOR_TORQUE_FILTER_CAPACITY 150 // 1000 ms.
 
 
 //! Структура двигателя привода.
@@ -26,8 +33,12 @@ typedef struct _Drive_Motor {
     param_t* param_torque; //!< Параметр с моментом двигателя.
     param_t* param_e_rot; //!< Параметр с ЭДС двигателя.
     param_t* param_u_wires; //!< Параметр с падением напряжения на проводах.
-    fixed32_t rpm; //!< Текущие обороты двигателя.
-    fixed32_t torque; //!< Текущий момент двигателя.
+    //fixed32_t rpm; //!< Текущие обороты двигателя.
+    //fixed32_t torque; //!< Текущий момент двигателя.
+    fixed32_t rpm_filter_data[DRIVE_MOTOR_RPM_FILTER_CAPACITY]; //!< Данные фильтра оборотов двигателя.
+    channel_filter_t rpm_filter; //!< Фильтр оборотов двигателя.
+    fixed32_t torque_filter_data[DRIVE_MOTOR_TORQUE_FILTER_CAPACITY]; //!< Данные фильтра момента двигателя.
+    channel_filter_t torque_filter; //!< Фильтр момента двигателя.
     fixed32_t E_rot; //!< ЭДС двигателя.
     fixed32_t U_wires; //!< Падение напряжения на проводах.
 } drive_motor_t;
@@ -45,6 +56,9 @@ static drive_motor_t motor;
 err_t drive_motor_init(void)
 {
     memset(&motor, 0x0, sizeof(drive_motor_t));
+    
+    channel_filter_init(&motor.rpm_filter, motor.rpm_filter_data, DRIVE_MOTOR_RPM_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&motor.torque_filter, motor.torque_filter_data, DRIVE_MOTOR_TORQUE_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
     
     motor.param_rpm = settings_param_by_id(PARAM_ID_MOTOR_RPM);
     motor.param_torque = settings_param_by_id(PARAM_ID_MOTOR_TORQUE);
@@ -93,6 +107,9 @@ err_t drive_motor_update_settings(void)
     fixed32_t eff_f = settings_valuef(PARAM_ID_MOTOR_EFF_NOM) / 100; // % -> доли.
     
     int64_t P_W_f = (int64_t)P_f * 1000; // кВт -> Вт.
+    
+    uint32_t avg_time_rpm = settings_valueu(PARAM_ID_AVERAGING_TIME_RPM);
+    uint32_t avg_time_torque = settings_valueu(PARAM_ID_AVERAGING_TIME_TORQUE);
     
     if(P_f == 0 || RPM_nom == 0 ||
        U_rot == 0 || I_rot_f == 0 ||
@@ -187,6 +204,9 @@ err_t drive_motor_update_settings(void)
     
     drive_motor_update_calc_params();
     
+    channel_filter_resize_ms(&motor.rpm_filter, avg_time_rpm);
+    channel_filter_resize_ms(&motor.torque_filter, avg_time_torque);
+    
     motor.valid = true;
     
     return E_NO_ERROR;
@@ -244,13 +264,19 @@ void drive_motor_calculate(void)
         M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
     }
     
-    motor.rpm = N;
-    motor.torque = M;
+    channel_filter_put(&motor.rpm_filter, N);
+    channel_filter_calculate(&motor.rpm_filter);
+    
+    channel_filter_put(&motor.torque_filter, M);
+    channel_filter_calculate(&motor.torque_filter);
+    
+    //motor.rpm = N;
+    //motor.torque = M;
     motor.E_rot = E_rot;
     motor.U_wires = U_wires;
     
-    DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(N));
-    DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, M);
+    DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(channel_filter_value(&motor.rpm_filter)));
+    DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, channel_filter_value(&motor.torque_filter));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_e_rot, E_rot);
     DRIVE_UPDATE_PARAM_FIXED(motor.param_u_wires, U_wires);
 }
@@ -299,14 +325,14 @@ fixed32_t drive_motor_rpm(void)
 {
     if(!motor.valid) return 0;
     
-    return motor.rpm;
+    return channel_filter_value(&motor.rpm_filter);
 }
 
 fixed32_t drive_motor_torque(void)
 {
     if(!motor.valid) return 0;
     
-    return motor.torque;
+    return channel_filter_value(&motor.torque_filter);
 }
 
 fixed32_t drive_motor_e_rot(void)

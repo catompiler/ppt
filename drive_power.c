@@ -7,6 +7,7 @@
 #include "drive_protection.h"
 #include "drive_tasks.h"
 #include "drive_motor.h"
+#include "channel_filter.h"
 #include <string.h>
 #include <arm_math.h>
 
@@ -94,27 +95,15 @@ typedef struct _Triacs_Diag {
 } triacs_diag_t;
 
 
-//! Максимальный размер фильтра канала питания.
-#define CHANNEL_FILTER_MAX_SIZE 30 // 200 мс.
-
-//! Максимальное время усреднения фильтра.
-#define CHANNEL_FILTER_MAX_TIME_MS 200
-
-//! Размер фильтра канала питания по-умолчанию.
-#define CHANNEL_FILTER_DEFAULT_SIZE 1 // 6.67 мс.
-
-//! Фильтр значений каналов АЦП.
-typedef struct _Channel_Filter {
-    fixed32_t buffer[CHANNEL_FILTER_MAX_SIZE]; //!< Сумма значений канала питания.
-    fixed32_t value; //!< Вычисленное значение фильтра.
-    uint16_t count; //!< Количество значений канала питания.
-    uint16_t index; //!< Индекс текущего элемента в фильтре.
-    uint16_t size;  //!< Размер буфера фильтра.
-} channel_filter_t;
+//! Ёмкость фильтра каналов питания.
+#define CHANNEL_FILTER_CAPACITY 30
+//! Буфер данных фильтра каналов питания.
+typedef fixed32_t channel_filter_data_t[CHANNEL_FILTER_CAPACITY];
 
 //! Тип питания привода.
 typedef struct _Drive_Power {
     power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
+    channel_filter_data_t channel_filters_data[DRIVE_POWER_CHANNELS_COUNT]; //!< Данные фильтров каналов АЦП.
     channel_filter_t channel_filters[DRIVE_POWER_CHANNELS_COUNT]; //!< Фильтры каналов АЦП.
     power_t power; //!< Питание.
     size_t processing_iters; //!< Число итераций для накопления и обработки данных.
@@ -137,64 +126,6 @@ typedef struct _Drive_Power {
 //! Питание привода.
 static drive_power_t drive_power;
 
-
-static void channel_filter_reset(channel_filter_t* filter)
-{
-    memset(filter->buffer, 0x0, sizeof(fixed32_t) * CHANNEL_FILTER_MAX_SIZE);
-    filter->index = 0;
-    filter->count = 0;
-}
-
-static void channel_filter_resize(channel_filter_t* filter, size_t size)
-{
-    if(size > CHANNEL_FILTER_MAX_SIZE) size = CHANNEL_FILTER_MAX_SIZE;
-    if(size == 0) size = 1;
-    
-    filter->size = (uint16_t)size;
-    if(filter->count > filter->size) filter->count = filter->size;
-    if(filter->index >= filter->size) filter->index = 0;
-}
-
-static void channel_filter_resize_ms(channel_filter_t* filter, uint32_t time_ms)
-{
-    size_t size = (time_ms * CHANNEL_FILTER_MAX_SIZE +
-                   CHANNEL_FILTER_MAX_TIME_MS / 2) / CHANNEL_FILTER_MAX_TIME_MS;
-    
-    channel_filter_resize(filter, size);
-}
-
-static void channel_filter_init(channel_filter_t* filter, size_t size)
-{
-    memset(filter->buffer, 0x0, sizeof(fixed32_t) * CHANNEL_FILTER_MAX_SIZE);
-    filter->index = 0;
-    filter->count = 0;
-    
-    channel_filter_resize(filter, size);
-}
-
-static void channel_filter_put(channel_filter_t* filter, fixed32_t value)
-{
-    filter->buffer[filter->index] = value;
-    
-    if(filter->count < filter->size) filter->count ++;
-    if(++ filter->index >= filter->size) filter->index = 0;
-}
-
-static void channel_filter_calculate(channel_filter_t* filter)
-{
-    int32_t count = (int32_t)filter->count;
-    
-    fixed32_t sum_val = 0;
-    
-    size_t i;
-    for(i = 0; i < count; i ++){
-        sum_val += filter->buffer[i];
-    }
-    
-    if(count > 1) sum_val /= count;
-    
-    filter->value = sum_val;
-}
 
 
 static void drive_power_reset_channel_filters(void)
@@ -258,18 +189,18 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Ifan
     power_value_init(&drive_power.power_values[DRIVE_POWER_Erot],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Erot
     
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ub], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ib], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Uc], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ic], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Urot], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Irot], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Erot], CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], drive_power.channel_filters_data[DRIVE_POWER_Ua], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], drive_power.channel_filters_data[DRIVE_POWER_Ia], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ub], drive_power.channel_filters_data[DRIVE_POWER_Ub], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ib], drive_power.channel_filters_data[DRIVE_POWER_Ib], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Uc], drive_power.channel_filters_data[DRIVE_POWER_Uc], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ic], drive_power.channel_filters_data[DRIVE_POWER_Ic], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Urot], drive_power.channel_filters_data[DRIVE_POWER_Urot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Irot], drive_power.channel_filters_data[DRIVE_POWER_Irot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], drive_power.channel_filters_data[DRIVE_POWER_Iexc], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], drive_power.channel_filters_data[DRIVE_POWER_Iref], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], drive_power.channel_filters_data[DRIVE_POWER_Ifan], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Erot], drive_power.channel_filters_data[DRIVE_POWER_Erot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
     
@@ -1294,7 +1225,7 @@ fixed32_t drive_power_channel_real_value_inst(size_t channel)
 fixed32_t drive_power_channel_real_value(size_t channel)
 {
     if(channel >= DRIVE_POWER_CHANNELS_COUNT) return 0;
-    return drive_power.channel_filters[channel].value;
+    return channel_filter_value(&drive_power.channel_filters[channel]);
     //return power_channel_real_value(&drive_power.power, channel);
 }
 
