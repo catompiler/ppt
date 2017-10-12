@@ -41,6 +41,11 @@ typedef ramp_reference_t reference_t;
 extern err_t drive_regulator_init(void);
 
 /**
+ * Обновляет настройки регулятора привода.
+ */
+extern void drive_regulator_update_settings(void);
+
+/**
  * Получает ПИД-регулятор скорости.
  * Для отладки.
  * @return ПИД-регулятор скорости.
@@ -192,26 +197,12 @@ extern void drive_regulator_set_exc_enabled(bool enabled);
 extern void drive_regulator_set_spd_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd);
 
 /**
- * Устанавливает пределы значений ПИД-регулятора скорости.
- * @param pid_min Минимальное значение ПИД.
- * @param pid_max Максимальное значение ПИД.
- */
-extern void drive_regulator_spd_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
-
-/**
  * Устанавливает коэффициенты ПИД-регулятора тока ротора.
  * @param kp Коэффициент пропорционального звена.
  * @param ki Коэффициент интегрального звена.
  * @param kd Коэффициент дифференциального звена.
  */
 extern void drive_regulator_set_rot_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd);
-
-/**
- * Устанавливает пределы значений ПИД-регулятора тока ротора.
- * @param pid_min Минимальное значение ПИД.
- * @param pid_max Максимальное значение ПИД.
- */
-extern void drive_regulator_rot_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
 
 /**
  * Устанавливает коэффициенты ПИД-регулятора тока возбуждения.
@@ -222,11 +213,24 @@ extern void drive_regulator_rot_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
 extern void drive_regulator_set_exc_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd);
 
 /**
- * Устанавливает пределы значений ПИД-регулятора тока возбуждения.
- * @param pid_min Минимальное значение ПИД.
- * @param pid_max Максимальное значение ПИД.
+ * Устанавливает максимальный ток якоря.
+ * @param I_max Максимальный ток якоря.
  */
-extern void drive_regulator_exc_pid_clamp(fixed32_t pid_min, fixed32_t pid_max);
+extern void drive_regulator_set_max_rot_current(fixed32_t I_max);
+
+/**
+ * Устанавливает пределы углов открытия тиристоров.
+ * @param angle_min Минимальный угол открытия.
+ * @param angle_max Максимальный угол открытия.
+ */
+extern void drive_regulator_set_rot_open_angle_range(fixed32_t angle_min, fixed32_t angle_max);
+
+/**
+ * Устанавливает пределы углов открытия симистора возбуждения.
+ * @param angle_min Минимальный угол открытия.
+ * @param angle_max Максимальный угол открытия.
+ */
+extern void drive_regulator_set_exc_open_angle_range(fixed32_t angle_min, fixed32_t angle_max);
 
 /**
  * Получает значение номинального напряжения якоря.

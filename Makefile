@@ -12,7 +12,7 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    gui/widgets/gui_statusbar.o gui/menu/menu_explorer.o\
 	    gui/widgets/gui_menu.o gui/widgets/gui_home.o commands.o\
 	    storage.o nvdata.o drive_nvdata.o drive_events.o\
-	    drive_temp.o drive_motor.o channel_filter.o
+	    drive_temp.o drive_motor.o channel_filter.o drive_overload.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\

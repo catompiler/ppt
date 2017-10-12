@@ -126,6 +126,38 @@
 #define PARAM_ID_REGULATOR_IR_COMPENSATION 1130
 
 /*
+ * Перегруз.
+ */
+/*
+ * Разрешение перегруза.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_ENABLED 1135
+/*
+ * Режим.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_MODE 1136
+/*
+ * Базовый ток.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_BASE_CURRENT 1137
+/*
+ * Максимальный ток.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_MAX_CURRENT 1138
+/*
+ * Время перегруза.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_TIME 1139
+/*
+ * Период перегруза.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_PERIOD 1140
+/*
+ * Зона нечувствительности.
+ */
+#define PARAM_ID_REGULATOR_OVERLOAD_DEAD_ZONE 1141
+
+/*
  * Возбуждение.
  */
 /**
@@ -364,6 +396,10 @@
  * Действие при срабатывании тепловой защиты по току.
  */
 #define PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION 2122
+/**
+ * Зона нечувствительности.
+ */
+#define PARAM_ID_THERMAL_OVERLOAD_PROT_DEAD_ZONE 2123
 
 
 /*

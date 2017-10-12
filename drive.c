@@ -3,6 +3,7 @@
 #include "ramp.h"
 #include "pid_controller/pid_controller.h"
 #include "drive_regulator.h"
+#include "drive_overload.h"
 #include "drive_protection.h"
 #include "drive_phase_sync.h"
 #include "drive_tasks.h"
@@ -48,6 +49,9 @@
 
 //! dt Тепловой защиты.
 #define DRIVE_TOP_DT 0x1b5 //0.006667 с
+
+//! dt Перегруза.
+#define DRIVE_OVERLOAD_DT 0x1b5 //0.006667 с
 
 //! dt Цифровых входов, мс.
 #define DRIVE_DIO_DT 0x6AAC0 //6.667 мс.
@@ -1522,16 +1526,6 @@ static void drive_update_digital_outputs(void)
 }
 
 /**
- * Обрабатывает тепловую защиту. 
- */
-static void drive_process_top(void)
-{
-    if(drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-        drive_protection_top_process(drive_power_channel_real_value(DRIVE_POWER_Irot), DRIVE_TOP_DT);
-    }
-}
-
-/**
  * Получает флаг допустимости открытия тиристоров.
  * @return Флаг допустимости открытия тиристоров.
  */
@@ -2132,37 +2126,14 @@ err_t drive_update_settings(void)
     drive_triacs_set_exc_open_time_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_TIME));
     drive_triacs_set_exc_phase(settings_valueu(PARAM_ID_EXC_PHASE));
     
-    drive_regulator_set_mode(settings_valueu(PARAM_ID_REGULATOR_MODE));
+    drive_triacs_clamp_pairs_open_angle(settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN),
+                                        settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX));
+    drive_triacs_clamp_exc_open_angle(settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN),
+                                      settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX));
     
-    drive_regulator_set_reference_time(settings_valuef(PARAM_ID_RAMP_REFERENCE_TIME));
-    drive_regulator_set_start_time(settings_valuef(PARAM_ID_RAMP_START_TIME));
-    drive_regulator_set_stop_time(settings_valuef(PARAM_ID_RAMP_STOP_TIME));
-    drive_regulator_set_fast_stop_time(settings_valuef(PARAM_ID_RAMP_FAST_STOP_TIME));
+    drive_regulator_update_settings();
     
-    drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM));
-    drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
-    drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
-    drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
-                                settings_valuef(PARAM_ID_SPD_PID_K_I),
-                                settings_valuef(PARAM_ID_SPD_PID_K_D));
-    drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
-                                settings_valuef(PARAM_ID_ROT_PID_K_I),
-                                settings_valuef(PARAM_ID_ROT_PID_K_D));
-    drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
-                                settings_valuef(PARAM_ID_EXC_PID_K_I),
-                                settings_valuef(PARAM_ID_EXC_PID_K_D));
-    
-    fixed32_t rot_angle_min = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN);
-    fixed32_t rot_angle_max = settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX);
-    fixed32_t exc_angle_min = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN);
-    fixed32_t exc_angle_max = settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX);
-    
-    drive_triacs_clamp_pairs_open_angle(rot_angle_min, rot_angle_max);
-    drive_triacs_clamp_exc_open_angle(exc_angle_min, exc_angle_max);
-    
-    drive_regulator_spd_pid_clamp(0, settings_valuef(PARAM_ID_MOTOR_I_ROT_MAX));
-    drive_regulator_rot_pid_clamp(rot_angle_min, rot_angle_max);
-    drive_regulator_exc_pid_clamp(exc_angle_min, exc_angle_max);
+    drive_overload_update_settings();
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
@@ -2581,8 +2552,9 @@ void drive_null_timer_irq_handler(void)
 #endif
     
     if(drive_calculate_power() && drive_flags_is_set(DRIVE_FLAG_POWER_DATA_AVAIL)){
-        drive_process_top();
+        drive_protection_top_process(DRIVE_TOP_DT);
         drive_check_prots();
+        drive_overload_process(DRIVE_OVERLOAD_DT);
     }
     
     drive_states_process();

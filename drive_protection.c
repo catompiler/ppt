@@ -40,6 +40,7 @@ typedef struct _Drive_Prot_Base_Item {
 //! Структура тепловой защиты.
 typedef struct _Drive_TOP {
     bool enabled; //!< Разрешение тепловой защиты.
+    fixed32_t I_allow; //!< Допустимый ток с учётом зоны нечувствительности.
     fixed32_t k_pie_max; //!< Коэффициент зависимости времени срабатывания от перегрузки по току.
     fixed32_t cur_pie; //!< Текущее тепло двигателя.
     bool overheat; //!< Флаг перегрева.
@@ -765,6 +766,9 @@ static void drive_prot_update_items_settings(void)
  */
 static void drive_protection_update_top_settings(void)
 {
+    drive_prot.top.I_allow = drive_protection_get_ovf_level(drive_prot.I_rot,
+                             settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_DEAD_ZONE));
+    
     drive_prot.top.k_pie_max =
             (DRIVE_TOP_NOMINAL_OVERCURRENT * DRIVE_TOP_NOMINAL_OVERCURRENT - 1)
             * settings_valuef(PARAM_ID_THERMAL_OVERLOAD_PROT_TIME_2I);
@@ -1483,10 +1487,13 @@ drive_power_errors_t drive_protection_power_item_error(drive_prot_index_t index)
   * Тепловая защита.
   */
  
-void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt)
+void drive_protection_top_process(fixed32_t dt)
 {
     if(!drive_prot.top.enabled) return;
-    if(I_rot > drive_prot.I_rot){
+    
+    fixed32_t I_rot = drive_power_channel_real_value(DRIVE_POWER_Irot);
+    
+    if(I_rot > drive_prot.top.I_allow){
         // Q_heat = (i^2 - 1) * dt
         fixed32_t i = fixed32_div((int64_t)I_rot, drive_prot.I_rot);
         fixed32_t q = fixed32_mul((int64_t)i, i);

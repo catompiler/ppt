@@ -1,8 +1,10 @@
 #include "drive_regulator.h"
+#include "settings.h"
 #include "pid_controller/pid_controller.h"
 #include "utils/utils.h"
 #include "drive_power.h"
 #include "drive_motor.h"
+#include "drive_overload.h"
 #include <string.h>
 
 
@@ -28,6 +30,7 @@ typedef struct _Drive_Regulator {
     
     fixed32_t U_rot_nom; //!< Номинальное напряжение якоря.
     fixed32_t I_rot_nom; //!< Номинальный ток якоря.
+    fixed32_t I_rot_max; //!< Максимальный ток якоря.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t rpm_rot_ref; //!< Текущие обороты задания.
     fixed32_t i_rot_ref; //!< Текущий ток задания.
@@ -50,6 +53,35 @@ err_t drive_regulator_init(void)
     pid_controller_init(&regulator.exc_pid, 0, 0, 0);
     
     return E_NO_ERROR;
+}
+
+void drive_regulator_update_settings(void)
+{
+    drive_regulator_set_mode(settings_valueu(PARAM_ID_REGULATOR_MODE));
+    
+    drive_regulator_set_reference_time(settings_valuef(PARAM_ID_RAMP_REFERENCE_TIME));
+    drive_regulator_set_start_time(settings_valuef(PARAM_ID_RAMP_START_TIME));
+    drive_regulator_set_stop_time(settings_valuef(PARAM_ID_RAMP_STOP_TIME));
+    drive_regulator_set_fast_stop_time(settings_valuef(PARAM_ID_RAMP_FAST_STOP_TIME));
+    
+    drive_regulator_set_rot_nom_voltage(settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM));
+    drive_regulator_set_rot_nom_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM));
+    drive_regulator_set_exc_current(settings_valuef(PARAM_ID_I_EXC));
+    drive_regulator_set_spd_pid(settings_valuef(PARAM_ID_SPD_PID_K_P),
+                                settings_valuef(PARAM_ID_SPD_PID_K_I),
+                                settings_valuef(PARAM_ID_SPD_PID_K_D));
+    drive_regulator_set_rot_pid(settings_valuef(PARAM_ID_ROT_PID_K_P),
+                                settings_valuef(PARAM_ID_ROT_PID_K_I),
+                                settings_valuef(PARAM_ID_ROT_PID_K_D));
+    drive_regulator_set_exc_pid(settings_valuef(PARAM_ID_EXC_PID_K_P),
+                                settings_valuef(PARAM_ID_EXC_PID_K_I),
+                                settings_valuef(PARAM_ID_EXC_PID_K_D));
+    
+    drive_regulator_set_max_rot_current(settings_valuef(PARAM_ID_MOTOR_I_ROT_MAX));
+    drive_regulator_set_rot_open_angle_range(settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MIN),
+                                             settings_valuef(PARAM_ID_TRIACS_PAIRS_ANGLE_MAX));
+    drive_regulator_set_exc_open_angle_range(settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN),
+                                             settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX));
 }
 
 pid_controller_t* drive_regulator_spd_pid(void)
@@ -249,21 +281,11 @@ void drive_regulator_set_spd_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
     pid_controller_set_kd(&regulator.spd_pid, kd);
 }
 
-void drive_regulator_spd_pid_clamp(fixed32_t pid_min, fixed32_t pid_max)
-{
-    pid_controller_clamp(&regulator.spd_pid, pid_min, pid_max);
-}
-
 void drive_regulator_set_rot_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
 {
     pid_controller_set_kp(&regulator.rot_pid, kp);
     pid_controller_set_ki(&regulator.rot_pid, ki);
     pid_controller_set_kd(&regulator.rot_pid, kd);
-}
-
-void drive_regulator_rot_pid_clamp(fixed32_t pid_min, fixed32_t pid_max)
-{
-    pid_controller_clamp(&regulator.rot_pid, pid_min, pid_max);
 }
 
 void drive_regulator_set_exc_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
@@ -273,9 +295,20 @@ void drive_regulator_set_exc_pid(fixed32_t kp, fixed32_t ki, fixed32_t kd)
     pid_controller_set_kd(&regulator.exc_pid, kd);
 }
 
-void drive_regulator_exc_pid_clamp(fixed32_t pid_min, fixed32_t pid_max)
+void drive_regulator_set_max_rot_current(fixed32_t I_max)
 {
-    pid_controller_clamp(&regulator.exc_pid, pid_min, pid_max);
+    regulator.I_rot_max = I_max;
+    //pid_controller_clamp(&regulator.spd_pid, 0, I_max);
+}
+
+void drive_regulator_set_rot_open_angle_range(fixed32_t angle_min, fixed32_t angle_max)
+{
+    pid_controller_clamp(&regulator.rot_pid, angle_min, angle_max);
+}
+
+void drive_regulator_set_exc_open_angle_range(fixed32_t angle_min, fixed32_t angle_max)
+{
+    pid_controller_clamp(&regulator.exc_pid, angle_min, angle_max);
 }
 
 fixed32_t drive_regulator_rot_nom_voltage(void)
@@ -339,6 +372,13 @@ fixed32_t drive_regulator_exc_open_angle(void)
 static void drive_regulator_regulate_impl(void)
 {
     if(regulator.rot_enabled){
+        
+        if(drive_overload_enabled()){
+            pid_controller_clamp(&regulator.spd_pid, 0, drive_overload_avail_current());
+        }else{
+            pid_controller_clamp(&regulator.spd_pid, 0, regulator.I_rot_max);
+        }
+        
         fixed32_t rpm_rot_nom = drive_motor_rpm_nom();
         
         fixed32_t rpm_rot_back = drive_motor_rpm();

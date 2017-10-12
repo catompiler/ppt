@@ -398,10 +398,9 @@ extern drive_power_errors_t drive_protection_power_item_error(drive_prot_index_t
 
 /**
  * Обрабатывает нагрев/охлаждение под действием тока за заданный интервал времени.
- * @param I_rot Текущий ток ротора.
  * @param dt Интервал времени действия тока.
  */
-extern void drive_protection_top_process(fixed32_t I_rot, fixed32_t dt);
+extern void drive_protection_top_process(fixed32_t dt);
 
 /**
  * Производит проверку текущего состояния тепловой защиты.
