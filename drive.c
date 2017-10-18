@@ -8,6 +8,7 @@
 #include "drive_phase_sync.h"
 #include "drive_tasks.h"
 #include "drive_motor.h"
+#include "drive_selfstart.h"
 #include "utils/critical.h"
 #include <string.h>
 #include <stdio.h>
@@ -455,6 +456,20 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
 }
 
 /**
+ * Обрабатывает изменение состояния.
+ * @param state_from Текущее состояние.
+ * @param state_to Необходимое состояние.
+ */
+static void drive_on_state_changed(/*drive_state_t state_from, */drive_state_t state_to)
+{
+    if(drive_selfstart_starting()){
+        if(state_to == DRIVE_STATE_START){
+            drive_selfstart_done();
+        }
+    }
+}
+
+/**
  * Установка состояния.
  * @param state Состояние.
  */
@@ -463,6 +478,7 @@ static void drive_set_state(drive_state_t state)
     if(drive.state == state) return;
     
     drive_change_prot_masks(drive.state, state);
+    drive_on_state_changed(/*drive.state, */state);
     
     drive.state = state;
     drive.state_changed = true;
@@ -924,15 +940,14 @@ static void drive_error_stop_cutoff(void)
 /**
  * Обрабатывает действие останова по ошибке элемента защиты.
  * @param action Действие элемента защиты.
- * @return Флаг обработки элемента защиты.
+ * @return Флаг останова.
  */
 static bool drive_prot_error_stop_by_action(drive_prot_action_t action)
 {
     switch(action){
         case DRIVE_PROT_ACTION_IGNORE:
-            return false;
         case DRIVE_PROT_ACTION_WARNING:
-            break;
+            return false;
         case DRIVE_PROT_ACTION_COAST_STOP:
             drive_error_stop_coast();
             break;
@@ -949,15 +964,14 @@ static bool drive_prot_error_stop_by_action(drive_prot_action_t action)
 /**
  * Обрабатывает действие останова элемента защиты.
  * @param action Действие элемента защиты.
- * @return Флаг обработки элемента защиты.
+ * @return Флаг останова.
  */
 static bool drive_prot_stop_by_action(drive_prot_action_t action)
 {
     switch(action){
         case DRIVE_PROT_ACTION_IGNORE:
-            return false;
         case DRIVE_PROT_ACTION_WARNING:
-            break;
+            return false;
         case DRIVE_PROT_ACTION_COAST_STOP:
             drive_stop_coast();
             break;
@@ -974,7 +988,7 @@ static bool drive_prot_stop_by_action(drive_prot_action_t action)
 /**
  * Обрабатывает событие действия элемента защиты.
  * @param action Действие элемента защиты.
- * @return Флаг обработки элемента защиты.
+ * @return Флаг обработки события.
  */
 static bool drive_prot_event_by_action(drive_prot_action_t action)
 {
@@ -1149,10 +1163,20 @@ static void drive_check_prots(void)
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_WARN_TRIACS, DRIVE_ERROR_NONE, DRIVE_WARNING_TRIAC));
     
+    bool running = drive_running();
+    
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
+        // Если событие не проигнорировано.
         if(drive_prot_event_by_action(res_action)){
-            drive_prot_stop_by_action(res_action);
+            // Если необходим останов.
+            if(drive_prot_stop_by_action(res_action)){
+                // Если была работа.
+                if(running){
+                    // Запустим самозапуск.
+                    drive_selfstart_on_error();
+                }
+            }
         }
     }
 }
@@ -1574,11 +1598,66 @@ static void drive_setup_triacs_open(phase_t phase, phase_time_t sensor_time)
 }
 
 /**
+ * Обрабатывает самозапуск.
+ * @return Флаг действия самозапуска.
+ */
+static bool drive_state_process_selfstart(void)
+{
+    // Если самозапуск не разрешён - выход.
+    if(!drive_selfstart_enabled()) return false;
+    // Если пока не нужно запускаться (таймаут) - выход.
+    if(!drive_selfstart_need_start()) return false;
+    
+    // Если нет ошибок
+    if(drive_errors() == DRIVE_ERROR_NONE){
+        // Попытаемся запуститься.
+        if(drive_start()){
+            // Обработаем запуск.
+            drive_selfstart_started();
+        }else{
+            // Не смогли.
+            drive_selfstart_done();
+        }
+    }else{ // Есть ошибки.
+        // Если мы не можем очистить ошибки.
+        if(!drive_selfstart_can_clear_errors()){
+            // Завершим самозапуск - он не возможен.
+            drive_selfstart_done();
+            
+            return true;
+        }
+        // Если пока не нужно очищать ошибки (таймаут) - выход.
+        if(!drive_selfstart_need_clear_errors()) return false;
+        
+        // Очистить ошибки.
+        drive_clear_errors();
+        
+        // Обработаем очистку ошибок.
+        drive_selfstart_errors_cleared();
+    }
+    
+    return true;
+}
+
+/**
  * Обработка состояния ошибки привода.
  * @return Код ошибки.
  */
 static err_t drive_state_process_error(void)
 {
+    drive_state_process_selfstart();
+    
+    return E_NO_ERROR;
+}
+
+/**
+ * Обработка состояния простоя(готовности) привода.
+ * @return Код ошибки.
+ */
+static err_t drive_state_process_idle(void)
+{
+    drive_state_process_selfstart();
+    
     return E_NO_ERROR;
 }
 
@@ -1845,15 +1924,6 @@ static err_t drive_state_process_start(void)
 }
 
 /**
- * Обработка состояния простоя(готовности) привода.
- * @return Код ошибки.
- */
-static err_t drive_state_process_idle(void)
-{
-    return E_NO_ERROR;
-}
-
-/**
  * Производит калибровку питания.
  * @return Код ошибки.
  */
@@ -2056,6 +2126,8 @@ err_t drive_init(void)
     
     drive_motor_init();
     
+    drive_selfstart_init();
+    
     drive_update_settings();
     
     drive_set_static_prot_masks();
@@ -2134,6 +2206,8 @@ err_t drive_update_settings(void)
     drive_regulator_update_settings();
     
     drive_overload_update_settings();
+    
+    drive_selfstart_update_settings();
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
@@ -2287,15 +2361,15 @@ drive_err_stopping_t drive_err_stopping(void)
 
 bool drive_ok(void)
 {
-    return drive_get_state() != DRIVE_STATE_ERROR &&
+    return drive.state != DRIVE_STATE_ERROR &&
            drive_protection_top_ready() &&
            drive_motor_ready();
 }
 
 bool drive_ready(void)
 {
-    return (drive.errors == 0) &&
-           (drive.state != DRIVE_STATE_INIT) &&
+    return (drive.state != DRIVE_STATE_INIT) &&
+           (drive.state != DRIVE_STATE_ERROR) &&
             drive_flags_is_set(DRIVE_READY_FLAGS) &&
             drive_protection_top_ready() &&
             drive_motor_ready();
@@ -2555,6 +2629,11 @@ void drive_null_timer_irq_handler(void)
         drive_protection_top_process(DRIVE_TOP_DT);
         drive_check_prots();
         drive_overload_process(DRIVE_OVERLOAD_DT);
+    }
+    
+    // Если ошибок нет - выйдем из состояния ошибки.
+    if(drive_get_state() == DRIVE_STATE_ERROR && drive_errors() == DRIVE_ERROR_NONE){
+        drive_set_state(DRIVE_STATE_IDLE);
     }
     
     drive_states_process();

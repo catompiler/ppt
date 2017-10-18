@@ -32,6 +32,8 @@
 #define TR_ID_UNITS_US 112
 //! Часы.
 #define TR_ID_UNITS_HOUR 113
+//! Минуты.
+#define TR_ID_UNITS_MIN 114
 //! Проценты.
 #define TR_ID_UNITS_PERCENT 120
 //! Градусы.

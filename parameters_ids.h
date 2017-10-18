@@ -198,6 +198,34 @@
 #define PARAM_ID_RAMP_STOP_MODE 1204
 
 /*
+ * Самозапуск.
+ */
+/**
+ * Разрешение.
+ */
+#define PARAM_ID_SELFSTART_ENABLED 1220
+/**
+ * Период самозапуска.
+ */
+#define PARAM_ID_SELFSTART_PERIOD 1221
+/**
+ * Задержка.
+ */
+#define PARAM_ID_SELFSTART_DELAY 1222
+/**
+ * Сброс ошибок.
+ */
+#define PARAM_ID_SELFSTART_CLEAR_ERRORS_ENABLED 1223
+/**
+ * Попытки сброса ошибок.
+ */
+#define PARAM_ID_SELFSTART_CLEAR_ERRORS_ATTEMPTS 1224
+/**
+ * Период попыток сброса ошибок.
+ */
+#define PARAM_ID_SELFSTART_CLEAR_ERRORS_PERIOD 1225
+
+/*
  * Синхронизация с фазами.
  */
 /**
