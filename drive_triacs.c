@@ -65,6 +65,8 @@ typedef struct _Drive_Triacs {
     bool pairs_enabled; //!< Разрешение подачи импульсов на тиристорные пары.
     bool exc_enabled; //!< Разрешение подачи импульсов на симистор возбуждения.
     
+    drive_triacs_open_pair_t opening_pair; //!< Открываемые пары между нулями фаз.
+    
     fixed32_t triacs_pairs_min_angle; //!< Минимальный угол открытия тиристорных пар.
     fixed32_t triacs_pairs_max_angle; //!< Максимальный угол открытия тиристорных пар.
     
@@ -196,6 +198,16 @@ void drive_triacs_set_pairs_enabled(bool enabled)
 {
     if(enabled && !drive_triacs.pairs_enabled) drive_triacs.last_opened_pair = TRIAC_PAIR_NONE;
     drive_triacs.pairs_enabled = enabled;
+}
+
+drive_triacs_open_pair_t drive_triacs_opening_pair(void)
+{
+    return drive_triacs.opening_pair;
+}
+
+void drive_triacs_set_opening_pair(drive_triacs_open_pair_t pair)
+{
+    drive_triacs.opening_pair = pair;
 }
 
 bool drive_triacs_exc_enabled(void)
@@ -536,7 +548,7 @@ void drive_triacs_timer1_irq_handler(void)
     // Если нужно открыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM, TRIACS_A_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled){
+        if(drive_triacs.pairs_enabled && drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_FIRST){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_a)
                 );
@@ -556,7 +568,7 @@ void drive_triacs_timer1_irq_handler(void)
     } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled){
+        if(drive_triacs.pairs_enabled && drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_SECOND){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
@@ -638,19 +650,37 @@ static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_num
     // Вторая пара тиристоров.
     tim_trcs->triacs_b = triacs_b;
     // Установим каналы таймера.
-    // Открытие первой пары тиристоров.
-    TIM_SetCompare1(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
-    // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
-    // Открытие второй пары тиристоров.
-    TIM_SetCompare3(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
-    // Закрытие второй пары тиристоров.
-    TIM_SetCompare4(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET +
-                                     drive_triacs.triacs_pairs_open_ticks) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+    if(drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_FIRST){
+        // Открытие первой пары тиристоров.
+        TIM_SetCompare1(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS) -
+                                         drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+        // Закрытие первой пары тиристоров.
+        TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
+                                         drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC1, ENABLE);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC2, ENABLE);
+    }else{
+        TIM_SetCompare1(tim_trcs->timer, 0xffff);
+        TIM_SetCompare2(tim_trcs->timer, 0xffff);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC1, DISABLE);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC2, DISABLE);
+    }
+    if(drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_SECOND){
+        // Открытие второй пары тиристоров.
+        TIM_SetCompare3(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET) -
+                                         drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+        // Закрытие второй пары тиристоров.
+        TIM_SetCompare4(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + TRIACS_TIM_OFFSET +
+                                         drive_triacs.triacs_pairs_open_ticks) -
+                                         drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC3, ENABLE);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC4, ENABLE);
+    }else{
+        TIM_SetCompare3(tim_trcs->timer, 0xffff);
+        TIM_SetCompare4(tim_trcs->timer, 0xffff);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC3, DISABLE);
+        TIM_ITConfig(tim_trcs->timer, TIM_IT_CC4, DISABLE);
+    }
     //! Запустим таймер.
     TIM_Cmd(tim_trcs->timer, ENABLE);
 }

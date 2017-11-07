@@ -114,7 +114,7 @@ typedef int8_t triac_pair_number_t;
 //! Период в микросекундах.
 #define TRIACS_TIM_PERIOD_US (20000)
 //! Значение счётчика за период.
-#define TRIACS_TIM_PERIOD (0xffff)
+#define TRIACS_TIM_PERIOD (TRIACS_TIM_TICKS - 1)
 //! Предделитель.
 #define TRIACS_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
@@ -157,7 +157,7 @@ typedef int8_t triac_pair_number_t;
 //! Период в микросекундах.
 #define TRIAC_EXC_TIM_PERIOD_US (20000)
 //! Значение счётчика за период.
-#define TRIAC_EXC_TIM_PERIOD (0xffff)
+#define TRIAC_EXC_TIM_PERIOD (TRIAC_EXC_TIM_TICKS - 1)
 //! Предделитель.
 #define TRIAC_EXC_TIM_PRESCALER (40 - 1)
 //! Время в тиках таймера открытия тиристоров.
@@ -193,6 +193,18 @@ typedef enum _Drive_Triacs_Exc_Mode {
     DRIVE_TRIACS_EXC_REGULATED = 1, //!< Регулирование тока возбуждения.
     DRIVE_TRIACS_EXC_EXTERNAL = 2 //!< Внешнее возбуждение.
 } drive_triacs_exc_mode_t;
+
+
+/**
+ * Открываемые за период между
+ * датчиками нуля тиристорные пары.
+ */
+typedef enum _Drive_Triacs_Open_Pair {
+    DRIVE_TRIACS_OPEN_PAIR_NONE   = 0,
+    DRIVE_TRIACS_OPEN_PAIR_FIRST  = 1,
+    DRIVE_TRIACS_OPEN_PAIR_SECOND = 2,
+    DRIVE_TRIACS_OPEN_PAIR_ALL    = 3,
+} drive_triacs_open_pair_t;
 
 /**
  * Инициализирует тиристоры привода.
@@ -247,6 +259,18 @@ extern bool drive_triacs_pairs_enabled(void);
  * @param enabled Разрешение подачи импульсов на тиристорные пары.
  */
 extern void drive_triacs_set_pairs_enabled(bool enabled);
+
+/**
+ * Устанавливает открываемые пары между нулями фаз.
+ * @return Открываемые пары между нулями фаз.
+ */
+extern drive_triacs_open_pair_t drive_triacs_opening_pair(void);
+
+/**
+ * Устанавливает открываемые пары между нулями фаз.
+ * @param pair Открываемые пары между нулями фаз.
+ */
+extern void drive_triacs_set_opening_pair(drive_triacs_open_pair_t pair);
 
 /**
  * Получает разрешение подачи импульсов на симистор возбуждения.

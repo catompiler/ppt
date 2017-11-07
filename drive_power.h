@@ -16,6 +16,8 @@
 
 //! Питание.
 //! Число значений каналов АЦП.
+#define DRIVE_POWER_ADC_CHANNELS_COUNT 11
+//! Число значений каналов питания.
 #define DRIVE_POWER_CHANNELS_COUNT 12
 
 // Алиасы значений токов и напряжений.
@@ -98,7 +100,7 @@ typedef int16_t osc_value_t;
 #define DRIVE_POWER_OSC_CHANNEL_Iexc 8
 
 //! Количество точек осциллограммы за период.
-#define DRIVE_POWER_OSC_PERIOD_POINTS (32)
+#define DRIVE_POWER_OSC_PERIOD_POINTS (64)
 
 //! Длина канала осциллограммы (3.5 периода до и после аварии).
 #define DRIVE_POWER_OSC_CHANNEL_LEN (225) // (0.7 * 2) / (0.0003125 * 2) + 1
@@ -390,6 +392,21 @@ extern bool drive_power_calc_values(power_channels_t channels, err_t* err);
 extern err_t drive_power_calibrate(power_channels_t channels);
 
 /**
+ * Получает флаг разрешения фильтрации значений АЦП.
+ * @param channel Номер канала питания.
+ * @return Флаг разрешения фильтрации значений АЦП.
+ */
+extern bool drive_power_channel_adc_filter_enabled(size_t channel);
+
+/**
+ * Получает флаг разрешения фильтрации значений АЦП.
+ * @param channel Номер канала питания.
+ * @param enabled Разрешение.
+ * @return Флаг разрешения фильтрации значений АЦП.
+ */
+extern void drive_power_channel_set_adc_filter_enabled(size_t channel, bool enabled);
+
+/**
  * Получает множитель значения канала АЦП.
  * @param channel Номер канала АЦП.
  * @return Множитель значения канала АЦП.
@@ -500,6 +517,12 @@ extern fixed32_t drive_power_channel_real_value(size_t channel);
  * @return Напряжение по углу открытия тиристоров.
  */
 extern fixed32_t drive_power_open_angle_voltage(void);
+
+/**
+ * Получает максимальное выпрямленное значение напряжения.
+ * @return Максимальное выпрямленное значение напряжения.
+ */
+extern fixed32_t drive_power_max_rectified_voltage(void);
 
 #endif /* DRIVE_POWER_H */
 

@@ -129,6 +129,8 @@ static drive_modbus_t drive_modbus;
 #define DRIVE_MODBUS_COIL_REBOOT (DRIVE_MODBUS_COILS_START + 10)
 //! Сброс времени работы вентилятора.
 #define DRIVE_MODBUS_COIL_RESET_FAN_RUNTIME (DRIVE_MODBUS_COILS_START + 11)
+//! Самонастройка.
+#define DRIVE_MODBUS_COIL_SELFTUNE (DRIVE_MODBUS_COILS_START + 12)
 
 
 /** Пользовательские функции и коды.
@@ -485,6 +487,9 @@ static modbus_rtu_error_t drive_modbus_on_write_coil(uint16_t address, modbus_rt
         case DRIVE_MODBUS_COIL_RESET_FAN_RUNTIME:
             drive_nvdata_reset_fan_runtime();
             break;
+        case DRIVE_MODBUS_COIL_SELFTUNE:
+            drive_selftune();
+            break;
     }
     return MODBUS_RTU_ERROR_NONE;
 }
@@ -495,6 +500,35 @@ static modbus_rtu_error_t drive_modbus_on_report_slave_id(modbus_rtu_slave_id_t*
     slave_id->id = DRIVE_ID;
     slave_id->data = &drive_modbus.id;
     slave_id->data_size = sizeof(drive_modbus_id_t);
+    
+    return MODBUS_RTU_ERROR_NONE;
+}
+
+#define FILE_RECORDS_COUNT 10
+static uint16_t file_records[FILE_RECORDS_COUNT];
+
+static modbus_rtu_error_t drive_modbus_rtu_read_file_record(uint16_t file, uint16_t record, uint16_t count, uint16_t* values)
+{
+    if(file != 1) return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+    if(record + count >= FILE_RECORDS_COUNT) return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+    
+    uint16_t i;
+    for(i = 0; i < count; i ++){
+        values[record + i] = file_records[record + i];
+    }
+    
+    return MODBUS_RTU_ERROR_NONE;
+}
+
+static modbus_rtu_error_t drive_modbus_rtu_write_file_record(uint16_t file, uint16_t record, uint16_t count, const uint16_t* values)
+{
+    if(file != 1) return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+    if(record + count >= FILE_RECORDS_COUNT) return MODBUS_RTU_ERROR_INVALID_ADDRESS;
+    
+    uint16_t i;
+    for(i = 0; i < count; i ++){
+        file_records[record + i] = values[record + i];
+    }
     
     return MODBUS_RTU_ERROR_NONE;
 }
@@ -727,6 +761,8 @@ err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_
     modbus_rtu_set_write_coil_callback(drive_modbus.modbus, drive_modbus_on_write_coil);
     modbus_rtu_set_write_holding_reg_callback(drive_modbus.modbus, drive_modbus_on_write_reg);
     modbus_rtu_set_report_slave_id_callback(drive_modbus.modbus, drive_modbus_on_report_slave_id);
+    modbus_rtu_set_read_file_record_callback(drive_modbus.modbus, drive_modbus_rtu_read_file_record);
+    modbus_rtu_set_write_file_record_callback(drive_modbus.modbus, drive_modbus_rtu_write_file_record);
     modbus_rtu_set_custom_function_callback(drive_modbus.modbus, drive_modbus_on_custom_func);
     
     return E_NO_ERROR;

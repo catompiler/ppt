@@ -123,6 +123,7 @@ typedef struct _Drive {
     //drive_phase_angle_errors_t phase_angle_errors; //!< Ошибки углов между фазами.
     //drive_phase_angle_warnings_t phase_angle_warnings; //!< Предупреждения углов между фазами.
     drive_power_calibration_t power_calibration_state; //!< Состояние калибровки питания.
+    drive_selftuning_t selftuning_state; //!< Состояние самонастройки привода.
     drive_starting_t starting_state; //!< Состояние запуска привода.
     drive_stopping_t stopping_state; //!< Состояние останова привода.
     drive_stop_mode_t stopping_cur_mode; //!< Режим текущего останова привода.
@@ -131,9 +132,12 @@ typedef struct _Drive {
     drive_settings_t settings; //!< Настройки.
     drive_parameters_t params; //!< Обновляемые параметры.
     uint32_t iters_counter; //!< Счётчик итераций при ожидании таймаутов.
+    uint16_t adc_rate; //!< Кратность частоты АЦП.
+    uint16_t adc_prescaler; //!< Счётчик тиков АЦП.
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
     drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
     drive_reset_callback_t on_reset_callback; //!< Каллбэк при сбросе.
+    set_adc_rate_proc_t set_adc_rate_proc; //!< Функция установки частоты АЦП.
 } drive_t;
 
 //! Состояние привода.
@@ -290,6 +294,9 @@ static const size_t drive_prot_cutoff_items[] = {
 // ZERO SPEED
 #define PROT_ITEMS_ZERO_SPEED_ERRORS_MASK      PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT | DRIVE_POWER_ERROR_OVERFLOW_Iexc
 #define PROT_ITEMS_ZERO_SPEED_WARNINGS_MASK    PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT | DRIVE_POWER_WARNING_OVERFLOW_Iexc
+// SELFTUNE
+#define PROT_ITEMS_SELFTUNE_ERRORS_MASK      PROT_ERRORS_MASK_IN | PROT_ERRORS_MASK_ROT
+#define PROT_ITEMS_SELFTUNE_WARNINGS_MASK    PROT_WARNINGS_MASK_IN | PROT_WARNINGS_MASK_ROT
 
 // External exc inverse mask.
 // Errors.
@@ -308,6 +315,7 @@ static const drive_prot_data_t drive_prot_data[] = {
     {PROT_ITEMS_STOP_ERROR_ERRORS_MASK,     PROT_ITEMS_STOP_ERROR_WARNINGS_MASK}, // Stop error
     {PROT_ITEMS_ERROR_ERRORS_MASK,          PROT_ITEMS_ERROR_WARNINGS_MASK},  // Error
     {PROT_ITEMS_ZERO_SPEED_ERRORS_MASK,     PROT_ITEMS_ZERO_SPEED_WARNINGS_MASK}, // Zero speed
+    {PROT_ITEMS_SELFTUNE_ERRORS_MASK,       PROT_ITEMS_SELFTUNE_WARNINGS_MASK}, // Selftune
 };
 #define DRIVE_PROT_DATA_COUNT ARRAY_LEN(drive_prot_data)
 
@@ -455,17 +463,22 @@ static void drive_change_prot_masks(drive_state_t state_from, drive_state_t stat
     }
 }
 
+// Необходимые функции.
+static void drive_state_end_selftune(void);
 /**
  * Обрабатывает изменение состояния.
  * @param state_from Текущее состояние.
  * @param state_to Необходимое состояние.
  */
-static void drive_on_state_changed(/*drive_state_t state_from, */drive_state_t state_to)
+static void drive_on_state_changed(drive_state_t state_from, drive_state_t state_to)
 {
     if(drive_selfstart_starting()){
         if(state_to == DRIVE_STATE_START){
             drive_selfstart_done();
         }
+    }
+    if(state_from == DRIVE_STATE_SELFTUNE){
+        drive_state_end_selftune();
     }
 }
 
@@ -478,7 +491,7 @@ static void drive_set_state(drive_state_t state)
     if(drive.state == state) return;
     
     drive_change_prot_masks(drive.state, state);
-    drive_on_state_changed(/*drive.state, */state);
+    drive_on_state_changed(drive.state, state);
     
     drive.state = state;
     drive.state_changed = true;
@@ -513,6 +526,10 @@ static void drive_set_state(drive_state_t state)
             drive.status = DRIVE_STATUS_ERROR;
             break;
         case DRIVE_STATE_ZERO_SPEED:
+            drive.status = DRIVE_STATUS_RUN;
+            break;
+        case DRIVE_STATE_SELFTUNE:
+            drive.selftuning_state = DRIVE_SELFTUNING_BEGIN;
             drive.status = DRIVE_STATUS_RUN;
             break;
     }
@@ -821,6 +838,23 @@ static void drive_on_reset(void)
     if(drive.on_reset_callback){
         drive.on_reset_callback();
     }
+}
+
+/**
+ * Устанавливает частоту АЦП.
+ * @param rate Кратность частоты АЦП.
+ * @return Флаг установки частоты АЦП.
+ */
+static bool drive_set_adc_rate(uint32_t rate)
+{
+    if(!drive.set_adc_rate_proc) return false;
+    
+    CRITICAL_ENTER();
+    drive.adc_rate = rate;
+    drive.set_adc_rate_proc(rate);
+    CRITICAL_EXIT();
+    
+    return true;
 }
 
 /**
@@ -1163,7 +1197,7 @@ static void drive_check_prots(void)
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_WARN_TRIACS, DRIVE_ERROR_NONE, DRIVE_WARNING_TRIAC));
     
-    bool running = drive_running();
+    bool running = drive_get_state() == DRIVE_STATE_RUN;
     
     // Если требуется действие.
     if(res_action != DRIVE_PROT_ACTION_IGNORE){
@@ -1597,6 +1631,74 @@ static void drive_setup_triacs_open(phase_t phase, phase_time_t sensor_time)
     drive_triacs_setup_next_pairs(phase, sensor_time);
 }
 
+fixed32_t calc_open_angle_rms(fixed32_t Umax, fixed32_t U)
+{
+    fixed32_t U_Umax = fixed32_div((int64_t)U, Umax);
+    U_Umax = U_Umax - fixed32_make_from_int(1);
+    fixed32_t angle = fixed32_acos(U_Umax) - fixed32_make_from_int(60);
+    
+    return angle;
+}
+
+fixed32_t calc_open_angle_inst(fixed32_t Umax, fixed32_t U)
+{
+    fixed32_t U_Umax = fixed32_div((int64_t)U, Umax);
+    fixed32_t angle = fixed32_asin(U_Umax);
+    
+    return angle;
+}
+
+static void drive_state_begin_selftune(void)
+{
+    drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Irot, false);
+    drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Urot, false);
+    
+    //drive_triacs_set_pairs_open_angle(calc_open_angle_inst(drive_power_max_rectified_voltage(),
+    //                                 fixed32_make_from_int(50)));
+    drive_triacs_set_pairs_open_angle(fixed32_make_from_int(10));
+    drive_triacs_set_opening_pair(DRIVE_TRIACS_OPEN_PAIR_ALL);
+    drive_triacs_set_pairs_enabled(true);
+    
+    drive_set_adc_rate(DRIVE_ADC_RATE_FAST);
+}
+
+static void drive_state_end_selftune(void)
+{
+    drive_set_adc_rate(DRIVE_ADC_RATE_NORMAL);
+    
+    drive_triacs_set_pairs_enabled(false);
+    drive_triacs_set_opening_pair(DRIVE_TRIACS_OPEN_PAIR_NONE);
+    drive_triacs_set_pairs_open_angle(0);
+    
+    drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Urot, true);
+    drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Irot, true);
+}
+
+/**
+ * Обработка состояния самонастройки привода.
+ * @return Код ошибки.
+ */
+static bool drive_state_process_selftune(void)
+{
+    switch(drive.selftuning_state){
+        case DRIVE_SELFTUNING_NONE:
+            break;
+        case DRIVE_SELFTUNING_BEGIN:
+            drive_state_begin_selftune();
+            drive.selftuning_state = DRIVE_SELFTUNING_DATA;
+            break;
+        case DRIVE_SELFTUNING_DATA:
+            break;
+        case DRIVE_SELFTUNING_CALC:
+            break;
+        case DRIVE_SELFTUNING_DONE:
+            drive_set_state(DRIVE_STATE_IDLE);
+            break;
+    }
+    
+    return true;
+}
+
 /**
  * Обрабатывает самозапуск.
  * @return Флаг действия самозапуска.
@@ -1902,6 +2004,7 @@ static err_t drive_state_process_start(void)
                     drive_protection_power_set_errs_mask_flags(DRIVE_POWER_ERROR_UNDERFLOW_Iexc);
                     drive_protection_power_set_warn_mask_flags(DRIVE_POWER_WARNING_UNDERFLOW_Iexc);
                 }
+                drive_triacs_set_opening_pair(DRIVE_TRIACS_OPEN_PAIR_ALL);
                 drive_triacs_set_pairs_enabled(true);
                 drive_regulator_set_rot_enabled(true);
                 drive.starting_state = DRIVE_STARTING_RAMP;
@@ -2047,6 +2150,9 @@ static err_t drive_states_process(void)
         case DRIVE_STATE_ZERO_SPEED:
             drive_state_process_zero_speed();
             break;
+        case DRIVE_STATE_SELFTUNE:
+            drive_state_process_selftune();
+            break;
     }
     
     drive_process_digital_inputs();
@@ -2101,6 +2207,9 @@ static int16_t drive_get_null_timer_time(void)
 err_t drive_init(void)
 {
     memset(&drive, 0x0, sizeof(drive_t));
+    
+    drive.adc_prescaler = 0;
+    drive.adc_rate = 1;
     
     drive_phase_sync_init();
     drive_phase_sync_set_angle_callback(drive_get_null_timer_angle);
@@ -2344,6 +2453,11 @@ drive_power_calibration_t drive_power_calibration(void)
     return drive.power_calibration_state;
 }
 
+drive_selftuning_t drive_selftuning(void)
+{
+    return drive.selftuning_state;
+}
+
 drive_starting_t drive_starting(void)
 {
     return drive.starting_state;
@@ -2402,6 +2516,8 @@ bool drive_stop(void)
                 drive_stop_coast();
                 break;
         }
+    }else if(drive.state == DRIVE_STATE_SELFTUNE){
+        drive_set_state(DRIVE_STATE_IDLE);
     }
     return true;
 }
@@ -2428,6 +2544,16 @@ bool drive_calibrate_power(void)
        drive.state == DRIVE_STATE_ERROR){
         drive_save_state();
         drive_set_state(DRIVE_STATE_CALIBRATION);
+        
+        return true;
+    }
+    return false;
+}
+
+bool drive_selftune(void)
+{
+    if(drive.state == DRIVE_STATE_IDLE){
+        drive_set_state(DRIVE_STATE_SELFTUNE);
         
         return true;
     }
@@ -2492,6 +2618,16 @@ drive_reset_callback_t drive_reset_callback(void)
 void drive_set_reset_callback(drive_reset_callback_t callback)
 {
     drive.on_reset_callback = callback;
+}
+
+set_adc_rate_proc_t drive_adc_rate_proc(void)
+{
+    return drive.set_adc_rate_proc;
+}
+
+void drive_set_adc_rate_proc(set_adc_rate_proc_t proc)
+{
+    drive.set_adc_rate_proc = proc;
 }
 
 err_t drive_set_null_timer(TIM_TypeDef* TIM)
@@ -2641,11 +2777,27 @@ void drive_null_timer_irq_handler(void)
 
 err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
-    err_t err = drive_power_process_adc_values(channels, adc_values);
+    err_t err = E_NO_ERROR;
     
-    drive_check_prots_inst();
+    drive.adc_prescaler ++;
     
-    drive_phase_sync_append_data();
+    if(drive.adc_prescaler == drive.adc_rate){
+        
+        // double-buffer.
+        uint16_t adc_buffer[DRIVE_POWER_ADC_CHANNELS_COUNT];
+        // copy.
+        memcpy(adc_buffer, adc_values, sizeof(uint16_t) * DRIVE_POWER_ADC_CHANNELS_COUNT);
+        
+        err = drive_power_process_adc_values(channels, adc_buffer);
+
+        drive_check_prots_inst();
+
+        drive_phase_sync_append_data();
+    }
+    
+    if(drive.adc_prescaler >= drive.adc_rate){
+        drive.adc_prescaler = 0;
+    }
     
     return err;
 }

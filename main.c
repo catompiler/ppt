@@ -491,6 +491,8 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
+        NVIC_ClearPendingIRQ(DMA1_Channel1_IRQn);
+        
         drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
     }
 }
@@ -1383,7 +1385,7 @@ static void init_adc(void)
     ADC_Init(ADC3, &adc_is);
     
     
-#define ADC_SAMPLE_TIME ADC_SampleTime_71Cycles5
+#define ADC_SAMPLE_TIME ADC_SampleTime_1Cycles5
     
     //Порядок оцифровки ADC1.
     ADC_RegularChannelConfig(ADC1, ADC_Channel_15, 1, ADC_SAMPLE_TIME);
@@ -1447,6 +1449,47 @@ static void init_adc(void)
     NVIC_SetPriority(DMA1_Channel1_IRQn, IRQ_PRIOR_ADC_DMA);
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
+    
+#define ADC_TIM_PRESCALER (1)
+#define ADC_TIM_PERIOD (72000000UL / ADC_TIM_PRESCALER / POWER_ADC_FREQ)
+
+static void init_adc_timer(void)
+{
+    TIM_DeInit(TIM1);
+    TIM_TimeBaseInitTypeDef tim1_is;
+    TIM_TimeBaseStructInit(&tim1_is);
+            tim1_is.TIM_Prescaler = ADC_TIM_PRESCALER-1;                    // Делитель (0000...FFFF)
+            tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim1_is.TIM_Period = ADC_TIM_PERIOD-1;                     // Значение периода (0000...FFFF)
+            tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
+    TIM_TimeBaseInit(TIM1, &tim1_is);
+
+    TIM_OCInitTypeDef tim1_oc_is;
+    TIM_OCStructInit(&tim1_oc_is);
+        tim1_oc_is.TIM_OCMode = TIM_OCMode_PWM1;
+        tim1_oc_is.TIM_OutputState = TIM_OutputState_Disable;
+        tim1_oc_is.TIM_OutputNState = TIM_OutputNState_Disable;
+        tim1_oc_is.TIM_Pulse = 1; // Минимальное значение.
+        tim1_oc_is.TIM_OCPolarity = TIM_OCPolarity_Low;
+        tim1_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+        tim1_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
+        tim1_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    TIM_OC3Init(TIM1, &tim1_oc_is);
+    TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
+    
+    TIM_ARRPreloadConfig(TIM1, ENABLE);
+    
+    TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+}
+
+static void adc_timer_set_rate(uint32_t rate)
+{
+    TIM1->ARR = (ADC_TIM_PERIOD / rate) - 1;
+}
+
+#undef ADC_TIM_PERIOD
+#undef ADC_TIM_PRESCALER
 
 static void init_ioport_simple(void)
 {
@@ -1484,6 +1527,7 @@ static void init_drive(void)
     drive_set_error_callback((drive_error_callback_t)drive_tasks_write_error_event);
     drive_set_warning_callback((drive_warning_callback_t)drive_tasks_write_warning_event);
     drive_set_reset_callback(on_drive_reset);
+    drive_set_adc_rate_proc(adc_timer_set_rate);
 }
 
 static void reset_ioport(void)
@@ -1519,36 +1563,6 @@ static void init_drive_ui(void)
 }
 
 /******************************************************************************/
-static void init_adc_timer(void)
-{
-    TIM_DeInit(TIM1);
-    
-#define ADC_TIM_PRESCALER 10
-    TIM_TimeBaseInitTypeDef tim1_is;
-    TIM_TimeBaseStructInit(&tim1_is);
-            tim1_is.TIM_Prescaler = ADC_TIM_PRESCALER-1;                    // Делитель (0000...FFFF)
-            tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim1_is.TIM_Period = (72000000 / ADC_TIM_PRESCALER / POWER_ADC_FREQ)-1;                     // Значение периода (0000...FFFF)
-            tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
-    TIM_TimeBaseInit(TIM1, &tim1_is);
-#undef ADC_TIM_PRESCALER
-
-    TIM_OCInitTypeDef tim1_oc_is;
-    TIM_OCStructInit(&tim1_oc_is);
-        tim1_oc_is.TIM_OCMode = TIM_OCMode_PWM1;
-        tim1_oc_is.TIM_OutputState = TIM_OutputState_Disable;
-        tim1_oc_is.TIM_OutputNState = TIM_OutputNState_Disable;
-        tim1_oc_is.TIM_Pulse = tim1_is.TIM_Period / 2;
-        tim1_oc_is.TIM_OCPolarity = TIM_OCPolarity_Low;
-        tim1_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
-        tim1_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
-        tim1_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
-    TIM_OC3Init(TIM1, &tim1_oc_is);
-    TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
-    
-    TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
-}
 
 static void triacs_pairs_timer_init(TIM_TypeDef* TIM)
 {

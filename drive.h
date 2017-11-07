@@ -42,6 +42,17 @@
 #define DRIVE_NULL_TIMER_TICKS_PER_DEG 333//400
 
 
+/*
+ * Кратность частоты АЦП.
+ */
+//! Нормальный режим.
+#define DRIVE_ADC_RATE_NORMAL 1
+//! Ускоренный режим.
+#define DRIVE_ADC_RATE_FAST 4
+//! Функция установки частоты АЦП.
+typedef void (*set_adc_rate_proc_t)(uint32_t rate);
+
+
 
 //! Флаги привода - тип флага.
 typedef enum _Drive_Flag {
@@ -71,7 +82,8 @@ typedef enum _Drive_State {
     DRIVE_STATE_STOP        = 5, //!< Останов.
     DRIVE_STATE_STOP_ERROR  = 6, //!< Останов при ошибке.
     DRIVE_STATE_ERROR       = 7, //!< Ошибка.
-    DRIVE_STATE_ZERO_SPEED  = 8  //!< Нулевое задание.
+    DRIVE_STATE_ZERO_SPEED  = 8, //!< Нулевое задание.
+    DRIVE_STATE_SELFTUNE    = 9  //!< Самонастройка.
 } drive_state_t;
 
 //! Тип ошибки привода.
@@ -266,6 +278,15 @@ typedef enum _Drive_Power_Calibration {
     DRIVE_PWR_CALIBRATION_DONE    = 3  //!< Калибровка выполнена.
 } drive_power_calibration_t;
 
+//! Перечисление состояний самонастройки.
+typedef enum _Drive_Selftuning {
+    DRIVE_SELFTUNING_NONE = 0,
+    DRIVE_SELFTUNING_BEGIN = 1,
+    DRIVE_SELFTUNING_DATA = 2,
+    DRIVE_SELFTUNING_CALC = 3,
+    DRIVE_SELFTUNING_DONE = 4
+} drive_selftuning_t;
+
 //! Перечисление состояний запуска привода.
 typedef enum _Drive_Starting {
     DRIVE_STARTING_NONE     = 0, //!< Не запускается.
@@ -459,6 +480,12 @@ extern drive_init_state_t drive_init_state(void);
 extern drive_power_calibration_t drive_power_calibration(void);
 
 /**
+ * Получает состояние самонастройки привода.
+ * @return Состояние самонастройки привода.
+ */
+extern drive_selftuning_t drive_selftuning(void);
+
+/**
  * Получает состояние запуска привода.
  * @return Состояние запуска привода.
  */
@@ -549,6 +576,12 @@ extern bool drive_emergency_stop(void);
 extern bool drive_calibrate_power(void);
 
 /**
+ * Выполняет самонастройку привода.
+ * @return Флаг начала самонастройки привода.
+ */
+extern bool drive_selftune(void);
+
+/**
  * Получает флаг работы привода.
  * @return Флаг работы привода.
  */
@@ -594,6 +627,18 @@ extern drive_reset_callback_t drive_reset_callback(void);
  * @param callback Каллбэк при сбросе.
  */
 extern void drive_set_reset_callback(drive_reset_callback_t callback);
+
+/**
+ * Получает функцию установки частоты АЦП.
+ * @return Функция установки частоты АЦП.
+ */
+extern set_adc_rate_proc_t drive_adc_rate_proc(void);
+
+/**
+ * Устанавливает функцию установки частоты АЦП.
+ * @param proc Функция установки частоты АЦП.
+ */
+extern void drive_set_adc_rate_proc(set_adc_rate_proc_t callback);
 
 /**
  * Устанавливает порт ввода-вывода для цифрового входа.

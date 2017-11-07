@@ -115,6 +115,7 @@ typedef struct _Power_Value {
     bool is_soft; //!< Флаг программного вычисления канала.
     bool calibrated; //!< Флаг калибровки.
     bool data_avail; //!< Флаг доступности данных.
+    bool adc_filter_enabled; //!< Разрешение фильтрации данных АЦП.
 } power_value_t;
 
 //! Инициализирует структуру значения канала АЦП по месту объявления.
@@ -125,8 +126,8 @@ typedef struct _Power_Value {
                                     .sum = 0, .sum_zero = 0,\
                                     .count = 0, .count_zero = 0,\
                                     .filter_value = {0}, .filter_zero = {0},\
-                                    .is_soft = false,\
-                                    .calibrated = false, .data_avail = false }
+                                    .is_soft = false, .calibrated = false,\
+                                    .data_avail = false, adc_filter_enabled = true }
 
 /**
  * Структура питания.
@@ -329,6 +330,29 @@ ALWAYS_INLINE static bool power_channel_calibrated(const power_t* power, size_t 
 ALWAYS_INLINE static bool power_channel_data_avail(const power_t* power, size_t channel)
 {
     return power->channels[channel].data_avail;
+}
+
+/**
+ * Получает флаг разрешения фильтрации значений АЦП.
+ * @param power Питание.
+ * @param channel Номер канала питания.
+ * @return Флаг разрешения фильтрации значений АЦП.
+ */
+ALWAYS_INLINE static bool power_channel_adc_filter_enabled(const power_t* power, size_t channel)
+{
+    return power->channels[channel].adc_filter_enabled;
+}
+
+/**
+ * Получает флаг разрешения фильтрации значений АЦП.
+ * @param power Питание.
+ * @param channel Номер канала питания.
+ * @param enabled Разрешение.
+ * @return Флаг разрешения фильтрации значений АЦП.
+ */
+ALWAYS_INLINE static void power_channel_set_adc_filter_enabled(power_t* power, size_t channel, bool enabled)
+{
+    power->channels[channel].adc_filter_enabled = enabled;
 }
 
 /**

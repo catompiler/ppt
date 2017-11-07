@@ -13,7 +13,7 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
 	    gui/widgets/gui_menu.o gui/widgets/gui_home.o commands.o\
 	    storage.o nvdata.o drive_nvdata.o drive_events.o\
 	    drive_temp.o drive_motor.o channel_filter.o drive_overload.o\
-	    drive_selfstart.o
+	    drive_selfstart.o drive_math.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
@@ -21,8 +21,9 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
 	    tft9341 tft9341_cache graphics painter font\
 	    i2c pca9555 list key_input scheduler\
 	    pid_controller m95x menu localization\
-	    crc16_ccitt bsqrt cordic32\
-	    usart_bus modbus_rtu timers lm75 mid_filter3i
+	    crc16_ccitt cordic32\
+	    usart_bus modbus_rtu timers lm75 mid_filter3i\
+	    rbtree
 
 # Дата версии прошивки
 GIT_DATETIME=$(shell git show -s --format="%cd" --date=short)

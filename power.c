@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "bsqrt.h"
+#include "drive_math.h"
 
 
 
@@ -68,6 +68,8 @@ err_t power_value_init(power_value_t* value, power_channel_type_t type, size_t f
     
     value->type = type;
     value->adc_mult = k;
+    
+    value->adc_filter_enabled = true;
     
     return E_NO_ERROR;
 }
@@ -141,8 +143,10 @@ err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t
 static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
     // Отфильтруем значение АЦП.
-    mid_filter3i_put(&channel->filter_mid_adc, adc_value);
-    adc_value = mid_filter3i_value(&channel->filter_mid_adc);
+    if(channel->adc_filter_enabled){
+        mid_filter3i_put(&channel->filter_mid_adc, adc_value);
+        adc_value = mid_filter3i_value(&channel->filter_mid_adc);
+    }
     
     channel->raw_adc_value_inst = adc_value;
     

@@ -116,6 +116,7 @@ typedef struct _Drive_Power {
     bool rot_calc_voltage; //!< Вычислять напряжение якоря.
     bool exc_calc_current; //!< Вычислять ток возбуждения.
     // Вычисляемые значения.
+    fixed32_t max_rectified_voltage; //!< Максимальное выпрямленное напряжение.
     fixed32_t open_angle_voltage; //!< Напряжение согласно углу открытия тиристоров.
     fixed32_t U_exc_calc; //!< Вычисленное значение напряжения возбуждения.
     fixed32_t I_exc_calc; //!< Вычисленное значение тока возбуждения.
@@ -944,6 +945,7 @@ static void drive_power_calc_angle_voltage(void)
     }
     
     drive_power.open_angle_voltage = fixed32_mul((int64_t)Ud0, open_angle_cos);
+    drive_power.max_rectified_voltage = Ud0;
 }
 
 static void drive_power_calc_exc_current_rms(void)
@@ -1151,6 +1153,16 @@ err_t drive_power_calibrate(power_channels_t channels)
     return power_calibrate(&drive_power.power, channels);
 }
 
+bool drive_power_channel_adc_filter_enabled(size_t channel)
+{
+    return power_channel_adc_filter_enabled(&drive_power.power, channel);
+}
+
+void drive_power_channel_set_adc_filter_enabled(size_t channel, bool enabled)
+{
+    power_channel_set_adc_filter_enabled(&drive_power.power, channel, enabled);
+}
+
 fixed32_t drive_power_adc_value_multiplier(size_t channel)
 {
     return power_adc_value_multiplier(&drive_power.power, channel);
@@ -1232,4 +1244,9 @@ fixed32_t drive_power_channel_real_value(size_t channel)
 fixed32_t drive_power_open_angle_voltage(void)
 {
     return drive_power.open_angle_voltage;
+}
+
+fixed32_t drive_power_max_rectified_voltage(void)
+{
+    return drive_power.max_rectified_voltage;
 }
