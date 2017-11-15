@@ -16,7 +16,8 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
             drive_selfstart.o drive_math.o\
 	    drive_task_i2c_watchdog.o drive_task_buzz.o drive_task_temp.o\
 	    drive_task_ui.o drive_task_settings.o drive_task_events.o\
-	    drive_task_main.o drive_task_adc.o drive_task_modbus.o
+	    drive_task_main.o drive_task_adc.o drive_task_modbus.o\
+	    FreeRTOS-openocd.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
@@ -298,6 +299,8 @@ LDFLAGS   += -Wl,-Map=$(BUILD_TARGET_MAP),--cref
 LDFLAGS   += $(addprefix -L, $(LIBS_PATH))
 # Скрипт линкера.
 LDFLAGS   += -T$(LDSCRIPT)
+# FreeRTOS + OpenOCD
+LDFLAGS   += -Wl,--undefined=uxTopUsedPriority
 # Библиотеки.
 LDLIBS   += $(addprefix -l, $(LIBS))
 
