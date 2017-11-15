@@ -7,7 +7,7 @@
 
 #include "menu/menu.h"
 #include "settings.h"
-#include "counter/counter.h"
+#include <sys/time.h>
 
 // Максимальный уровень меню
 #define MENU_EXPLORER_MAX_LEVEL 7
@@ -74,8 +74,8 @@ struct _Menu_Explorer {
     bool help; //!< Показывать справку по элементу меню
     menu_explorer_state_t state; //!< Состояние меню (режим)
     gui_menu_draw_mode_t draw_mode; //!< Режим перерисовки после обновления состояния
-    counter_t touch; //!< Последнее время обращения пользователя
-    counter_t autoupdate; //!< Время автообновления
+    struct timeval touch; //!< Последнее время обращения пользователя
+    struct timeval autoupdate; //!< Время автообновления
     menu_user_t user; //!< Права доступа текущего пользователя
 };
 
@@ -95,7 +95,7 @@ EXTERN void menu_explorer_touch(menu_explorer_t* explorer);
 /**
  * Последнее время обращения пользователя
  */
-EXTERN counter_t menu_explorer_get_touch(menu_explorer_t* explorer);
+EXTERN void menu_explorer_get_touch(menu_explorer_t* explorer, struct timeval* touch);
 
 /**
  * Устанавливает права доступа (пользователя) меню

@@ -1,6 +1,15 @@
 #ifndef TRANSLATIONS_H
 #define TRANSLATIONS_H
 
+#ifdef TRANSLATION_DECL_ATTRIBS
+#undef TRANSLATION_DECL_ATTRIBS
+#endif
+#define TRANSLATION_DECL_ATTRIBS static const
+
+#ifdef TEXT_TR_DECL_ATTRIBS
+#undef TEXT_TR_DECL_ATTRIBS
+#endif
+#define TEXT_TR_DECL_ATTRIBS static const
 #include "localization/localization.h"
 #include "translation_en.h"
 #include "translation_ru.h"

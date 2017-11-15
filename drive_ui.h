@@ -32,15 +32,16 @@ typedef struct _Drive_Ui_Init {
     tft9341_t* tft; //!< TFT.
     struct timeval* ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
+    uint32_t ioport_i2c_watchdog; //!< Сторож i2c.
 } drive_ui_init_t;
 
 
-extern void* drive_ui_update_buzzer(void* arg);
+extern void drive_ui_update_buzzer(void);
 
 /**
  * Звуковой сигнал (короткий)
  */
-extern void* drive_ui_buzzer_beep(void* arg);
+extern void drive_ui_buzzer_beep(void);
 
 /**
  * Инициализирует интерфейс привода.
@@ -48,6 +49,12 @@ extern void* drive_ui_buzzer_beep(void* arg);
  * @return Код ошибки.
  */
 extern err_t drive_ui_init(drive_ui_init_t* ui_is);
+
+/**
+ * Выполняет настройку интерфейса привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_ui_setup(void);
 
 /**
  * Уничтожает интерфейс привода.

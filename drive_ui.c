@@ -2,18 +2,19 @@
 
 #include "drive_ui.h"
 #include "drive.h"
+#include "drive_tasks.h"
 #include "utils/utils.h"
-#include "counter/counter.h"
-#include "timers/timers.h"
 #include <sys/time.h>
+
+
+#define DRIVE_UI_UPDATE_PERIOD_DEFAULT_US 250000
 
 
 //! Тип структуры интерфейса привода.
 typedef struct _Drive_Ui {
-    counter_t update_period;
-    counter_t last_update_time;
+    struct timeval update_period;
+    struct timeval last_update_time;
     bool need_update;
-    timer_id_t upd_buz_tid;
 } drive_ui_t;
 
 //! Интерфейс привода.
@@ -27,6 +28,7 @@ static err_t drive_ui_init_keypad(drive_ui_init_t* ui_is)
     keypad_is.ioport = ui_is->ioport;
     keypad_is.ioport_timeout = ui_is->ioport_timeout;
     keypad_is.reset_i2c_bus_proc = ui_is->reset_i2c_bus_proc;
+    keypad_is.ioport_i2c_watchdog = ui_is->ioport_i2c_watchdog;
     
     return drive_keypad_init(&keypad_is);
 }
@@ -40,31 +42,9 @@ static err_t drive_ui_init_gui(drive_ui_init_t* ui_is)
     return drive_gui_init(&gui_is);
 }
 
-static void* drive_ui_timer_buzz_off_proc(void* arg)
-{
-    while(drive_keypad_pins_off(DRIVE_KPD_PIN_BUZZ) != E_NO_ERROR);
-    
-    return NULL;
-}
-
-static void* drive_ui_timer_buzz_on_proc(void* arg)
-{
-    while(drive_keypad_pins_on(DRIVE_KPD_PIN_BUZZ) != E_NO_ERROR);
-
-    struct timeval tv_start;
-    
-    gettimeofday(&tv_start, NULL);
-    tv_start.tv_sec += 0;
-    tv_start.tv_usec += 100000;
-    
-    timers_add_timer(drive_ui_timer_buzz_off_proc, &tv_start, NULL, NULL, NULL);/**/
-    
-    return NULL;
-}
-
 static void drive_ui_on_key_pressed(keycode_t key)
 {
-    drive_ui_buzzer_beep(NULL);
+    drive_ui_buzzer_beep();
     
     switch(key){
         case KEY_START:
@@ -81,17 +61,11 @@ static void drive_ui_on_key_pressed(keycode_t key)
     }
 }
 
-void* drive_ui_buzzer_beep(void* arg) {
+void drive_ui_buzzer_beep(void) {
     if (drive_ui_sound_enabled()) {
-        struct timeval tv_start;
-
-        gettimeofday(&tv_start, NULL);
-        tv_start.tv_sec += 0;
-        tv_start.tv_usec += 100000;
-
-        timers_add_timer(drive_ui_timer_buzz_on_proc, &tv_start, NULL, NULL, NULL);/**/
+        
+        drive_task_buzz_beep();
     }
-    return NULL;
 }
 
 static void drive_ui_on_key_released(keycode_t key)
@@ -116,31 +90,44 @@ err_t drive_ui_init(drive_ui_init_t* ui_is)
     gettimeofday(&tv, NULL);
     timeradd(&tv, &timeout, &tv);
     
-    ui.upd_buz_tid = timers_add_timer(drive_ui_update_buzzer, &tv, &timeout, NULL, NULL);/**/
-    
     ui.need_update = true;
-    ui.last_update_time = 0;
-    ui.update_period = system_counter_ticks_per_sec() / 4;
+    
+    ui.last_update_time.tv_sec = 0;
+    ui.last_update_time.tv_usec = 0;
+    
+    ui.update_period.tv_sec = 0;
+    ui.update_period.tv_usec = DRIVE_UI_UPDATE_PERIOD_DEFAULT_US;
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_ui_setup(void)
+{
+    RETURN_ERR_IF_FAIL(drive_keypad_setup());
+    RETURN_ERR_IF_FAIL(drive_gui_setup());
     
     return E_NO_ERROR;
 }
 
 void drive_ui_deinit(void)
 {
-    if(ui.upd_buz_tid != INVALID_TIMER_ID){
-        timers_remove_timer(ui.upd_buz_tid);
-        ui.upd_buz_tid = INVALID_TIMER_ID;
-    }
 }
 
 ALWAYS_INLINE static void drive_ui_update_update_time(void)
 {
-    ui.last_update_time = system_counter_ticks();
+    gettimeofday(&ui.last_update_time, NULL);
 }
 
-ALWAYS_INLINE static bool drive_ui_update_timeout(void)
+static bool drive_ui_update_timeout(void)
 {
-    return system_counter_diff(&ui.last_update_time) >= ui.update_period;
+    struct timeval cur_tv;
+    gettimeofday(&cur_tv, NULL);
+    
+    struct timeval timeout;
+    timeradd(&ui.update_period, &ui.last_update_time, &timeout);
+    
+    //return system_counter_diff(&ui.last_update_time) >= ui.update_period;
+    return timercmp(&cur_tv, &timeout, >=);
 }
 
 static void drive_ui_update_leds(void)
@@ -172,28 +159,42 @@ static void drive_ui_update_leds(void)
 /**
  * Обновление звукового оповещения
  */
-void* drive_ui_update_buzzer(void* arg)
+void drive_ui_update_buzzer(void)
 {
     static int8_t buzcnt;
     buzcnt++;
     bool buzon = (((buzcnt % DRIVE_UI_BUZZER_SEQUECE_ALARM == 0) && (drive_errors() != DRIVE_ERROR_NONE)) \
                 || ((buzcnt % DRIVE_UI_BUZZER_SEQUECE_WARNING == 0) && (drive_warnings() != DRIVE_WARNING_NONE)));
     if (buzon) {
-        counter_t cur = system_counter_ticks();
-        counter_t ticks_per_sec = system_counter_ticks_per_sec();
-        counter_t mute_time = drive_gui_get_touch_menu_explorer() + ticks_per_sec * DRIVE_UI_BUZZER_MUTE_AFTER_TOUCH_SEC;
-        if (cur >= mute_time) {
-            drive_ui_buzzer_beep(NULL);
+        
+        struct timeval cur_tv;
+        gettimeofday(&cur_tv, NULL);
+        
+        struct timeval touch_tv;
+        drive_gui_get_touch_menu_explorer(&touch_tv);
+        
+        touch_tv.tv_sec += DRIVE_UI_BUZZER_MUTE_AFTER_TOUCH_SEC;
+        
+        if(timercmp(&cur_tv, &touch_tv, >=)){
+            drive_ui_buzzer_beep();
         }
+        
+        // System counter removed.
+        //counter_t cur = system_counter_ticks();
+        //counter_t ticks_per_sec = system_counter_ticks_per_sec();
+        //counter_t mute_time = drive_gui_get_touch_menu_explorer() + ticks_per_sec * DRIVE_UI_BUZZER_MUTE_AFTER_TOUCH_SEC;
+        //if (cur >= mute_time) {
+        //    drive_ui_buzzer_beep(NULL);
+        //}
     }
-    
-    return NULL;
 }
 
 void drive_ui_process(void)
 {
     if(drive_keypad_update()) drive_keypad_process();
     else drive_keypad_repeat();
+    
+    drive_ui_update_buzzer();
     
     if(drive_ui_update_timeout()) ui.need_update = true;
     

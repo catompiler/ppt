@@ -8,7 +8,15 @@
 #include "errors/errors.h"
 #include "future/future.h"
 #include "drive_events.h"
-
+#include "drive_task_i2c_watchdog.h"
+#include "drive_task_buzz.h"
+#include "drive_task_temp.h"
+#include "drive_task_ui.h"
+#include "drive_task_settings.h"
+#include "drive_task_events.h"
+#include "drive_task_main.h"
+#include "drive_task_adc.h"
+#include "drive_task_modbus.h"
 
 
 /**

@@ -2724,9 +2724,12 @@ static int32_t angle_phC = 0;
 static int32_t angle_pid_val = 0;
 #endif
 
-void drive_null_timer_irq_handler(void)
+//void drive_null_timer_irq_handler(void)
+void drive_process_iter(void)
 {
-    if(drive.tim_null) TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
+    //if(drive.tim_null) TIM_ClearITPendingBit(drive.tim_null, TIM_IT_Update);
+    
+    int32_t iter_time = drive_get_null_timer_time();
     
     phase_t phase = drive_phase_sync_next_phase();
     if(phase != PHASE_UNK){
@@ -2773,6 +2776,11 @@ void drive_null_timer_irq_handler(void)
     }
     
     drive_states_process();
+    
+    iter_time = drive_get_null_timer_time() - iter_time;
+    
+    param_t* p_iter_time = settings_param_by_id(PARAM_ID_DEBUG_0);
+    if(p_iter_time) settings_param_set_valuei(p_iter_time, iter_time);
 }
 
 err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)
@@ -2783,16 +2791,18 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
     
     if(drive.adc_prescaler == drive.adc_rate){
         
-        // double-buffer.
-        uint16_t adc_buffer[DRIVE_POWER_ADC_CHANNELS_COUNT];
-        // copy.
-        memcpy(adc_buffer, adc_values, sizeof(uint16_t) * DRIVE_POWER_ADC_CHANNELS_COUNT);
+        int32_t adc_tick_time = drive_get_null_timer_time();
         
-        err = drive_power_process_adc_values(channels, adc_buffer);
+        err = drive_power_process_adc_values(channels, adc_values);
 
         drive_check_prots_inst();
 
         drive_phase_sync_append_data();
+        
+        adc_tick_time = drive_get_null_timer_time() - adc_tick_time;
+        
+        param_t* p_adc_tick_time = settings_param_by_id(PARAM_ID_DEBUG_1);
+        if(p_adc_tick_time) settings_param_set_valuei(p_adc_tick_time, adc_tick_time);
     }
     
     if(drive.adc_prescaler >= drive.adc_rate){

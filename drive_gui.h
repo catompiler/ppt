@@ -33,6 +33,11 @@ typedef struct _Drive_Gui_Init {
 extern err_t drive_gui_init(drive_gui_init_t* gui_is);
 
 /**
+ * Настраивает графический интерфейс привода.
+ */
+extern err_t drive_gui_setup(void);
+
+/**
  * Проверка параметра и изменение языка интерфейса
  */
 extern bool drive_gui_check_language(void);
@@ -93,7 +98,7 @@ extern bool drive_gui_modbus_status_idle(void);
 
 extern bool drive_gui_menu_user_is(menu_user_t user);
 
-extern counter_t drive_gui_get_touch_menu_explorer();
+extern void drive_gui_get_touch_menu_explorer(struct timeval* touch);
 
 void drive_gui_tiles_init();
 

@@ -69,6 +69,7 @@ typedef void (*reset_i2c_bus_proc_t)(void);
 typedef struct _Drive_Keypad_Init {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     struct timeval* ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
+    uint32_t ioport_i2c_watchdog; //!< Сторож i2c.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
 } drive_keypad_init_t;
 
@@ -78,6 +79,12 @@ typedef struct _Drive_Keypad_Init {
  * @return Код ошибки.
  */
 extern err_t drive_keypad_init(drive_keypad_init_t* keypad_is);
+
+/**
+ * Настраивает кейпад привода.
+ * @return Код ошибки.
+ */
+extern err_t drive_keypad_setup(void);
 
 /**
  * Ждёт завершения текущей операции.

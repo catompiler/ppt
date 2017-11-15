@@ -1,7 +1,7 @@
 #include "drive_keypad.h"
 #include "input/key_input.h"
 #include "utils/utils.h"
-#include "timers/timers.h"
+#include "drive_task_i2c_watchdog.h"
 #include "i2c/i2c.h"
 #include <stddef.h>
 #include <string.h>
@@ -20,6 +20,7 @@ typedef enum _Drive_Kpd_Upd_KbdState {
 typedef struct _Drive_Keypad {
     pca9555_t* ioport; //!< Порт ввода-вывода.
     struct timeval ioport_timeout; //!< Таймаут обмена данными с портом ввода-вывода.
+    uint32_t ioport_i2c_watchdog; //!< Сторож i2c.
     reset_i2c_bus_proc_t reset_i2c_bus_proc; //!< Функция сброса i2c.
     struct timeval last_update_time; //!< Последнее время обновления клавиатуры.
     volatile bool kbd_need_update; //!< Флаг необходимости обновления клавиатуры.
@@ -81,50 +82,23 @@ static bool drive_keypad_kbd_update_timeout(void)
     return timercmp(&tv, &timeout, >);
 }
 
-ALWAYS_INLINE static void drive_keypad_io_reset(void)
-{
-    if(keypad.reset_i2c_bus_proc){
-        keypad.reset_i2c_bus_proc();
-    }else{
-        pca9555_timeout(keypad.ioport);
-        i2c_bus_reset(pca9555_i2c_bus(keypad.ioport));
-    }
-}
-
-static void* drive_keypad_reset_ioport_task(void* arg)
-{
-    drive_keypad_io_reset();
-    
-    return NULL;
-}
-
 static err_t drive_keypad_try_safe(err_t (*pca9555_io_proc)(pca9555_t*))
 {
-    // Текущее время.
-    struct timeval cur_time = {0};
-    // Идентификатор таймера.
-    timer_id_t tid = INVALID_TIMER_ID;
-    // Время истечения тайм-аута.
-    struct timeval timeout = {0, 0};
-    
     err_t err = E_IO_ERROR;
     size_t i;
     for(i = 0; i < DRIVE_KEYPAD_IO_RETRIES_COUNT; i ++){
         
-        // Получим время истечения тайм-аута.
-        gettimeofday(&cur_time, NULL);
-        timeradd(&cur_time, &keypad.ioport_timeout, &timeout);
+        uint32_t timeout_ms = keypad.ioport_timeout.tv_sec * 1000 +
+                keypad.ioport_timeout.tv_usec / 1000;
         
-        tid = timers_add_timer(drive_keypad_reset_ioport_task, &timeout, NULL, NULL, NULL);
-        if(tid != INVALID_TIMER_ID){
+        drive_task_i2c_watchdog_start(keypad.ioport_i2c_watchdog, timeout_ms);
             
-            err = pca9555_io_proc(keypad.ioport);
-            if(err == E_NO_ERROR){
-                err = pca9555_wait(keypad.ioport);
-            }
-            
-            timers_remove_timer(tid);
+        err = pca9555_io_proc(keypad.ioport);
+        if(err == E_NO_ERROR){
+            err = pca9555_wait(keypad.ioport);
         }
+            
+        drive_task_i2c_watchdog_stop(keypad.ioport_i2c_watchdog);
         
         if(err == E_NO_ERROR) break;
     }
@@ -166,10 +140,17 @@ err_t drive_keypad_init(drive_keypad_init_t* keypad_is)
         keypad.ioport_timeout.tv_usec = DRIVE_KEYPAD_IO_TIMEOUT_DEFAULT_US;
     }
     
-    RETURN_ERR_IF_FAIL(drive_keypad_ioport_init());
+    keypad.ioport_i2c_watchdog = keypad_is->ioport_i2c_watchdog;
+    
+    //RETURN_ERR_IF_FAIL(drive_keypad_ioport_init());
     RETURN_ERR_IF_FAIL(key_input_init());
     
     return E_NO_ERROR;
+}
+
+err_t drive_keypad_setup(void)
+{
+    return drive_keypad_ioport_init();
 }
 
 err_t drive_keypad_wait(void)

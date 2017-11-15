@@ -25,6 +25,7 @@ typedef struct _Drive_Temp_Init {
     lm75_t* heatsink_sensor; //!< Датчик температуры радиатора.
     drive_temp_sensor_reset_proc_t heatsink_sensor_reset_proc; //!< Функция сброса датчика температуры радиатора.
     struct timeval* heatsink_sensor_io_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    uint32_t heatsink_sensor_i2c_watchdog; //!< Сторож i2c.
     struct timeval* heatsink_sensor_timeout; //!< Таймаут попыток обмена данными с датчиком температуры радиатора.
     struct timeval* update_interval; //!< Интервал обновления температур.
     drive_temp_set_fan_rpm_proc_t set_fan_rpm_proc; //!< Функция установки оборотов вентилятора.

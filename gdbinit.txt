@@ -15,7 +15,7 @@ target extended-remote | openocd -f "interface/stlink-v2.cfg" -f "target/stm32f1
 monitor reset halt
 
 # Файл отладки
-file main
+file build/main
 
 ## Раскомментировать, если необходимо
 ## каждый раз загружать прошивку.

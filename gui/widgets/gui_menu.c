@@ -56,7 +56,8 @@ void gui_menu_init_counters(gui_menu_t* menu, gui_metro_t* gui)
 
 void gui_menu_on_repaint(gui_menu_t* menu, const rect_t* rect)
 {
-    menu->explorer.autoupdate = system_counter_ticks();
+    gettimeofday(&menu->explorer.autoupdate, NULL);
+    //menu->explorer.autoupdate = system_counter_ticks();
     //gui_widget_on_repaint(GUI_WIDGET(menu), rect);
     if (gui_widget_visible(GUI_WIDGET(menu))) {
 
@@ -142,25 +143,45 @@ void gui_menu_on_home_action(gui_menu_t* menu, keycode_t key)
 void gui_menu_on_timer_home_action(gui_menu_t* menu)
 {
     //if (GUI_WIDGET(menu)->focusable) {
-        counter_t cur = system_counter_ticks();
-        counter_t ticks_per_sec = system_counter_ticks_per_sec();
-        // проверка перехода на главный экран
-        counter_t reset_time = menu->explorer.touch + ticks_per_sec * MENU_HOME_ON_TIMER_SEC;
-        if (cur >= reset_time) {
-            gui_menu_on_home_action(menu, 0);
-        }
-        // проверка сброса предыдущих прав пользователя по таймауту
-        reset_time = menu->explorer.touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
-        if (cur >= reset_time) {
-            menu->explorer.user = MENU_USER_NONE;
-        }
-        // проверка обновления значений пунктов меню
-        reset_time = menu->explorer.autoupdate + ticks_per_sec * MENU_EXPLORER_AUTO_UPDATE_VALUES_SEC;
-        if (cur >= reset_time) {
-            // перерисовываются только автообновляемые значения
-            menu->explorer.draw_mode = GUI_MENU_DRAW_MODE_NONE;
-            gui_menu_on_repaint(menu, NULL);
-        }
+    struct timeval cur_tv;
+    gettimeofday(&cur_tv, NULL);
+
+    //counter_t cur = system_counter_ticks();
+    //counter_t ticks_per_sec = system_counter_ticks_per_sec();
+    struct timeval home_timeout = {
+        menu->explorer.touch.tv_sec + MENU_HOME_ON_TIMER_SEC,
+        menu->explorer.touch.tv_usec
+    };
+    // проверка перехода на главный экран
+    //counter_t reset_time = menu->explorer.touch + ticks_per_sec * MENU_HOME_ON_TIMER_SEC;
+    //if (cur >= reset_time) {
+    if(timercmp(&cur_tv, &home_timeout, >=)){
+        gui_menu_on_home_action(menu, 0);
+    }
+    
+    struct timeval perms_timeout = {
+        menu->explorer.touch.tv_sec + MENU_EXPLORER_USER_RESET_SEC,
+        menu->explorer.touch.tv_usec
+    };
+    // проверка сброса предыдущих прав пользователя по таймауту
+    //reset_time = menu->explorer.touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
+    //if (cur >= reset_time) {
+    if(timercmp(&cur_tv, &perms_timeout, >=)){
+        menu->explorer.user = MENU_USER_NONE;
+    }
+    
+    struct timeval update_timeout = {
+        menu->explorer.autoupdate.tv_sec + MENU_EXPLORER_AUTO_UPDATE_VALUES_SEC,
+        menu->explorer.autoupdate.tv_usec
+    };
+    // проверка обновления значений пунктов меню
+    //reset_time = menu->explorer.autoupdate + ticks_per_sec * MENU_EXPLORER_AUTO_UPDATE_VALUES_SEC;
+    //if (cur >= reset_time) {
+    if(timercmp(&cur_tv, &update_timeout, >=)){
+        // перерисовываются только автообновляемые значения
+        menu->explorer.draw_mode = GUI_MENU_DRAW_MODE_NONE;
+        gui_menu_on_repaint(menu, NULL);
+    }
     //}
 }
 

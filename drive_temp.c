@@ -2,7 +2,7 @@
 #include "defs/defs.h"
 #include "stddef.h"
 #include <string.h>
-#include "timers/timers.h"
+#include "drive_task_i2c_watchdog.h"
 #include "settings.h"
 #include "stm32f10x.h"
 #include "drive.h"
@@ -26,6 +26,7 @@ typedef struct _Drive_Temp {
     lm75_t* heatsink_sensor; //!< Датчик температуры радиатора.
     drive_temp_sensor_reset_proc_t heatsink_sensor_reset; //!< Функция сброса датчика температуры радиатора.
     struct timeval heatsink_sensor_io_timeout; //!< Таймаут обмена данными с датчиком температуры радиатора.
+    uint32_t heatsink_sensor_i2c_watchdog; //!< Сторож i2c.
     struct timeval heatsink_sensor_timeout; //!< Таймаут попыток обмена данными с датчиком температуры радиатора.
     
     struct timeval update_interval; //!< Интервал обновления температуры.
@@ -80,6 +81,8 @@ err_t drive_temp_init(drive_temp_init_t* temp_is)
         drive_temp.heatsink_sensor_io_timeout.tv_sec = 0;
         drive_temp.heatsink_sensor_io_timeout.tv_usec = DRIVE_TEMP_IO_TIMEOUT_DEFAULT_US;
     }
+    
+    drive_temp.heatsink_sensor_i2c_watchdog = temp_is->heatsink_sensor_i2c_watchdog;
     
     if(temp_is->heatsink_sensor_timeout){
         memcpy(&drive_temp.heatsink_sensor_timeout, temp_is->heatsink_sensor_timeout, sizeof(struct timeval));
@@ -173,13 +176,6 @@ static void drive_temp_update_params(void)
     }
 }
 
-static void* drive_temp_reset_sensor_task(void* arg_proc)
-{
-    if(arg_proc) ((drive_temp_sensor_reset_proc_t)arg_proc)();
-    
-    return NULL;
-}
-
 bool drive_temp_update(void)
 {
     // Флаг успеха обновления.
@@ -206,19 +202,16 @@ bool drive_temp_update(void)
         }
     }
     
-    timer_id_t tid = INVALID_TIMER_ID;
-    struct timeval timeout = {0, 0};
-    
     fixed16_t temp16 = 0;
     
     if(drive_temp.updated || !drive_temp.heatsink_temp_avail){
         
-        timeradd(&cur_time, &drive_temp.heatsink_sensor_io_timeout, &timeout);
+        uint32_t timeout_ms = drive_temp.heatsink_sensor_io_timeout.tv_sec * 1000 +
+                drive_temp.heatsink_sensor_io_timeout.tv_usec / 1000;
         
-        tid = timers_add_timer(drive_temp_reset_sensor_task, &timeout, NULL, (void*)drive_temp.heatsink_sensor_reset, NULL);
+        drive_task_i2c_watchdog_start(drive_temp.heatsink_sensor_i2c_watchdog, timeout_ms);
         
-        if(tid != INVALID_TIMER_ID &&
-                lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
+        if(lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
             drive_temp.heatsink_temp_avail = true;
             drive_temp.heatsink_temp = fixed16_to_32(temp16);
             memcpy(&drive_temp.heatsink_temp_time, &cur_time, sizeof(struct timeval));
@@ -227,7 +220,7 @@ bool drive_temp_update(void)
             update_success = false;
         }
         
-        timers_remove_timer(tid);
+        drive_task_i2c_watchdog_stop(drive_temp.heatsink_sensor_i2c_watchdog);
     }
     
     if(update_success && timerisset(&drive_temp.update_interval)){

@@ -260,8 +260,6 @@ static err_t drive_gui_init_tft(void)
     RETURN_ERR_IF_FAIL(tft9341_sleep_out(gui.tft));
     RETURN_ERR_IF_FAIL(tft9341_display_on(gui.tft));
     
-    tft_cache.tft = gui.tft;
-    
     return E_NO_ERROR;
 }
 
@@ -380,11 +378,19 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
     if(gui_is->tft == NULL) return E_NULL_POINTER;
     
     gui.tft = gui_is->tft;
+    tft_cache.tft = gui_is->tft;
     
     drive_modbus_last_time = (uint32_t)time(NULL) - DRIVE_MODBUS_GUI_ICON_IDLE_SEC;
     
-    RETURN_ERR_IF_FAIL(drive_gui_init_tft());
+    //RETURN_ERR_IF_FAIL(drive_gui_init_tft());
     RETURN_ERR_IF_FAIL(gui_metro_init(&gui.gui, &graphics, &theme));
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_gui_setup(void)
+{
+    RETURN_ERR_IF_FAIL(drive_gui_init_tft());
     
     make_gui();
     
@@ -461,7 +467,10 @@ bool drive_gui_menu_user_is(menu_user_t user)
     return gui.menu.explorer.user == user;
 }
 
-counter_t drive_gui_get_touch_menu_explorer()
+void drive_gui_get_touch_menu_explorer(struct timeval* touch)
 {
-    return gui.menu.explorer.touch;
+    if(!touch) return;
+    
+    touch->tv_sec = gui.menu.explorer.touch.tv_sec;
+    touch->tv_usec = gui.menu.explorer.touch.tv_usec;
 }

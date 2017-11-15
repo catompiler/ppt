@@ -291,6 +291,8 @@ void drive_phase_sync_append_data(void)
             if(fft_buffers->index == 0){
                 if(phase_sync.angle_callback){
                     fft_buffers->first_angle = phase_sync.angle_callback();
+                }else{
+                    fft_buffers->first_angle = 0;
                 }
             }
             

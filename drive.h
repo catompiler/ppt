@@ -759,7 +759,13 @@ extern __attribute__ ((deprecated)) err_t drive_process_null_sensor(phase_t phas
 /**
  * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
  */
-extern void drive_null_timer_irq_handler(void);
+//extern void drive_null_timer_irq_handler(void);
+
+/**
+ * Обрабатывает очередную итерацию действий и вычислений
+ * при срабатывании виртуального датчика нуля.
+ */
+extern void drive_process_iter(void);
 
 /**
  * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.

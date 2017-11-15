@@ -7,7 +7,6 @@
 #include "usart/usart_bus.h"
 #include "modbus/modbus_rtu.h"
 #include <stdio.h>
-#include "counter/counter.h"
 #include "rtc/rtc.h"
 #include "spi/spi.h"
 #include "dma/dma.h"
@@ -16,8 +15,6 @@
 #include "tft9341/tft9341.h"
 #include "fixed/fixed32.h"
 #include "pca9555/pca9555.h"
-#include "scheduler/scheduler.h"
-#include "timers/timers.h"
 #include "m95x/m95x.h"
 #include "lm75/lm75.h"
 #include "storage.h"
@@ -34,6 +31,10 @@
 #include "drive_temp.h"
 #include <string.h>
 #include <stdlib.h>
+#undef LIST_H
+#include <FreeRTOS.h>
+#include <list.h>
+#include <task.h>
 
 
 //! Буфер записи USART.
@@ -58,42 +59,9 @@ static modbus_rtu_t modbus;
 //! Сообщения Modbus.
 static modbus_rtu_message_t modbus_rx_msg, modbus_tx_msg;
 
-//! Счётчик.
-static counter_t counter = 0;
-
 //! Счётчик миллисекунд для функции gettimeofday.
-static counter_t counter_ms_gtod = 0;
+static uint32_t counter_ms_gtod = 0;
 
-//! Планеровщик задач.
-//! Максимум задач.
-#define SCHEDULER_TASKS_MAX 10
-//! Буфер задач.
-static TASKS_BUFFER(tasks_buffer, SCHEDULER_TASKS_MAX);
-
-//! Таймеры.
-//! Максимум таймеров.
-#define TIMERS_COUNT_MAX 10
-//! Буфер таймеров.
-static TIMERS_BUFFER(timers_buf, TIMERS_COUNT_MAX);
-//! Константы таймера таймеров.
-//! Таймер.
-#define TIMERS_TIMER TIM5
-//! Прерывание таймера.
-#define TIMERS_TIMER_IRQn TIM5_IRQn
-//! Предделитель.
-#define TIMERS_TIMER_PRESCALER (7200 - 1) // 100us per tick
-//! Тиков за период.
-#define TIMERS_TIMER_PERIOD_TICKS (65536)
-//! Период.
-#define TIMERS_TIMER_PERIOD (0xffff)
-//! Максимум секунд.
-#define TIMERS_TIMER_MAX_SECS (6)
-//! Максимум микросекунд.
-#define TIMERS_TIMER_MAX_USECS (553500)
-//! Минимум тиков.
-#define TIMERS_TIMER_TICKS_MIN (1)
-//! Максимум тиков.
-#define TIMERS_TIMER_TICKS_MAX (TIMERS_TIMER_PERIOD)
 
 //! Шина spi.
 static spi_bus_t spi;
@@ -157,9 +125,14 @@ static pca9555_t ioport;
 #define IOPORT_IO_TIMEOUT_US (200000)
 
 
-// Watchdog работы задач IDLE.
-//! Время до сброса панельки / датчиков i2c.
-#define IDLE_WATCHDOG_TIMEOUT_S (5)
+// Watchdogs.
+// Работа с шиной i2c1.
+#define WATCHDOG_I2C1 0
+// Работа с шиной i2c2.
+#define WATCHDOG_I2C2 1
+
+
+#define DEBUG_RESET_I2C 1
 
 
 //! TFT9341.
@@ -240,32 +213,52 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
  */
 #define IRQ_PRIOR_TRIACS_TIMER 0
 #define IRQ_PRIOR_TRIAC_EXC_TIMER 0
-#define IRQ_PRIOR_SYSTICK 0
-#define IRQ_PRIOR_RTC 0
-#define IRQ_PRIOR_NULL_SENSORS 1
-#define IRQ_PRIOR_ADC_DMA 2
-#define IRQ_PRIOR_NULL_TIMER 4
+// FreeRTOS.
+//#define IRQ_PRIOR_SYSTICK 0
 
 #ifdef USE_ZERO_SENSORS
 #define IRQ_PRIOR_PHASES_TIMER 4
+#define IRQ_PRIOR_NULL_SENSORS 1
 #endif //USE_ZERO_SENSORS
 
-#define IRQ_PRIOR_MODBUS_USART 3
-#define IRQ_PRIOR_I2C1 5
-#define IRQ_PRIOR_I2C2 5
-#define IRQ_PRIOR_SPI1 5
-#define IRQ_PRIOR_SPI2 5
-#define IRQ_PRIOR_USART 5
-#define IRQ_PRIOR_DMA_CH1 5
-#define IRQ_PRIOR_DMA_CH2 5 // spi1
-#define IRQ_PRIOR_DMA_CH3 5 // spi1
-#define IRQ_PRIOR_DMA_CH4 5 // spi2 usart1 (modbus)
-#define IRQ_PRIOR_DMA_CH5 5 // spi2 usart1 (modbus) i2c2
-#define IRQ_PRIOR_DMA_CH6 5 // i2c1 usart2 i2c2
-#define IRQ_PRIOR_DMA_CH7 5 // i2c1 usart2
-#define IRQ_PRIOR_KEYPAD 6
-#define IRQ_PRIOR_RTC_ALARM 6
-#define IRQ_PRIOR_TIMERS_TIMER 7
+#define IRQ_PRIOR_RTOS_MAX 8
+
+#define IRQ_PRIOR_RTC (IRQ_PRIOR_RTOS_MAX + 1)
+#define IRQ_PRIOR_ADC_DMA (IRQ_PRIOR_RTOS_MAX + 2)
+#define IRQ_PRIOR_NULL_TIMER (IRQ_PRIOR_RTOS_MAX + 4)
+
+#define IRQ_PRIOR_MODBUS_USART (IRQ_PRIOR_RTOS_MAX + 3)
+#define IRQ_PRIOR_I2C1 (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_I2C2 (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_SPI1 (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_SPI2 (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_USART (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_DMA_CH1 (IRQ_PRIOR_RTOS_MAX + 5)
+#define IRQ_PRIOR_DMA_CH2 (IRQ_PRIOR_RTOS_MAX + 5) // spi1
+#define IRQ_PRIOR_DMA_CH3 (IRQ_PRIOR_RTOS_MAX + 5) // spi1
+#define IRQ_PRIOR_DMA_CH4 (IRQ_PRIOR_RTOS_MAX + 5) // spi2 usart1 (modbus)
+#define IRQ_PRIOR_DMA_CH5 (IRQ_PRIOR_RTOS_MAX + 5) // spi2 usart1 (modbus) i2c2
+#define IRQ_PRIOR_DMA_CH6 (IRQ_PRIOR_RTOS_MAX + 5) // i2c1 usart2 i2c2
+#define IRQ_PRIOR_DMA_CH7 (IRQ_PRIOR_RTOS_MAX + 5) // i2c1 usart2
+#define IRQ_PRIOR_KEYPAD (IRQ_PRIOR_RTOS_MAX + 6)
+#define IRQ_PRIOR_RTC_ALARM (IRQ_PRIOR_RTOS_MAX + 6)
+
+
+/*
+ * Приоритеты задач.
+ */
+#define DRIVE_TASK_PRIORITY_ADC 10
+#define DRIVE_TASK_PRIORITY_MAIN 8
+#define DRIVE_TASK_PRIORITY_MODBUS 9
+#define DRIVE_TASK_PRIORITY_EVENTS 7
+#define DRIVE_TASK_PRIORITY_SETTINGS 6
+//#define DRIVE_TASK_PRIORITY_TIMER 5
+#define DRIVE_TASK_PRIORITY_I2C_WDT 4
+#define DRIVE_TASK_PRIORITY_TEMP 3
+#define DRIVE_TASK_PRIORITY_BUZZ 2
+#define DRIVE_TASK_PRIORITY_UI 1
+//#define DRIVE_TASK_PRIORITY_ 0
+//#define DRIVE_TASK_PRIORITY_ 0
 
 
 //! Атрибуты обработчиков прерываний.
@@ -296,15 +289,17 @@ IRQ_ATTRIBS void UsageFault_Handler(void)
     for(;;);
 }
 
-IRQ_ATTRIBS void SVC_Handler(void)
-{
-    for(;;);
-}
+// Handler in FreeRTOS.
+//IRQ_ATTRIBS void SVC_Handler(void)
+//{
+//    for(;;);
+//}
 
-IRQ_ATTRIBS void PendSV_Handler(void)
-{
-    for(;;);
-}
+// Handler in FreeRTOS.
+//IRQ_ATTRIBS void PendSV_Handler(void)
+//{
+//    for(;;);
+//}
 
 /*
  * Обработчики прерываний.
@@ -320,10 +315,12 @@ IRQ_ATTRIBS void USART3_IRQHandler(void)
     usart_buf_irq_handler(&usart_buf);
 }
 
-IRQ_ATTRIBS void SysTick_Handler(void)
-{
-    system_counter_tick();
-}
+// Handler in FreeRTOS.
+//IRQ_ATTRIBS void SysTick_Handler(void)
+//{
+//    // System counter removed.
+//    //system_counter_tick();
+//}
 
 IRQ_ATTRIBS void SPI1_IRQHandler(void)
 {
@@ -352,13 +349,13 @@ IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
     i2c_bus_dma_tx_channel_irq_handler(&i2c2);
 }
 
-ALWAYS_INLINE static void modbus_rs485_set_input(void);
+static void modbus_rs485_set_input(void);
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
     // Установка интерфейса rs485 (Modbus RTU)
     // на приём данных с целью предотвращения его
     // ошибочной установки на передачу.
-    modbus_rs485_set_input();
+    //modbus_rs485_set_input();
     
     usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2) ||
@@ -413,7 +410,7 @@ IRQ_ATTRIBS void RTCAlarm_IRQHandler(void)
  */
 static void rtc_on_second(void)
 {
-    counter_ms_gtod = system_counter_ticks();
+    counter_ms_gtod = xTaskGetTickCountFromISR();
     
     drive_nvdata_inc_lifetime();
     
@@ -432,10 +429,8 @@ static void rtc_on_second(void)
 /*
  * RTC alarm callback.
  */
-static void idle_watchdog_reset_idle_tasks_hangs(void);
 static void rtc_on_alarm(void)
 {
-    idle_watchdog_reset_idle_tasks_hangs();
 }
 
 /*
@@ -448,8 +443,17 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
         return -1;
     }
     
+    uint32_t ticks_old = counter_ms_gtod;
+    uint32_t ticks = xTaskGetTickCount();
+    
+    if(ticks >= ticks_old){
+        ticks -= ticks_old;
+    }else{
+        ticks = UINT32_MAX - ticks_old + ticks + 1;
+    }
+    
     tv->tv_sec = rtc_time(NULL);
-    tv->tv_usec = system_counter_diff(&counter_ms_gtod) * 1000;
+    tv->tv_usec = (ticks * 1000 / configTICK_RATE_HZ) * 1000;
     
     if(tv->tv_usec >= 1000000){
         tv->tv_usec = 1000000 - 1;
@@ -491,9 +495,13 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
     if(DMA_GetITStatus(DMA1_IT_TC1)){
         DMA_ClearITPendingBit(DMA1_IT_TC1);
         
-        NVIC_ClearPendingIRQ(DMA1_Channel1_IRQn);
+        //drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
         
-        drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
+        BaseType_t pxHigherPriorityTaskWoken = 0;
+        
+        drive_task_adc_process_data_isr((uint16_t*)adc_raw_buffer, &pxHigherPriorityTaskWoken);
+        
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
     }
 }
 
@@ -645,12 +653,6 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
     drive_triac_exc_timer_irq_handler();
 }
 
-IRQ_ATTRIBS void TIM5_IRQHandler(void)
-{
-    TIM_ClearITPendingBit(TIMERS_TIMER, TIM_IT_Update);
-    timers_timer_handler();
-}
-
 IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
     drive_phases_timer_irq_handler();
@@ -658,7 +660,13 @@ IRQ_ATTRIBS void TIM6_IRQHandler(void)
 
 IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
-    drive_null_timer_irq_handler();
+    if(TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET){
+        TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
+        
+        if(drive_task_main_process_isr()){
+            portYIELD();
+        }
+    }
 }
 
 /*
@@ -685,12 +693,12 @@ static bool spi2_callback(void)
     return m95x_spi_callback(&eeprom);
 }
 
-ALWAYS_INLINE static void modbus_rs485_set_input(void)
+static void modbus_rs485_set_input(void)
 {
     RS485_IFACE_CTL_GPIO->BRR = RS485_IFACE_CTL_PIN;
 }
 
-ALWAYS_INLINE static void modbus_rs485_set_output(void)
+static void modbus_rs485_set_output(void)
 {
     RS485_IFACE_CTL_GPIO->BSRR = RS485_IFACE_CTL_PIN;
 }
@@ -719,11 +727,11 @@ static bool usart_tc_callback(void)
 
 static void modbus_on_msg_recv(void)
 {
-    modbus_rs485_set_output();
-    if(modbus_rtu_dispatch(&modbus) != E_NO_ERROR){
-        modbus_rs485_set_input();
-    }
     drive_gui_modbus_set_last_time();
+    
+    if(drive_task_modbus_process_isr()){
+        portYIELD();
+    }
 }
 
 static void modbus_on_msg_sent(void)
@@ -734,14 +742,14 @@ static void modbus_on_msg_sent(void)
 /*
  * Инициализация.
  */
-
-static void init_sys_counter(void)
-{
-    system_counter_init(1000);
-    counter = system_counter_ticks();
-    SysTick_Config(SystemCoreClock / 1000);
-    NVIC_SetPriority(SysTick_IRQn, IRQ_PRIOR_SYSTICK);
-}
+// System counter removed.
+//static void init_sys_counter(void)
+//{
+//    system_counter_init(1000);
+//    counter = system_counter_ticks();
+//    SysTick_Config(SystemCoreClock / 1000);
+//    NVIC_SetPriority(SysTick_IRQn, IRQ_PRIOR_SYSTICK);
+//}
 
 static void remap_config(void)
 {
@@ -789,8 +797,6 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);    // Включаем тактирование General-purpose TIM3
     // TIM4.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
-    // TIM5.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);    // Включаем тактирование General-purpose TIM5
     // TIM6.
 #ifdef USE_ZERO_SENSORS
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
@@ -1449,7 +1455,7 @@ static void init_adc(void)
     NVIC_SetPriority(DMA1_Channel1_IRQn, IRQ_PRIOR_ADC_DMA);
     NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
-    
+
 #define ADC_TIM_PRESCALER (1)
 #define ADC_TIM_PERIOD (72000000UL / ADC_TIM_PRESCALER / POWER_ADC_FREQ)
 
@@ -1543,23 +1549,6 @@ static void reset_ioport(void)
         settings_param_set_valueu(p, rst_cnt + 1);
     }
 #endif
-}
-
-static void init_drive_ui(void)
-{
-    init_ioport_simple();
-    init_tft_simple();
-    
-    drive_ui_init_t ui_is;
-    
-    struct timeval timeout = {0, IOPORT_IO_TIMEOUT_US};
-    
-    ui_is.ioport = &ioport;
-    ui_is.tft = &tft;
-    ui_is.ioport_timeout = &timeout;
-    ui_is.reset_i2c_bus_proc = reset_ioport;
-    
-    drive_ui_init(&ui_is);
 }
 
 /******************************************************************************/
@@ -1922,73 +1911,6 @@ static void init_dio(void)
     init_dio_out(DRIVE_DIO_OUTPUT_4, DIGITAL_IO_OUT_4_GPIO, DIGITAL_IO_OUT_4_PIN);
 }
 
-static void init_scheduler(void)
-{
-    scheduler_init(tasks_buffer, SCHEDULER_TASKS_MAX);
-}
-
-static void init_timers_timer(void)
-{
-    TIM_DeInit(TIMERS_TIMER);
-    TIM_TimeBaseInitTypeDef tim_is;
-            tim_is.TIM_Prescaler = TIMERS_TIMER_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
-            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim_is.TIM_Period = TIMERS_TIMER_PERIOD; // Значение периода (0000...FFFF)
-            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
-    TIM_TimeBaseInit(TIMERS_TIMER, &tim_is);
-    TIM_SelectOnePulseMode(TIMERS_TIMER, TIM_OPMode_Single);                    // Однопульсный режим таймера
-    TIM_SetCounter(TIMERS_TIMER, 0);                                            // Сбрасываем счетный регистр в ноль
-    
-    TIM_ITConfig(TIMERS_TIMER, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    
-    NVIC_SetPriority(TIMERS_TIMER_IRQn, IRQ_PRIOR_TIMERS_TIMER);
-    NVIC_EnableIRQ(TIMERS_TIMER_IRQn);
-}
-
-static void setup_timers_timer(const struct timeval* time)
-{
-    if(!time) return;
-    
-    TIM_Cmd(TIMERS_TIMER, DISABLE);
-    TIM_SetCounter(TIMERS_TIMER, 0);
-    TIM_ClearITPendingBit(TIMERS_TIMER, TIM_IT_Update);
-    
-    struct timeval tv;
-    
-    if(time->tv_sec < 0 ||
-       (time->tv_sec == 0 && time->tv_usec < 0)){
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-    }else if(time->tv_sec > TIMERS_TIMER_MAX_SECS ||
-       (time->tv_sec == TIMERS_TIMER_MAX_SECS && time->tv_usec > TIMERS_TIMER_MAX_USECS)){
-        tv.tv_sec = TIMERS_TIMER_MAX_SECS;
-        tv.tv_usec = TIMERS_TIMER_MAX_USECS;
-    }else{
-        tv.tv_sec = time->tv_sec;
-        tv.tv_usec = time->tv_usec;
-    }
-    
-    long ticks = tv.tv_sec * 10000 + tv.tv_usec / 100;
-    if(ticks > 0) ticks --;
-    
-    if(ticks > TIMERS_TIMER_TICKS_MAX) ticks = TIMERS_TIMER_TICKS_MAX;
-    if(ticks < TIMERS_TIMER_TICKS_MIN) ticks = TIMERS_TIMER_TICKS_MIN;
-    
-    TIM_SetAutoreload(TIMERS_TIMER, (uint16_t)ticks);
-    TIM_Cmd(TIMERS_TIMER, ENABLE);
-}
-
-static void init_timers(void)
-{
-    timers_init_t timers_is;
-    
-    timers_is.buffer = timers_buf;
-    timers_is.count = TIMERS_COUNT_MAX;
-    timers_is.setup_timer_callback = setup_timers_timer;
-    
-    timers_init(&timers_is);
-}
-
 static void init_heatsink_sensor(void)
 {
     lm75_init(&heatsink_sensor, &i2c2, HEATSINK_SENSOR_ADDRESS);
@@ -2023,6 +1945,24 @@ static void fan_pwm_set_value(uint32_t rpm_percents)
     TIM_SetCompare2(HEATSINK_FAN_PWM_TIM, rpm_percents);
 }
 
+static void init_drive_ui(void)
+{
+    init_ioport_simple();
+    init_tft_simple();
+    
+    drive_ui_init_t ui_is;
+    
+    struct timeval timeout = {0, IOPORT_IO_TIMEOUT_US};
+    
+    ui_is.ioport = &ioport;
+    ui_is.tft = &tft;
+    ui_is.ioport_timeout = &timeout;
+    ui_is.reset_i2c_bus_proc = reset_ioport;
+    ui_is.ioport_i2c_watchdog = WATCHDOG_I2C1;
+    
+    drive_ui_init(&ui_is);
+}
+
 static void init_drive_temp(void)
 {
     drive_temp_init_t temp_is;
@@ -2035,6 +1975,7 @@ static void init_drive_temp(void)
     temp_is.heatsink_sensor_reset_proc = reset_heatsink_sensor;
     temp_is.heatsink_sensor_io_timeout = &io_timeout;
     temp_is.heatsink_sensor_timeout = &timeout;
+    temp_is.heatsink_sensor_i2c_watchdog = WATCHDOG_I2C2;
     temp_is.update_interval = &temp_interval;
     temp_is.set_fan_rpm_proc = fan_pwm_set_value;
     
@@ -2049,68 +1990,92 @@ static void* drive_temp_reinit_gui_task(void* arg)
     return NULL;
 }
 
-static void idle_watchdog_reset(void)
-{
-    time_t t = time(NULL) + IDLE_WATCHDOG_TIMEOUT_S;
-    rtc_set_alarm(&t);
-}
-
-static void reset_idle_tasks_hangs(void)
+static void on_i2c_watchdog_timeout(uint32_t i2c_number)
 {
     // unlock rs485 dma channels.
     dma_channel_unlock(DMA1_Channel4);
     dma_channel_unlock(DMA1_Channel5);
     
-    //modbus_rs485_set_input();
-    
-    reset_ioport();
-    reset_heatsink_sensor();
-}
-
-static void idle_watchdog_reset_idle_tasks_hangs(void)
-{
-    reset_idle_tasks_hangs();
-    idle_watchdog_reset();
-    
-    // Resets counters.
-#ifdef DEBUG_RESET_I2C
-    param_t* p_pca = settings_param_by_id(PARAM_ID_DEBUG_2);
-    if(p_pca){
-        unsigned int rst_cnt = settings_param_valueu(p_pca);
-        settings_param_set_valueu(p_pca, rst_cnt + 999);
+    switch(i2c_number){
+        case WATCHDOG_I2C1:
+            reset_ioport();
+            break;
+        case WATCHDOG_I2C2:
+            reset_heatsink_sensor();
+            break;
+        default:
+            reset_ioport();
+            reset_heatsink_sensor();
+            break;
     }
-    param_t* p_lm = settings_param_by_id(PARAM_ID_DEBUG_3);
-    if(p_lm){
-        unsigned int rst_cnt = settings_param_valueu(p_lm);
-        settings_param_set_valueu(p_lm, rst_cnt + 999);
-    }
-#endif
 }
 
-static void* main_task(void* arg)
+static void setup_i2c_watchdogs(void)
 {
-    idle_watchdog_reset();
-    drive_ui_process();
-    
-    return NULL;
-}
-
-static void* drive_temp_task(void* arg)
-{
-    idle_watchdog_reset();
-    drive_temp_update();
-    drive_temp_regulate_fan();
-    
-    return NULL;
+    drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C1, on_i2c_watchdog_timeout);
+    drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C2, on_i2c_watchdog_timeout);
 }
 
 static void on_drive_reset(void)
 {
-    reset_idle_tasks_hangs();
-    scheduler_add_task(drive_temp_reinit_gui_task, 1, NULL, TASK_RUN_ONCE, NULL);
 }
 
 
+static void init_drive_tasks(void)
+{
+    drive_tasks_init();
+    
+    drive_task_adc_init(DRIVE_TASK_PRIORITY_ADC);
+    drive_task_main_init(DRIVE_TASK_PRIORITY_MAIN);
+    drive_task_modbus_init(DRIVE_TASK_PRIORITY_MODBUS);
+    drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
+    drive_task_events_init(DRIVE_TASK_PRIORITY_EVENTS);
+    drive_task_settings_init(DRIVE_TASK_PRIORITY_SETTINGS);
+    drive_task_i2c_watchdog_init(DRIVE_TASK_PRIORITY_I2C_WDT);
+    setup_i2c_watchdogs();
+    drive_task_temp_init(DRIVE_TASK_PRIORITY_TEMP);
+    drive_task_buzz_init(DRIVE_TASK_PRIORITY_BUZZ);
+    drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
+}
+
+
+/*
+ * FreeRTOS
+ * static allocation
+ * functions.
+ */
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
+                                    StackType_t **ppxIdleTaskStackBuffer,
+                                    uint32_t *pulIdleTaskStackSize )
+{
+    static StaticTask_t xIdleTaskTCB;
+    static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ];
+
+    *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
+    *ppxIdleTaskStackBuffer = uxIdleTaskStack;
+    *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
+                                     StackType_t **ppxTimerTaskStackBuffer,
+                                     uint32_t *pulTimerTaskStackSize )
+{
+    static StaticTask_t xTimerTaskTCB;
+    static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
+
+    *ppxTimerTaskTCBBuffer = &xTimerTaskTCB;
+    *ppxTimerTaskStackBuffer = uxTimerTaskStack;
+    *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+}
+
+void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
+{
+	( void ) pxTask;
+	( void ) pcTaskName;
+
+        __disable_irq();
+	for( ;; );
+}
 
 int main(void)
 {
@@ -2118,8 +2083,6 @@ int main(void)
     //*((unsigned int*)0xE000E008) = 0x7;
     
     NVIC_SetPriorityGrouping(0x3);
-    
-    init_sys_counter();
     
     init_periph_clock();
     init_PDR();
@@ -2131,9 +2094,6 @@ int main(void)
     init_rtc_nvdata();
     
     printf("STM32 MCU\r\n");
-    
-    init_i2c1();
-    init_spi();
     
     init_spi2();
     init_eeprom();
@@ -2149,11 +2109,7 @@ int main(void)
         settings_default();
     }
     
-    init_scheduler();
-    init_timers_timer();
-    init_timers();
-    
-    drive_tasks_init();
+    init_drive_tasks();
     
     init_gpio();
     
@@ -2179,8 +2135,9 @@ int main(void)
     init_modbus();
     init_drive_modbus();
     
+    init_i2c1();
+    init_spi();
     init_drive_ui();
-    
     init_exti_pca9555();
     
     init_i2c2();
@@ -2188,12 +2145,11 @@ int main(void)
     init_fan_pwm();
     init_drive_temp();
     
-    scheduler_add_task(main_task, 0, NULL, 0, NULL);
-    scheduler_add_task(drive_temp_task, 0, NULL, 0, NULL);
+    // Start RTOS.
+    vTaskStartScheduler();
     
     for(;;){
-        scheduler_process();
-        //if(!scheduler_process()) __WFI();
     }
+    
     return 0;
 }

@@ -8,13 +8,12 @@
 #include "translations_ids.h"
 #include "parameters_ids.h"
 #include "settings.h"
-#include "localization/localization.h"
 #include "gui/gui_metro.h"
 #include "gui/gui_widget.h"
 #include "errors/errors.h"
 #include "defs/defs.h"
 #include "drive_events.h"
-#include "counter/counter.h"
+#include <sys/time.h>
 
 #define GUI_TILE_VALUE_FONT_WIDTH 24
 #define GUI_TILE_VALUE_FONT_SPACE 2
@@ -86,7 +85,7 @@ struct _Gui_Tile {
     drive_errors_t errors; //!< Отображаемые ошибки
     drive_warnings_t warnings; //!< Отображаемые предупреждения
     uint8_t show_error_break; //!< Индекс последней отображаемой ошибки (которая отобразилась не полностью)
-    counter_t last_error_update; //!< Предыдушее время обновления отображения ошибок
+    struct timeval last_error_update; //!< Предыдушее время обновления отображения ошибок
     bool update_errors; //! Необходимость обновления отображения ошибок
     gui_tile_status_t status; //!< Статус плитки.
     graphics_color_t status_color; //!< Цвет фона плитки

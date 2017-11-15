@@ -202,18 +202,26 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
                 
                 // перерисовывается только при изменении статуса
                 gui_tile_set_status(tile, ch_status);
-                if (tile->last_error_update == 0) {
+                if (tile->last_error_update.tv_sec == 0 && tile->last_error_update.tv_usec == 0) {
                     gui_widget_repaint(GUI_WIDGET(tile), NULL);
                 }
             } else if (tile->update_errors) {
                 // циклическое отображение ошибок и предупреждений
-                counter_t cur = system_counter_ticks();
-                counter_t ticks_per_sec = system_counter_ticks_per_sec();
-                counter_t update_time = tile->last_error_update + ticks_per_sec * TILE_TIMEOUT_ERROR_UPDATE;
-                if (cur > update_time) {
+                struct timeval cur_tv;
+                gettimeofday(&cur_tv, NULL);
+                
+                struct timeval update_timeout = {
+                    tile->last_error_update.tv_sec,
+                    tile->last_error_update.tv_usec
+                };
+                
+                update_timeout.tv_sec += TILE_TIMEOUT_ERROR_UPDATE;
+                
+                if (timercmp(&cur_tv, &update_timeout, >=)) {
                     // в предыдущий раз все ошибки не отобразились, перерисовываем для циклического отображения
                     gui_widget_repaint(GUI_WIDGET(tile), NULL);
-                    tile->last_error_update = cur;
+                    tile->last_error_update.tv_sec = cur_tv.tv_sec;
+                    tile->last_error_update.tv_usec = cur_tv.tv_usec;
                 }
             }
         }
@@ -222,7 +230,8 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
                 tile->warnings = DRIVE_ERROR_NONE;
                 tile->errors = DRIVE_WARNING_NONE;
                 tile->show_error_break = 0;
-                tile->last_error_update = 0;
+                tile->last_error_update.tv_sec = 0;
+                tile->last_error_update.tv_usec = 0;
                 gui_widget_repaint(GUI_WIDGET(tile), NULL);
                 return;
             }

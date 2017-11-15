@@ -5,6 +5,11 @@
 #ifndef PARAMETERS_MENU_H
 #define PARAMETERS_MENU_H
 
+#ifdef MENU_VALUE_ARRAY_ATTRIBS
+#undef MENU_VALUE_ARRAY_ATTRIBS
+#endif
+#define MENU_VALUE_ARRAY_ATTRIBS static const
+
 #include "menu/menu.h"
 #include "localization/localization.h"
 #include "translations_ids.h"

@@ -44,20 +44,45 @@ err_t menu_explorer_init(menu_explorer_t* explorer, menu_t* menu)
 
 void menu_explorer_touch(menu_explorer_t* explorer)
 {
-    counter_t cur = system_counter_ticks();
-    counter_t ticks_per_sec = system_counter_ticks_per_sec();
-    counter_t reset_time = explorer->touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
-    if (cur >= reset_time) {
+    struct timeval cur_tv;
+    gettimeofday(&cur_tv, NULL);
+    
+    struct timeval reset_timeout = {
+        explorer->touch.tv_sec,
+        explorer->touch.tv_usec
+    };
+    
+    reset_timeout.tv_sec += MENU_EXPLORER_USER_RESET_SEC;
+    
+    if(timercmp(&cur_tv, &reset_timeout, >=)){
         // сброс предыдущих прав пользователя по таймауту
         explorer->user = MENU_USER_NONE;
     }
-    explorer->touch = cur;
-    explorer->autoupdate = cur;
+    
+    explorer->touch.tv_sec = cur_tv.tv_sec;
+    explorer->touch.tv_usec = cur_tv.tv_usec;
+    
+    explorer->autoupdate.tv_sec = cur_tv.tv_sec;
+    explorer->autoupdate.tv_usec = cur_tv.tv_usec;
+    
+    // System counter removed.
+    //counter_t cur = system_counter_ticks();
+    //counter_t ticks_per_sec = system_counter_ticks_per_sec();
+    //counter_t reset_time = explorer->touch + ticks_per_sec * MENU_EXPLORER_USER_RESET_SEC;
+    //if (cur >= reset_time) {
+    //    // сброс предыдущих прав пользователя по таймауту
+    //    explorer->user = MENU_USER_NONE;
+    //}
+    //explorer->touch = cur;
+    //explorer->autoupdate = cur;
 }
 
-counter_t menu_explorer_get_touch(menu_explorer_t* explorer)
+void menu_explorer_get_touch(menu_explorer_t* explorer, struct timeval* touch)
 {
-    return explorer->touch;
+    if(!touch) return;
+    
+    touch->tv_sec = explorer->touch.tv_sec;
+    touch->tv_usec = explorer->touch.tv_usec;
 }
 
 void menu_explorer_set_user(menu_explorer_t* explorer, menu_user_t user)

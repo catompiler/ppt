@@ -11,7 +11,6 @@
 #include "errors/errors.h"
 #include "defs/defs.h"
 #include "translations_ids.h"
-#include "localization/localization.h"
 
 //! Зеначение идентификатора типа главного экрана.
 #define GUI_HOME_TYPE_ID 301
