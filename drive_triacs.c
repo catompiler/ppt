@@ -494,14 +494,13 @@ static timer_triacs_t* timer_triacs_next(void)
     return timer_triacs_current();
 }
 
-void drive_triacs_timer0_irq_handler(void)
+static void drive_triacs_timer_irq_handler_impl(timer_triacs_t* tim_triacs)
 {
-    timer_triacs_t* tim_triacs = get_timer_triacs(TRIACS_TIMER_0);
     TIM_TypeDef* TIM = tim_triacs->timer;
     // Если нужно открыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM, TRIACS_A_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled){
+        if(drive_triacs.pairs_enabled && (drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_FIRST)){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_a)
                 );
@@ -514,14 +513,14 @@ void drive_triacs_timer0_irq_handler(void)
             triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_a)
                 );
-            if(drive_triacs.pairs_enabled){
+            if(drive_triacs.pairs_enabled && (drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_FIRST)){
                 drive_triacs.last_opened_pair = tim_triacs->triacs_a;
             }
         TIM_ClearITPendingBit(TIM, TRIACS_A_CLOSE_CHANNEL_IT);
     } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled){
+        if(drive_triacs.pairs_enabled && (drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_SECOND)){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
@@ -534,58 +533,23 @@ void drive_triacs_timer0_irq_handler(void)
             triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
-            if(drive_triacs.pairs_enabled){
+            if(drive_triacs.pairs_enabled && (drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_SECOND)){
                 drive_triacs.last_opened_pair = tim_triacs->triacs_b;
             }
         TIM_ClearITPendingBit(TIM, TRIACS_B_CLOSE_CHANNEL_IT);
     }
 }
 
+void drive_triacs_timer0_irq_handler(void)
+{
+    timer_triacs_t* tim_triacs = get_timer_triacs(TRIACS_TIMER_0);
+    drive_triacs_timer_irq_handler_impl(tim_triacs);
+}
+
 void drive_triacs_timer1_irq_handler(void)
 {
     timer_triacs_t* tim_triacs = get_timer_triacs(TRIACS_TIMER_1);
-    TIM_TypeDef* TIM = tim_triacs->timer;
-    // Если нужно открыть тиристорную пару 1.
-    if(TIM_GetITStatus(TIM, TRIACS_A_OPEN_CHANNEL_IT) != RESET){
-        // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled && drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_FIRST){
-            triac_pair_open(
-                    get_triac_pair(tim_triacs->triacs_a)
-                );
-            //drive_triacs.last_opened_pair = tim_triacs->triacs_a;
-            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_a;
-        }
-        TIM_ClearITPendingBit(TIM, TRIACS_A_OPEN_CHANNEL_IT);
-    } // Если нужно закрыть тиристорную пару 1.
-    if(TIM_GetITStatus(TIM, TRIACS_A_CLOSE_CHANNEL_IT) != RESET){
-            triac_pair_close(
-                    get_triac_pair(tim_triacs->triacs_a)
-                );
-            if(drive_triacs.pairs_enabled){
-                drive_triacs.last_opened_pair = tim_triacs->triacs_a;
-            }
-        TIM_ClearITPendingBit(TIM, TRIACS_A_CLOSE_CHANNEL_IT);
-    } // Если нужно открыть тиристорную пару 2.
-    if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
-        // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled && drive_triacs.opening_pair & DRIVE_TRIACS_OPEN_PAIR_SECOND){
-            triac_pair_open(
-                    get_triac_pair(tim_triacs->triacs_b)
-                );
-            //drive_triacs.last_opened_pair = tim_triacs->triacs_b;
-            drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_b;
-        }
-        TIM_ClearITPendingBit(TIM, TRIACS_B_OPEN_CHANNEL_IT);
-    } // Если нужно закрыть тиристорную пару 2.
-    if(TIM_GetITStatus(TIM, TRIACS_B_CLOSE_CHANNEL_IT) != RESET){
-            triac_pair_close(
-                    get_triac_pair(tim_triacs->triacs_b)
-                );
-            if(drive_triacs.pairs_enabled){
-                drive_triacs.last_opened_pair = tim_triacs->triacs_b;
-            }
-        TIM_ClearITPendingBit(TIM, TRIACS_B_CLOSE_CHANNEL_IT);
-    }
+    drive_triacs_timer_irq_handler_impl(tim_triacs);
 }
 
 void drive_triacs_exc_timer_irq_handler(void)
@@ -644,6 +608,11 @@ static void timer_triacs_setup_next(triac_pair_number_t triacs_a, triac_pair_num
     TIM_Cmd(tim_trcs->timer, DISABLE);
     // Сбросим счётчик.
     TIM_SetCounter(tim_trcs->timer, 0);
+    // Очистим флаги прерываний на открытие тиристоров.
+    // Первая пара.
+    TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT);
+    // Вторая пара.
+    TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_B_OPEN_CHANNEL_IT);
     // Установим тиристорные пары таймера.
     // Первая пара тиристоров.
     tim_trcs->triacs_a = triacs_a;

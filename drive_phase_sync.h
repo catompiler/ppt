@@ -44,6 +44,23 @@ extern void drive_phase_sync_set_angle_callback(drive_phase_sync_angle_callback_
 extern void drive_phase_sync_append_data(void);
 
 /**
+ * Получает флаг заполненности буферов записи.
+ * @return Флаг заполненности буферов записи.
+ */
+bool drive_phase_sync_put_buffers_full(void);
+
+/**
+ * Получает флаг заполненности буферов чтения.
+ * @return Флаг заполненности буферов чтения.
+ */
+bool drive_phase_sync_get_buffers_full(void);
+
+/**
+ * Сбрасываент буферы записи.
+ */
+extern void drive_phase_sync_reset_put_buffers(void);
+
+/**
  * Переключает буферы чтения и записи.
  */
 extern void drive_phase_sync_swap_buffers(void);

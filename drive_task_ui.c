@@ -2,11 +2,12 @@
 #include "drive_ui.h"
 #undef LIST_H
 #include <stddef.h>
+#include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
 
 
-#define TASK_UI_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#define TASK_UI_STACK_SIZE (configMINIMAL_STACK_SIZE * 3)
 
 
 typedef struct _Ui_Task {
@@ -23,12 +24,19 @@ static void ui_task_proc(void*);
 
 err_t drive_task_ui_init(uint32_t priority)
 {
+    memset(&ui_task, 0x0, sizeof(ui_task_t));
+    
     ui_task.task_handle = xTaskCreateStatic(ui_task_proc, "ui_task",
             TASK_UI_STACK_SIZE, NULL, priority, ui_task.task_stack, &ui_task.task_buffer);
     
     if(ui_task.task_handle == NULL) return E_INVALID_VALUE;
     
     return E_NO_ERROR;
+}
+
+void drive_task_ui_deinit(void)
+{
+    vTaskDelete(ui_task.task_handle);
 }
 
 static void ui_task_proc(void* arg)

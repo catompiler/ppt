@@ -16,5 +16,10 @@
  */
 extern err_t drive_task_ui_init(uint32_t priority);
 
+/**
+ * Удаляет задачу интерфейса.
+ */
+extern void drive_task_ui_deinit(void);
+
 #endif /* DRIVE_TASK_UI_H */
 

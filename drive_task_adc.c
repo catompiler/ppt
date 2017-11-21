@@ -10,7 +10,7 @@
 
 
 #define TASK_ADC_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
-#define QUEUE_ADC_SIZE 10
+#define QUEUE_ADC_SIZE 100
 
 
 // Команды задачи.
@@ -45,6 +45,8 @@ static void adc_task_proc(void*);
 
 err_t drive_task_adc_init(uint32_t priority)
 {
+    memset(&adc_task, 0x0, sizeof(task_adc_t));
+    
     adc_task.task_handle = xTaskCreateStatic(adc_task_proc, "adc_task",
             TASK_ADC_STACK_SIZE, NULL, priority, adc_task.task_stack, &adc_task.task_buffer);
     

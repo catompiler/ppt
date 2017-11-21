@@ -4,6 +4,7 @@
 #include <timers.h>
 #include <queue.h>
 #include <stddef.h>
+#include <string.h>
 
 
 #define TASK_I2C_WATCHDOG_STACK_SIZE configMINIMAL_STACK_SIZE
@@ -37,6 +38,8 @@ static void i2c_watchdog_timer_proc(TimerHandle_t);
 
 err_t drive_task_i2c_watchdog_init(uint32_t priority)
 {
+    memset(&i2c_wdt_task, 0x0, sizeof(task_i2c_wdt_t));
+    
     i2c_wdt_task.task_handle = xTaskCreateStatic(i2c_watchdog_task_proc, "i2c_wdt_task",
             TASK_I2C_WATCHDOG_STACK_SIZE, NULL, priority, i2c_wdt_task.task_stack, &i2c_wdt_task.task_buffer);
     

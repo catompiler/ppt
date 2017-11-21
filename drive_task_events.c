@@ -4,6 +4,7 @@
 #include <timers.h>
 #include <queue.h>
 #include <stddef.h>
+#include <string.h>
 #include "drive_events.h"
 #include "drive_power.h"
 #include "utils/utils.h"
@@ -88,6 +89,8 @@ static void events_task_proc(void*);
 
 err_t drive_task_events_init(uint32_t priority)
 {
+    memset(&events_task, 0x0, sizeof(task_events_t));
+    
     events_task.task_handle = xTaskCreateStatic(events_task_proc, "events_task",
             TASK_EVENTS_STACK_SIZE, NULL, priority, events_task.task_stack, &events_task.task_buffer);
     

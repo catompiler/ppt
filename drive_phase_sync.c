@@ -318,11 +318,6 @@ void drive_phase_sync_append_data(void)
     }
 }
 
-void drive_phase_sync_swap_buffers(void)
-{
-    phase_sync_swap_fft_buffers();
-}
-
 /**
  * Получает буфер FFT для заданной фазы.
  * @param fft_buffers Буферы FFT.
@@ -506,6 +501,30 @@ static err_t drive_phase_sync_calc_buffer(phase_sync_fft_buffers_t* fft_buffers,
     fft_value->angle = angle;
     
     return E_NO_ERROR;
+}
+
+bool drive_phase_sync_put_buffers_full(void)
+{
+    phase_sync_fft_buffers_t* fft_buffers = phase_sync_cur_put_fft_buffers();
+    
+    return phase_sync_buffers_full(fft_buffers);
+}
+
+bool drive_phase_sync_get_buffers_full(void)
+{
+    phase_sync_fft_buffers_t* fft_buffers = phase_sync_cur_get_fft_buffers();
+    
+    return phase_sync_buffers_full(fft_buffers);
+}
+
+void drive_phase_sync_reset_put_buffers(void)
+{
+    phase_sync_reset_fft_put_buffers();
+}
+
+void drive_phase_sync_swap_buffers(void)
+{
+    phase_sync_swap_fft_buffers();
 }
 
 err_t drive_phase_sync_calc(phase_t phase)

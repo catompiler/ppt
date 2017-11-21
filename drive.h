@@ -40,7 +40,8 @@
 #define DRIVE_NULL_TIMER_OFFSET_TICKS_MAX (750) // 125 мкс
 //! Коэффициент тик/градус отклонения.
 #define DRIVE_NULL_TIMER_TICKS_PER_DEG 333//400
-
+//! Число срабатываний таймера за период.
+#define DRIVE_NULL_TIMER_PERIOD_ITERS (3)
 
 /*
  * Кратность частоты АЦП.
@@ -48,7 +49,7 @@
 //! Нормальный режим.
 #define DRIVE_ADC_RATE_NORMAL 1
 //! Ускоренный режим.
-#define DRIVE_ADC_RATE_FAST 4
+#define DRIVE_ADC_RATE_FAST 3
 //! Функция установки частоты АЦП.
 typedef void (*set_adc_rate_proc_t)(uint32_t rate);
 
@@ -757,9 +758,9 @@ extern __attribute__ ((deprecated)) err_t drive_process_null_sensor(phase_t phas
 #endif //USE_ZERO_SENSORS
 
 /**
- * Обрабатывает прерывание переполнения таймера искусственных датчиков нуля.
+ * Обрабатывает искусственный датчик нуля.
  */
-//extern void drive_null_timer_irq_handler(void);
+extern void drive_process_zero(void);
 
 /**
  * Обрабатывает очередную итерацию действий и вычислений

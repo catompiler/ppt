@@ -1,5 +1,6 @@
 #include "drive_task_buzz.h"
 #include <stddef.h>
+#include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include "drive_keypad.h"
@@ -21,6 +22,8 @@ static void buzzer_task_proc(void*);
 
 err_t drive_task_buzz_init(uint32_t priority)
 {
+    memset(&buzzer_task, 0x0, sizeof(buzzer_task_t));
+    
     buzzer_task.task_handle = xTaskCreateStatic(buzzer_task_proc, "buzzer_task",
             TASK_BUZZER_STACK_SIZE, NULL, priority, buzzer_task.task_stack, &buzzer_task.task_buffer);
     

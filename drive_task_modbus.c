@@ -1,5 +1,6 @@
 #include "drive_task_modbus.h"
 #include <stddef.h>
+#include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -24,6 +25,8 @@ static void modbus_task_proc(void*);
 
 err_t drive_task_modbus_init(uint32_t priority)
 {
+    memset(&modbus_task, 0x0, sizeof(modbus_task_t));
+    
     modbus_task.task_handle = xTaskCreateStatic(modbus_task_proc, "modbus_task",
             TASK_MODBUS_STACK_SIZE, NULL, priority, modbus_task.task_stack, &modbus_task.task_buffer);
     

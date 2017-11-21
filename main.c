@@ -170,16 +170,39 @@ static tft9341_t tft;
 //! Линия RTC Alarm.
 #define EXTI_RTC_ALARM_LINE EXTI_Line17
 
+//! Множитель дисктретизации АЦП.
+#define ADC_FREQ_MULT_MAX 10
+
+//! Количество каналов ADC 1 и 2.
+#define ADC12_CHANNELS_COUNT 4
 //! Длина буфера ADC 1 и 2 в трансферах 32 бит.
-#define ADC12_RAW_BUFFER_DMA_TRANSFERS 4
+#define ADC12_RAW_BUFFER_DMA_TRANSFERS (ADC12_CHANNELS_COUNT)
+#define ADC12_RAW_BUFFER_DMA_TRANSFERS_MAX (ADC12_CHANNELS_COUNT * ADC_FREQ_MULT_MAX)
 //! Размер буфера ADC 1 и 2.
-#define ADC12_RAW_BUFFER_SIZE (ADC12_RAW_BUFFER_DMA_TRANSFERS * 2)
+#define ADC12_RAW_BUFFER_SIZE (ADC12_RAW_BUFFER_DMA_TRANSFERS_MAX * 2)
+//! Буфер ADC12.
+static volatile uint16_t adc12_raw_buffer[ADC12_RAW_BUFFER_SIZE] = {0};
+
+//! Количество каналов ADC 3.
+#define ADC3_CHANNELS_COUNT 3
 //! Длина буфера ADC 3 в трансферах 16 бит.
-#define ADC3_RAW_BUFFER_DMA_TRANSFERS 3
+#define ADC3_RAW_BUFFER_DMA_TRANSFERS (ADC3_CHANNELS_COUNT)
+#define ADC3_RAW_BUFFER_DMA_TRANSFERS_MAX (ADC3_CHANNELS_COUNT * ADC_FREQ_MULT_MAX)
 //! Размер буфера ADC 3.
-#define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS)
+#define ADC3_RAW_BUFFER_SIZE (ADC3_RAW_BUFFER_DMA_TRANSFERS_MAX)
+//! Буфер ADC3.
+static volatile uint16_t adc3_raw_buffer[ADC3_RAW_BUFFER_SIZE] = {0};
+
+//! Количество каналов трёх АЦП суммарно.
+#define ADC_CHANNELS_COUNT (ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT + ADC3_CHANNELS_COUNT)
+//! Размер данных буфера ADC12
+#define ADC12_DATA_SIZE ((ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT) * 2)
+//! Размер данных буфера ADC3
+#define ADC3_DATA_SIZE (ADC3_CHANNELS_COUNT * 2)
+//! Буфер ADC однократного измерения каналов.
+static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
 //! Буфер ADC.
-static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
+//static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
 
 
 // Константы для цифровых входов-выходов.
@@ -211,8 +234,8 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 /*
  * Приоритеты прерываний.
  */
-#define IRQ_PRIOR_TRIACS_TIMER 0
-#define IRQ_PRIOR_TRIAC_EXC_TIMER 0
+#define IRQ_PRIOR_TRIACS_TIMER 1
+#define IRQ_PRIOR_TRIAC_EXC_TIMER 2
 // FreeRTOS.
 //#define IRQ_PRIOR_SYSTICK 0
 
@@ -223,11 +246,11 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 
 #define IRQ_PRIOR_RTOS_MAX 8
 
-#define IRQ_PRIOR_RTC (IRQ_PRIOR_RTOS_MAX + 1)
 #define IRQ_PRIOR_ADC_DMA (IRQ_PRIOR_RTOS_MAX + 2)
-#define IRQ_PRIOR_NULL_TIMER (IRQ_PRIOR_RTOS_MAX + 4)
+#define IRQ_PRIOR_NULL_TIMER (IRQ_PRIOR_RTOS_MAX + 1)
+#define IRQ_PRIOR_RTC (IRQ_PRIOR_RTOS_MAX + 3)
 
-#define IRQ_PRIOR_MODBUS_USART (IRQ_PRIOR_RTOS_MAX + 3)
+#define IRQ_PRIOR_MODBUS_USART (IRQ_PRIOR_RTOS_MAX + 4)
 #define IRQ_PRIOR_I2C1 (IRQ_PRIOR_RTOS_MAX + 5)
 #define IRQ_PRIOR_I2C2 (IRQ_PRIOR_RTOS_MAX + 5)
 #define IRQ_PRIOR_SPI1 (IRQ_PRIOR_RTOS_MAX + 5)
@@ -247,9 +270,10 @@ static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_
 /*
  * Приоритеты задач.
  */
-#define DRIVE_TASK_PRIORITY_ADC 10
-#define DRIVE_TASK_PRIORITY_MAIN 8
-#define DRIVE_TASK_PRIORITY_MODBUS 9
+#define DRIVE_TASK_PRIORITY_ADC 11
+#define DRIVE_TASK_PRIORITY_ZERO 12
+#define DRIVE_TASK_PRIORITY_MAIN 9
+#define DRIVE_TASK_PRIORITY_MODBUS 8
 #define DRIVE_TASK_PRIORITY_EVENTS 7
 #define DRIVE_TASK_PRIORITY_SETTINGS 6
 //#define DRIVE_TASK_PRIORITY_TIMER 5
@@ -497,6 +521,9 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
         
         //drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
         
+        memcpy((void*)&adc_raw_buffer[0], (void*)adc12_raw_buffer, ADC12_DATA_SIZE);
+        memcpy((void*)&adc_raw_buffer[ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT], (void*)adc3_raw_buffer, ADC3_DATA_SIZE);
+        
         BaseType_t pxHigherPriorityTaskWoken = 0;
         
         drive_task_adc_process_data_isr((uint16_t*)adc_raw_buffer, &pxHigherPriorityTaskWoken);
@@ -653,17 +680,22 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
     drive_triac_exc_timer_irq_handler();
 }
 
+#ifdef USE_ZERO_SENSORS
 IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
     drive_phases_timer_irq_handler();
 }
+#endif //USE_ZERO_SENSORS
 
 IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
     if(TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET){
         TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
         
-        if(drive_task_main_process_isr()){
+        bool switch_to_main_task = drive_task_main_process_isr();
+        bool switch_to_zero_task = drive_task_zero_process_isr();
+        
+        if(switch_to_main_task || switch_to_zero_task){
             portYIELD();
         }
     }
@@ -799,6 +831,8 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
     // TIM6.
 #ifdef USE_ZERO_SENSORS
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
+#else
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
 #endif //USE_ZERO_SENSORS
     // TIM7.
@@ -1324,7 +1358,7 @@ static void init_adc(void)
     DMA_InitTypeDef dma_is;
     DMA_StructInit(&dma_is);
     dma_is.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR;
-    dma_is.DMA_MemoryBaseAddr = (uint32_t)adc_raw_buffer;
+    dma_is.DMA_MemoryBaseAddr = (uint32_t)adc12_raw_buffer;
     dma_is.DMA_DIR = DMA_DIR_PeripheralSRC;
     dma_is.DMA_BufferSize = ADC12_RAW_BUFFER_DMA_TRANSFERS;
     dma_is.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -1339,7 +1373,7 @@ static void init_adc(void)
 
     DMA_StructInit(&dma_is);
     dma_is.DMA_PeripheralBaseAddr = (uint32_t)&ADC3->DR;
-    dma_is.DMA_MemoryBaseAddr = (uint32_t)(adc_raw_buffer + ADC12_RAW_BUFFER_SIZE);
+    dma_is.DMA_MemoryBaseAddr = (uint32_t)adc3_raw_buffer;
     dma_is.DMA_DIR = DMA_DIR_PeripheralSRC;
     dma_is.DMA_BufferSize = ADC3_RAW_BUFFER_DMA_TRANSFERS;
     dma_is.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -1364,7 +1398,7 @@ static void init_adc(void)
     adc_is.ADC_ContinuousConvMode = DISABLE;
     adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
     adc_is.ADC_DataAlign = ADC_DataAlign_Right;
-    adc_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    adc_is.ADC_NbrOfChannel = ADC12_CHANNELS_COUNT;
     
     ADC_Init(ADC1, &adc_is);
     
@@ -1375,7 +1409,7 @@ static void init_adc(void)
     adc_is.ADC_ContinuousConvMode = DISABLE;
     adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
     adc_is.ADC_DataAlign = ADC_DataAlign_Right;
-    adc_is.ADC_NbrOfChannel = ADC12_RAW_BUFFER_DMA_TRANSFERS;
+    adc_is.ADC_NbrOfChannel = ADC12_CHANNELS_COUNT;
     
     ADC_Init(ADC2, &adc_is);
     
@@ -1386,7 +1420,7 @@ static void init_adc(void)
     adc_is.ADC_ContinuousConvMode = DISABLE;
     adc_is.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC3;
     adc_is.ADC_DataAlign = ADC_DataAlign_Right;
-    adc_is.ADC_NbrOfChannel = ADC3_RAW_BUFFER_DMA_TRANSFERS;
+    adc_is.ADC_NbrOfChannel = ADC3_CHANNELS_COUNT;
     
     ADC_Init(ADC3, &adc_is);
     
@@ -1653,6 +1687,42 @@ static void init_phases_timer(void)
     NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
     NVIC_EnableIRQ(TIM6_IRQn);
 }
+
+#else
+
+#if configGENERATE_RUN_TIME_STATS == 1
+
+static uint32_t hiresTimerValue = 0;
+
+IRQ_ATTRIBS void TIM6_IRQHandler(void)
+{
+	if(TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET){
+		TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
+		hiresTimerValue ++;
+	}
+}
+
+static void init_rtstats_timer(void)
+{
+    TIM_DeInit(TIM6);
+    TIM_TimeBaseInitTypeDef tim_is;
+            tim_is.TIM_Prescaler = 1440-1; //0..50000 1 Hz.
+            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
+            tim_is.TIM_Period = 50000-1; // Значение периода (0000...FFFF)
+            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
+    TIM_TimeBaseInit(TIM6, &tim_is);
+    TIM_SetCounter(TIM6, 0);
+
+    TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);
+    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
+
+    TIM_Cmd(TIM6, ENABLE);
+
+    NVIC_SetPriority(TIM6_IRQn, 5);
+	NVIC_EnableIRQ(TIM6_IRQn);
+}
+
+#endif //configGENERATE_RUN_TIME_STATS
 
 #endif //USE_ZERO_SENSORS
 
@@ -1982,14 +2052,6 @@ static void init_drive_temp(void)
     drive_temp_init(&temp_is);
 }
 
-static void* drive_temp_reinit_gui_task(void* arg)
-{
-    drive_ui_deinit();
-    init_drive_ui();
-    
-    return NULL;
-}
-
 static void on_i2c_watchdog_timeout(uint32_t i2c_number)
 {
     // unlock rs485 dma channels.
@@ -2016,16 +2078,12 @@ static void setup_i2c_watchdogs(void)
     drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C2, on_i2c_watchdog_timeout);
 }
 
-static void on_drive_reset(void)
-{
-}
-
-
 static void init_drive_tasks(void)
 {
     drive_tasks_init();
     
     drive_task_adc_init(DRIVE_TASK_PRIORITY_ADC);
+    drive_task_zero_init(DRIVE_TASK_PRIORITY_ZERO);
     drive_task_main_init(DRIVE_TASK_PRIORITY_MAIN);
     drive_task_modbus_init(DRIVE_TASK_PRIORITY_MODBUS);
     drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
@@ -2038,6 +2096,20 @@ static void init_drive_tasks(void)
     drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
 }
 
+static void drive_reinit_gui(void)
+{
+    drive_task_ui_deinit();
+    
+    drive_ui_deinit();
+    init_drive_ui();
+    
+    drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
+}
+
+static void on_drive_reset(void)
+{
+    drive_reinit_gui();
+}
 
 /*
  * FreeRTOS
@@ -2076,6 +2148,27 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
         __disable_irq();
 	for( ;; );
 }
+
+#if configGENERATE_RUN_TIME_STATS == 1
+
+void initHiresCounter(void)
+{
+#ifndef USE_ZERO_SENSORS
+	init_rtstats_timer();
+#endif
+}
+
+uint32_t getHiresCounterValue(void)
+{
+#ifndef USE_ZERO_SENSORS
+	//return ((uint32_t)hiresTimerValue << 16) | (uint32_t)TIM6->CNT;
+	return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
+#else
+	//return 0;
+#endif
+}
+
+#endif
 
 int main(void)
 {

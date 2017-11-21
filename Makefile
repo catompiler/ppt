@@ -2,7 +2,7 @@
 TARGET    = main
 
 # Объектные файлы.
-OBJECTS   = main.o power.o triac.o triac_pair.o\
+OBJECTS   = main.o FreeRTOS-openocd.o power.o triac.o triac_pair.o\
             drive_triacs.o drive_power.o drive.o settings.o ramp.o\
             drive_regulator.o drive_protection.o drive_phase_state.o\
             drive_keypad.o drive_gui.o drive_ui.o drive_modbus.o\
@@ -14,10 +14,10 @@ OBJECTS   = main.o power.o triac.o triac_pair.o\
             storage.o nvdata.o drive_nvdata.o drive_events.o\
             drive_temp.o drive_motor.o channel_filter.o drive_overload.o\
             drive_selfstart.o drive_math.o\
-	    drive_task_i2c_watchdog.o drive_task_buzz.o drive_task_temp.o\
-	    drive_task_ui.o drive_task_settings.o drive_task_events.o\
-	    drive_task_main.o drive_task_adc.o drive_task_modbus.o\
-	    FreeRTOS-openocd.o
+            drive_task_i2c_watchdog.o drive_task_buzz.o drive_task_temp.o\
+            drive_task_ui.o drive_task_settings.o drive_task_events.o\
+            drive_task_main.o drive_task_adc.o drive_task_modbus.o\
+            drive_task_zero.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
@@ -42,10 +42,10 @@ DEFINES  += USE_GRAPHICS_FORMAT_RGB_565 USE_GRAPHICS_FORMAT_BW_1_V\
 LIBS      = c
 
 # Оптимизация, вторая часть флага компилятора -O.
-OPTIMIZE  = 2
+OPTIMIZE  = s
 
 # Флаги отладки.
-DEBUG    += 
+DEBUG    += -ggdb
 
 # Стандартные драйвера периферии.
 # STD_PERIPH_DRIVERS += misc
@@ -324,6 +324,7 @@ MKDIR   = mkdir -p
 RMDIR   = rmdir --ignore-fail-on-non-empty
 RMDIR_P = rmdir -p --ignore-fail-on-non-empty
 RM_DIR  = rm -fr
+CP      = cp
 
 # Переменные сборки.
 # Цель сборки.
@@ -393,6 +394,9 @@ $(BUILD_DIR)/%.o: %.s
 
 $(BUILD_DIR)/%.s: %.c
 	$(CC) -S -o $@ $(CFLAGS) $<
+
+$(BUILD_DIR)/%.s: %.s
+	$(CP) $< $@
 
 clean:
 	$(RM) $(BUILD_OBJECTS)

@@ -4,6 +4,7 @@
 #include <timers.h>
 #include <queue.h>
 #include <stddef.h>
+#include <string.h>
 #include "settings.h"
 #include "drive.h"
 #include "drive_temp.h"
@@ -40,6 +41,8 @@ static void settings_task_proc(void*);
 
 err_t drive_task_settings_init(uint32_t priority)
 {
+    memset(&settings_task, 0x0, sizeof(task_settings_t));
+    
     settings_task.task_handle = xTaskCreateStatic(settings_task_proc, "settings_task",
             TASK_SETTINGS_STACK_SIZE, NULL, priority, settings_task.task_stack, &settings_task.task_buffer);
     

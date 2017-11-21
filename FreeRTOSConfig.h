@@ -88,15 +88,24 @@
 
 // Статистика.
 // Сбор статистики времени выполнения.
-#define configGENERATE_RUN_TIME_STATS               0
+#define configGENERATE_RUN_TIME_STATS               1
 // Функционал для трассировки и визуализации выполнения.
-#define configUSE_TRACE_FACILITY                    0
+#define configUSE_TRACE_FACILITY                    1
 // Функции получения форматированной статистики.
 #define configUSE_STATS_FORMATTING_FUNCTIONS        0
 // Первый запуск задачи управления таймерами.
 #define configUSE_DAEMON_TASK_STARTUP_HOOK          0
 // Тик системного счётчика.
 #define configUSE_TICK_HOOK                         0
+// Настройка счётчика времени выполнения.
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initHiresCounter()
+// Получение значение счётчика времени выполнения.
+#define portGET_RUN_TIME_COUNTER_VALUE() getHiresCounterValue()
+
+#if configGENERATE_RUN_TIME_STATS == 1
+extern void initHiresCounter(void);
+extern uint32_t getHiresCounterValue(void);
+#endif
 
 // Прерывания.
 // Приоритет прерывания ядра.
@@ -117,7 +126,7 @@
 // Дополнительные функции.
 #define INCLUDE_vTaskPrioritySet                    0
 #define INCLUDE_uxTaskPriorityGet                   0
-#define INCLUDE_vTaskDelete                         0
+#define INCLUDE_vTaskDelete                         1
 #define INCLUDE_vTaskSuspend                        1
 #define INCLUDE_xTaskResumeFromISR                  1
 #define INCLUDE_vTaskDelayUntil                     0

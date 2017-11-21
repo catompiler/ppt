@@ -1,5 +1,6 @@
 #include "drive_task_temp.h"
 #include <stddef.h>
+#include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include "drive_temp.h"
@@ -23,6 +24,8 @@ static void temp_task_proc(void*);
 
 err_t drive_task_temp_init(uint32_t priority)
 {
+    memset(&hs_temp_task, 0x0, sizeof(hs_temp_task_t));
+    
     hs_temp_task.task_handle = xTaskCreateStatic(temp_task_proc, "hs_temp_task",
             TASK_HS_TEMP_STACK_SIZE, NULL, priority, hs_temp_task.task_stack, &hs_temp_task.task_buffer);
     
