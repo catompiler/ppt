@@ -10,7 +10,7 @@
 
 
 #define TASK_ADC_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
-#define QUEUE_ADC_SIZE 100
+#define QUEUE_ADC_SIZE 8
 
 
 // Команды задачи.

@@ -49,7 +49,7 @@
 //! Нормальный режим.
 #define DRIVE_ADC_RATE_NORMAL 1
 //! Ускоренный режим.
-#define DRIVE_ADC_RATE_FAST 3
+#define DRIVE_ADC_RATE_FAST 10
 //! Функция установки частоты АЦП.
 typedef void (*set_adc_rate_proc_t)(uint32_t rate);
 

@@ -861,7 +861,9 @@ static bool drive_set_adc_rate(uint32_t rate)
     if(!drive.set_adc_rate_proc) return false;
     
     if(drive_adc_rate() == rate) return true;
-
+    
+    drive_tasks_write_status_event();
+    
     CRITICAL_ENTER();
     drive.adc_rate = rate;
     drive.set_adc_rate_proc(rate);
@@ -898,10 +900,10 @@ static void drive_oneshot_make(void)
 /**
  * Получает флаг завершения подачи одиночного импульса.
  */
-static bool drive_oneshot_done(void)
+/*static bool drive_oneshot_done(void)
 {
 	return !drive.one_shot_enabled || drive.one_shot_opened;
-}
+}*/
 
 /**
  * Получает разрешение режима однократной подачи импульса.
@@ -1738,7 +1740,7 @@ static void drive_state_begin_selftune(void)
     drive_oneshot_set_enabled(true);
     drive_triacs_set_pairs_enabled(true);
     
-    //drive_set_adc_rate(DRIVE_ADC_RATE_FAST);
+    drive_set_adc_rate(DRIVE_ADC_RATE_FAST);
 }
 
 static void drive_state_end_selftune(void)
@@ -1772,7 +1774,7 @@ static bool drive_state_process_selftune(void)
         case DRIVE_SELFTUNING_DATA:
             
             if(drive.iters_counter == 0){
-				drive_oneshot_make();
+                drive_oneshot_make();
             }
             
             drive.iters_counter ++;
@@ -2747,6 +2749,8 @@ void drive_triac_exc_timer_irq_handler(void)
     drive_triacs_exc_timer_irq_handler();
 }
 
+#ifdef USE_ZERO_SENSORS
+
 /**
  * Обрабатывает действительно сработавший датчик нуля.
  * @param phase Фаза.
@@ -2765,8 +2769,6 @@ static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
     
     return E_NO_ERROR;
 }
-
-#ifdef USE_ZERO_SENSORS
 
 #ifdef DRIVE_PHASE_SYNC_DEBUG
 static int32_t zero_sens = 0;
@@ -2821,14 +2823,23 @@ static int32_t angle_pid_val = 0;
 void drive_process_zero(void)
 {
     phase_t phase = drive_phase_sync_next_phase();
+    
     if(phase != PHASE_UNK){
         
         int16_t offset = 0;
         
+        drive_phase_state_handle(phase);
+        
+        CRITICAL_ENTER();
+        
         offset += drive_phase_sync_offset(phase);
         offset += drive_get_null_timer_time();
+
+        if(drive_can_open_triacs()){
+            drive_setup_triacs_open(phase, offset);
+        }
         
-        drive_process_null_sensor_impl(phase, offset);
+        CRITICAL_EXIT();
     }
     
     if(drive_phase_sync_process()){
@@ -2891,31 +2902,12 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
     int32_t adc_tick_time = drive_get_null_timer_time();
     
     err_t err = E_NO_ERROR;
-    
-    drive.adc_prescaler ++;
-    
-    if(drive.adc_prescaler >= drive.adc_rate){
-        
-        err = drive_power_process_adc_values(channels, adc_values);
 
-        drive_check_prots_inst();
+    err = drive_power_process_adc_values(channels, adc_values);
 
-        drive_phase_sync_append_data();
-    }
+    drive_check_prots_inst();
 
-    if(drive.adc_prescaler >= drive.adc_rate){
-        drive.adc_prescaler = 0;
-
-        // Если нужны данные АЦП - тиристоры открыты.
-        if(drive.state == DRIVE_STATE_SELFTUNE && drive.selftuning_state == DRIVE_SELFTUNING_DATA){
-            
-            if(drive_oneshot_done()){
-                drive_set_adc_rate(DRIVE_ADC_RATE_NORMAL);
-            }else if(drive_oneshot_enabled()){
-            	drive_set_adc_rate(DRIVE_ADC_RATE_FAST);
-            }
-        }
-    }
+    drive_phase_sync_append_data();
 
     adc_tick_time = drive_get_null_timer_time() - adc_tick_time;
 

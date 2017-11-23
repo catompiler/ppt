@@ -170,8 +170,18 @@ static tft9341_t tft;
 //! Линия RTC Alarm.
 #define EXTI_RTC_ALARM_LINE EXTI_Line17
 
-//! Множитель дисктретизации АЦП.
+
+// ADC.
+//! Таймер АЦП.
+#define ADC_TIM (TIM1)
+//! Минимальный множитель дисктретизации АЦП.
+#define ADC_FREQ_MULT_MIN 1
+//! Максимальный множитель дисктретизации АЦП.
 #define ADC_FREQ_MULT_MAX 10
+//! Флаг необходимости изменения частоты DMA АЦП.
+static bool adc_change_rate = false;
+//! Необходимая частота АЦП.
+static uint8_t adc_rate = ADC_FREQ_MULT_MIN;
 
 //! Количество каналов ADC 1 и 2.
 #define ADC12_CHANNELS_COUNT 4
@@ -246,8 +256,9 @@ static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
 
 #define IRQ_PRIOR_RTOS_MAX 8
 
-#define IRQ_PRIOR_ADC_DMA (IRQ_PRIOR_RTOS_MAX + 2)
-#define IRQ_PRIOR_NULL_TIMER (IRQ_PRIOR_RTOS_MAX + 1)
+//#define IRQ_PRIOR_ADC_TIM (IRQ_PRIOR_RTOS_MAX + 0)
+#define IRQ_PRIOR_ADC_DMA (IRQ_PRIOR_RTOS_MAX + 1)
+#define IRQ_PRIOR_NULL_TIMER (IRQ_PRIOR_RTOS_MAX + 2)
 #define IRQ_PRIOR_RTC (IRQ_PRIOR_RTOS_MAX + 3)
 
 #define IRQ_PRIOR_MODBUS_USART (IRQ_PRIOR_RTOS_MAX + 4)
@@ -270,8 +281,8 @@ static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
 /*
  * Приоритеты задач.
  */
-#define DRIVE_TASK_PRIORITY_ADC 11
-#define DRIVE_TASK_PRIORITY_ZERO 12
+#define DRIVE_TASK_PRIORITY_ADC 12
+#define DRIVE_TASK_PRIORITY_ZERO 11
 #define DRIVE_TASK_PRIORITY_MAIN 9
 #define DRIVE_TASK_PRIORITY_MODBUS 8
 #define DRIVE_TASK_PRIORITY_EVENTS 7
@@ -512,17 +523,51 @@ int settimeofday(const struct timeval *tv, const struct timezone *tz)
 }
 
 /**
+ * Обработчик прерывания таймера АЦП.
+ */
+IRQ_ATTRIBS void TIM1_UP_IRQHandler(void)
+{
+    if(ADC_TIM->SR & TIM_SR_UIF){
+        ADC_TIM->SR = ~TIM_SR_UIF;
+        
+        ADC_TIM->DIER &= ~TIM_DIER_UIE;
+    }
+}
+
+static void adc_timer_set_rate(uint32_t rate);
+static void adc_dma_set_rate(uint32_t rate);
+
+/**
  * Обработчик окончания передачи данных от ADC.
  */
 IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
 {
-    if(DMA_GetITStatus(DMA1_IT_TC1)){
-        DMA_ClearITPendingBit(DMA1_IT_TC1);
+    /*if(DMA_GetITStatus(DMA1_IT_TC1)){
+        DMA_ClearITPendingBit(DMA1_IT_TC1);*/
+    if(DMA1->ISR & DMA_ISR_TCIF1){
+        DMA1->IFCR = DMA_IFCR_CTCIF1;
         
         //drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
         
-        memcpy((void*)&adc_raw_buffer[0], (void*)adc12_raw_buffer, ADC12_DATA_SIZE);
-        memcpy((void*)&adc_raw_buffer[ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT], (void*)adc3_raw_buffer, ADC3_DATA_SIZE);
+        if(adc_change_rate){
+
+            adc_dma_set_rate(adc_rate);
+
+            adc_timer_set_rate(adc_rate);
+            
+            adc_change_rate = false;
+        }
+        
+        memcpy(
+                (void*)&adc_raw_buffer[0],
+                (void*)&adc12_raw_buffer[(ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT) * (adc_rate - 1)],
+                ADC12_DATA_SIZE
+            );
+        memcpy(
+                (void*)&adc_raw_buffer[ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT],
+                (void*)&adc3_raw_buffer[(ADC3_CHANNELS_COUNT) * (adc_rate - 1)],
+                ADC3_DATA_SIZE
+            );
         
         BaseType_t pxHigherPriorityTaskWoken = 0;
         
@@ -1495,14 +1540,14 @@ static void init_adc(void)
 
 static void init_adc_timer(void)
 {
-    TIM_DeInit(TIM1);
+    TIM_DeInit(ADC_TIM);
     TIM_TimeBaseInitTypeDef tim1_is;
     TIM_TimeBaseStructInit(&tim1_is);
             tim1_is.TIM_Prescaler = ADC_TIM_PRESCALER-1;                    // Делитель (0000...FFFF)
             tim1_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
             tim1_is.TIM_Period = ADC_TIM_PERIOD-1;                     // Значение периода (0000...FFFF)
             tim1_is.TIM_ClockDivision = 0;                   // определяет тактовое деление
-    TIM_TimeBaseInit(TIM1, &tim1_is);
+    TIM_TimeBaseInit(ADC_TIM, &tim1_is);
 
     TIM_OCInitTypeDef tim1_oc_is;
     TIM_OCStructInit(&tim1_oc_is);
@@ -1514,18 +1559,70 @@ static void init_adc_timer(void)
         tim1_oc_is.TIM_OCNPolarity = TIM_OCNPolarity_Low;
         tim1_oc_is.TIM_OCIdleState = TIM_OCIdleState_Reset;
         tim1_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
-    TIM_OC3Init(TIM1, &tim1_oc_is);
-    TIM_CCxCmd (TIM1, TIM_Channel_3, TIM_CCx_Enable);
+    TIM_OC3Init(ADC_TIM, &tim1_oc_is);
+    TIM_CCxCmd (ADC_TIM, TIM_Channel_3, TIM_CCx_Enable);
     
-    TIM_ARRPreloadConfig(TIM1, ENABLE);
+    //TIM_ARRPreloadConfig(ADC_TIM, DISABLE);
     
-    TIM_Cmd(TIM1, ENABLE);                                                      // Начать отсчёт!
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    TIM_Cmd(ADC_TIM, ENABLE);                                                      // Начать отсчёт!
+    TIM_CtrlPWMOutputs(ADC_TIM, ENABLE);
+    
+    //NVIC_SetPriority(TIM1_UP_IRQn, IRQ_PRIOR_ADC_TIM);
+    //NVIC_EnableIRQ(TIM1_UP_IRQn);
 }
 
 static void adc_timer_set_rate(uint32_t rate)
 {
-    TIM1->ARR = (ADC_TIM_PERIOD / rate) - 1;
+    ADC_TIM->CR1 &= ~TIM_CR1_CEN;
+    
+    ADC_TIM->ARR = (ADC_TIM_PERIOD / rate) - 1;
+    
+    if(ADC_TIM->CNT > ADC_TIM->ARR){
+        ADC_TIM->CNT = ADC_TIM->ARR - 1;
+    }
+    
+    ADC_TIM->CR1 |= TIM_CR1_CEN;
+}
+
+/*static void adc_stop(void)
+{
+    ADC1->CR2 &= ~ADC_CR2_ADON;
+    ADC2->CR2 &= ~ADC_CR2_ADON;
+    ADC3->CR2 &= ~ADC_CR2_ADON;
+}
+
+static void adc_start(void)
+{
+    ADC1->CR2 |= ADC_CR2_ADON;
+    ADC2->CR2 |= ADC_CR2_ADON;
+    ADC3->CR2 |= ADC_CR2_ADON;
+}*/
+
+static void adc_dma_set_rate(uint32_t rate)
+{
+    DMA1_Channel1->CCR &= ~DMA_CCR1_EN;
+    DMA2_Channel5->CCR &= ~DMA_CCR1_EN;
+    
+    DMA1_Channel1->CNDTR = ADC12_RAW_BUFFER_DMA_TRANSFERS * rate;
+    DMA2_Channel5->CNDTR = ADC3_RAW_BUFFER_DMA_TRANSFERS * rate;
+    
+    DMA1_Channel1->CMAR = (uint32_t)adc12_raw_buffer;
+    DMA2_Channel5->CMAR = (uint32_t)adc3_raw_buffer;
+    
+    DMA1_Channel1->CCR |= DMA_CCR1_EN;
+    DMA2_Channel5->CCR |= DMA_CCR1_EN;
+}
+
+static void adc_set_rate(uint32_t rate)
+{
+    if(rate >= ADC_FREQ_MULT_MIN && rate <= ADC_FREQ_MULT_MAX){
+        adc_rate = rate;
+        
+        adc_change_rate = true;
+        
+        //ADC_TIM->SR = ~TIM_SR_UIF;
+        //ADC_TIM->DIER |= TIM_DIER_UIE;
+    }
 }
 
 #undef ADC_TIM_PERIOD
@@ -1567,7 +1664,7 @@ static void init_drive(void)
     drive_set_error_callback((drive_error_callback_t)drive_tasks_write_error_event);
     drive_set_warning_callback((drive_warning_callback_t)drive_tasks_write_warning_event);
     drive_set_reset_callback(on_drive_reset);
-    drive_set_adc_rate_proc(adc_timer_set_rate);
+    drive_set_adc_rate_proc(adc_set_rate);
 }
 
 static void reset_ioport(void)
