@@ -147,20 +147,6 @@ static tft9341_t tft;
 /******************************************************************************/
 
 // EXTI.
-//! Порт EXTI.
-#define EXTI_PHASE_GPIO GPIOE
-//! Пин датчика нуля фазы A.
-#define EXTI_PHASE_A_Pin GPIO_Pin_13
-//! Пин датчика нуля фазы B.
-#define EXTI_PHASE_B_Pin GPIO_Pin_14
-//! Пин датчика нуля фазы C.
-#define EXTI_PHASE_C_Pin GPIO_Pin_15
-//! Линия фазы A.
-#define EXTI_PHASE_A_LINE EXTI_Line13
-//! Линия фазы B.
-#define EXTI_PHASE_B_LINE EXTI_Line14
-//! Линия фазы C.
-#define EXTI_PHASE_C_LINE EXTI_Line15
 //! GPIO PCA9555.
 #define EXTI_PCA9555_GPIO GPIOD
 //! Пин PCA95555.
@@ -246,13 +232,6 @@ static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
  */
 #define IRQ_PRIOR_TRIACS_TIMER 1
 #define IRQ_PRIOR_TRIAC_EXC_TIMER 2
-// FreeRTOS.
-//#define IRQ_PRIOR_SYSTICK 0
-
-#ifdef USE_ZERO_SENSORS
-#define IRQ_PRIOR_PHASES_TIMER 4
-#define IRQ_PRIOR_NULL_SENSORS 1
-#endif //USE_ZERO_SENSORS
 
 #define IRQ_PRIOR_RTOS_MAX 8
 
@@ -324,18 +303,6 @@ IRQ_ATTRIBS void UsageFault_Handler(void)
     for(;;);
 }
 
-// Handler in FreeRTOS.
-//IRQ_ATTRIBS void SVC_Handler(void)
-//{
-//    for(;;);
-//}
-
-// Handler in FreeRTOS.
-//IRQ_ATTRIBS void PendSV_Handler(void)
-//{
-//    for(;;);
-//}
-
 /*
  * Обработчики прерываний.
  */
@@ -349,13 +316,6 @@ IRQ_ATTRIBS void USART3_IRQHandler(void)
 {
     usart_buf_irq_handler(&usart_buf);
 }
-
-// Handler in FreeRTOS.
-//IRQ_ATTRIBS void SysTick_Handler(void)
-//{
-//    // System counter removed.
-//    //system_counter_tick();
-//}
 
 IRQ_ATTRIBS void SPI1_IRQHandler(void)
 {
@@ -384,14 +344,8 @@ IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
     i2c_bus_dma_tx_channel_irq_handler(&i2c2);
 }
 
-static void modbus_rs485_set_input(void);
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
-    // Установка интерфейса rs485 (Modbus RTU)
-    // на приём данных с целью предотвращения его
-    // ошибочной установки на передачу.
-    //modbus_rs485_set_input();
-    
     usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2) ||
     i2c_bus_dma_rx_channel_irq_handler(&i2c2);
@@ -464,9 +418,11 @@ static void rtc_on_second(void)
 /*
  * RTC alarm callback.
  */
+/*
 static void rtc_on_alarm(void)
 {
 }
+*/
 
 /*
  * get/set time of day functions.
@@ -589,127 +545,6 @@ IRQ_ATTRIBS void EXTI9_5_IRQHandler(void)
     }
 }
 
-#ifdef USE_ZERO_SENSORS
-
-/**
- * Разрешает прерывание от заданных линий EXTI.
- * @param lines_mask Линии EXTI.
- */
-ALWAYS_INLINE static void exti_enable_lines(uint16_t lines_mask)
-{
-    EXTI->IMR |= lines_mask;
-}
-
-/**
- * Запрещает прерывание от заданных линий EXTI.
- * @param lines_mask Линии EXTI.
- */
-ALWAYS_INLINE static void exti_disable_lines(uint16_t lines_mask)
-{
-    EXTI->IMR &= ~lines_mask;
-}
-
-#ifdef DISABLE_LAST_NULL_SENSOR
-/**
- * Включает и отключает прерывания от EXTI
- * согласно текущей фазе и направлению движения.
- * @param phase Фаза датчика нуля.
- */
-static void update_exti_inputs(phase_t phase)
-{
-    if(phase == PHASE_UNK) return;
-    
-    drive_dir_t dir = drive_direction();
-    
-    if(dir == DRIVE_DIR_UNK) return;
-    
-    // Обработаем фазу.
-    switch(phase){
-        case PHASE_A:
-            exti_disable_lines(EXTI_PHASE_A_LINE);
-            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_B_LINE : EXTI_PHASE_C_LINE);
-            break;
-        case PHASE_B:
-            exti_disable_lines(EXTI_PHASE_B_LINE);
-            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_C_LINE : EXTI_PHASE_A_LINE);
-            break;
-        case PHASE_C:
-            exti_disable_lines(EXTI_PHASE_C_LINE);
-            exti_enable_lines((dir == DRIVE_DIR_FORW) ? EXTI_PHASE_A_LINE : EXTI_PHASE_B_LINE);
-            break;
-        default:
-            return;
-    }
-}
-#endif
-
-/**
- * Получает состояние флага прерывания линии EXTI.
- * @param exti_line Линия EXTI.
- * @param imr Регистр IMR EXTI.
- * @retrun Состояние флага прерывания линии EXTI.
- */
-ALWAYS_INLINE static bool exti_it_status(uint16_t exti_line, uint32_t imr)
-{
-    return EXTI->PR & imr & exti_line;
-}
-
-/**
- * Очищает флаг прерывания линии EXTI.
- * @param exti_line Линия EXTI.
- */
-ALWAYS_INLINE static void exti_clear_it(uint16_t exti_line)
-{
-    EXTI->PR |= exti_line;
-}
-
-ALWAYS_INLINE static null_sensor_edge_t exti_gpio_edge(GPIO_TypeDef* GPIO, uint16_t pin)
-{
-    return (GPIO->IDR & pin) ? NULL_SENSOR_EDGE_TRAILING : NULL_SENSOR_EDGE_LEADING;
-}
-
-/**
- * Прерывание по датчикам нуля.
- */
-IRQ_ATTRIBS void EXTI15_10_IRQHandler(void)
-{
-    uint32_t imr = EXTI->IMR;
-    // Датчик нуля фазы A.
-    if (exti_it_status(EXTI_PHASE_A_LINE, imr) != RESET)
-    {
-        drive_process_null_sensor(PHASE_A,
-                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_A_Pin)); // Обрабатывает событие.
-#ifdef DISABLE_LAST_NULL_SENSOR
-        update_exti_inputs(PHASE_A);        // Обновим разрешения внешних прерываний.
-#endif
-        exti_clear_it(EXTI_PHASE_A_LINE);  // очищаем флаг прерывания 13
-    }
-
-    // Датчик нуля фазы B.
-    if (exti_it_status(EXTI_PHASE_B_LINE, imr) != RESET)
-    {
-        drive_process_null_sensor(PHASE_B,
-                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_B_Pin)); // Обрабатывает событие.
-#ifdef DISABLE_LAST_NULL_SENSOR
-        update_exti_inputs(PHASE_B);        // Обновим разрешения внешних прерываний.
-#endif
-        exti_clear_it(EXTI_PHASE_B_LINE);  // очищаем флаг прерывания 14
-    }
-
-    // Датчик нуля фазы C.
-    if (exti_it_status(EXTI_PHASE_C_LINE, imr) != RESET)
-    {
-        drive_process_null_sensor(PHASE_C,
-                exti_gpio_edge(EXTI_PHASE_GPIO, EXTI_PHASE_C_Pin)); // Обрабатывает событие.
-#ifdef DISABLE_LAST_NULL_SENSOR
-        update_exti_inputs(PHASE_C);        // Обновим разрешения внешних прерываний.
-#endif
-        exti_clear_it(EXTI_PHASE_C_LINE);  // очищаем флаг прерывания 15
-    }
-}
-
-#endif //USE_ZERO_SENSORS
-
 IRQ_ATTRIBS void TIM2_IRQHandler(void)
 {
     drive_triac_pairs_timer0_irq_handler();
@@ -724,13 +559,6 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
 {
     drive_triac_exc_timer_irq_handler();
 }
-
-#ifdef USE_ZERO_SENSORS
-IRQ_ATTRIBS void TIM6_IRQHandler(void)
-{
-    drive_phases_timer_irq_handler();
-}
-#endif //USE_ZERO_SENSORS
 
 IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
@@ -819,14 +647,6 @@ static void modbus_on_msg_sent(void)
 /*
  * Инициализация.
  */
-// System counter removed.
-//static void init_sys_counter(void)
-//{
-//    system_counter_init(1000);
-//    counter = system_counter_ticks();
-//    SysTick_Config(SystemCoreClock / 1000);
-//    NVIC_SetPriority(SysTick_IRQn, IRQ_PRIOR_SYSTICK);
-//}
 
 static void remap_config(void)
 {
@@ -875,11 +695,7 @@ static void init_periph_clock(void)
     // TIM4.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
     // TIM6.
-#ifdef USE_ZERO_SENSORS
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
-#else
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
-#endif //USE_ZERO_SENSORS
     // TIM7.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
     // TIM8.
@@ -920,6 +736,7 @@ static void init_PDR(void)
     PWR->CR |= PWR_CR_PVDE;
 }
 
+/*
 static void init_rtc_alarm_exti_line(void)
 {
     EXTI_InitTypeDef EXTI_InitStructure;
@@ -930,6 +747,7 @@ static void init_rtc_alarm_exti_line(void)
     
     EXTI_Init(&EXTI_InitStructure);
 }
+*/
 
 static void init_rtc_nvdata(void)
 {
@@ -960,14 +778,14 @@ static void init_rtc_nvdata(void)
     
     rtc_set_second_callback(rtc_on_second);
     
-    init_rtc_alarm_exti_line();
+    /*init_rtc_alarm_exti_line();
     rtc_set_alarm_callback(rtc_on_alarm);
-    rtc_set_alarm_interrupt_enabled(false);
+    rtc_set_alarm_interrupt_enabled(false);*/
     
     NVIC_SetPriority(RTC_IRQn, IRQ_PRIOR_RTC);
-    NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
+    //NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
     NVIC_EnableIRQ(RTC_IRQn);
-    NVIC_EnableIRQ(RTCAlarm_IRQn);
+    //NVIC_EnableIRQ(RTCAlarm_IRQn);
 }
 
 /*
@@ -1343,15 +1161,9 @@ static void reset_i2c2(void)
     
     I2C_Cmd(I2C2, DISABLE);
     
-    //settings_param_set_valueu(settings_param_by_id(PARAM_ID_HEATSINK_TEMP), 100);
-    //drive_dio_set_output_type_state(DRIVE_DIO_OUT_USER, DRIVE_DIO_ON);
-    
     if(!(I2C2_GPIO->IDR & I2C2_PIN_SDA)){
         reset_i2c2_slave();
     }
-    
-    //delay_ms(500);
-    //drive_dio_set_output_type_state(DRIVE_DIO_OUT_USER, DRIVE_DIO_OFF);
     
     init_i2c2_periph();
 }
@@ -1762,41 +1574,16 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
     TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
 }
 
-#ifdef USE_ZERO_SENSORS
-
-static void init_phases_timer(void)
-{
-    TIM_DeInit(TIM6);
-    TIM_TimeBaseInitTypeDef tim_is;
-            tim_is.TIM_Prescaler = DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
-            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim_is.TIM_Period = DRIVE_PHASE_STATE_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
-            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
-    TIM_TimeBaseInit(TIM6, &tim_is);
-    TIM_SelectOnePulseMode(TIM6, TIM_OPMode_Single);                    // Однопульсный режим таймера
-    TIM_SetCounter(TIM6, 0);                                            // Сбрасываем счетный регистр в ноль
-    
-    drive_set_phase_state_timer(TIM6);
-    
-    TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    //TIM_Cmd(TIM6, ENABLE);
-    
-    NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_PHASES_TIMER);
-    NVIC_EnableIRQ(TIM6_IRQn);
-}
-
-#else
-
 #if configGENERATE_RUN_TIME_STATS == 1
 
 static uint32_t hiresTimerValue = 0;
 
 IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
-	if(TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET){
-		TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
-		hiresTimerValue ++;
-	}
+    if(TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET){
+        TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
+        hiresTimerValue ++;
+    }
 }
 
 static void init_rtstats_timer(void)
@@ -1820,8 +1607,6 @@ static void init_rtstats_timer(void)
 }
 
 #endif //configGENERATE_RUN_TIME_STATS
-
-#endif //USE_ZERO_SENSORS
 
 static void init_null_timer(void)
 {
@@ -1918,42 +1703,6 @@ static void init_exti_pca9555(void)
  
     NVIC_EnableIRQ (EXTI9_5_IRQn);       // Разрешаем прерывание от 5-9 ног
 }
-
-#ifdef USE_ZERO_SENSORS
-
-static void init_exti_zero_sensors(void)
-{
-    /*
-     * Zero sensor
-     */
-    /* GPIOB Configuration: 44 (PE13 - ZeroSensor_1); 45 (PE14 - ZeroSensor_2); 46 (PE15 - ZeroSensor_3) as input floating */
-    GPIO_InitTypeDef GPIO_InitStructure;
-        GPIO_InitStructure.GPIO_Pin = EXTI_PHASE_A_Pin | EXTI_PHASE_B_Pin | EXTI_PHASE_C_Pin;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(EXTI_PHASE_GPIO, &GPIO_InitStructure);
-    
-    /*
-     * Привязка Прерывания к портам МК.
-     */
-    GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource13);
-    GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource14);
-    GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource15);
-    
-    
-    EXTI_InitTypeDef EXTI_InitStructure;
-    EXTI_InitStructure.EXTI_Line = EXTI_PHASE_A_LINE | EXTI_PHASE_B_LINE | EXTI_PHASE_C_LINE;
-    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
-    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-    EXTI_Init(&EXTI_InitStructure);
-    
-    NVIC_SetPriority(EXTI15_10_IRQn, IRQ_PRIOR_NULL_SENSORS);
- 
-    NVIC_EnableIRQ (EXTI15_10_IRQn);     // Разрешаем прерывание от 10-15 ног
-}
-
-#endif //USE_ZERO_SENSORS
 
 static void init_gpio (void)
 {
@@ -2250,19 +1999,13 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 
 void initHiresCounter(void)
 {
-#ifndef USE_ZERO_SENSORS
-	init_rtstats_timer();
-#endif
+    init_rtstats_timer();
 }
 
 uint32_t getHiresCounterValue(void)
 {
-#ifndef USE_ZERO_SENSORS
-	//return ((uint32_t)hiresTimerValue << 16) | (uint32_t)TIM6->CNT;
-	return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
-#else
-	//return 0;
-#endif
+    //return ((uint32_t)hiresTimerValue << 16) | (uint32_t)TIM6->CNT;
+    return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
 }
 
 #endif
@@ -2312,14 +2055,7 @@ int main(void)
     init_adc();
     init_adc_timer();
     
-#ifdef USE_ZERO_SENSORS
-    init_phases_timer();
-#endif //USE_ZERO_SENSORS
     init_null_timer();
-    
-#ifdef USE_ZERO_SENSORS
-    init_exti_zero_sensors();
-#endif
     
     init_modbus_usart();
     init_modbus();

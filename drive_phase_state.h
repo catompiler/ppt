@@ -25,19 +25,6 @@
 
 
 /*
- * Конфигурация таймера для отсчёта времени между датчиками нуля.
- */
-//! Число тиков.
-#define DRIVE_PHASE_STATE_TIMER_CNT_TICKS (PHASE_TIME_US_MAX + 1)
-//! Период в микросекундах.
-#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD_US (DRIVE_PHASE_STATE_TIMER_CNT_TICKS)
-//! Период.
-#define DRIVE_PHASE_STATE_TIMER_CNT_PERIOD (DRIVE_PHASE_STATE_TIMER_CNT_TICKS - 1)
-//! Предделитель.
-#define DRIVE_PHASE_STATE_TIMER_CNT_PRESCALER (72 - 1)
-
-
-/*
  * Структуры для отслеживания состояния фаз.
  */
 
@@ -98,13 +85,6 @@ extern err_t drive_phase_state_init(void);
 extern void drive_phase_state_set_error_callback(drive_phase_state_error_callback_t callback);
 
 /**
- * Устанавливает таймер для отсчёта интервалов между датчиками нуля.
- * @param TIM Таймер.
- * @return Код ошибки.
- */
-extern err_t drive_phase_state_set_timer(TIM_TypeDef* TIM);
-
-/**
  * Обрабатывает фазу.
  * @param phase Фаза.
  */
@@ -136,23 +116,11 @@ extern drive_dir_t drive_phase_state_direction(void);
 extern phase_time_t drive_phase_state_phase_time(phase_t phase);
 
 /**
- * Получает время с последнего срабатывания датчика нуля.
- * @return Время с последнего срабатывания датчика нуля.
- */
-extern phase_time_t drive_phase_state_time(void);
-
-/**
  * Получает флаг допустимости времени между срабатываниями датчиков нуля.
  * @param time Время между срабатываниями датчиков нуля.
  * @return Флаг допустимости времени между срабатываниями датчиков нуля.
  */
 extern bool drive_phase_state_time_valid(phase_time_t time);
-
-/**
- * Получает флаг наличия актуальных данных о времени.
- * @return Флаг наличия данных о времени.
- */
-extern bool drive_phase_state_has_time(void);
 
 /**
  * Получает следующую фазу после заданной при заданном направлении вращения.
@@ -171,10 +139,5 @@ extern void drive_phase_state_clear_errors(void);
  * Сбрасывает состояние.
  */
 extern void drive_phase_state_reset(void);
-
-/**
- * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
- */
-extern void drive_phase_state_process_phase_timeout(void);
 
 #endif  //DRIVE_PHASE_STATE_H

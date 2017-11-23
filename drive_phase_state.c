@@ -119,7 +119,6 @@ typedef struct _DrivePhaseState {
     phase_t cur_phase; //!< Текущая фаза.
     drive_dir_t drive_dir; //!< Направление.
     drive_phase_errors_t phase_errs; //!< Ошибки.
-    TIM_TypeDef* timer_cnt; //!< Таймер - счётчик времени между фазами.
     phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
     drive_phase_state_error_callback_t error_callback; //!< Каллбэк ошибки фаз.
 } drive_phase_state_t;
@@ -146,19 +145,6 @@ ALWAYS_INLINE static drive_phase_error_t drive_phase_state_get_time_error(phase_
     return phase_time_errors[phase - 1];
 }
 
-ALWAYS_INLINE static bool drive_phase_state_has_phase_timer(void)
-{
-    return state.timer_cnt != NULL;
-}
-
-ALWAYS_INLINE static phase_time_t drive_phase_state_get_cur_time(void)
-{
-    if(state.timer_cnt){
-        return (phase_time_t)TIM_GetCounter(state.timer_cnt);
-    }
-    return 0;
-}
-
 ALWAYS_INLINE static phase_time_t drive_phase_state_delta(phase_time_t time)
 {
     if(time < PHASE_TIME_US) return PHASE_TIME_US - time;
@@ -169,28 +155,6 @@ ALWAYS_INLINE static bool drive_phase_state_time_check(phase_time_t time)
 {
     if(drive_phase_state_delta(time) > PHASE_DELTA_US_MAX) return false;
     return true;
-}
-
-ALWAYS_INLINE static void drive_phase_state_reset_timer(void)
-{
-    if(state.timer_cnt){
-        TIM_SetCounter(state.timer_cnt, 0);
-    }
-}
-
-ALWAYS_INLINE static void drive_phase_state_stop_timer(void)
-{
-    if(state.timer_cnt){
-        TIM_Cmd(state.timer_cnt, DISABLE);
-    }
-}
-
-ALWAYS_INLINE static void drive_phase_state_start_timer(void)
-{
-    if(state.timer_cnt){
-        TIM_SetCounter(state.timer_cnt, 0);
-        TIM_Cmd(state.timer_cnt, ENABLE);
-    }
 }
 
 err_t drive_phase_state_init(void)
@@ -205,26 +169,11 @@ void drive_phase_state_set_error_callback(drive_phase_state_error_callback_t cal
     state.error_callback = callback;
 }
 
-err_t drive_phase_state_set_timer(TIM_TypeDef* TIM)
-{
-    if(TIM == NULL) return E_NULL_POINTER;
-    
-    state.timer_cnt = TIM;
-    
-    return E_NO_ERROR;
-}
-
 void drive_phase_state_handle(phase_t phase)
 {
     phase_time_t time = 0;
     
-    if(drive_phase_state_has_phase_timer()){
-        drive_phase_state_stop_timer();
-        time = drive_phase_state_get_cur_time();
-        drive_phase_state_start_timer();
-    }else{
-        time = drive_phase_sync_delta(phase);
-    }
+    time = drive_phase_sync_delta(phase);
     
     // Если время равно нулю - скорее всего было
     // переполнение - установим время в максимум + 1.
@@ -269,21 +218,9 @@ phase_time_t drive_phase_state_phase_time(phase_t phase)
     return state.phases_time[phase - 1];
 }
 
-phase_time_t drive_phase_state_time(void)
-{
-    return drive_phase_state_get_cur_time();
-}
-
 bool drive_phase_state_time_valid(phase_time_t time)
 {
     return drive_phase_state_time_check(time);
-}
-
-bool drive_phase_state_has_time(void)
-{
-    if(!state.timer_cnt) return false;
-    if(!(state.timer_cnt->CR1 & TIM_CR1_CEN)) return false;
-    return true;
 }
 
 #define NEXT_PHASE_TABLE
@@ -340,20 +277,4 @@ void drive_phase_state_reset(void)
     state.drive_dir = DRIVE_DIR_UNK;
     state.phase_errs = PHASE_NO_ERROR;
     state.state = PHASE_STATE_UNK;
-    drive_phase_state_stop_timer();
-    drive_phase_state_reset_timer();
-}
-
-void drive_phase_state_process_phase_timeout(void)
-{
-    if(state.timer_cnt) TIM_ClearITPendingBit(state.timer_cnt, TIM_IT_Update);
-    
-    phase_time_t time = PHASE_TIME_US_MAX + 1;
-    phase_t phase = drive_phase_state_next_phase(state.cur_phase, state.drive_dir);
-    
-    drive_phase_state_set_time(phase, time);
-    
-    state.phase_errs |= drive_phase_state_get_time_error(phase);
-    
-    drive_phase_state_on_error();
 }

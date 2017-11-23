@@ -2749,68 +2749,6 @@ void drive_triac_exc_timer_irq_handler(void)
     drive_triacs_exc_timer_irq_handler();
 }
 
-#ifdef USE_ZERO_SENSORS
-
-/**
- * Обрабатывает действительно сработавший датчик нуля.
- * @param phase Фаза.
- * @return Код ошибки.
- */
-static err_t drive_process_null_sensor_impl(phase_t phase, int16_t sensor_time)
-{
-    drive_phase_state_handle(phase);
-
-    if(drive_can_open_triacs()){
-        drive_setup_triacs_open(phase, sensor_time);
-    }
-    /*else{
-        drive_tasks_write_status_event();
-    }*/
-    
-    return E_NO_ERROR;
-}
-
-#ifdef DRIVE_PHASE_SYNC_DEBUG
-static int32_t zero_sens = 0;
-#endif
-
-err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge)
-{
-    if(phase == PHASE_UNK) return E_INVALID_VALUE;
-    
-    static phase_time_t sensors_time[PHASES_COUNT] = {0};
-    static null_sensor_edge_t sensors_edges[PHASES_COUNT] = {0};
-    
-    phase_time_t time = drive_phase_state_time();
-    phase_time_t prev_time = sensors_time[phase - 1];
-    null_sensor_edge_t prev_edge = sensors_edges[phase - 1];
-    
-    if(edge == NULL_SENSOR_EDGE_TRAILING && prev_edge != edge){
-        
-        if(!drive_phase_state_has_time()){
-            return E_NO_ERROR;
-            //return drive_process_null_sensor_impl(phase, 0);
-        }
-        
-        if(time >= prev_time){
-            phase_time_t diff_time = time - prev_time;
-#ifdef DRIVE_PHASE_SYNC_DEBUG
-            zero_sens = diff_time;
-#endif
-            if(diff_time >= drive.settings.zero_sensor_time){
-                //return E_NO_ERROR;
-                return drive_process_null_sensor_impl(phase, diff_time);
-            }
-        }
-    }
-    
-    sensors_edges[phase - 1] = edge;
-    sensors_time[phase - 1] = time;
-    
-    return E_NO_ERROR;
-}
-
-#endif //USE_ZERO_SENSORS
 
 #ifdef DRIVE_PHASE_SYNC_DEBUG
 static int32_t angle_phA = 0;

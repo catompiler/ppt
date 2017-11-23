@@ -712,16 +712,6 @@ ALWAYS_INLINE static err_t drive_set_triac_exc_timer(TIM_TypeDef* TIM)
 }
 
 /**
- * Устанавливает таймер для отсчёта интервалов между датчиками нуля.
- * @param TIM Таймер.
- * @return Код ошибки.
- */
-ALWAYS_INLINE static err_t drive_set_phase_state_timer(TIM_TypeDef* TIM)
-{
-    return drive_phase_state_set_timer(TIM);
-}
-
-/**
  * Устанавливает таймер искусственных датчиков нуля.
  * @param TIM Таймер.
  * @return Код ошибки.
@@ -743,20 +733,6 @@ extern void drive_triac_pairs_timer1_irq_handler(void);
  */
 extern void drive_triac_exc_timer_irq_handler(void);
 
-#ifdef USE_ZERO_SENSORS
-
-/**
- * Обрабатывает событие датчика нуля по заданной фазе.
- * Устаревшая функция, датчики нуля теперь
- * не используются для определения нуля.
- * @param phase Фаза.
- * @param edge Фронт сигнала датчика нуля.
- * @return Код ошибки.
- */
-extern __attribute__ ((deprecated)) err_t drive_process_null_sensor(phase_t phase, null_sensor_edge_t edge);
-
-#endif //USE_ZERO_SENSORS
-
 /**
  * Обрабатывает искусственный датчик нуля.
  */
@@ -767,14 +743,6 @@ extern void drive_process_zero(void);
  * при срабатывании виртуального датчика нуля.
  */
 extern void drive_process_iter(void);
-
-/**
- * Обрабатывает прерывание переполнения таймера отсчёта времени между фазами.
- */
-ALWAYS_INLINE static void drive_phases_timer_irq_handler(void)
-{
-    drive_phase_state_process_phase_timeout();
-}
 
 /**
  * Обрабатывает очередные значения АЦП.
