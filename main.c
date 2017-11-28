@@ -29,6 +29,8 @@
 #include "drive_dio.h"
 #include "drive_nvdata.h"
 #include "drive_temp.h"
+#include "drive_hires_timer.h"
+#include "utils/critical.h"
 #include <string.h>
 #include <stdlib.h>
 #undef LIST_H
@@ -61,6 +63,7 @@ static modbus_rtu_message_t modbus_rx_msg, modbus_tx_msg;
 
 //! Счётчик миллисекунд для функции gettimeofday.
 static uint32_t counter_ms_gtod = 0;
+//static struct timeval counter_gtod = {0, 0};
 
 
 //! Шина spi.
@@ -233,6 +236,8 @@ static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
 #define IRQ_PRIOR_TRIACS_TIMER 1
 #define IRQ_PRIOR_TRIAC_EXC_TIMER 2
 
+#define IRQ_PRIOR_HIRES_TIMER 5
+
 #define IRQ_PRIOR_RTOS_MAX 8
 
 //#define IRQ_PRIOR_ADC_TIM (IRQ_PRIOR_RTOS_MAX + 0)
@@ -401,6 +406,8 @@ static void rtc_on_second(void)
 {
     counter_ms_gtod = xTaskGetTickCountFromISR();
     
+    //drive_hires_timer_value(&counter_gtod);
+    
     drive_nvdata_inc_lifetime();
     
     if(drive_running()){
@@ -434,6 +441,31 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
         return -1;
     }
     
+    //struct timeval res_time;
+    
+    tv->tv_sec = rtc_time(NULL);
+    
+    // Высокоточное время.
+    /*drive_hires_timer_value(&res_time);
+    
+    portENTER_CRITICAL();
+    
+    // Вычислим разницу с учётом переполнения.
+    res_time.tv_sec -= counter_gtod.tv_sec;
+    res_time.tv_usec -= counter_gtod.tv_usec;
+    
+    portEXIT_CRITICAL();
+    
+    if(res_time.tv_sec < 0){
+        res_time.tv_sec = 1;
+    }
+    if(res_time.tv_usec < 0){
+        res_time.tv_usec += 1000000;
+        res_time.tv_sec --;
+    }
+    
+    tv->tv_usec = res_time.tv_usec;*/
+    
     uint32_t ticks_old = counter_ms_gtod;
     uint32_t ticks = xTaskGetTickCount();
     
@@ -442,10 +474,7 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
     }else{
         ticks = UINT32_MAX - ticks_old + ticks + 1;
     }
-    
-    tv->tv_sec = rtc_time(NULL);
     tv->tv_usec = (ticks * 1000 / configTICK_RATE_HZ) * 1000;
-    
     if(tv->tv_usec >= 1000000){
         tv->tv_usec = 1000000 - 1;
         //tv->tv_sec ++;
@@ -1576,37 +1605,31 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
 
 #if configGENERATE_RUN_TIME_STATS == 1
 
-static uint32_t hiresTimerValue = 0;
+//static uint32_t hiresTimerValue = 0;
+
+#endif //configGENERATE_RUN_TIME_STATS
 
 IRQ_ATTRIBS void TIM6_IRQHandler(void)
 {
-    if(TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET){
-        TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
-        hiresTimerValue ++;
-    }
-}
+    drive_hires_timer_irq_handler();
+    
+#if configGENERATE_RUN_TIME_STATS == 1
 
-static void init_rtstats_timer(void)
-{
-    TIM_DeInit(TIM6);
-    TIM_TimeBaseInitTypeDef tim_is;
-            tim_is.TIM_Prescaler = 1440-1; //0..50000 1 Hz.
-            tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim_is.TIM_Period = 50000-1; // Значение периода (0000...FFFF)
-            tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
-    TIM_TimeBaseInit(TIM6, &tim_is);
-    TIM_SetCounter(TIM6, 0);
-
-    TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);
-    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
-
-    TIM_Cmd(TIM6, ENABLE);
-
-    NVIC_SetPriority(TIM6_IRQn, 5);
-	NVIC_EnableIRQ(TIM6_IRQn);
-}
+    //hiresTimerValue ++;
 
 #endif //configGENERATE_RUN_TIME_STATS
+}
+
+static void init_hires_timer(void)
+{
+    drive_hires_timer_init(TIM6);
+    drive_hires_timer_irq_set_enabled(true);
+    
+    drive_hires_timer_start();
+
+    NVIC_SetPriority(TIM6_IRQn, IRQ_PRIOR_HIRES_TIMER);
+    NVIC_EnableIRQ(TIM6_IRQn);
+}
 
 static void init_null_timer(void)
 {
@@ -1997,15 +2020,23 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 
 #if configGENERATE_RUN_TIME_STATS == 1
 
+static struct timeval rt_stats_initial_tv = {0, 0};
+
 void initHiresCounter(void)
 {
-    init_rtstats_timer();
+    gettimeofday(&rt_stats_initial_tv, NULL);
 }
 
 uint32_t getHiresCounterValue(void)
 {
-    //return ((uint32_t)hiresTimerValue << 16) | (uint32_t)TIM6->CNT;
-    return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
+    //return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
+    
+    struct timeval tv;
+    //gettimeofday(&tv, NULL);
+    //timersub(&tv, &rt_stats_initial_tv, &tv);
+    drive_hires_timer_value(&tv);
+    
+    return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 #endif
@@ -2025,6 +2056,7 @@ int main(void)
     init_usart();
     
     init_rtc_nvdata();
+    init_hires_timer();
     
     printf("STM32 MCU\r\n");
     

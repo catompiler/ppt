@@ -37,7 +37,9 @@
 //! Точность синхронизации с фазами.
 //#define DRIVE_PHASE_SYNC_ACCURACY (fixed32_make_from_fract(3, 1))
 
-#define DRIVE_PHASE_SYNC_DEBUG
+//#define DRIVE_PHASE_SYNC_DEBUG
+
+//#define DRIVE_MEASURE_ITERS_TIME_DEBUG
 
 //! Число периодов калибровки питания.
 #define DRIVE_POWER_CALIBRATION_ITERS 15
@@ -2810,9 +2812,19 @@ void drive_process_zero(void)
 #endif
 }
 
+#ifdef DRIVE_MEASURE_ITERS_TIME_DEBUG
+#include <sys/time.h>
+#include "drive_hires_timer.h"
+#endif
 void drive_process_iter(void)
 {
+#ifdef DRIVE_MEASURE_ITERS_TIME_DEBUG
+    struct timeval tv_prev;
+    //gettimeofday(&tv_prev, NULL);
+    drive_hires_timer_value(&tv_prev);
+    
     int32_t iter_time = drive_get_null_timer_time();
+#endif
     
     //drive_phase_sync_process();
 
@@ -2829,15 +2841,29 @@ void drive_process_iter(void)
 
     drive_states_process();
     
+#ifdef DRIVE_MEASURE_ITERS_TIME_DEBUG
+    struct timeval tv_next;
+    //gettimeofday(&tv_next, NULL);
+    drive_hires_timer_value(&tv_next);
+    
     iter_time = drive_get_null_timer_time() - iter_time;
+    
+    struct timeval tv;
+    timersub(&tv_next, &tv_prev, &tv);
     
     param_t* p_iter_time = settings_param_by_id(PARAM_ID_DEBUG_0);
     if(p_iter_time) settings_param_set_valuei(p_iter_time, iter_time);
+    
+    param_t* p_adc_tick_time = settings_param_by_id(PARAM_ID_DEBUG_1);
+    if(p_adc_tick_time) settings_param_set_valuei(p_adc_tick_time, tv.tv_usec);
+#endif
 }
 
 err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_values)
 {
+#ifdef DRIVE_MEASURE_ITERS_TIME_DEBUG
     int32_t adc_tick_time = drive_get_null_timer_time();
+#endif
     
     err_t err = E_NO_ERROR;
 
@@ -2847,10 +2873,12 @@ err_t drive_process_power_adc_values(power_channels_t channels, uint16_t* adc_va
 
     drive_phase_sync_append_data();
 
+#ifdef DRIVE_MEASURE_ITERS_TIME_DEBUG
     adc_tick_time = drive_get_null_timer_time() - adc_tick_time;
 
-    param_t* p_adc_tick_time = settings_param_by_id(PARAM_ID_DEBUG_1);
-    if(p_adc_tick_time) settings_param_set_valuei(p_adc_tick_time, adc_tick_time);
+    //param_t* p_adc_tick_time = settings_param_by_id(PARAM_ID_DEBUG_1);
+    //if(p_adc_tick_time) settings_param_set_valuei(p_adc_tick_time, adc_tick_time);
+#endif
     
     return err;
 }
