@@ -372,6 +372,9 @@ bool drive_regulator_regulate_speed(fixed32_t dt)
 
     fixed32_t rpm_rot_back = drive_motor_rpm();
     
+    // Если обороты отрицательны - считаем их моментом на валу.
+    if(rpm_rot_back < 0) rpm_rot_back = 0;
+    
     fixed32_t rpm_rot_e = 0;
 
     rpm_rot_e = regulator.rpm_rot_ref - rpm_rot_back;
