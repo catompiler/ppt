@@ -91,6 +91,23 @@ extern void drive_phase_state_set_error_callback(drive_phase_state_error_callbac
 extern void drive_phase_state_handle(phase_t phase);
 
 /**
+ * Получает флаг прохождения нуля.
+ * @return Флаг прохождения нуля.
+ */
+extern bool drive_phase_state_zero_reached(void);
+
+/**
+ * Обрабатывает полуфазу.
+ */
+extern void drive_phase_state_half_handle(void);
+
+/**
+ * Получает Полуфазу.
+ * @return Полуфаза.
+ */
+extern phase_t drive_phase_state_half_phase(void);
+
+/**
  * Получает ошибки.
  * @return Ошибки.
  */
@@ -99,6 +116,12 @@ extern drive_phase_errors_t drive_phase_state_errors(void);
 /**
  * Получает текущую фазу.
  * @return Текущая фаза.
+ */
+extern phase_t drive_phase_state_current_phase(void);
+
+/**
+ * Получает предыдущую фазу.
+ * @return Предыдущая фаза.
  */
 extern phase_t drive_phase_state_current_phase(void);
 

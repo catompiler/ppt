@@ -117,6 +117,9 @@ phase_time_errors[PHASE_TIME_ERRORS_COUNT] = {
 typedef struct _DrivePhaseState {
     phase_state_t state; //!< Состояние фаз.
     phase_t cur_phase; //!< Текущая фаза.
+    phase_t last_phase; //!< Предыдущая фаза.
+    phase_t half_phase; //!< Полуфаза.
+    bool zero_reached; //!< Флаг прохождения нуля.
     drive_dir_t drive_dir; //!< Направление.
     drive_phase_errors_t phase_errs; //!< Ошибки.
     phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
@@ -185,7 +188,10 @@ void drive_phase_state_handle(phase_t phase)
     state.state = state_values->state;
     state.drive_dir = state_values->dir;
     state.phase_errs = state_values->error;
+    state.last_phase = state.cur_phase;
     state.cur_phase = phase;
+    
+    state.zero_reached = true;
     
     drive_phase_state_set_time(phase, time);
     
@@ -196,6 +202,24 @@ void drive_phase_state_handle(phase_t phase)
     if(state.phase_errs != PHASE_NO_ERROR) drive_phase_state_on_error();
 }
 
+bool drive_phase_state_zero_reached(void)
+{
+    return state.zero_reached;
+}
+
+void drive_phase_state_half_handle(void)
+{
+    if(state.zero_reached) state.half_phase = state.last_phase;
+    else state.half_phase = state.cur_phase;
+    
+    state.zero_reached = false;
+}
+
+phase_t drive_phase_state_half_phase(void)
+{
+    return state.half_phase;
+}
+
 drive_phase_errors_t drive_phase_state_errors(void)
 {
     return state.phase_errs;
@@ -204,6 +228,11 @@ drive_phase_errors_t drive_phase_state_errors(void)
 phase_t drive_phase_state_current_phase(void)
 {
     return state.cur_phase;
+}
+
+phase_t drive_phase_state_last_phase(void)
+{
+    return state.last_phase;
 }
 
 drive_dir_t drive_phase_state_direction(void)
@@ -273,8 +302,10 @@ void drive_phase_state_clear_errors(void)
 
 void drive_phase_state_reset(void)
 {
+    state.last_phase = PHASE_UNK;
     state.cur_phase = PHASE_UNK;
     state.drive_dir = DRIVE_DIR_UNK;
     state.phase_errs = PHASE_NO_ERROR;
     state.state = PHASE_STATE_UNK;
+    state.zero_reached = false;
 }

@@ -29,6 +29,9 @@
 //! Число итераций накопления и обработки данных за период.
 #define POWER_PERIOD_ITERS 3
 
+//! Максимальное число итераций накопления и обработки данных за период.
+#define POWER_PERIOD_ITERS_MAX 3
+
 
 #define POWER_IGNORE_BITS 0
 #if POWER_IGNORE_BITS != 0
@@ -39,7 +42,7 @@
 
 
 //! Число элементов в буфере фильтра.
-#define POWER_FILTER_SIZE_MAX (POWER_PERIOD_ITERS)
+#define POWER_FILTER_SIZE_MAX (POWER_PERIOD_ITERS_MAX)
 
 /**
  * Перечисление каналов АЦП.

@@ -160,6 +160,11 @@ static tft9341_t tft;
 #define EXTI_RTC_ALARM_LINE EXTI_Line17
 
 
+//! Таймер открытия тиристоров и итераций привода.
+#define DRIVE_MAIN_TIM TIM7
+//! Делитель (счётчик) частоты основного таймера привода.
+static uint8_t drive_main_iter_prescaler = 0;
+
 // ADC.
 //! Таймер АЦП.
 #define ADC_TIM (TIM1)
@@ -266,7 +271,8 @@ static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
  * Приоритеты задач.
  */
 #define DRIVE_TASK_PRIORITY_ADC 12
-#define DRIVE_TASK_PRIORITY_ZERO 11
+#define DRIVE_TASK_PRIORITY_SYNC 11
+#define DRIVE_TASK_PRIORITY_TRIACS 10
 #define DRIVE_TASK_PRIORITY_MAIN 9
 #define DRIVE_TASK_PRIORITY_MODBUS 8
 #define DRIVE_TASK_PRIORITY_EVENTS 7
@@ -441,30 +447,7 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
         return -1;
     }
     
-    //struct timeval res_time;
-    
     tv->tv_sec = rtc_time(NULL);
-    
-    // Высокоточное время.
-    /*drive_hires_timer_value(&res_time);
-    
-    portENTER_CRITICAL();
-    
-    // Вычислим разницу с учётом переполнения.
-    res_time.tv_sec -= counter_gtod.tv_sec;
-    res_time.tv_usec -= counter_gtod.tv_usec;
-    
-    portEXIT_CRITICAL();
-    
-    if(res_time.tv_sec < 0){
-        res_time.tv_sec = 1;
-    }
-    if(res_time.tv_usec < 0){
-        res_time.tv_usec += 1000000;
-        res_time.tv_sec --;
-    }
-    
-    tv->tv_usec = res_time.tv_usec;*/
     
     uint32_t ticks_old = counter_ms_gtod;
     uint32_t ticks = xTaskGetTickCount();
@@ -519,8 +502,8 @@ IRQ_ATTRIBS void TIM1_UP_IRQHandler(void)
     }
 }
 
-static void adc_timer_set_rate(uint32_t rate);
 static void adc_dma_set_rate(uint32_t rate);
+static void adc_timer_set_rate(uint32_t rate);
 
 /**
  * Обработчик окончания передачи данных от ADC.
@@ -591,15 +574,25 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
 
 IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
-    if(TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET){
-        TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
+    if(TIM_GetITStatus(DRIVE_MAIN_TIM, TIM_IT_Update) != RESET){
+        TIM_ClearITPendingBit(DRIVE_MAIN_TIM, TIM_IT_Update);
         
-        bool switch_to_main_task = drive_task_main_process_isr();
-        bool switch_to_zero_task = drive_task_zero_process_isr();
+        bool need_yield = false;
         
-        if(switch_to_main_task || switch_to_zero_task){
-            portYIELD();
+        need_yield |= drive_task_triacs_process_isr();
+            
+        if(drive_main_iter_prescaler == 0){
+            need_yield |= drive_task_main_process_isr();
+            need_yield |= drive_task_sync_process_isr();
         }
+        
+        if(drive_main_iter_prescaler >= DRIVE_MAIN_ITER_PRESCALER){
+            drive_main_iter_prescaler = 0;
+        }else{
+            drive_main_iter_prescaler ++;
+        }
+        
+        if(need_yield) portYIELD();
     }
 }
 
@@ -725,7 +718,7 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);    // Включаем тактирование General-purpose TIM4
     // TIM6.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);    // Включаем тактирование Basic TIM6
-    // TIM7.
+    // TIM7 - DRIVE_MAIN_TIM.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);    // Включаем тактирование Basic TIM7
     // TIM8.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8, ENABLE);    // Включаем тактирование Motor-control TIM8
@@ -1631,22 +1624,22 @@ static void init_hires_timer(void)
     NVIC_EnableIRQ(TIM6_IRQn);
 }
 
-static void init_null_timer(void)
+static void init_drive_main_timer(void)
 {
-    TIM_DeInit(TIM7);
+    TIM_DeInit(DRIVE_MAIN_TIM);
     TIM_TimeBaseInitTypeDef tim_is;
-            tim_is.TIM_Prescaler = DRIVE_NULL_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
+            tim_is.TIM_Prescaler = DRIVE_MAIN_TIMER_CNT_PRESCALER; // Настраиваем делитель чтобы таймер тикал 1 000 000 раз в секунду
             tim_is.TIM_CounterMode = TIM_CounterMode_Up;    // Режим счетчика
-            tim_is.TIM_Period = DRIVE_NULL_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
+            tim_is.TIM_Period = DRIVE_MAIN_TIMER_CNT_PERIOD; // Значение периода (0000...FFFF)
             tim_is.TIM_ClockDivision = TIM_CKD_DIV1;        // определяет тактовое деление
-    TIM_TimeBaseInit(TIM7, &tim_is);
-    TIM_SelectOnePulseMode(TIM7, TIM_OPMode_Repetitive);                // Повторяющийся режим таймера
-    TIM_SetCounter(TIM7, 0);                                            // Сбрасываем счетный регистр в ноль
+    TIM_TimeBaseInit(DRIVE_MAIN_TIM, &tim_is);
+    TIM_SelectOnePulseMode(DRIVE_MAIN_TIM, TIM_OPMode_Repetitive);                // Повторяющийся режим таймера
+    TIM_SetCounter(DRIVE_MAIN_TIM, 0);                                            // Сбрасываем счетный регистр в ноль
     
-    drive_set_null_timer(TIM7);
+    drive_set_null_timer(DRIVE_MAIN_TIM);
     
-    TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
-    TIM_Cmd(TIM7, ENABLE);                                            // Начать отсчёт!
+    TIM_ITConfig(DRIVE_MAIN_TIM, TIM_IT_Update, ENABLE);                        // Разрешаем прерывание от таймера
+    TIM_Cmd(DRIVE_MAIN_TIM, ENABLE);                                            // Начать отсчёт!
     
     NVIC_SetPriority(TIM7_IRQn, IRQ_PRIOR_NULL_TIMER);
     NVIC_EnableIRQ(TIM7_IRQn);
@@ -1952,7 +1945,8 @@ static void init_drive_tasks(void)
     drive_tasks_init();
     
     drive_task_adc_init(DRIVE_TASK_PRIORITY_ADC);
-    drive_task_zero_init(DRIVE_TASK_PRIORITY_ZERO);
+    drive_task_sync_init(DRIVE_TASK_PRIORITY_SYNC);
+    drive_task_triacs_init(DRIVE_TASK_PRIORITY_TRIACS);
     drive_task_main_init(DRIVE_TASK_PRIORITY_MAIN);
     drive_task_modbus_init(DRIVE_TASK_PRIORITY_MODBUS);
     drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
@@ -2087,7 +2081,7 @@ int main(void)
     init_adc();
     init_adc_timer();
     
-    init_null_timer();
+    init_drive_main_timer();
     
     init_modbus_usart();
     init_modbus();

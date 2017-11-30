@@ -95,19 +95,59 @@ typedef struct _Triacs_Diag {
 } triacs_diag_t;
 
 
-//! Ёмкость фильтра каналов питания.
+//! Ёмкость фильтра каналов питания (вычисление каждые 6.67 мс).
 #define CHANNEL_FILTER_CAPACITY 30
-//! Буфер данных фильтра каналов питания.
-typedef fixed32_t channel_filter_data_t[CHANNEL_FILTER_CAPACITY];
+//! Ёмкость фильтра каналов питания (вычисление каждые 3.33 мс).
+#define CHANNEL_FILTER_FAST_CAPACITY (CHANNEL_FILTER_CAPACITY * 2)
+
+// Смещения и размеры данных фильтров.
+// Ua.
+#define CF_DATA_OFFSET_Ua   (0)
+#define CF_DATA_SIZE_Ua     (CHANNEL_FILTER_CAPACITY)
+// Ia.
+#define CF_DATA_OFFSET_Ia   (CF_DATA_OFFSET_Ua + CF_DATA_SIZE_Ua)
+#define CF_DATA_SIZE_Ia     (CHANNEL_FILTER_CAPACITY)
+// Ub.
+#define CF_DATA_OFFSET_Ub   (CF_DATA_OFFSET_Ia + CF_DATA_SIZE_Ia)
+#define CF_DATA_SIZE_Ub     (CHANNEL_FILTER_CAPACITY)
+// Ib.
+#define CF_DATA_OFFSET_Ib   (CF_DATA_OFFSET_Ub + CF_DATA_SIZE_Ub)
+#define CF_DATA_SIZE_Ib     (CHANNEL_FILTER_CAPACITY)
+// Uc.
+#define CF_DATA_OFFSET_Uc   (CF_DATA_OFFSET_Ib + CF_DATA_SIZE_Ib)
+#define CF_DATA_SIZE_Uc     (CHANNEL_FILTER_CAPACITY)
+// Ic.
+#define CF_DATA_OFFSET_Ic   (CF_DATA_OFFSET_Uc + CF_DATA_SIZE_Uc)
+#define CF_DATA_SIZE_Ic     (CHANNEL_FILTER_CAPACITY)
+// Urot.
+#define CF_DATA_OFFSET_Urot   (CF_DATA_OFFSET_Ic + CF_DATA_SIZE_Ic)
+#define CF_DATA_SIZE_Urot     (CHANNEL_FILTER_CAPACITY)
+// Irot.
+#define CF_DATA_OFFSET_Irot   (CF_DATA_OFFSET_Urot + CF_DATA_SIZE_Urot)
+#define CF_DATA_SIZE_Irot     (CHANNEL_FILTER_FAST_CAPACITY)
+// Iexc.
+#define CF_DATA_OFFSET_Iexc   (CF_DATA_OFFSET_Irot + CF_DATA_SIZE_Irot)
+#define CF_DATA_SIZE_Iexc     (CHANNEL_FILTER_CAPACITY)
+// Iref.
+#define CF_DATA_OFFSET_Iref   (CF_DATA_OFFSET_Iexc + CF_DATA_SIZE_Iexc)
+#define CF_DATA_SIZE_Iref     (CHANNEL_FILTER_CAPACITY)
+// Ifan.
+#define CF_DATA_OFFSET_Ifan   (CF_DATA_OFFSET_Iref + CF_DATA_SIZE_Iref)
+#define CF_DATA_SIZE_Ifan     (CHANNEL_FILTER_CAPACITY)
+// Erot.
+#define CF_DATA_OFFSET_Erot   (CF_DATA_OFFSET_Ifan + CF_DATA_SIZE_Ifan)
+#define CF_DATA_SIZE_Erot     (CHANNEL_FILTER_CAPACITY)
+
+//! Общий размер данных фильтров.
+#define CHANNEL_FILTERS_DATA_SIZE (CF_DATA_OFFSET_Erot + CF_DATA_SIZE_Erot)
+
 
 //! Тип питания привода.
 typedef struct _Drive_Power {
     power_value_t power_values[DRIVE_POWER_CHANNELS_COUNT]; //!< Значение каналов АЦП.
-    channel_filter_data_t channel_filters_data[DRIVE_POWER_CHANNELS_COUNT]; //!< Данные фильтров каналов АЦП.
+    fixed32_t channel_filters_data[CHANNEL_FILTERS_DATA_SIZE]; //!< Данные фильтров каналов АЦП.
     channel_filter_t channel_filters[DRIVE_POWER_CHANNELS_COUNT]; //!< Фильтры каналов АЦП.
     power_t power; //!< Питание.
-    size_t processing_iters; //!< Число итераций для накопления и обработки данных.
-    size_t iters_processed; //!< Число итераций обработки данных.
     size_t period_iters; //!< Счётчик периода измерений АЦП.
     oscillogram_buf_t osc_buf; //!< Буфер осциллограмм.
     phase_t phase_calc_current; //!< Вычислять ток заданной фазы.
@@ -145,11 +185,13 @@ static void drive_power_calc_channel_filter(size_t channel)
     channel_filter_calculate(filter);
 }
 
-static void drive_power_calc_channel_filters(void)
+static void drive_power_calc_channel_filters(power_channels_t channels)
 {
     size_t i;
-    for(i = 0; i < DRIVE_POWER_CHANNELS_COUNT; i ++){
-        drive_power_calc_channel_filter(i);
+    for(i = 0; i < DRIVE_POWER_CHANNELS_COUNT && channels != 0x0; i ++, channels >>= 1){
+        if(channels & 0x1){
+            drive_power_calc_channel_filter(i);
+        }
     }
 }
 
@@ -175,8 +217,6 @@ err_t drive_power_init(void)
     
     drive_power.osc_buf.pause_mark = DRIVE_POWER_OSC_CHANNEL_LEN;
     
-    drive_power.processing_iters = DRIVE_POWER_PROCESSING_ITERS_DEFAULT;
-    
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ua],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ua //0x4478
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ia],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ia
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ub],POWER_CHANNEL_AC, DRIVE_POWER_AC_DEFAULT_FILTER_SIZE, 0x10000); // Ub //0x44ac
@@ -190,18 +230,18 @@ err_t drive_power_init(void)
     power_value_init(&drive_power.power_values[DRIVE_POWER_Ifan],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Ifan
     power_value_init(&drive_power.power_values[DRIVE_POWER_Erot],POWER_CHANNEL_DC, DRIVE_POWER_DC_DEFAULT_FILTER_SIZE, 0x10000); // Erot
     
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], drive_power.channel_filters_data[DRIVE_POWER_Ua], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], drive_power.channel_filters_data[DRIVE_POWER_Ia], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ub], drive_power.channel_filters_data[DRIVE_POWER_Ub], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ib], drive_power.channel_filters_data[DRIVE_POWER_Ib], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Uc], drive_power.channel_filters_data[DRIVE_POWER_Uc], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ic], drive_power.channel_filters_data[DRIVE_POWER_Ic], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Urot], drive_power.channel_filters_data[DRIVE_POWER_Urot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Irot], drive_power.channel_filters_data[DRIVE_POWER_Irot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], drive_power.channel_filters_data[DRIVE_POWER_Iexc], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], drive_power.channel_filters_data[DRIVE_POWER_Iref], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], drive_power.channel_filters_data[DRIVE_POWER_Ifan], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Erot], drive_power.channel_filters_data[DRIVE_POWER_Erot], CHANNEL_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ua], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ua], CF_DATA_SIZE_Ua, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ia], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ia], CF_DATA_SIZE_Ia, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ub], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ub], CF_DATA_SIZE_Ub, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ib], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ib], CF_DATA_SIZE_Ib, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Uc], &drive_power.channel_filters_data[CF_DATA_OFFSET_Uc], CF_DATA_SIZE_Uc, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ic], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ic], CF_DATA_SIZE_Ic, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Urot], &drive_power.channel_filters_data[CF_DATA_OFFSET_Urot], CF_DATA_SIZE_Urot, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Irot], &drive_power.channel_filters_data[CF_DATA_OFFSET_Irot], CF_DATA_SIZE_Irot, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_FAST);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iexc], &drive_power.channel_filters_data[CF_DATA_OFFSET_Iexc], CF_DATA_SIZE_Iexc, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Iref], &drive_power.channel_filters_data[CF_DATA_OFFSET_Iref], CF_DATA_SIZE_Iref, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Ifan], &drive_power.channel_filters_data[CF_DATA_OFFSET_Ifan], CF_DATA_SIZE_Ifan, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&drive_power.channel_filters[DRIVE_POWER_Erot], &drive_power.channel_filters_data[CF_DATA_OFFSET_Erot], CF_DATA_SIZE_Erot, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
     
@@ -272,7 +312,6 @@ err_t drive_power_update_settings(void)
 
 void drive_power_reset(void)
 {
-    drive_power.iters_processed = 0;
 }
 
 phase_t drive_power_phase_calc_current(void)
@@ -412,18 +451,6 @@ void drive_power_set_exc_calc_current(bool calc)
     drive_power.exc_calc_current = calc;
     
     power_set_soft_channel(&drive_power.power, DRIVE_POWER_Iexc, calc);
-}
-
-size_t drive_power_processing_iters(void)
-{
-    return drive_power.processing_iters;
-}
-
-err_t drive_power_set_processing_iters(size_t iters)
-{
-    drive_power.processing_iters = iters;
-    
-    return E_NO_ERROR;
 }
 
 size_t drive_power_osc_channels_count(void)
@@ -1118,34 +1145,31 @@ static void drive_power_calc_values_impl(power_channels_t channels, err_t* err)
     err_t e = power_calc_values(&drive_power.power, channels);
     if(err) *err = e;
     
-    drive_power_calc_channel_filters();
-    
-    drive_power_calc_angle_voltage();
-    
-    drive_power_calc_exc_current_rms();
+    drive_power_calc_channel_filters(channels);
 }
 
 bool drive_power_calc_values(power_channels_t channels, err_t* err)
 {
     bool res = false;
     
-    if(drive_power.processing_iters == 0){
-        drive_power_calc_values_impl(channels, err);
-        res = power_data_filter_filled(&drive_power.power, channels);
-    }else if(++ drive_power.iters_processed >= drive_power.processing_iters){
-        drive_power.iters_processed = 0;
-        drive_power_calc_values_impl(channels, err);
-        res = power_data_filter_filled(&drive_power.power, channels);
-    }
+    drive_power_calc_values_impl(channels, err);
+    res = power_data_filter_filled(&drive_power.power, channels);
+    
+    return res;
+}
+
+void drive_power_process_iter(void)
+{
+    drive_power_calc_angle_voltage();
+    
+    drive_power_calc_exc_current_rms();
     
     // Если прошёл очередной период.
     // И питание вычислено.
-    if(++ drive_power.period_iters >= POWER_PERIOD_ITERS){
+    if(++ drive_power.period_iters >= DRIVE_POWER_PERIOD_ITERS){
         drive_power.period_iters = 0;
         drive_power_diag_triac_pairs();
     }
-    
-    return res;
 }
 
 err_t drive_power_calibrate(power_channels_t channels)
@@ -1201,11 +1225,6 @@ power_channel_type_t drive_power_channel_type(size_t channel)
 bool drive_power_data_avail(power_channels_t channels)
 {
     return power_data_filter_filled(&drive_power.power, channels);
-}
-
-bool drive_power_new_data_avail(power_channels_t channels)
-{
-    return drive_power.iters_processed == 0 && drive_power_data_avail(channels);
 }
 
 err_t drive_power_reset_channels(power_channels_t channels)

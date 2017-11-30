@@ -66,6 +66,11 @@ extern void drive_phase_sync_reset_put_buffers(void);
 extern void drive_phase_sync_swap_buffers(void);
 
 /**
+ * Переключает буферы чтения и записи при необходимости.
+ */
+extern void drive_phase_sync_swap_buffers_if_needed(void);
+
+/**
  * Производит вычисления для заданной фазы.
  * @param phase Фаза.
  * @return Код ошибки.

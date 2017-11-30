@@ -119,7 +119,7 @@ extern void drive_regulator_dec_reference(void);
  * Подстраивает текущее значение разгона
  * согласно выходному значению питания.
  */
-extern void drive_regulator_adjust_current_reference(void);
+extern void drive_regulator_adjust_cur_reference(void);
 
 /**
  * Выполняет запуск.
@@ -299,9 +299,30 @@ extern fixed32_t drive_regulator_rot_open_angle(void);
 extern fixed32_t drive_regulator_exc_open_angle(void);
 
 /**
+ * Выполняет ПИД-регулирование скорости.
+ * @param dt Время.
+ * @return Флаг регулировки.
+ */
+extern bool drive_regulator_regulate_speed(fixed32_t dt);
+
+/**
+ * Выполняет ПИД-регулирование тока.
+ * @param dt Время.
+ * @return Флаг регулировки.
+ */
+extern bool drive_regulator_regulate_current(fixed32_t dt);
+
+/**
+ * Выполняет ПИД-регулирование возбуждения.
+ * @param dt Время.
+ * @return Флаг регулировки.
+ */
+extern bool drive_regulator_regulate_exc(fixed32_t dt);
+
+/**
  * Выполняет ПИД-регулирование.
  * @return Флаг регулировки.
  */
-extern bool drive_regulator_regulate(void);
+extern bool drive_regulator_process(void);
 
 #endif /* DRIVE_REGULATOR_H */

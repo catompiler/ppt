@@ -57,8 +57,8 @@ err_t drive_motor_init(void)
 {
     memset(&motor, 0x0, sizeof(drive_motor_t));
     
-    channel_filter_init(&motor.rpm_filter, motor.rpm_filter_data, DRIVE_MOTOR_RPM_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
-    channel_filter_init(&motor.torque_filter, motor.torque_filter_data, DRIVE_MOTOR_TORQUE_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE);
+    channel_filter_init(&motor.rpm_filter, motor.rpm_filter_data, DRIVE_MOTOR_RPM_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
+    channel_filter_init(&motor.torque_filter, motor.torque_filter_data, DRIVE_MOTOR_TORQUE_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
     
     motor.param_rpm = settings_param_by_id(PARAM_ID_MOTOR_RPM);
     motor.param_torque = settings_param_by_id(PARAM_ID_MOTOR_TORQUE);

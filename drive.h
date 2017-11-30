@@ -22,26 +22,36 @@
 
 
 /*
- * Конфигурация таймера для искусственных датчиков нуля..
+ * Конфигурация таймера для итераций работы привода.
  */
 //! Число тиков.
-#define DRIVE_NULL_TIMER_CNT_TICKS (40000)
+#define DRIVE_MAIN_TIMER_CNT_TICKS (40000)
 //! Период в микросекундах.
-#define DRIVE_NULL_TIMER_CNT_PERIOD_US (6667)
+#define DRIVE_MAIN_TIMER_CNT_PERIOD_US (3333)
 //! Период.
-#define DRIVE_NULL_TIMER_CNT_PERIOD (DRIVE_NULL_TIMER_CNT_TICKS - 1)
+#define DRIVE_MAIN_TIMER_CNT_PERIOD (DRIVE_MAIN_TIMER_CNT_TICKS - 1)
 //! Предделитель.
-#define DRIVE_NULL_TIMER_CNT_PRESCALER (12 - 1)
+#define DRIVE_MAIN_TIMER_CNT_PRESCALER (6 - 1)
 //! Частота срабатывания таймера нуля.
-#define DRIVE_NULL_TIMER_FREQ (POWER_FREQ * 3)
+#define DRIVE_MAIN_TIMER_FREQ (POWER_FREQ * 6)
 //! Угол таймера нуля.
-#define DRIVE_NULL_TIMER_ANGLE (120)
+#define DRIVE_MAIN_TIMER_ANGLE (60)
 //! Отклонение таймера нуля для синхронизации.
-#define DRIVE_NULL_TIMER_OFFSET_TICKS_MAX (750) // 125 мкс
+#define DRIVE_MAIN_TIMER_OFFSET_TICKS_MAX (1500) // 125 мкс
 //! Коэффициент тик/градус отклонения.
-#define DRIVE_NULL_TIMER_TICKS_PER_DEG 333//400
+#define DRIVE_MAIN_TIMER_TICKS_PER_DEG 667//400
 //! Число срабатываний таймера за период.
-#define DRIVE_NULL_TIMER_PERIOD_ITERS (3)
+#define DRIVE_MAIN_TIMER_PERIOD_ITERS (6)
+
+/*
+ * Периодичность основных итераций привода.
+ */
+//! Делитель частоты для основного таймера для основных итераций привода.
+#define DRIVE_MAIN_ITER_PRESCALER (2 - 1)
+//! Число основных итераций за период.
+#define DRIVE_MAIN_ITER_PERIOD_ITERS (3)
+//! Частота основных итераций.
+#define DRIVE_MAIN_ITER_FREQ (POWER_FREQ * DRIVE_MAIN_ITER_PERIOD_ITERS)
 
 /*
  * Кратность частоты АЦП.
@@ -734,9 +744,14 @@ extern void drive_triac_pairs_timer1_irq_handler(void);
 extern void drive_triac_exc_timer_irq_handler(void);
 
 /**
- * Обрабатывает искусственный датчик нуля.
+ * Обрабатывает итерацию синхронизации с фазами.
  */
-extern void drive_process_zero(void);
+extern void drive_process_sync_iter(void);
+
+/**
+ * Обрабатывает итерацию открытия тиристоров и регулирования тока.
+ */
+extern void drive_process_triacs_iter(void);
 
 /**
  * Обрабатывает очередную итерацию действий и вычислений
@@ -763,11 +778,16 @@ ALWAYS_INLINE static err_t drive_process_power_accumulated_data(power_channels_t
 }
 
 /**
- * Обработка данных с АЦП.
- * Вызывается из прерывания АЦП. 
+ * Вычисление значений питания.
  * @return Флаг обработки данных питания.
  */
 bool drive_calculate_power(void);
+
+/**
+ * Вычисление значений тока.
+ * @return Флаг обработки данных питания.
+ */
+bool drive_calculate_currrent(void);
 
 /**
  * Инкрементирует значение задания.

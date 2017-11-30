@@ -8,9 +8,6 @@
 #include <string.h>
 
 
-//! dt PID-регулятора.
-#define DRIVE_PID_DT 0x1b5//0x51f
-
 //! dt рампы.
 #define DRIVE_RAMP_DT 0x1b5//0x51f
 
@@ -167,7 +164,7 @@ void drive_regulator_dec_reference(void)
     }
 }
 
-void drive_regulator_adjust_current_reference(void)
+void drive_regulator_adjust_cur_reference(void)
 {
     if(regulator.state == DRIVE_REGULATOR_STATE_IDLE) return;
     
@@ -369,65 +366,86 @@ fixed32_t drive_regulator_exc_open_angle(void)
     return pid_controller_value(&regulator.exc_pid);
 }
 
-static void drive_regulator_regulate_impl(void)
+bool drive_regulator_regulate_speed(fixed32_t dt)
+{
+    if(!regulator.rot_enabled) return false;
+
+    fixed32_t rpm_rot_back = drive_motor_rpm();
+    
+    fixed32_t rpm_rot_e = 0;
+
+    rpm_rot_e = regulator.rpm_rot_ref - rpm_rot_back;
+    pid_controller_calculate(&regulator.spd_pid, rpm_rot_e, dt);
+    
+    return true;
+}
+
+bool drive_regulator_regulate_current(fixed32_t dt)
+{
+    if(!regulator.rot_enabled) return false;
+    
+    if(drive_overload_enabled()){
+        pid_controller_clamp(&regulator.spd_pid, 0, drive_overload_avail_current());
+    }else{
+        pid_controller_clamp(&regulator.spd_pid, 0, regulator.I_rot_max);
+    }
+    
+    fixed32_t i_rot_back = drive_power_channel_real_value(DRIVE_POWER_Irot);
+    
+    fixed32_t i_rot_e = 0;
+    
+    if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
+        i_rot_e = pid_controller_value(&regulator.spd_pid) - i_rot_back;
+    }else{ //DRIVE_REGULATOR_MODE_TORQUE
+        i_rot_e = regulator.i_rot_ref - i_rot_back;
+    }
+    
+    pid_controller_calculate(&regulator.rot_pid, i_rot_e, dt);
+    
+    return true;
+}
+
+bool drive_regulator_regulate_exc(fixed32_t dt)
+{
+    if(!regulator.exc_enabled) return false;
+    
+    fixed32_t i_exc_back = drive_power_channel_real_value(DRIVE_POWER_Iexc);
+    fixed32_t i_exc_e = regulator.I_exc - i_exc_back;
+    pid_controller_calculate(&regulator.exc_pid, i_exc_e, dt);
+    
+    return true;
+}
+
+static void drive_regulator_process_impl(void)
 {
     if(regulator.rot_enabled){
-        
-        if(drive_overload_enabled()){
-            pid_controller_clamp(&regulator.spd_pid, 0, drive_overload_avail_current());
-        }else{
-            pid_controller_clamp(&regulator.spd_pid, 0, regulator.I_rot_max);
-        }
-        
         fixed32_t rpm_rot_nom = drive_motor_rpm_nom();
-        
-        fixed32_t rpm_rot_back = drive_motor_rpm();
-        fixed32_t i_rot_back = drive_power_channel_real_value(DRIVE_POWER_Irot);
-        
+
         ramp_calc_step(&regulator.speed_ramp);
         fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / RAMP_REFERENCE_MAX;
             
         regulator.rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_nom, ramp_cur_ref);
         regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_nom, ramp_cur_ref);
-        
-        fixed32_t rpm_rot_e = 0;
-        fixed32_t i_rot_e = 0;
-        
-        rpm_rot_e = regulator.rpm_rot_ref - rpm_rot_back;
-        pid_controller_calculate(&regulator.spd_pid, rpm_rot_e, DRIVE_PID_DT);
-        
-        if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
-            i_rot_e = pid_controller_value(&regulator.spd_pid) - i_rot_back;
-        }else{ //DRIVE_REGULATOR_MODE_TORQUE
-            i_rot_e = regulator.i_rot_ref - i_rot_back;
-        }
-        pid_controller_calculate(&regulator.rot_pid, i_rot_e, DRIVE_PID_DT);
-    }
-    
-    if(regulator.exc_enabled){
-        fixed32_t i_exc_back = drive_power_channel_real_value(DRIVE_POWER_Iexc);
-        fixed32_t i_exc_e = regulator.I_exc - i_exc_back;
-        pid_controller_calculate(&regulator.exc_pid, i_exc_e, DRIVE_PID_DT);
     }
 }
 
-bool drive_regulator_regulate(void)
+bool drive_regulator_process(void)
 {
     switch(regulator.state){
         default:
         case DRIVE_REGULATOR_STATE_IDLE:
             return false;
         case DRIVE_REGULATOR_STATE_START:
-            drive_regulator_regulate_impl();
+            drive_regulator_process_impl();
             if(ramp_current_reference(&regulator.speed_ramp) >= regulator.reference){
                 regulator.state = DRIVE_REGULATOR_STATE_RUN;
             }
             break;
         case DRIVE_REGULATOR_STATE_RUN:
-            drive_regulator_regulate_impl();
+            drive_regulator_process_impl();
             break;
         case DRIVE_REGULATOR_STATE_STOP:
-            drive_regulator_regulate_impl();
+            drive_regulator_process_impl();
             if(ramp_done(&regulator.speed_ramp)){
                 regulator.state = DRIVE_REGULATOR_STATE_IDLE;
             }

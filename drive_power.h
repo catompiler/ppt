@@ -20,6 +20,9 @@
 //! Число значений каналов питания.
 #define DRIVE_POWER_CHANNELS_COUNT 12
 
+//! Число итераций вычисления питания за период.
+#define DRIVE_POWER_PERIOD_ITERS 3
+
 // Алиасы значений токов и напряжений.
 #define DRIVE_POWER_Ua 0
 #define DRIVE_POWER_Ia 1
@@ -49,23 +52,24 @@
 #define DRIVE_POWER_CHANNEL_Erot POWER_CHANNEL_11
 
 //! Каналы АЦП.
-#define DRIVE_POWER_ADC_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
-                                  POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
-                                  POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
-                                  POWER_CHANNEL_9 | POWER_CHANNEL_10)
+#define DRIVE_POWER_ADC_CHANNELS (DRIVE_POWER_CHANNEL_Ua | DRIVE_POWER_CHANNEL_Ia |\
+                                  DRIVE_POWER_CHANNEL_Ub | DRIVE_POWER_CHANNEL_Ib |\
+                                  DRIVE_POWER_CHANNEL_Uc | DRIVE_POWER_CHANNEL_Ic |\
+                                  DRIVE_POWER_CHANNEL_Urot | DRIVE_POWER_CHANNEL_Irot |\
+                                  DRIVE_POWER_CHANNEL_Iexc | DRIVE_POWER_CHANNEL_Iref |\
+                                  DRIVE_POWER_CHANNEL_Ifan)
 
 //! Каналы питания.
-#define DRIVE_POWER_CHANNELS (POWER_CHANNEL_0 | POWER_CHANNEL_1 | POWER_CHANNEL_2 |\
-                              POWER_CHANNEL_3 | POWER_CHANNEL_4 | POWER_CHANNEL_5 |\
-                              POWER_CHANNEL_6 | POWER_CHANNEL_7 | POWER_CHANNEL_8 |\
-                              POWER_CHANNEL_9 | POWER_CHANNEL_10 | POWER_CHANNEL_11)
-
-//! Число итераций накопления и обработки данных по-умолчанию.
-#define DRIVE_POWER_PROCESSING_ITERS_DEFAULT 3
+#define DRIVE_POWER_CHANNELS (DRIVE_POWER_CHANNEL_Ua | DRIVE_POWER_CHANNEL_Ia |\
+                              DRIVE_POWER_CHANNEL_Ub | DRIVE_POWER_CHANNEL_Ib |\
+                              DRIVE_POWER_CHANNEL_Uc | DRIVE_POWER_CHANNEL_Ic |\
+                              DRIVE_POWER_CHANNEL_Urot | DRIVE_POWER_CHANNEL_Irot |\
+                              DRIVE_POWER_CHANNEL_Iexc | DRIVE_POWER_CHANNEL_Iref |\
+                              DRIVE_POWER_CHANNEL_Ifan | DRIVE_POWER_CHANNEL_Erot)
 
 
 //! Количество элементов фильтра каналов AC.
-#define DRIVE_POWER_AC_DEFAULT_FILTER_SIZE 3
+#define DRIVE_POWER_AC_DEFAULT_FILTER_SIZE POWER_PERIOD_ITERS
 
 //! Количество элементов фильтра каналов DC.
 #define DRIVE_POWER_DC_DEFAULT_FILTER_SIZE 1
@@ -229,19 +233,6 @@ extern void drive_power_set_rot_calc_voltage(bool calc);
 extern void drive_power_set_exc_calc_current(bool calc);
 
 /**
- * Получает количество итераций накопления данных.
- * @return Количество итераций накопления данных.
- */
-extern size_t drive_power_processing_iters(void);
-
-/**
- * Устанавливает количество итераций накопления данных.
- * @param periods Количество итераций накопления данных.
- * @return Код ошибки.
- */
-extern err_t drive_power_set_processing_iters(size_t iters);
-
-/**
  * Получает количество осциллограмм.
  * @return Количество осциллограмм.
  */
@@ -385,6 +376,11 @@ extern size_t drive_power_triac_open_count(triac_number_t triac_number);
 extern bool drive_power_calc_values(power_channels_t channels, err_t* err);
 
 /**
+ * Обрабатывает очередную итерацию питания.
+ */
+extern void drive_power_process_iter(void);
+
+/**
  * Записывает текущее значение нуля в калиброванное.
  * @param channels Маска каналов АЦП.
  * @return Код ошибки.
@@ -461,13 +457,6 @@ extern power_channel_type_t drive_power_channel_type(size_t channel);
  * @return Флаг доступности данных.
  */
 extern bool drive_power_data_avail(power_channels_t channels);
-
-/**
- * Получает флаг доступности новых данных на всех заданных каналах АЦП.
- * @param channels Каналы АЦП.
- * @return Флаг доступности новых данных.
- */
-extern bool drive_power_new_data_avail(power_channels_t channels);
 
 /**
  * Сбрасывает накопленные данные каналов АЦП.

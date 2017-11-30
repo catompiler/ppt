@@ -261,18 +261,6 @@ extern bool drive_triacs_pairs_enabled(void);
 extern void drive_triacs_set_pairs_enabled(bool enabled);
 
 /**
- * Устанавливает открываемые пары между нулями фаз.
- * @return Открываемые пары между нулями фаз.
- */
-extern drive_triacs_open_pair_t drive_triacs_opening_pair(void);
-
-/**
- * Устанавливает открываемые пары между нулями фаз.
- * @param pair Открываемые пары между нулями фаз.
- */
-extern void drive_triacs_set_opening_pair(drive_triacs_open_pair_t pair);
-
-/**
  * Получает разрешение подачи импульсов на симистор возбуждения.
  * @return Разрешение подачи импульсов на симистор возбуждения.
  */
@@ -456,20 +444,21 @@ extern void drive_triacs_timer1_irq_handler(void);
 extern void drive_triacs_exc_timer_irq_handler(void);
 
 /**
- * Настраивает таймер открытия тиристорных пар.
+ * Настраивает таймер открытия тиристорной пары.
  * @param phase Текущая фаза.
+ * @param last_open_phase Фаза последней открытой пары тиристоров.
  * @param offset Компенсация времени до запуска открытия тиристоров.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_next_pairs(phase_t phase, int16_t offset);
+extern err_t drive_triacs_setup_next_pair(phase_t phase, phase_t last_open_phase, int16_t offset);
 
 /**
  * Настраивает таймер открытия симистора возбуждения.
  * @param phase Текущая фаза.
- * @param exc_phase Фаза возбуждения.
+ * @param last_open_phase Фаза последней открытой симистора возбуждения.
  * @param offset Компенсация времени до запуска открытия симистора.
  * @return Код ошибки.
  */
-extern err_t drive_triacs_setup_exc(phase_t phase, int16_t offset);
+extern err_t drive_triacs_setup_exc(phase_t phase, phase_t last_open_phase, int16_t offset);
 
 #endif /* DRIVE_TRIACS_H */

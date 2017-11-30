@@ -2,12 +2,13 @@
 
 
 
-void channel_filter_init(channel_filter_t* filter, fixed32_t* buffer, size_t capacity, size_t size)
+void channel_filter_init(channel_filter_t* filter, fixed32_t* buffer, size_t capacity, size_t size, channel_filter_type_t type)
 {
     filter->buffer = buffer;
     filter->capacity = capacity;
     filter->index = 0;
     filter->count = 0;
+    filter->type = type;
     
     channel_filter_resize(filter, size);
 }
@@ -29,17 +30,18 @@ void channel_filter_resize(channel_filter_t* filter, size_t size)
 
 void channel_filter_resize_ms(channel_filter_t* filter, uint32_t time_ms)
 {
-    //fixed32_t max_time = filter->capacity * 0x6AAAB; /* 6.667 ms */
+    fixed32_t item_time = (filter->type == CHANNEL_FILTER_NORMAL) ?
+                            CHANNEL_FILTER_TIME_PER_ITEM_MS_F :
+                            CHANNEL_FILTER_TIME_PER_FAST_ITEM_MS_F;
+    
+    //fixed32_t max_time = filter->capacity * CHANNEL_FILTER_TIME_PER_ITEM_MS_F;
     fixed32_t time = fixed32_make_from_int(time_ms);
-    fixed32_t items_count = fixed32_div((int64_t)time, 0x6AAAB /* 6.667 ms */);
+    fixed32_t items_count = fixed32_div((int64_t)time, item_time);
     items_count = fixed32_round(items_count);
     
     size_t size = fixed32_get_int(items_count);
     if(size == 0) size = 1;
     if(size > filter->capacity) size = filter->capacity;
-    
-    //size_t size = (time_ms * CHANNEL_FILTER_MAX_SIZE +
-    //               CHANNEL_FILTER_MAX_TIME_MS / 2) / CHANNEL_FILTER_MAX_TIME_MS;
     
     channel_filter_resize(filter, size);
 }

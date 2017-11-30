@@ -15,7 +15,8 @@
 #include "drive_task_settings.h"
 #include "drive_task_events.h"
 #include "drive_task_main.h"
-#include "drive_task_zero.h"
+#include "drive_task_triacs.h"
+#include "drive_task_sync.h"
 #include "drive_task_adc.h"
 #include "drive_task_modbus.h"
 

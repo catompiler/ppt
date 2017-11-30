@@ -527,6 +527,14 @@ void drive_phase_sync_swap_buffers(void)
     phase_sync_swap_fft_buffers();
 }
 
+void drive_phase_sync_swap_buffers_if_needed(void)
+{
+    if(phase_sync.calc_state == DRIVE_PHASE_SYNC_CALC_INIT ||
+       phase_sync.calc_state == DRIVE_PHASE_SYNC_CALC_PHASE_A){
+        phase_sync_swap_fft_buffers();
+    }
+}
+
 err_t drive_phase_sync_calc(phase_t phase)
 {
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
@@ -610,7 +618,7 @@ err_t drive_phase_sync_process_calc(void)
     
     switch(phase_sync.calc_state){
         case DRIVE_PHASE_SYNC_CALC_INIT:
-            drive_phase_sync_swap_buffers();
+            //drive_phase_sync_swap_buffers();
             phase_sync.calc_phases_counter = 0;
             phase_sync.calc_state = DRIVE_PHASE_SYNC_CALC_DATA_WAIT;
         case DRIVE_PHASE_SYNC_CALC_DATA_WAIT:
@@ -620,7 +628,7 @@ err_t drive_phase_sync_process_calc(void)
             }
             break;
         case DRIVE_PHASE_SYNC_CALC_PHASE_A:
-            drive_phase_sync_swap_buffers();
+            //drive_phase_sync_swap_buffers();
             err = drive_phase_sync_calc(PHASE_A);
             phase_sync.calc_state = DRIVE_PHASE_SYNC_CALC_PHASE_B;
             break;

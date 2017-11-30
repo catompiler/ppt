@@ -12,10 +12,24 @@
 
 
 //! Размер фильтра канала измерения по-умолчанию.
-#define CHANNEL_FILTER_DEFAULT_SIZE 1 // 6.67 мс.
+#define CHANNEL_FILTER_DEFAULT_SIZE 1
 
 //! Время одного элемента фильтра.
 #define CHANNEL_FILTER_TIME_PER_ITEM_US 6667
+
+//! Время одного элемента фильтра в типе с фиксированной запятой.
+#define CHANNEL_FILTER_TIME_PER_ITEM_MS_F 0x6AAAB
+
+//! Время одного элемента фильтра.
+#define CHANNEL_FILTER_TIME_PER_FAST_ITEM_US 3333
+
+//! Время одного элемента фильтра в типе с фиксированной запятой.
+#define CHANNEL_FILTER_TIME_PER_FAST_ITEM_MS_F 0x35555
+
+typedef enum _Channel_Filter_Type {
+    CHANNEL_FILTER_NORMAL = 0, //!< Обычная частота.
+    CHANNEL_FILTER_FAST = 1 //!< Быстрая (удвоенная) частота.
+} channel_filter_type_t;
 
 //! Фильтр значений каналов АЦП.
 typedef struct _Channel_Filter {
@@ -25,6 +39,7 @@ typedef struct _Channel_Filter {
     uint16_t count; //!< Количество значений канала измерения.
     uint16_t index; //!< Индекс текущего элемента в фильтре.
     fixed32_t value; //!< Вычисленное значение фильтра.
+    channel_filter_type_t type; //!< Тип фильтра.
 } channel_filter_t;
 
 
@@ -35,7 +50,7 @@ typedef struct _Channel_Filter {
  * @param capacity Размер буфера.
  * @param size Начальный размер фильтра.
  */
-EXTERN void channel_filter_init(channel_filter_t* filter, fixed32_t* buffer, size_t capacity, size_t size);
+EXTERN void channel_filter_init(channel_filter_t* filter, fixed32_t* buffer, size_t capacity, size_t size, channel_filter_type_t type);
 
 /**
  * Сбрасывает фильтр.
