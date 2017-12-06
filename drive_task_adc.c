@@ -68,7 +68,7 @@ static void adc_task_process_data_impl(task_adc_cmd_t* cmd)
 
 static void adc_task_proc(void* arg)
 {
-    task_adc_cmd_t cmd;
+    static task_adc_cmd_t cmd;
     for(;;){
         if(xQueueReceive(adc_task.queue_handle, &cmd, portMAX_DELAY) == pdTRUE){
             adc_task_process_data_impl(&cmd);

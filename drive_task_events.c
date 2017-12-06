@@ -10,7 +10,7 @@
 #include "utils/utils.h"
 
 
-#define TASK_EVENTS_STACK_SIZE configMINIMAL_STACK_SIZE
+#define TASK_EVENTS_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #define QUEUE_EVENTS_SIZE 4
 
 #define EVETNS_WAIT 0
@@ -186,7 +186,7 @@ static void events_task_clear_impl(clear_events_cmd_t* cmd)
 
 static void events_task_proc(void* arg)
 {
-    task_events_cmd_t cmd;
+    static task_events_cmd_t cmd;
     for(;;){
         if(xQueueReceive(events_task.queue_handle, &cmd, portMAX_DELAY) == pdTRUE){
             switch(cmd.type){

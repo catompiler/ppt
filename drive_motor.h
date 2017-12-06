@@ -112,5 +112,11 @@ extern fixed32_t drive_motor_torque(void);
  */
 extern fixed32_t drive_motor_e_rot(void);
 
+/**
+ * Получает текущие максимальные обороты двигателя.
+ * @return Текущие максимальные обороты двигателя.
+ */
+extern fixed32_t drive_motor_rpm_cur_max(void);
+
 #endif /* DRIVE_MOTOR_H */
 

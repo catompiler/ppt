@@ -423,11 +423,18 @@ static void drive_regulator_process_impl(void)
 {
     if(regulator.rot_enabled){
         fixed32_t rpm_rot_nom = drive_motor_rpm_nom();
+        fixed32_t rpm_rot_max = drive_motor_rpm_cur_max();
 
         ramp_calc_step(&regulator.speed_ramp);
         fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / RAMP_REFERENCE_MAX;
-            
-        regulator.rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_nom, ramp_cur_ref);
+        fixed32_t rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_nom, ramp_cur_ref);
+        
+        if(rpm_rot_ref > rpm_rot_max){
+            rpm_rot_ref = rpm_rot_max;
+            ramp_adjust_current_reference(&regulator.speed_ramp, rpm_rot_max, rpm_rot_nom);
+        }
+        
+        regulator.rpm_rot_ref = rpm_rot_ref;
         regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_nom, ramp_cur_ref);
     }
 }

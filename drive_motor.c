@@ -19,6 +19,7 @@ typedef struct _Drive_Motor {
     bool valid; //!< Флаг допустимости параметров двигателя.
     bool ir_comp_enabled; //!< Разрешение IR-компенсации.
     fixed32_t Eff; //!< КПД.
+    fixed32_t U_max; //!< Максимальное выходное напряжение.
     fixed32_t E_nom; //!< Номинальная ЭДС двигателя.
     fixed32_t RPM_nom; //!< Номинальные обороты.
     fixed32_t M_nom; //!< Номинальный момент.
@@ -30,6 +31,7 @@ typedef struct _Drive_Motor {
     fixed32_t Cn; //!< Коэффициент для расчёта оборотов.
     fixed32_t Cm; //!< Коэффициент для расчёта момента.
     param_t* param_rpm; //!< Параметр с оборотами двигателя.
+    param_t* param_rpm_cur_max; //!< Параметр с текущими максимальными оборотами двигателя.
     param_t* param_torque; //!< Параметр с моментом двигателя.
     param_t* param_e_rot; //!< Параметр с ЭДС двигателя.
     param_t* param_u_wires; //!< Параметр с падением напряжения на проводах.
@@ -41,6 +43,7 @@ typedef struct _Drive_Motor {
     channel_filter_t torque_filter; //!< Фильтр момента двигателя.
     fixed32_t E_rot; //!< ЭДС двигателя.
     fixed32_t U_wires; //!< Падение напряжения на проводах.
+    fixed32_t rpm_max;  //!< Текущие максимально возможные обороты.
 } drive_motor_t;
 
 
@@ -61,6 +64,7 @@ err_t drive_motor_init(void)
     channel_filter_init(&motor.torque_filter, motor.torque_filter_data, DRIVE_MOTOR_TORQUE_FILTER_CAPACITY, CHANNEL_FILTER_DEFAULT_SIZE, CHANNEL_FILTER_NORMAL);
     
     motor.param_rpm = settings_param_by_id(PARAM_ID_MOTOR_RPM);
+    motor.param_rpm_cur_max = settings_param_by_id(PARAM_ID_MOTOR_CUR_RPM_MAX);
     motor.param_torque = settings_param_by_id(PARAM_ID_MOTOR_TORQUE);
     motor.param_e_rot = settings_param_by_id(PARAM_ID_MOTOR_E);
     motor.param_u_wires = settings_param_by_id(PARAM_ID_POWER_U_WIRES);
@@ -187,8 +191,12 @@ err_t drive_motor_update_settings(void)
     fixed32_t Inom_R = fixed32_mul((int64_t)I_rot_f, R_rot75);
     fixed32_t E_nom = U_rot_f - Inom_R;
     
+    // Umax.
+    fixed32_t U_max = settings_valuef(PARAM_ID_U_ROT_MAX);
+    
     // Mnom.
     fixed32_t M_nom = fixed32_mul((int64_t)CmF, I_rot_f);
+    
     
     motor.Eff = eff_f;
     motor.I_exc = I_exc_f;
@@ -201,6 +209,7 @@ err_t drive_motor_update_settings(void)
     motor.E_nom = E_nom;
     motor.M_nom = M_nom;
     motor.RPM_nom = fixed32_make_from_int(RPM_nom);
+    motor.U_max = U_max;
     
     drive_motor_update_calc_params();
     
@@ -227,14 +236,25 @@ void drive_motor_set_ir_compensation_enabled(bool enabled)
     motor.ir_comp_enabled = enabled;
 }
 
+static fixed32_t drive_motor_calc_rpm(fixed32_t U_minus_IR, fixed32_t I_exc)
+{
+    fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
+    fixed32_t N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
+    
+    return N;
+}
+
 void drive_motor_calculate(void)
 {
     if(!motor.valid) return;
     
     fixed32_t N = 0;
+    fixed32_t N_max = 0;
     fixed32_t M = 0;
     fixed32_t E_rot = 0;
+    fixed32_t E_max = 0;
     fixed32_t U_wires = 0;
+    fixed32_t U_rot_wires = 0;
     
     fixed32_t I_rot = 0;
     fixed32_t I_exc = 0;
@@ -243,8 +263,16 @@ void drive_motor_calculate(void)
     
     U_wires = fixed32_mul((int64_t)I_rot, motor.R_wires);
     
+    U_rot_wires = fixed32_mul((int64_t)I_rot, motor.R_rot);
+    
     E_rot = drive_power_channel_real_value(DRIVE_POWER_Erot);
-    if(motor.ir_comp_enabled) E_rot -= U_wires;
+    
+    E_max = motor.U_max - U_rot_wires;
+    
+    if(motor.ir_comp_enabled){
+        E_rot -= U_wires;
+        E_max -= U_wires;
+    }
     
     bool i_exc_zero = false;
     
@@ -256,9 +284,13 @@ void drive_motor_calculate(void)
     }
     
     if(!i_exc_zero){
-        fixed32_t U_minus_IR = E_rot;
-        fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
-        N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
+        //fixed32_t U_minus_IR = E_rot;
+        //fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
+        //N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
+        
+        N = drive_motor_calc_rpm(E_rot, I_exc);
+        
+        N_max = drive_motor_calc_rpm(E_max, I_exc);
 
         fixed32_t I_rot_I_exc = fixed32_mul((int64_t)I_rot, I_exc);
         M = fixed32_mul((int64_t)motor.Cm, I_rot_I_exc);
@@ -274,8 +306,10 @@ void drive_motor_calculate(void)
     //motor.torque = M;
     motor.E_rot = E_rot;
     motor.U_wires = U_wires;
+    motor.rpm_max = N_max;
     
     DRIVE_UPDATE_PARAM_INT(motor.param_rpm, fixed32_get_int(channel_filter_value(&motor.rpm_filter)));
+    DRIVE_UPDATE_PARAM_INT(motor.param_rpm_cur_max, fixed32_get_int(N_max));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_torque, channel_filter_value(&motor.torque_filter));
     DRIVE_UPDATE_PARAM_FIXED(motor.param_e_rot, E_rot);
     DRIVE_UPDATE_PARAM_FIXED(motor.param_u_wires, U_wires);
@@ -339,5 +373,12 @@ fixed32_t drive_motor_e_rot(void)
 {
     if(!motor.valid) return 0;
     
-    return  motor.E_rot;
+    return motor.E_rot;
+}
+
+fixed32_t drive_motor_rpm_cur_max(void)
+{
+    if(!motor.valid) return 0;
+    
+    return motor.rpm_max;
 }

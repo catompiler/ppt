@@ -28,7 +28,7 @@
 // Поддержка динамического выделения памяти.
 #define configSUPPORT_DYNAMIC_ALLOCATION            0
 // Проверка переполнения стека.
-#define configCHECK_FOR_STACK_OVERFLOW              2
+#define configCHECK_FOR_STACK_OVERFLOW              0
 
 // Планировщик.
 // Использование вытеснения.
@@ -88,9 +88,9 @@
 
 // Статистика.
 // Сбор статистики времени выполнения.
-#define configGENERATE_RUN_TIME_STATS               1
+#define configGENERATE_RUN_TIME_STATS               0
 // Функционал для трассировки и визуализации выполнения.
-#define configUSE_TRACE_FACILITY                    1
+#define configUSE_TRACE_FACILITY                    0
 // Функции получения форматированной статистики.
 #define configUSE_STATS_FORMATTING_FUNCTIONS        0
 // Первый запуск задачи управления таймерами.
@@ -98,9 +98,9 @@
 // Тик системного счётчика.
 #define configUSE_TICK_HOOK                         0
 // Настройка счётчика времени выполнения.
-#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initHiresCounter()
+//#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() initHiresCounter()
 // Получение значение счётчика времени выполнения.
-#define portGET_RUN_TIME_COUNTER_VALUE() getHiresCounterValue()
+//#define portGET_RUN_TIME_COUNTER_VALUE() getHiresCounterValue()
 
 #if configGENERATE_RUN_TIME_STATS == 1
 extern void initHiresCounter(void);

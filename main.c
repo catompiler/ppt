@@ -135,7 +135,7 @@ static pca9555_t ioport;
 #define WATCHDOG_I2C2 1
 
 
-#define DEBUG_RESET_I2C 1
+//#define DEBUG_RESET_I2C 1
 
 
 //! TFT9341.
@@ -2008,8 +2008,8 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 	( void ) pxTask;
 	( void ) pcTaskName;
 
-        __disable_irq();
-	for( ;; );
+        //__disable_irq();
+	//for( ;; );
 }
 
 #if configGENERATE_RUN_TIME_STATS == 1
