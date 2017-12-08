@@ -22,6 +22,7 @@ typedef struct _Drive_Motor {
     fixed32_t U_max; //!< Максимальное выходное напряжение.
     fixed32_t E_nom; //!< Номинальная ЭДС двигателя.
     fixed32_t RPM_nom; //!< Номинальные обороты.
+    fixed32_t RPM_max; //!< Максимальные обороты.
     fixed32_t M_nom; //!< Номинальный момент.
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t R_rot; //!< Сопротивление якоря.
@@ -98,6 +99,8 @@ err_t drive_motor_update_settings(void)
     fixed32_t P_f = settings_valuef(PARAM_ID_MOTOR_P_NOM); // кВт.
     
     int32_t RPM_nom = settings_valueu(PARAM_ID_MOTOR_RPM_NOM); // об/мин.
+    
+    int32_t RPM_max = settings_valueu(PARAM_ID_MOTOR_RPM_MAX); // об/мин.
     
     int32_t poles = settings_valueu(PARAM_ID_MOTOR_POLES); // Число полюсов.
     
@@ -209,6 +212,7 @@ err_t drive_motor_update_settings(void)
     motor.E_nom = E_nom;
     motor.M_nom = M_nom;
     motor.RPM_nom = fixed32_make_from_int(RPM_nom);
+    motor.RPM_max = fixed32_make_from_int(RPM_max);
     motor.U_max = U_max;
     
     drive_motor_update_calc_params();
@@ -323,6 +327,11 @@ fixed32_t drive_motor_e_nom(void)
 fixed32_t drive_motor_rpm_nom(void)
 {
     return motor.RPM_nom;
+}
+
+fixed32_t drive_motor_rpm_max(void)
+{
+    return motor.RPM_max;
 }
 
 fixed32_t drive_motor_m_nom(void)

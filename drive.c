@@ -2421,6 +2421,9 @@ err_t drive_update_settings(void)
     drive_triacs_clamp_exc_open_angle(settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN),
                                       settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX));
     
+    drive_motor_update_settings();
+    drive_motor_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
+    
     drive_regulator_update_settings();
     
     drive_overload_update_settings();
@@ -2431,9 +2434,6 @@ err_t drive_update_settings(void)
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_D));
     drive_phase_sync_set_accuracy(settings_valuef(PARAM_ID_PHASE_SYNC_ACCURACY));
-    
-    drive_motor_update_settings();
-    drive_motor_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     
     drive_power_update_settings();
     

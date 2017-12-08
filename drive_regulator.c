@@ -20,7 +20,7 @@ typedef struct _Drive_Regulator {
     
     fixed32_t reference; //!< Задание.
     
-    ramp_t speed_ramp; //!< Разгон.
+    ramp_t ramp; //!< Разгон.
     
     bool rot_enabled; //!< Разрешение регулирования якоря.
     bool exc_enabled; //!< Разрешение регулирования возбуждения.
@@ -44,7 +44,7 @@ err_t drive_regulator_init(void)
 {
     memset(&regulator, 0x0, sizeof(drive_regulator_t));
     
-    ramp_init(&regulator.speed_ramp);
+    ramp_init(&regulator.ramp);
     pid_controller_init(&regulator.spd_pid, 0, 0, 0);
     pid_controller_init(&regulator.rot_pid, 0, 0, 0);
     pid_controller_init(&regulator.exc_pid, 0, 0, 0);
@@ -118,7 +118,7 @@ reference_t drive_regulator_reference(void)
 
 fixed32_t drive_regulator_current_reference(void)
 {
-    return ramp_current_reference(&regulator.speed_ramp);
+    return ramp_current_reference(&regulator.ramp);
 }
 
 err_t drive_regulator_set_reference(reference_t reference)
@@ -130,7 +130,7 @@ err_t drive_regulator_set_reference(reference_t reference)
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        err = ramp_set_target_reference(&regulator.speed_ramp, reference);
+        err = ramp_set_target_reference(&regulator.ramp, reference);
     }
     
     if(err == E_NO_ERROR){
@@ -142,25 +142,25 @@ err_t drive_regulator_set_reference(reference_t reference)
 
 void drive_regulator_inc_reference(void)
 {
-    fixed32_t new_ref = regulator.reference + ramp_reference_step(&regulator.speed_ramp);
+    fixed32_t new_ref = regulator.reference + ramp_reference_step(&regulator.ramp);
     if(new_ref > REFERENCE_MAX_F) new_ref = REFERENCE_MAX_F;
     regulator.reference = new_ref;
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.speed_ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
     }
 }
 
 void drive_regulator_dec_reference(void)
 {
-    fixed32_t new_ref = regulator.reference - ramp_reference_step(&regulator.speed_ramp);
+    fixed32_t new_ref = regulator.reference - ramp_reference_step(&regulator.ramp);
     if(new_ref < REFERENCE_MIN_F) new_ref = REFERENCE_MIN_F;
     regulator.reference = new_ref;
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.speed_ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
     }
 }
 
@@ -179,7 +179,7 @@ void drive_regulator_adjust_cur_reference(void)
         max_val = regulator.I_rot_nom;
     }
     
-    ramp_adjust_current_reference(&regulator.speed_ramp, cur_val, max_val);
+    ramp_adjust_current_reference(&regulator.ramp, cur_val, max_val);
     
     pid_controller_reset(&regulator.spd_pid);
     pid_controller_reset(&regulator.rot_pid);
@@ -192,7 +192,7 @@ void drive_regulator_start(void)
         
         regulator.state = DRIVE_REGULATOR_STATE_START;
         
-        ramp_set_target_reference(&regulator.speed_ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
     }
 }
 
@@ -203,8 +203,8 @@ void drive_regulator_stop(void)
         
         regulator.state = DRIVE_REGULATOR_STATE_STOP;
         
-        ramp_set_stop_mode(&regulator.speed_ramp, RAMP_STOP_MODE_NORMAL);
-        ramp_set_target_reference(&regulator.speed_ramp, 0);
+        ramp_set_stop_mode(&regulator.ramp, RAMP_STOP_MODE_NORMAL);
+        ramp_set_target_reference(&regulator.ramp, 0);
     }
 }
 
@@ -216,29 +216,29 @@ void drive_regulator_fast_stop(void)
         
         regulator.state = DRIVE_REGULATOR_STATE_STOP;
         
-        ramp_set_stop_mode(&regulator.speed_ramp, RAMP_STOP_MODE_FAST);
-        ramp_set_target_reference(&regulator.speed_ramp, 0);
+        ramp_set_stop_mode(&regulator.ramp, RAMP_STOP_MODE_FAST);
+        ramp_set_target_reference(&regulator.ramp, 0);
     }
 }
 
 err_t drive_regulator_set_reference_time(ramp_time_t time)
 {
-    return ramp_set_reference_time(&regulator.speed_ramp, time, DRIVE_RAMP_DT);
+    return ramp_set_reference_time(&regulator.ramp, time, DRIVE_RAMP_DT);
 }
 
 err_t drive_regulator_set_start_time(ramp_time_t time)
 {
-    return ramp_set_start_time(&regulator.speed_ramp, time, DRIVE_RAMP_DT);
+    return ramp_set_start_time(&regulator.ramp, time, DRIVE_RAMP_DT);
 }
 
 err_t drive_regulator_set_stop_time(ramp_time_t time)
 {
-    return ramp_set_stop_time(&regulator.speed_ramp, time, DRIVE_RAMP_DT);
+    return ramp_set_stop_time(&regulator.ramp, time, DRIVE_RAMP_DT);
 }
 
 err_t drive_regulator_set_fast_stop_time(ramp_time_t time)
 {
-    return ramp_set_fast_stop_time(&regulator.speed_ramp, time, DRIVE_RAMP_DT);
+    return ramp_set_fast_stop_time(&regulator.ramp, time, DRIVE_RAMP_DT);
 }
 
 bool drive_regulator_rot_enabled(void)
@@ -253,7 +253,7 @@ void drive_regulator_set_rot_enabled(bool enabled)
     if(!enabled){
         pid_controller_reset(&regulator.spd_pid);
         pid_controller_reset(&regulator.rot_pid);
-        ramp_reset_reference(&regulator.speed_ramp);
+        ramp_reset_reference(&regulator.ramp);
     }
 }
 
@@ -422,20 +422,27 @@ bool drive_regulator_regulate_exc(fixed32_t dt)
 static void drive_regulator_process_impl(void)
 {
     if(regulator.rot_enabled){
-        fixed32_t rpm_rot_nom = drive_motor_rpm_nom();
-        fixed32_t rpm_rot_max = drive_motor_rpm_cur_max();
+        
+        ramp_calc_step(&regulator.ramp);
+        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.ramp) / RAMP_REFERENCE_MAX;
+        
+        if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
+            fixed32_t rpm_rot_max = drive_motor_rpm_max();
+            fixed32_t rpm_rot_cur_max = drive_motor_rpm_cur_max();
 
-        ramp_calc_step(&regulator.speed_ramp);
-        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.speed_ramp) / RAMP_REFERENCE_MAX;
-        fixed32_t rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_nom, ramp_cur_ref);
-        
-        if(rpm_rot_ref > rpm_rot_max){
-            rpm_rot_ref = rpm_rot_max;
-            ramp_adjust_current_reference(&regulator.speed_ramp, rpm_rot_max, rpm_rot_nom);
+            fixed32_t rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_max, ramp_cur_ref);
+
+            if(rpm_rot_ref > rpm_rot_cur_max){
+                rpm_rot_ref = rpm_rot_cur_max;
+                ramp_adjust_current_reference(&regulator.ramp, rpm_rot_cur_max, rpm_rot_max);
+            }
+
+            regulator.rpm_rot_ref = rpm_rot_ref;
+            regulator.i_rot_ref = 0;
+        }else{ // DRIVE_REGULATOR_MODE_TORQUE
+            regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_max, ramp_cur_ref);
+            regulator.rpm_rot_ref = 0;
         }
-        
-        regulator.rpm_rot_ref = rpm_rot_ref;
-        regulator.i_rot_ref = fixed32_mul((int64_t)regulator.I_rot_nom, ramp_cur_ref);
     }
 }
 
@@ -447,7 +454,7 @@ bool drive_regulator_process(void)
             return false;
         case DRIVE_REGULATOR_STATE_START:
             drive_regulator_process_impl();
-            if(ramp_current_reference(&regulator.speed_ramp) >= regulator.reference){
+            if(ramp_current_reference(&regulator.ramp) >= regulator.reference){
                 regulator.state = DRIVE_REGULATOR_STATE_RUN;
             }
             break;
@@ -456,7 +463,7 @@ bool drive_regulator_process(void)
             break;
         case DRIVE_REGULATOR_STATE_STOP:
             drive_regulator_process_impl();
-            if(ramp_done(&regulator.speed_ramp)){
+            if(ramp_done(&regulator.ramp)){
                 regulator.state = DRIVE_REGULATOR_STATE_IDLE;
             }
             break;

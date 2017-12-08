@@ -59,6 +59,12 @@ extern fixed32_t drive_motor_e_nom(void);
 extern fixed32_t drive_motor_rpm_nom(void);
 
 /**
+ * Получает максимальные обороты двигателя.
+ * @return Максимальные обороты двигателя.
+ */
+extern fixed32_t drive_motor_rpm_max(void);
+
+/**
  * Получает номинальный момент двигателя.
  * @return Номинальный момент двигателя.
  */
