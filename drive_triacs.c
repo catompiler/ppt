@@ -500,6 +500,7 @@ static void drive_triacs_timer_irq_handler_impl(timer_triacs_t* tim_triacs)
             drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_a;
         }
         TIM_ClearITPendingBit(TIM, TRIACS_A_OPEN_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIACS_A_OPEN_CHANNEL_IT, DISABLE);
     } // Если нужно закрыть тиристорную пару 1.
     if(TIM_GetITStatus(TIM, TRIACS_A_CLOSE_CHANNEL_IT) != RESET){
             triac_pair_close(
@@ -509,26 +510,29 @@ static void drive_triacs_timer_irq_handler_impl(timer_triacs_t* tim_triacs)
                 drive_triacs.last_opened_pair = tim_triacs->triacs_a;
             }
         TIM_ClearITPendingBit(TIM, TRIACS_A_CLOSE_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIACS_A_CLOSE_CHANNEL_IT, DISABLE);
     } // Если нужно открыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на тиристорные пары разрешена.
-        if(drive_triacs.pairs_enabled){
+        /*if(drive_triacs.pairs_enabled){
             triac_pair_open(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
             //drive_triacs.last_opened_pair = tim_triacs->triacs_b;
             drive_triacs.last_opened_pair = TRIAC_PAIR_UNKNOWN;//tim_triacs->triacs_b;
-        }
+        }*/
         TIM_ClearITPendingBit(TIM, TRIACS_B_OPEN_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIACS_B_OPEN_CHANNEL_IT, DISABLE);
     } // Если нужно закрыть тиристорную пару 2.
     if(TIM_GetITStatus(TIM, TRIACS_B_CLOSE_CHANNEL_IT) != RESET){
-            triac_pair_close(
+            /*triac_pair_close(
                     get_triac_pair(tim_triacs->triacs_b)
                 );
             if(drive_triacs.pairs_enabled){
                 drive_triacs.last_opened_pair = tim_triacs->triacs_b;
-            }
+            }*/
         TIM_ClearITPendingBit(TIM, TRIACS_B_CLOSE_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIACS_B_CLOSE_CHANNEL_IT, DISABLE);
     }
 }
 
@@ -554,10 +558,12 @@ void drive_triacs_exc_timer_irq_handler(void)
             triac_open(&drive_triacs.triac_exc);
         }
         TIM_ClearITPendingBit(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT, DISABLE);
     } // Если нужно закрыть симистор первого полупериода.
     if(TIM_GetITStatus(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT) != RESET){
         triac_close(&drive_triacs.triac_exc);
         TIM_ClearITPendingBit(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, DISABLE);
     } // Если нужно открыть симистор второго полупериода.
     if(TIM_GetITStatus(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT) != RESET){
         // Если подача импульсов на симистор возбуждения разрешена.
@@ -565,10 +571,12 @@ void drive_triacs_exc_timer_irq_handler(void)
             triac_open(&drive_triacs.triac_exc);
         }
         TIM_ClearITPendingBit(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT, DISABLE);
     } // Если нужно закрыть симистор второго полупериода.
     if(TIM_GetITStatus(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT) != RESET){
         triac_close(&drive_triacs.triac_exc);
         TIM_ClearITPendingBit(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT);
+        TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, DISABLE);
     }
 }
 
@@ -603,7 +611,7 @@ static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int16_
     // Первая пара.
     TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT);
     // Вторая пара.
-    TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_B_OPEN_CHANNEL_IT);
+    //TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_B_OPEN_CHANNEL_IT);
     // Установим тиристорные пары таймера.
     // Первая пара тиристоров.
     tim_trcs->triacs_a = triacs_pair;
@@ -616,8 +624,9 @@ static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int16_
     // Закрытие первой пары тиристоров.
     TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
                                      drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
-    TIM_ITConfig(tim_trcs->timer, TIM_IT_CC1, ENABLE);
-    TIM_ITConfig(tim_trcs->timer, TIM_IT_CC2, ENABLE);
+    // Разрешим прерывания.
+    TIM_ITConfig(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT, ENABLE);
+    TIM_ITConfig(tim_trcs->timer, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE);
     
     //! Запустим таймер.
     TIM_Cmd(tim_trcs->timer, ENABLE);
@@ -715,6 +724,11 @@ static void timer_triac_exc_setup(int16_t offset_ticks)
     TIM_SetCompare4(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
                                             drive_triacs.triac_exc_open_ticks) -
                                             drive_triacs.triac_exc_angle_ticks - offset_ticks));
+    // Разрешить прерывания.
+    TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
+    TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
+    TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
+    TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
     //! Запустим таймер.
     TIM_Cmd(drive_triacs.timer_exc, ENABLE);
 }
