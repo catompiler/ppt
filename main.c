@@ -174,8 +174,10 @@ static uint8_t drive_main_iter_prescaler = 0;
 #define ADC_FREQ_MULT_MAX 10
 //! Флаг необходимости изменения частоты DMA АЦП.
 static bool adc_change_rate = false;
-//! Необходимая частота АЦП.
+//! Текущая частота АЦП.
 static uint8_t adc_rate = ADC_FREQ_MULT_MIN;
+//! Необходимая частота АЦП.
+static uint8_t adc_new_rate = ADC_FREQ_MULT_MIN;
 
 //! Количество каналов ADC 1 и 2.
 #define ADC12_CHANNELS_COUNT 4
@@ -502,28 +504,18 @@ IRQ_ATTRIBS void TIM1_UP_IRQHandler(void)
     }
 }
 
-static void adc_dma_set_rate(uint32_t rate);
-static void adc_timer_set_rate(uint32_t rate);
+static void adc_set_rate_impl(uint32_t rate);
 
 /**
  * Обработчик окончания передачи данных от ADC.
  */
 IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
 {
-    /*if(DMA_GetITStatus(DMA1_IT_TC1)){
-        DMA_ClearITPendingBit(DMA1_IT_TC1);*/
     if(DMA1->ISR & DMA_ISR_TCIF1){
         DMA1->IFCR = DMA_IFCR_CTCIF1;
         
-        //drive_process_power_adc_values(DRIVE_POWER_ADC_CHANNELS, (uint16_t*)adc_raw_buffer);
-        
         if(adc_change_rate){
-
-            adc_dma_set_rate(adc_rate);
-
-            adc_timer_set_rate(adc_rate);
-            
-            adc_change_rate = false;
+            adc_set_rate_impl(adc_new_rate);
         }
         
         memcpy(
@@ -540,6 +532,11 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
         BaseType_t pxHigherPriorityTaskWoken = 0;
         
         drive_task_adc_process_data_isr((uint16_t*)adc_raw_buffer, &pxHigherPriorityTaskWoken);
+        
+        if(adc_change_rate){
+            adc_rate = adc_new_rate;
+            adc_change_rate = false;
+        }
         
         portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
     }
@@ -1447,10 +1444,16 @@ static void adc_dma_set_rate(uint32_t rate)
     DMA2_Channel5->CCR |= DMA_CCR1_EN;
 }
 
+static void adc_set_rate_impl(uint32_t rate)
+{
+    adc_dma_set_rate(rate);
+    adc_timer_set_rate(rate);
+}
+
 static void adc_set_rate(uint32_t rate)
 {
     if(rate >= ADC_FREQ_MULT_MIN && rate <= ADC_FREQ_MULT_MAX){
-        adc_rate = rate;
+        adc_new_rate = rate;
         
         adc_change_rate = true;
         
@@ -1543,18 +1546,13 @@ static void triacs_pairs_timer_init(TIM_TypeDef* TIM)
         tim_oc_is.TIM_OCNIdleState = TIM_OCNIdleState_Reset ;
     TIM_OC1Init(TIM, &tim_oc_is);
     TIM_OC2Init(TIM, &tim_oc_is);
-    TIM_OC3Init(TIM, &tim_oc_is);
-    TIM_OC4Init(TIM, &tim_oc_is);
+    //TIM_OC3Init(TIM, &tim_oc_is);
+    //TIM_OC4Init(TIM, &tim_oc_is);
     
     TIM_CCxCmd (TIM, TRIACS_A_OPEN_CHANNEL,  TIM_CCx_Enable);
     TIM_CCxCmd (TIM, TRIACS_A_CLOSE_CHANNEL, TIM_CCx_Enable);
-    TIM_CCxCmd (TIM, TRIACS_B_OPEN_CHANNEL,  TIM_CCx_Enable);
-    TIM_CCxCmd (TIM, TRIACS_B_CLOSE_CHANNEL, TIM_CCx_Enable);
-    
-    TIM_ITConfig(TIM, TRIACS_A_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 1 от таймера
-    TIM_ITConfig(TIM, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 2 от таймера
-    TIM_ITConfig(TIM, TRIACS_B_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 3 от таймера
-    TIM_ITConfig(TIM, TRIACS_B_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
+    //TIM_CCxCmd (TIM, TRIACS_B_OPEN_CHANNEL,  TIM_CCx_Enable);
+    //TIM_CCxCmd (TIM, TRIACS_B_CLOSE_CHANNEL, TIM_CCx_Enable);
 }
 
 static void triac_exc_timer_init(TIM_TypeDef* TIM)
@@ -1590,10 +1588,10 @@ static void triac_exc_timer_init(TIM_TypeDef* TIM)
     TIM_CCxCmd (TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL,  TIM_CCx_Enable);
     TIM_CCxCmd (TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL, TIM_CCx_Enable);
     
-    TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT,   ENABLE); // Разрешаем прерывание OC 1 от таймера
-    TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 2 от таймера
-    TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 3 от таймера
-    TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
+    //TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT,   ENABLE); // Разрешаем прерывание OC 1 от таймера
+    //TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 2 от таймера
+    //TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT,  ENABLE); // Разрешаем прерывание OC 3 от таймера
+    //TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE); // Разрешаем прерывание OC 4 от таймера
 }
 
 #if configGENERATE_RUN_TIME_STATS == 1
@@ -2003,31 +2001,28 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
     *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }
 
+#if configCHECK_FOR_STACK_OVERFLOW != 0
+
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
 	( void ) pxTask;
 	( void ) pcTaskName;
 
-        //__disable_irq();
-	//for( ;; );
+        __disable_irq();
+	for( ;; );
 }
+
+#endif
 
 #if configGENERATE_RUN_TIME_STATS == 1
 
-static struct timeval rt_stats_initial_tv = {0, 0};
-
 void initHiresCounter(void)
 {
-    gettimeofday(&rt_stats_initial_tv, NULL);
 }
 
 uint32_t getHiresCounterValue(void)
 {
-    //return hiresTimerValue * ((uint32_t)TIM6->ARR + 1) + (uint32_t)TIM6->CNT;
-    
     struct timeval tv;
-    //gettimeofday(&tv, NULL);
-    //timersub(&tv, &rt_stats_initial_tv, &tv);
     drive_hires_timer_value(&tv);
     
     return tv.tv_sec * 1000000 + tv.tv_usec;
