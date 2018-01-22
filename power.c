@@ -140,6 +140,29 @@ err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t
     return E_NO_ERROR;
 }
 
+fixed32_t power_calc_inst_value(power_value_t* channel, uint16_t adc_value)
+{
+    int32_t value = (int32_t)adc_value - channel->raw_zero_cal;
+
+    #if POWER_IGNORE_BITS != 0
+    if(value >= 0){
+        value &= POWER_IGNORE_BITS_MASK;
+    }else{
+        value = -((-value) & POWER_IGNORE_BITS_MASK);
+    }
+    #endif
+
+    // Мгновенное реальное значение канала АЦП.
+    return (fixed32_t)value * channel->adc_mult;
+}
+
+fixed32_t power_channel_calc_inst_value(power_t* power, size_t channel, uint16_t adc_value)
+{
+    if(channel >= power->channels_count) return 0;
+    
+    return power_calc_inst_value(&power->channels[channel], adc_value);
+}
+
 static void power_channel_process_adc_value(power_value_t* channel, uint16_t adc_value)
 {
     // Отфильтруем значение АЦП.

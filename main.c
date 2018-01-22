@@ -31,6 +31,7 @@
 #include "drive_temp.h"
 #include "drive_hires_timer.h"
 #include "utils/critical.h"
+#include "drive_selftuning.h"
 #include <string.h>
 #include <stdlib.h>
 #undef LIST_H
@@ -209,6 +210,12 @@ static volatile uint16_t adc3_raw_buffer[ADC3_RAW_BUFFER_SIZE] = {0};
 static uint16_t adc_raw_buffer[ADC_CHANNELS_COUNT] = {0};
 //! Буфер ADC.
 //static volatile uint16_t adc_raw_buffer[ADC12_RAW_BUFFER_SIZE + ADC3_RAW_BUFFER_SIZE] = {0};
+// Количество каналов самонастройки.
+#define ADC_TUNING_CHANNELS_COUNT 2
+// Максимальная длина буфера.
+#define ADC_TUNING_BUFFER_LEN (ADC_TUNING_CHANNELS_COUNT * ADC_FREQ_MULT_MAX)
+// Буфер для значенией самонастройки.
+static uint16_t adc_raw_tuning_buffer[ADC_TUNING_BUFFER_LEN];
 
 
 // Константы для цифровых входов-выходов.
@@ -532,6 +539,26 @@ IRQ_ATTRIBS void DMA1_Channel1_IRQHandler(void)
         BaseType_t pxHigherPriorityTaskWoken = 0;
         
         drive_task_adc_process_data_isr((uint16_t*)adc_raw_buffer, &pxHigherPriorityTaskWoken);
+        
+        // Самонастройка.
+        size_t i, rindex, tindex;
+        if(drive_selftuning_data_collecting() && !drive_selftuning_data_collected()){
+            // Первый цикл - сохранение данных в буфер.
+            for(i = 0; i < adc_rate; i ++){
+                tindex = i * (ADC_TUNING_CHANNELS_COUNT);
+                rindex = i * (ADC12_CHANNELS_COUNT + ADC12_CHANNELS_COUNT);
+                adc_raw_tuning_buffer[tindex + 0] = adc12_raw_buffer[DRIVE_POWER_Urot + rindex];
+                adc_raw_tuning_buffer[tindex + 1] = adc12_raw_buffer[DRIVE_POWER_Irot + rindex];
+            }
+            // Второй цикл - обработка.
+            for(i = 0; i < adc_rate; i ++){
+                tindex = i * (ADC_TUNING_CHANNELS_COUNT);
+                if(!drive_selftuning_put(adc_raw_tuning_buffer[tindex + 0],
+                                         adc_raw_tuning_buffer[tindex + 1])){
+                    break;
+                }
+            }
+        }
         
         if(adc_change_rate){
             adc_rate = adc_new_rate;

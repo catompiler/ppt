@@ -1158,6 +1158,11 @@ bool drive_power_calc_values(power_channels_t channels, err_t* err)
     return res;
 }
 
+fixed32_t drive_power_channel_calc_inst_value(size_t channel, uint16_t adc_value)
+{
+    return power_channel_calc_inst_value(&drive_power.power, channel, adc_value);
+}
+
 void drive_power_process_iter(void)
 {
     drive_power_calc_angle_voltage();

@@ -206,11 +206,28 @@ typedef enum _Drive_Triacs_Open_Pair {
     DRIVE_TRIACS_OPEN_PAIR_ALL    = 3,
 } drive_triacs_open_pair_t;
 
+
+//! Тип калбэка открытия пары тиристоров.
+typedef void (*drive_triacs_open_pair_callback_t)(triac_pair_number_t pair);
+
+
 /**
  * Инициализирует тиристоры привода.
  * @return Код ошибки.
  */
 extern err_t drive_triacs_init(void);
+
+/**
+ * Получает каллбэк открытия пары тиристоров.
+ * @return каллбэк открытия пары тиристоров.
+ */
+extern drive_triacs_open_pair_callback_t drive_triacs_open_pair_callback(void);
+
+/**
+ * Устанавливает каллбэк открытия пары тиристоров.
+ * @param callback каллбэк открытия пары тиристоров.
+ */
+extern void drive_triacs_set_open_pair_callback(drive_triacs_open_pair_callback_t callback);
 
 /**
  * Получает фазы с соответсвующим состоянием тиристоров

@@ -376,6 +376,14 @@ extern size_t drive_power_triac_open_count(triac_number_t triac_number);
 extern bool drive_power_calc_values(power_channels_t channels, err_t* err);
 
 /**
+ * Преобразовывает мгновенное значение АЦП в реальную величину.
+ * @param channel Номер канала.
+ * @param adc_value Значение АЦП.
+ * @return Реальное значение.
+ */
+extern fixed32_t drive_power_channel_calc_inst_value(size_t channel, uint16_t adc_value);
+
+/**
  * Обрабатывает очередную итерацию питания.
  */
 extern void drive_power_process_iter(void);

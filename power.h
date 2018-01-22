@@ -182,6 +182,23 @@ extern err_t power_set_soft_channel(power_t* power, size_t channel, bool is_soft
 extern err_t power_process_soft_channel_value(power_t* power, size_t channel, fixed32_t value);
 
 /**
+ * Преобразовывает мгновенное значение АЦП в реальную величину.
+ * @param channel Канал питания.
+ * @param adc_value Значение АЦП.
+ * @return Реальное значение.
+ */
+extern fixed32_t power_calc_inst_value(power_value_t* channel, uint16_t adc_value);
+
+/**
+ * Преобразовывает мгновенное значение АЦП в реальную величину.
+ * @param power Питание.
+ * @param channel Номер канала.
+ * @param adc_value Значение АЦП.
+ * @return Реальное значение.
+ */
+extern fixed32_t power_channel_calc_inst_value(power_t* power, size_t channel, uint16_t adc_value);
+
+/**
  * Обрабатывает очередные значения АЦП.
  * @param power Питание.
  * @param channels Маска каналов АЦП.

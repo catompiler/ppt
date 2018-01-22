@@ -8,6 +8,7 @@
 #include "drive_phase_state.h"
 #else
 #include "drive_phase_sync.h"
+#include "drive_selftuning.h"
 #endif
 
 
@@ -253,6 +254,60 @@ static err_t drive_events_write_osc_channel_impl(drive_osc_index_t osc_index, si
     return storage_write(address, osc, sizeof(drive_power_osc_channel_t));
 }
 
+static void drive_events_put_tuning_urot_data(void)
+{
+    drive_selftuning_data_iter_t iter = drive_selftuning_data_iter_begin();
+    size_t i;
+    osc_value_t* value;
+    fixed32_t f;
+    for(i = 0; i < DRIVE_POWER_OSC_CHANNEL_LEN; i ++){
+        value = &events.osc_buf.data[i];
+        if(!drive_selftuning_data_iter_at_end(iter)){
+            f = drive_selftuning_data_iter_urot(iter);
+            *value = drive_power_osc_value_from_fixed32(f);
+            iter = drive_selftuning_data_iter_next(iter);
+        }else{
+            *value = 0;
+        }
+    }
+}
+
+static void drive_events_put_tuning_irot_data(void)
+{
+    drive_selftuning_data_iter_t iter = drive_selftuning_data_iter_begin();
+    size_t i;
+    osc_value_t* value;
+    fixed32_t f;
+    for(i = 0; i < DRIVE_POWER_OSC_CHANNEL_LEN; i ++){
+        value = &events.osc_buf.data[i];
+        if(!drive_selftuning_data_iter_at_end(iter)){
+            f = drive_selftuning_data_iter_irot(iter);
+            *value = drive_power_osc_value_from_fixed32(f);
+            iter = drive_selftuning_data_iter_next(iter);
+        }else{
+            *value = 0;
+        }
+    }
+}
+
+static void drive_events_put_tuning_time_data(void)
+{
+    drive_selftuning_data_iter_t iter = drive_selftuning_data_iter_begin();
+    size_t i;
+    osc_value_t* value;
+    fixed32_t f;
+    for(i = 0; i < DRIVE_POWER_OSC_CHANNEL_LEN; i ++){
+        value = &events.osc_buf.data[i];
+        if(!drive_selftuning_data_iter_at_end(iter)){
+            f = drive_selftuning_data_iter_time(iter);
+            *value = drive_power_osc_value_from_fixed32(f);
+            iter = drive_selftuning_data_iter_next(iter);
+        }else{
+            *value = 0;
+        }
+    }
+}
+
 err_t drive_events_write_current_oscillogram(drive_event_id_t event_id)
 {
     size_t osc_ch_index = 0;
@@ -263,7 +318,15 @@ err_t drive_events_write_current_oscillogram(drive_event_id_t event_id)
     }
     
     for(; osc_ch_index < DRIVE_POWER_OSC_CHANNELS_COUNT; osc_ch_index ++){
-        RETURN_ERR_IF_FAIL(drive_power_osc_channel_get(osc_ch_index, &events.osc_buf));
+        if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Urot){
+            drive_events_put_tuning_urot_data();
+        }else if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Irot){
+            drive_events_put_tuning_irot_data();
+        }else if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Iexc){
+            drive_events_put_tuning_time_data();
+        }else{
+            RETURN_ERR_IF_FAIL(drive_power_osc_channel_get(osc_ch_index, &events.osc_buf));
+        }
         RETURN_ERR_IF_FAIL(drive_events_write_osc_channel_impl(osc_index, osc_ch_index, &events.osc_buf));
     }
     

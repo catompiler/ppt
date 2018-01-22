@@ -9,6 +9,7 @@
 #include "drive_tasks.h"
 #include "drive_motor.h"
 #include "drive_selfstart.h"
+#include "drive_selftuning.h"
 #include "utils/critical.h"
 #include <string.h>
 #include <stdio.h>
@@ -864,8 +865,6 @@ static bool drive_set_adc_rate(uint32_t rate)
     
     if(drive_adc_rate() == rate) return true;
     
-    drive_tasks_write_status_event();
-    
     CRITICAL_ENTER();
     drive.adc_rate = rate;
     drive.set_adc_rate_proc(rate);
@@ -1705,8 +1704,8 @@ static bool drive_regulate(void)
  */
 static bool drive_regulate_current(void)
 {
-    if(!drive_power_data_avail(DRIVE_FAST_POWER_CHANNELS)) return false;
     if(!drive_regulator_rot_enabled()) return false;
+    if(!drive_power_data_avail(DRIVE_FAST_POWER_CHANNELS)) return false;
 
     drive_regulator_regulate_current(DRIVE_CURRENT_PID_DT);
 
@@ -1745,23 +1744,39 @@ fixed32_t calc_open_angle_inst(fixed32_t Umax, fixed32_t U)
     return angle;
 }
 
+static void drive_on_triac_pair_opened(triac_pair_number_t pair)
+{
+    drive_selftuning_reset_adc_time();
+    drive_selftuning_set_data_collecting(true);
+}
+
 static void drive_state_begin_selftune(void)
 {
+    drive_selftuning_reset();
+    
     drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Irot, false);
     drive_power_channel_set_adc_filter_enabled(DRIVE_POWER_Urot, false);
     
     //drive_triacs_set_pairs_open_angle(calc_open_angle_inst(drive_power_max_rectified_voltage(),
     //                                 fixed32_make_from_int(50)));
-    drive_triacs_set_pairs_open_angle(fixed32_make_from_int(30));
+    drive_triacs_set_pairs_open_angle(fixed32_make_from_int(20));
 
     drive_oneshot_set_enabled(true);
     drive_triacs_set_pairs_enabled(true);
     
     drive_set_adc_rate(DRIVE_ADC_RATE_FAST);
+    drive_selftuning_set_adc_rate(DRIVE_ADC_RATE_FAST);
+    
+    drive_triacs_set_open_pair_callback(drive_on_triac_pair_opened);
 }
 
 static void drive_state_end_selftune(void)
 {
+    drive_selftuning_set_data_collecting(false);
+    
+    drive_triacs_set_open_pair_callback(NULL);
+    
+    drive_selftuning_set_adc_rate(DRIVE_ADC_RATE_NORMAL);
     drive_set_adc_rate(DRIVE_ADC_RATE_NORMAL);
 
     drive_triacs_set_pairs_enabled(false);
@@ -1789,6 +1804,11 @@ static bool drive_state_process_selftune(void)
             break;
         case DRIVE_SELFTUNING_DATA:
             
+            if(drive_selftuning_data_collected()){
+                drive.selftuning_state = DRIVE_SELFTUNING_CALC;
+                break;
+            }
+            
             if(drive.iters_counter == 0){
                 drive_oneshot_make();
             }
@@ -1800,8 +1820,11 @@ static bool drive_state_process_selftune(void)
             
             break;
         case DRIVE_SELFTUNING_CALC:
+            drive_selftuning_calculate_adc_data();
+            drive.selftuning_state = DRIVE_SELFTUNING_DONE;
             break;
         case DRIVE_SELFTUNING_DONE:
+            drive_tasks_write_status_event();
             drive_set_state(DRIVE_STATE_IDLE);
             break;
     }
@@ -2346,6 +2369,8 @@ err_t drive_init(void)
     
     drive_selfstart_init();
     
+    drive_selftuning_init();
+    
     drive_update_settings();
     
     drive_set_static_prot_masks();
@@ -2814,6 +2839,10 @@ void drive_process_triacs_iter(void)
         drive_setup_triacs_open(phase, last_open_phase, offset);
         
         CRITICAL_EXIT();
+    }
+    
+    if(drive.state == DRIVE_STATE_SELFTUNE){
+        drive_selftuning_set_data_collecting(false);
     }
 }
 
