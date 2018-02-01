@@ -399,6 +399,32 @@ extern uint16_t drive_triacs_exc_open_time_us(void);
 extern err_t drive_triacs_set_exc_open_time_us(uint16_t time);
 
 /**
+ * Получает время задержки открытия тиристорных пар в мкс.
+ * @return Время задержки открытия тиристорных пар в мкс.
+ */
+extern uint16_t drive_triacs_pairs_open_delay_us(void);
+
+/**
+ * Устанавливает время задержки открытия тиристорных пар в мкс.
+ * @param time Время задержки открытия тиристорных пар в мкс.
+ * @return Код ошибки.
+ */
+extern err_t drive_triacs_set_pairs_open_delay_us(uint16_t time);
+
+/**
+ * Получает время задержки открытия симистора возбуждения в мкс.
+ * @return Время задержки открытия симистора возбуждения в мкс.
+ */
+extern uint16_t drive_triacs_exc_open_delay_us(void);
+
+/**
+ * Устанавливает время задержки открытия симистора возбуждения в мкс.
+ * @param time Время задержки открытия симистора возбуждения в мкс.
+ * @return Код ошибки.
+ */
+extern err_t drive_triacs_set_exc_open_delay_us(uint16_t time);
+
+/**
  * Получает фазу возбуждения.
  * @return Фаза возбуждения.
  */

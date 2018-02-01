@@ -294,8 +294,9 @@ typedef enum _Drive_Selftuning {
     DRIVE_SELFTUNING_NONE = 0,
     DRIVE_SELFTUNING_BEGIN = 1,
     DRIVE_SELFTUNING_DATA = 2,
-    DRIVE_SELFTUNING_CALC = 3,
-    DRIVE_SELFTUNING_DONE = 4
+    DRIVE_SELFTUNING_CALC_DATA = 3,
+    DRIVE_SELFTUNING_CALC = 4,
+    DRIVE_SELFTUNING_DONE = 5
 } drive_selftuning_t;
 
 //! Перечисление состояний запуска привода.

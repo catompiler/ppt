@@ -13,6 +13,8 @@
 #include "fixed/fixed32.h"
 
 
+
+//! Тип итератора данных самонастройки.
 typedef void* drive_selftuning_data_iter_t;
 
 
@@ -23,9 +25,31 @@ typedef void* drive_selftuning_data_iter_t;
 extern err_t drive_selftuning_init(void);
 
 /**
+ * Обновляет настройки самозапуска.
+ */
+extern void drive_selftuning_update_settings(void);
+
+/**
+ * Получает угол открытия для самонастройки.
+ * @return Угол открытия для самонастройки.
+ */
+extern fixed32_t drive_selftuning_open_angle(void);
+
+/**
  * Сбрасывает самонастройку привода.
  */
 extern void drive_selftuning_reset(void);
+
+/**
+ * Очищает собранные данные.
+ */
+extern void drive_selftuning_clear_data(void);
+
+/**
+ * Получает флаг окончания итераций накопления и просчёта данных.
+ * @return Флаг завершения итераций накопления и просчёта данных.
+ */
+extern bool drive_selftuning_data_collecting_done(void);
 
 /**
  * Устанавливает флаг сбора данных самонастройки.
@@ -67,6 +91,17 @@ extern bool drive_selftuning_put(uint16_t U_rot_adc, uint16_t I_rot_adc);
 extern void drive_selftuning_calculate_adc_data(void);
 
 /**
+ * Вычисляет значения R и L для текущего набора данных.
+ * @return Флаг валидного результата.
+ */
+extern bool drive_selftuning_calculate_current_data(void);
+
+/**
+ * Вычисляет средние R и L по всем полученным значениям.
+ */
+extern void drive_selftuning_calculate(void);
+
+/**
  * Получает итератор данных самонастройки.
  * @return Итератор данных.
  */
@@ -106,6 +141,13 @@ extern fixed32_t drive_selftuning_data_iter_irot(drive_selftuning_data_iter_t it
  * @return Время.
  */
 extern fixed32_t drive_selftuning_data_iter_time(drive_selftuning_data_iter_t iter);
+
+/**
+ * Получает дифференциал тока якоря текущих данных.
+ * @param iter Итератор данных.
+ * @return Дифференциал тока якоря.
+ */
+extern fixed32_t drive_selftuning_data_iter_di(drive_selftuning_data_iter_t iter);
 
 #endif /* DRIVE_SELFTUNING_H */
 

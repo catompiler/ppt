@@ -71,6 +71,7 @@ typedef struct _Drive_Settings {
     uint16_t zero_sensor_time; //!< Время срабатывания датчика нуля.
     bool zero_speed_exc_off_enabled; //!< Разрешение выключения возбуждения при 0.
     uint32_t zero_speed_exc_off_iters; //!< Время выключения возбуждения при 0 в итерациях.
+    uint16_t selftune_pause_iters; //!< Время между накоплениями данных в итерациях.
 } drive_settings_t;
 
 //! Тип структуры обновляемых параметров.
@@ -138,7 +139,7 @@ typedef struct _Drive {
     uint16_t adc_rate; //!< Кратность частоты АЦП.
     uint16_t adc_prescaler; //!< Счётчик тиков АЦП.
     bool one_shot_enabled; //!< Флаг режима одного импульса (пары).
-    bool one_shot_opened; //!< Флаг подачи импульса (пары).
+    bool one_shot_need_open; //!< Флаг подачи импульса (пары).
     drive_error_callback_t on_error_occured; //!< Каллбэк при ошибке.
     drive_warning_callback_t on_warning_occured; //!< Каллбэк при предупреждении.
     drive_reset_callback_t on_reset_callback; //!< Каллбэк при сбросе.
@@ -882,11 +883,11 @@ static void drive_oneshot_set_enabled(bool enabled)
     // Если необходимо запретить подачу импульса.
     if(drive.one_shot_enabled && !enabled){
         drive.one_shot_enabled = false;
-        drive.one_shot_opened = false;
+        drive.one_shot_need_open = false;
     } // Если необходимо разрешить подачу импусльса.
     else if(!drive.one_shot_enabled && enabled){
         drive.one_shot_enabled = true;
-        drive.one_shot_opened = false;
+        drive.one_shot_need_open = false;
     }
 }
 
@@ -895,7 +896,7 @@ static void drive_oneshot_set_enabled(bool enabled)
  */
 static void drive_oneshot_make(void)
 {
-	if(drive.one_shot_enabled) drive.one_shot_opened = false;
+	if(drive.one_shot_enabled) drive.one_shot_need_open = true;
 }
 
 /**
@@ -903,7 +904,7 @@ static void drive_oneshot_make(void)
  */
 /*static bool drive_oneshot_done(void)
 {
-	return !drive.one_shot_enabled || drive.one_shot_opened;
+	return !(drive.one_shot_enabled && drive.one_shot_need_open);
 }*/
 
 /**
@@ -924,9 +925,9 @@ static bool drive_oneshot_process(void)
     // Если разрешён одиночный импульс.
     if(drive.one_shot_enabled){
         // Если импульс ещё не подан.
-        if(!drive.one_shot_opened){
+        if(drive.one_shot_need_open){
             // Отметим подачу импульса.
-            drive.one_shot_opened = true;
+            drive.one_shot_need_open = false;
             return true;
         }
     }
@@ -1759,7 +1760,8 @@ static void drive_state_begin_selftune(void)
     
     //drive_triacs_set_pairs_open_angle(calc_open_angle_inst(drive_power_max_rectified_voltage(),
     //                                 fixed32_make_from_int(50)));
-    drive_triacs_set_pairs_open_angle(fixed32_make_from_int(20));
+    //drive_triacs_set_pairs_open_angle(fixed32_make_from_int(20));
+    drive_triacs_set_pairs_open_angle(drive_selftuning_open_angle());
 
     drive_oneshot_set_enabled(true);
     drive_triacs_set_pairs_enabled(true);
@@ -1794,10 +1796,14 @@ static void drive_state_end_selftune(void)
  */
 static bool drive_state_process_selftune(void)
 {
+    // Будущее для ожидания окончания расчёта в отдельной задаче.
+    static future_t calc_future;
+    
     switch(drive.selftuning_state){
         case DRIVE_SELFTUNING_NONE:
             break;
         case DRIVE_SELFTUNING_BEGIN:
+            future_init(&calc_future);
             drive_state_begin_selftune();
             drive.selftuning_state = DRIVE_SELFTUNING_DATA;
             drive.iters_counter = 0;
@@ -1805,7 +1811,10 @@ static bool drive_state_process_selftune(void)
         case DRIVE_SELFTUNING_DATA:
             
             if(drive_selftuning_data_collected()){
-                drive.selftuning_state = DRIVE_SELFTUNING_CALC;
+                if(drive_task_selftune_calc_data(&calc_future)){
+                    drive.selftuning_state = DRIVE_SELFTUNING_CALC_DATA;
+                    drive.iters_counter = 0;
+                }
                 break;
             }
             
@@ -1813,15 +1822,31 @@ static bool drive_state_process_selftune(void)
                 drive_oneshot_make();
             }
             
-            drive.iters_counter ++;
-            if(drive.iters_counter >= DRIVE_MAIN_ITER_PERIOD_ITERS){
+            if(++ drive.iters_counter >= DRIVE_MAIN_ITER_PERIOD_ITERS){
                 drive.iters_counter = 0;
             }
             
             break;
+        case DRIVE_SELFTUNING_CALC_DATA:
+            
+            if(future_done(&calc_future)){
+                if(!drive_selftuning_data_collecting_done()){
+                    if(++ drive.iters_counter >= drive.settings.selftune_pause_iters){
+                        drive_selftuning_clear_data();
+                        drive.selftuning_state = DRIVE_SELFTUNING_DATA;
+                        drive.iters_counter = 0;
+                    }
+                }else{
+                    if(drive_task_selftune_calc(&calc_future)){
+                        drive.selftuning_state = DRIVE_SELFTUNING_CALC;
+                    }
+                }
+            }
+            break;
         case DRIVE_SELFTUNING_CALC:
-            drive_selftuning_calculate_adc_data();
-            drive.selftuning_state = DRIVE_SELFTUNING_DONE;
+            if(future_done(&calc_future)){
+                drive.selftuning_state = DRIVE_SELFTUNING_DONE;
+            }
             break;
         case DRIVE_SELFTUNING_DONE:
             drive_tasks_write_status_event();
@@ -2435,6 +2460,7 @@ err_t drive_update_settings(void)
     drive.settings.zero_sensor_time = settings_valueu(PARAM_ID_ZERO_SENSOR_TIME);
     drive.settings.zero_speed_exc_off_enabled = settings_valueu(PARAM_ID_ZERO_SPEED_EXC_OFF_ENABLED);
     drive.settings.zero_speed_exc_off_iters = settings_valueu(PARAM_ID_ZERO_SPEED_EXC_OFF_TIMEOUT) * DRIVE_MAIN_ITER_FREQ;
+    drive.settings.selftune_pause_iters = settings_valueu(PARAM_ID_SELFTUNE_PAUSE_TIME_MS) * DRIVE_MAIN_ITER_FREQ / 1000;
     
     drive_triacs_set_exc_mode(settings_valueu(PARAM_ID_EXC_MODE));
     drive_triacs_set_pairs_open_time_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_TIME));
@@ -2446,6 +2472,9 @@ err_t drive_update_settings(void)
     drive_triacs_clamp_exc_open_angle(settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MIN),
                                       settings_valuef(PARAM_ID_TRIAC_EXC_ANGLE_MAX));
     
+    drive_triacs_set_pairs_open_delay_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_DELAY));
+    drive_triacs_set_exc_open_delay_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_DELAY));
+    
     drive_motor_update_settings();
     drive_motor_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     
@@ -2454,6 +2483,8 @@ err_t drive_update_settings(void)
     drive_overload_update_settings();
     
     drive_selfstart_update_settings();
+    
+    drive_selftuning_update_settings();
     
     drive_phase_sync_set_pll_pid(settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_P),
                                  settings_valuef(PARAM_ID_PHASE_SYNC_PLL_PID_K_I),
@@ -2839,10 +2870,6 @@ void drive_process_triacs_iter(void)
         drive_setup_triacs_open(phase, last_open_phase, offset);
         
         CRITICAL_EXIT();
-    }
-    
-    if(drive.state == DRIVE_STATE_SELFTUNE){
-        drive_selftuning_set_data_collecting(false);
     }
 }
 

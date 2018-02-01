@@ -337,6 +337,18 @@
 #define PARAM_ID_TRIAC_EXC_OPEN_TIME 1351
 
 /*
+ * Тиристоры - компенсация задержки прохождения сигнала.
+ */
+/*
+ * Компенсация по тиристорным парам.
+ */
+#define PARAM_ID_TRIACS_PAIRS_OPEN_DELAY 1355
+/*
+ * Компенсация по симистору возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_OPEN_DELAY 1356
+
+/*
  * Тиристоры - углы открытия.
  */
 /**
@@ -399,6 +411,34 @@
  * Значение уровеня предупреждения превышения тока вентилятора, %.
  */
 #define PARAM_ID_FAN_PROT_OVF_LEVEL 1516
+
+
+/*
+ * Самонастройка.
+ */
+
+/*
+ * Угол открытия для самонастройки.
+ */
+#define PARAM_ID_SELFTUNE_OPEN_ANGLE 1610
+/*
+ * Использовать медианный фильтр для устранения помех.
+ */
+#define PARAM_ID_SELFTUNE_USE_MID_FILTER 1611
+/*
+ * Количесвто значений для вычисления dI/dt.
+ */
+#define PARAM_ID_SELFTUNE_DIDT_AVG_COUNT 1612
+/*
+ * Количество выборок данных.
+ */
+#define PARAM_ID_SELFTUNE_ITERS_COUNT 1613
+/*
+ * Время паузы между выборкаит данных.
+ */
+#define PARAM_ID_SELFTUNE_PAUSE_TIME_MS 1614
+
+
 
 
 /////////////

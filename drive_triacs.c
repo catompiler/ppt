@@ -81,9 +81,11 @@ typedef struct _Drive_Triacs {
     
     uint16_t triacs_pairs_angle_ticks; //!< Угол открытия тиристорных пар - значение регистра сравнения таймера.
     uint16_t triacs_pairs_open_ticks; //!< Время открытия тиристорных пар в тиках таймера.
+    uint16_t triacs_pairs_delay_ticks; //!< Время задержки открытия тиристорных пар в тиках таймера.
     
     uint16_t triac_exc_angle_ticks; //!< Угол открытия симистора возбуждения - значение регистра сравнения таймера.
     uint16_t triac_exc_open_ticks; //!< Время открытия симистора возбуждения в тиках таймера.
+    uint16_t triac_exc_delay_ticks; //!< Время задержки открытия симистора возбуждения в тиках таймера.
     
     triac_pair_t triac_pairs[TRIAC_PAIRS_COUNT]; //!< Пары тиристоров.
     triac_t triac_exc; //!< Тиристор возбуждения.
@@ -118,6 +120,9 @@ err_t drive_triacs_init(void)
     
     drive_triacs.triacs_pairs_open_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     drive_triacs.triac_exc_open_ticks = TRIAC_EXC_TIM_OPEN_TIME_DEFAULT;
+    
+    drive_triacs.triacs_pairs_delay_ticks = 0;
+    drive_triacs.triac_exc_delay_ticks = 0;
     
     drive_triacs.last_opened_pair = TRIAC_PAIR_NONE;
     
@@ -423,6 +428,30 @@ err_t drive_triacs_set_exc_open_time_us(uint16_t time)
     return E_NO_ERROR;
 }
 
+uint16_t drive_triacs_pairs_open_delay_us(void)
+{
+    return TICKS_TO_TIME(drive_triacs.triacs_pairs_delay_ticks);
+}
+
+err_t drive_triacs_set_pairs_open_delay_us(uint16_t time)
+{
+    drive_triacs.triacs_pairs_delay_ticks = TIME_TO_TICKS(time);
+    
+    return E_NO_ERROR;
+}
+
+uint16_t drive_triacs_exc_open_delay_us(void)
+{
+    return TICKS_TO_TIME(drive_triacs.triac_exc_delay_ticks);
+}
+
+err_t drive_triacs_set_exc_open_delay_us(uint16_t time)
+{
+    drive_triacs.triac_exc_delay_ticks = TIME_TO_TICKS(time);
+    
+    return E_NO_ERROR;
+}
+
 phase_t drive_triacs_exc_phase(void)
 {
     return drive_triacs.phase_exc;
@@ -644,10 +673,12 @@ static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int16_
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
     TIM_SetCompare1(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks -
+                                     drive_triacs.triacs_pairs_delay_ticks));
     // Закрытие первой пары тиристоров.
     TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks));
+                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks -
+                                     drive_triacs.triacs_pairs_delay_ticks));
     // Разрешим прерывания.
     TIM_ITConfig(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT, ENABLE);
     TIM_ITConfig(tim_trcs->timer, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE);
@@ -737,17 +768,21 @@ static void timer_triac_exc_setup(int16_t offset_ticks)
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
     TIM_SetCompare1(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
+                                            drive_triacs.triac_exc_delay_ticks));
     // Закрытие первой пары тиристоров.
     TIM_SetCompare2(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + drive_triacs.triac_exc_open_ticks) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
+                                            drive_triacs.triac_exc_delay_ticks));
     // Открытие второй пары тиристоров.
     TIM_SetCompare3(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
+                                            drive_triacs.triac_exc_delay_ticks));
     // Закрытие второй пары тиристоров.
     TIM_SetCompare4(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
                                             drive_triacs.triac_exc_open_ticks) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks));
+                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
+                                            drive_triacs.triac_exc_delay_ticks));
     // Разрешить прерывания.
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);

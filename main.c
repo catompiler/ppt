@@ -32,6 +32,7 @@
 #include "drive_hires_timer.h"
 #include "utils/critical.h"
 #include "drive_selftuning.h"
+#include "drive_task_selftune.h"
 #include <string.h>
 #include <stdlib.h>
 #undef LIST_H
@@ -279,13 +280,14 @@ static uint16_t adc_raw_tuning_buffer[ADC_TUNING_BUFFER_LEN];
 /*
  * Приоритеты задач.
  */
-#define DRIVE_TASK_PRIORITY_ADC 12
-#define DRIVE_TASK_PRIORITY_SYNC 11
-#define DRIVE_TASK_PRIORITY_TRIACS 10
-#define DRIVE_TASK_PRIORITY_MAIN 9
-#define DRIVE_TASK_PRIORITY_MODBUS 8
-#define DRIVE_TASK_PRIORITY_EVENTS 7
-#define DRIVE_TASK_PRIORITY_SETTINGS 6
+#define DRIVE_TASK_PRIORITY_ADC 15
+#define DRIVE_TASK_PRIORITY_SYNC 14
+#define DRIVE_TASK_PRIORITY_TRIACS 13
+#define DRIVE_TASK_PRIORITY_MAIN 12
+#define DRIVE_TASK_PRIORITY_MODBUS 10
+#define DRIVE_TASK_PRIORITY_EVENTS 8
+#define DRIVE_TASK_PRIORITY_SETTINGS 7
+#define DRIVE_TASK_PRIORITY_SELFTUNE 6
 //#define DRIVE_TASK_PRIORITY_TIMER 5
 #define DRIVE_TASK_PRIORITY_I2C_WDT 4
 #define DRIVE_TASK_PRIORITY_TEMP 3
@@ -600,6 +602,11 @@ IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
     if(TIM_GetITStatus(DRIVE_MAIN_TIM, TIM_IT_Update) != RESET){
         TIM_ClearITPendingBit(DRIVE_MAIN_TIM, TIM_IT_Update);
+        
+    
+        if(drive_state() == DRIVE_STATE_SELFTUNE && drive_selftuning_data_collecting()){
+            drive_selftuning_set_data_collecting(false);
+        }
         
         bool need_yield = false;
         
@@ -1977,6 +1984,7 @@ static void init_drive_tasks(void)
     drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
     drive_task_events_init(DRIVE_TASK_PRIORITY_EVENTS);
     drive_task_settings_init(DRIVE_TASK_PRIORITY_SETTINGS);
+    drive_task_selftune_init(DRIVE_TASK_PRIORITY_SELFTUNE);
     drive_task_i2c_watchdog_init(DRIVE_TASK_PRIORITY_I2C_WDT);
     setup_i2c_watchdogs();
     drive_task_temp_init(DRIVE_TASK_PRIORITY_TEMP);

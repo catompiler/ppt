@@ -19,6 +19,7 @@
 #include "drive_task_sync.h"
 #include "drive_task_adc.h"
 #include "drive_task_modbus.h"
+#include "drive_task_selftune.h"
 
 
 /**
