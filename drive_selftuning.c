@@ -380,6 +380,12 @@ static void tuning_calc_didt(void)
     
     while(node){
         
+        Iprev = 0;
+        Tprev = 0;
+        
+        Icur = 0;
+        Tcur = 0;
+        
         tuning_tree_node_calc_avg(node_prev, -count, NULL, &Iprev, NULL, &Tprev);
         tuning_tree_node_calc_avg(node,       count, NULL, &Icur,  NULL, &Tcur);
         
@@ -406,6 +412,17 @@ static void tuning_calc_didt(void)
     }
 }
 
+/**
+ * Вычисляет коэффициенты для системы линейных уравнений
+ * по методу наименьших квадратов.
+ * Из массива выборок, связанных уравнением:
+ * (I*R)n + (dI/dt)n - (U)n = 0;
+ * получаем систему уравнений:
+ * {{
+ * { a*R + b*L + c = 0,
+ * { d*R + e*L + f = 0.
+ * {{
+ */
 static void tuning_calc_coefs(int64_t* pa, int64_t* pb, int64_t* pc, int64_t* pd, int64_t* pe, int64_t* pf)
 {
     int64_t a = 0;
