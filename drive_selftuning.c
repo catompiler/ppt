@@ -9,6 +9,19 @@
 #include "settings.h"
 #include "drive.h"
 #include "utils/utils.h"
+#include "mid_filter/mid_filter3i.h"
+#include "filter_ab/filter_ab.h"
+
+
+//#define TUNING_CALC_TEST_DATA
+
+#ifdef TUNING_CALC_TEST_DATA
+#define MK_F32(f) ((int32_t)(f * 0x10000))
+#include "data_u.h"
+#include "data_i.h"
+#include "data_di.h"
+#undef MK_F32
+#endif
 
 
 //! Объединение данных точки самонастройки.
@@ -59,6 +72,8 @@ typedef struct _Selftuning {
     //size_t data_filter_avg; //!< Число элементов для усреднения.
     size_t data_delta_avg; //!< Число элементов для разности.
     bool use_mid_filter; //!< Флаг использования медианного фильтра.
+    filter_ab_weight_t ab_weight; //!< Вес АБ-фильтра.
+    bool use_ab_filter; //!< Флаг использования АБ-фильтра.
 } selftuning_t;
 
 //! Самонастройка привода.
@@ -83,6 +98,7 @@ static selftuning_t tuning;
 
 static int tuning_compare(rbtree_key_t lkey, rbtree_key_t rkey)
 {
+#ifndef TUNING_CALC_TEST_DATA
     fixed32_t lt = (fixed32_t)lkey;
     fixed32_t rt = (fixed32_t)rkey;
     
@@ -94,8 +110,9 @@ static int tuning_compare(rbtree_key_t lkey, rbtree_key_t rkey)
     if(dt < -min_dt) return -1;
     
     return 0;
-    
-    //return (int)lkey - (int)rkey;
+#else
+    return (int)lkey - (int)rkey;
+#endif
 }
 
 ALWAYS_INLINE static void tuning_pool_reset(void)
@@ -175,6 +192,8 @@ void drive_selftuning_update_settings(void)
     //tuning.data_filter_avg = TUNING_DATA_FILTER_AVG_DEFAULT;
     tuning.data_delta_avg = settings_valueu(PARAM_ID_SELFTUNE_DIDT_AVG_COUNT);
     tuning.data_iters_count = settings_valueu(PARAM_ID_SELFTUNE_ITERS_COUNT);
+    tuning.ab_weight = settings_valuef(PARAM_ID_SELFTUNE_AB_FILTER_WEIGHT);
+    tuning.use_ab_filter = settings_valueu(PARAM_ID_SELFTUNE_USE_AB_FILTER);
 }
 
 fixed32_t drive_selftuning_open_angle(void)
@@ -372,11 +391,17 @@ static void tuning_calc_didt(void)
     fixed32_t Icur, Iprev;
     fixed32_t Tcur, Tprev;
     fixed32_t di, dt;
-    int64_t didt;
+    int64_t didt64;
+    fixed32_t didt;
     
-    mid_filter3i_t filter_didt;
+    mid_filter3i_t filter_mid_didt;
     
-    mid_filter3i_init(&filter_didt);
+    mid_filter3i_init(&filter_mid_didt);
+    
+    filter_ab_t filter_ab_didt;
+    
+    filter_ab_init(&filter_ab_didt);
+    filter_ab_set_weight(&filter_ab_didt, tuning.ab_weight);
     
     while(node){
         
@@ -395,21 +420,44 @@ static void tuning_calc_didt(void)
         di = Icur - Iprev;
         
         if(dt > 0){
-            didt = fixed32_div((int64_t)di, dt);
+            didt64 = fixed32_div((int64_t)di, dt);
         }else{
-            didt = 0;
+            didt64 = 0;
         }
         
+        didt = tuning_satf(didt64);
+        
         if(tuning.use_mid_filter){
-            mid_filter3i_put(&filter_didt, tuning_satf(didt));
-            item->dI = mid_filter3i_value(&filter_didt);
-        }else{
-            item->dI = tuning_satf(didt);
+            mid_filter3i_put(&filter_mid_didt, didt);
+            didt = mid_filter3i_value(&filter_mid_didt);
         }
+        
+        if(tuning.use_ab_filter){
+            filter_ab_put(&filter_ab_didt, didt);
+            didt = filter_ab_value(&filter_ab_didt);
+        }
+        
+        item->dI = didt;
         
         node_prev = node;
         node = rbtree_next(&tuning.tree, node);
     }
+}
+
+/**
+ * Считает итерацию вычисления коэффициентов линейных уравнений.
+ * RES = val + a * b.
+ * @param val Предыдущее значение.
+ * @param a Значение A.
+ * @param b Значение Б.
+ * @return Результат.
+ */
+static int64_t tuning_calc_coef_iter(int64_t val, fixed32_t a, fixed32_t b)
+{
+    int64_t res = fixed32_mul((int64_t)a, b);
+    res += val;
+    
+    return res;
 }
 
 /**
@@ -423,7 +471,7 @@ static void tuning_calc_didt(void)
  * { d*R + e*L + f = 0.
  * {{
  */
-static void tuning_calc_coefs(int64_t* pa, int64_t* pb, int64_t* pc, int64_t* pd, int64_t* pe, int64_t* pf)
+static void tuning_calc_coefs(int32_t* pa, int32_t* pb, int32_t* pc, int32_t* pd, int32_t* pe, int32_t* pf)
 {
     int64_t a = 0;
     int64_t b = 0;
@@ -441,55 +489,68 @@ static void tuning_calc_coefs(int64_t* pa, int64_t* pb, int64_t* pc, int64_t* pd
     while(node){
         item = tuning_pool_node_item(node);
         
-        a = a + fixed32_mul((int64_t)item->I_rot.value, item->I_rot.value);
-        b = b + fixed32_mul((int64_t)item->dI,          item->I_rot.value);
-        c = c - fixed32_mul((int64_t)item->U_rot.value, item->I_rot.value);
+        a = tuning_calc_coef_iter(a, item->I_rot.value, item->I_rot.value);
+        b = tuning_calc_coef_iter(b, item->dI,          item->I_rot.value);
+        c = tuning_calc_coef_iter(c, -item->U_rot.value, item->I_rot.value);
         
-        d = d + fixed32_mul((int64_t)item->I_rot.value, item->dI);
-        e = e + fixed32_mul((int64_t)item->dI,          item->dI);
-        f = f - fixed32_mul((int64_t)item->U_rot.value, item->dI);
+        d = tuning_calc_coef_iter(d, item->I_rot.value, item->dI);
+        e = tuning_calc_coef_iter(e, item->dI,          item->dI);
+        f = tuning_calc_coef_iter(f, -item->U_rot.value, item->dI);
         
         node = rbtree_next(&tuning.tree, node);
     }
     
-    if(pa) *pa = a;
-    if(pb) *pb = b;
-    if(pc) *pc = c;
-    if(pd) *pd = d;
-    if(pe) *pe = e;
-    if(pf) *pf = f;
+    if(pa) *pa = tuning_satf(fixed32_get_int(a));
+    if(pb) *pb = tuning_satf(fixed32_get_int(b));
+    if(pc) *pc = tuning_satf(fixed32_get_int(c));
+    if(pd) *pd = tuning_satf(fixed32_get_int(d));
+    if(pe) *pe = tuning_satf(fixed32_get_int(e));
+    if(pf) *pf = tuning_satf(fixed32_get_int(f));
 }
 
-static bool tuning_calc_rl(fixed32_t* pr, fixed32_t* pl)
+static  bool tuning_calc_rl(fixed32_t* pr, fixed32_t* pl)
 {
-    int64_t a = 0;
-    int64_t b = 0;
-    int64_t c = 0;
-    int64_t d = 0;
-    int64_t e = 0;
-    int64_t f = 0;
+    int32_t a = 0;
+    int32_t b = 0;
+    int32_t c = 0;
+    int32_t d = 0;
+    int32_t e = 0;
+    int32_t f = 0;
+    
+    int64_t dc = 0;
+    int64_t fa = 0;
+    int64_t ae = 0;
+    int64_t db = 0;
+    
+    int64_t ae_db = 0;
+    int64_t dc_fa = 0;
+    
+    int64_t by = 0;
+    int64_t by_c = 0;
+    
+    int64_t x = 0;
+    int64_t y = 0;
     
     tuning_calc_coefs(&a, &b, &c, &d, &e, &f);
     
     if(a == 0) return false;
     
-    int64_t dc = fixed32_mul(d, c);
-    int64_t fa = fixed32_mul(f, a);
-    int64_t ae = fixed32_mul(a, e);
-    int64_t db = fixed32_mul(d, b);
+    dc = (int64_t)d * c;
+    fa = (int64_t)f * a;
+    ae = (int64_t)a * e;
+    db = (int64_t)d * b;
     
-    int64_t ae_db = ae - db;
+    ae_db = ae - db;
+    dc_fa = dc - fa;
     
     if(ae_db == 0) return false;
     
-    int64_t dc_fa = dc - fa;
+    y = fixed32_make_from_int((int64_t)dc_fa) / ae_db;
     
-    int64_t y = fixed32_div(dc_fa, ae_db);
+    by = y * b;
+    by_c = -by - fixed32_make_from_int((int64_t)c);
     
-    int64_t by = fixed32_mul(b, y);
-    int64_t by_c = -by - c;
-    
-    int64_t x = fixed32_div(by_c, a);
+    x = by_c / a;
     
     if(pr) *pr = tuning_satf(x);
     if(pl) *pl = tuning_satf(y);
@@ -505,10 +566,18 @@ void drive_selftuning_calculate_adc_data(void)
     
     fixed32_t U_rot, I_rot;
     
-    mid_filter3i_t filter_u_rot, filter_i_rot;
+    mid_filter3i_t filter_mid_u_rot, filter_mid_i_rot;
     
-    mid_filter3i_init(&filter_u_rot);
-    mid_filter3i_init(&filter_i_rot);
+    mid_filter3i_init(&filter_mid_u_rot);
+    mid_filter3i_init(&filter_mid_i_rot);
+    
+    filter_ab_t filter_ab_u_rot, filter_ab_i_rot;
+    
+    filter_ab_init(&filter_ab_u_rot);
+    filter_ab_init(&filter_ab_i_rot);
+    
+    filter_ab_set_weight(&filter_ab_u_rot, tuning.ab_weight);
+    filter_ab_set_weight(&filter_ab_i_rot, tuning.ab_weight);
     
     while(node){
         
@@ -518,15 +587,23 @@ void drive_selftuning_calculate_adc_data(void)
         I_rot = drive_power_channel_calc_inst_value(DRIVE_POWER_Irot, item->I_rot.adc_data);
         
         if(tuning.use_mid_filter){
-            mid_filter3i_put(&filter_u_rot, U_rot);
-            mid_filter3i_put(&filter_i_rot, I_rot);
+            mid_filter3i_put(&filter_mid_u_rot, U_rot);
+            mid_filter3i_put(&filter_mid_i_rot, I_rot);
 
-            item->U_rot.value = mid_filter3i_value(&filter_u_rot);
-            item->I_rot.value = mid_filter3i_value(&filter_i_rot);
-        }else{
-            item->U_rot.value = U_rot;
-            item->I_rot.value = I_rot;
+            U_rot = mid_filter3i_value(&filter_mid_u_rot);
+            I_rot = mid_filter3i_value(&filter_mid_i_rot);
         }
+        
+        if(tuning.use_ab_filter){
+            filter_ab_put(&filter_ab_u_rot, U_rot);
+            filter_ab_put(&filter_ab_i_rot, I_rot);
+
+            U_rot = filter_ab_value(&filter_ab_u_rot);
+            I_rot = filter_ab_value(&filter_ab_i_rot);
+        }
+        
+        item->U_rot.value = U_rot;
+        item->I_rot.value = I_rot;
         
         node = rbtree_next(&tuning.tree, node);
     }
@@ -537,6 +614,22 @@ bool drive_selftuning_calculate_current_data(void)
     fixed32_t r, l;
     
     tuning_calc_didt();
+    
+#ifdef TUNING_CALC_TEST_DATA
+    drive_selftuning_clear_data();
+    tuning_tree_item_t* item;
+    size_t i;
+    for(i = 0; i < 225; i ++){
+        item = tuning_pool_alloc();
+        
+        item->I_rot.value = data_i[i];
+        item->U_rot.value = data_u[i];
+        item->dI = data_di[i];
+        
+        rbtree_node_init(&item->node, (rbtree_key_t)i, (rbtree_value_t)item);
+        tuning_pool_insert_item(item);
+    }
+#endif
     
     if(!tuning_calc_rl(&r, &l)) return false;
     

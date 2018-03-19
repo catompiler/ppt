@@ -245,6 +245,11 @@ err_t drive_power_init(void)
     
     power_init(&drive_power.power, drive_power.power_values, DRIVE_POWER_CHANNELS_COUNT);
     
+    // Для синхронизации с фазами нельзя вносить задержку фильтрами.
+    power_channel_set_adc_filter_enabled(&drive_power.power, DRIVE_POWER_Ua, false);
+    power_channel_set_adc_filter_enabled(&drive_power.power, DRIVE_POWER_Ub, false);
+    power_channel_set_adc_filter_enabled(&drive_power.power, DRIVE_POWER_Uc, false);
+    
     power_set_soft_channel(&drive_power.power, DRIVE_POWER_Erot, true);
     
     drive_power_init_triacs_diag();

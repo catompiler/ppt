@@ -27,7 +27,7 @@ SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
             i2c pca9555 list key_input cordic32\
             pid_controller m95x menu localization\
             crc16_ccitt usart_bus modbus_rtu\
-            lm75 mid_filter3i rbtree
+            lm75 mid_filter3i rbtree filter_ab
 
 # Дата версии прошивки
 GIT_DATETIME=$(shell git show -s --format="%cd" --date=short)

@@ -9,7 +9,7 @@
 #include "utils/utils.h"
 
 
-#define TASK_SELFTUNE_STACK_SIZE (configMINIMAL_STACK_SIZE)
+#define TASK_SELFTUNE_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 
 #define QUEUE_SETTINGS_SIZE 4
 

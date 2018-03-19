@@ -2717,6 +2717,8 @@ bool drive_calibrate_power(void)
 
 bool drive_selftune(void)
 {
+    if(!drive_ready())
+        return false;
     if(drive.state == DRIVE_STATE_IDLE){
         drive_set_state(DRIVE_STATE_SELFTUNE);
         

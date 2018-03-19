@@ -437,7 +437,14 @@
  * Время паузы между выборкаит данных.
  */
 #define PARAM_ID_SELFTUNE_PAUSE_TIME_MS 1614
-
+/*
+ * Использовать АБ-фильтра.
+ */
+#define PARAM_ID_SELFTUNE_USE_AB_FILTER 1615
+/*
+ * Вес АБ-фильтра.
+ */
+#define PARAM_ID_SELFTUNE_AB_FILTER_WEIGHT 1616
 
 
 
