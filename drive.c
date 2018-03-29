@@ -2949,10 +2949,11 @@ bool drive_calculate_power(void)
             drive_clear_flag(DRIVE_FLAG_POWER_DATA_AVAIL);
             drive_error_occured(DRIVE_ERROR_POWER_DATA_NOT_AVAIL);
         }
+        
+        drive_power_process_iter();
+        
         return true;
     }
-    
-    drive_power_process_iter();
     
     return false;
 }

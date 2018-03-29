@@ -27,6 +27,7 @@
 #include "fixed/fixed32.h"
 #include "gui/widgets/gui_tile.h"
 #include "gui/widgets/gui_home.h"
+#define NEED_DESCRS
 #include "parameters_list.h"
 
 // Данные параметров.
@@ -435,6 +436,11 @@ err_t settings_read(void)
 
 err_t settings_write(void)
 {
+    // Контрольная сумма общих параметров.
+    params_shared_t* shared = (params_shared_t*)parameters_data.data;
+    shared->crc = crc16_ccitt(shared, sizeof(params_shared_t) - sizeof(uint16_t));
+    
+    // Контрольная сумма всех параметров.
     parameters_data.crc = crc16_ccitt(parameters_data.data, sizeof(parameters_data) - sizeof(uint16_t));
     
     return storage_write(STORAGE_RGN_SETTINGS_ADDRESS, &parameters_data, sizeof(parameters_data));

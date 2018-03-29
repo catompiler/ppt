@@ -2070,6 +2070,10 @@ int main(void)
     // ACTLR
     //*((unsigned int*)0xE000E008) = 0x7;
     
+    extern char _app_origin;
+    
+    SCB->VTOR = (uint32_t)&_app_origin;
+    
     NVIC_SetPriorityGrouping(0x3);
     
     init_periph_clock();

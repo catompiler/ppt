@@ -87,7 +87,7 @@ MCU_NAME   = stm32f103vc
 MCU_FAMILY = hd
 # Конфигурация МК.
 # Адрес флеш-памяти.
-MCU_FLASH_ORIGIN = 0x8000000
+MCU_FLASH_ORIGIN = 0x8004000
 # Размер флеш-памяти.
 MCU_FLASH_SIZE   = 0x40000
 # Адрес ОЗУ.
@@ -216,9 +216,11 @@ LIBS_PATH += $(CMSIS_CORE_SUPPORT_LIBS_PATH)
 
 # Скрипты линкера.
 # Путь к скриптам линкера.
-LDSCRIPTS_PATH += ../stm32/ld-scripts
+#LDSCRIPTS_PATH += ../stm32/ld-scripts
+LDSCRIPTS_PATH += .
 # Имя файла скрипта.
-LDSCRIPT   += $(LDSCRIPTS_PATH)/$(MCU_NAME).ld
+#LDSCRIPT   += $(LDSCRIPTS_PATH)/$(MCU_NAME).ld
+LDSCRIPT   += $(LDSCRIPTS_PATH)/$(MCU_NAME)_bld_app.ld
 # Путь поиска скриптов.
 LIBS_PATH  += $(LDSCRIPTS_PATH)
 

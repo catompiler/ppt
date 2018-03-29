@@ -18,14 +18,42 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 423
+#define PARAMETERS_REAL_COUNT 426
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 55
 // Общее число параметров.
 #define PARAMETERS_COUNT (PARAMETERS_REAL_COUNT + PARAMETERS_VIRT_COUNT)
+// Число общих параметров с загрузчиком.
+#define PARAMETERS_BOOT_SHARED_COUNT 5
 
+// Структура общих параметров с загрузчиком.
+#pragma pack(push, 1)
+typedef struct _Params_Shared {
+    union {
+        param_data_t data[PARAMETERS_BOOT_SHARED_COUNT];
+        struct {
+            param_data_t modbus_baud;
+            param_data_t modbus_parity;
+            param_data_t modbus_stop_bits;
+            param_data_t modbus_address;
+            // crc.
+            param_data_t crc;
+        };
+    };
+} params_shared_t;
+#pragma pack(pop)
+
+#ifdef NEED_DESCRS
 // Дескрипторы параметров.
 PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
+    // Общие настройки с загрузчиком.
+    // Настройки Modbus.
+    PARAM_DESCR(PARAM_ID_MODBUS_BAUD,      PARAM_TYPE_UINT,  1200,  57600,  9600,  0, NOUNITS),
+    PARAM_DESCR(PARAM_ID_MODBUS_PARITY,    PARAM_TYPE_UINT,     0,      2,     0,  0, NOUNITS),
+    PARAM_DESCR(PARAM_ID_MODBUS_STOP_BITS, PARAM_TYPE_UINT,     1,      2,     1,  0, NOUNITS),
+    PARAM_DESCR(PARAM_ID_MODBUS_ADDRESS,   PARAM_TYPE_UINT,     1,    255,     1,  0, NOUNITS),
+    PARAM_DESCR(PARAM_ID_SHARED_CRC,       PARAM_TYPE_UINT,     0,  65536,     0,  0, NOUNITS),
+    
     // Общие параметры.
     PARAM_DESCR(PARAM_ID_U_NOM,           PARAM_TYPE_UINT,      0,       1000,      220,        0, TEXT(TR_ID_UNITS_V)),
     PARAM_DESCR(PARAM_ID_I_NOM,           PARAM_TYPE_UINT,      0,       1000,      160,        0, TEXT(TR_ID_UNITS_A)),
@@ -393,10 +421,7 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_PROT_I_EXC_IDLE_WARN_LATCH_ENABLE,   PARAM_TYPE_UINT,      0,         1,        1, 0, NOUNITS),
     PARAM_DESCR(PARAM_ID_PROT_I_EXC_IDLE_WARN_ACTION,         PARAM_TYPE_UINT,      0,         4,        1, 0, NOUNITS),
     
-    // Интерфейсы.
-    PARAM_DESCR(PARAM_ID_MODBUS_BAUD,     PARAM_TYPE_UINT,  1200,  57600,  9600,  0, NOUNITS),
-    PARAM_DESCR(PARAM_ID_MODBUS_ADDRESS,  PARAM_TYPE_UINT,     1,    255,     1,  0, NOUNITS),
-    
+    // Входа - выхода.
     PARAM_DESCR(PARAM_ID_DIGITAL_IO_DEADTIME_MS,  PARAM_TYPE_UINT,  0, 1000,  100,   0, TEXT(TR_ID_UNITS_MS)),
     
     PARAM_DESCR(PARAM_ID_DIGITAL_IN_1_TYPE,      PARAM_TYPE_UINT,  0,    6,    0,   0, NOUNITS),
@@ -627,6 +652,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_DEBUG_8, PARAM_TYPE_FRACT_1000, 0, 0, 0, PARAM_FLAG_VIRTUAL, NOUNITS),
     PARAM_DESCR(PARAM_ID_DEBUG_9, PARAM_TYPE_FRACT_1000, 0, 0, 0, PARAM_FLAG_VIRTUAL, NOUNITS),
 };
+
+#endif //NEED_DESCRS
 
 #undef NOUNITS
 #undef F32I
