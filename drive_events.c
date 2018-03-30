@@ -8,6 +8,13 @@
 #include "drive_phase_state.h"
 #else
 #include "drive_phase_sync.h"
+#endif
+
+
+//! Отладочный флаг записи в осциллограмму данных самонастройки.
+//#define DRIVE_EVENTS_OSC_SELFTUNE
+
+#ifdef DRIVE_EVENTS_OSC_SELFTUNE
 #include "drive_selftuning.h"
 #endif
 
@@ -254,6 +261,7 @@ static err_t drive_events_write_osc_channel_impl(drive_osc_index_t osc_index, si
     return storage_write(address, osc, sizeof(drive_power_osc_channel_t));
 }
 
+#ifdef DRIVE_EVENTS_OSC_SELFTUNE
 static void drive_events_put_tuning_urot_data(void)
 {
     drive_selftuning_data_iter_t iter = drive_selftuning_data_iter_begin();
@@ -325,6 +333,7 @@ static void drive_events_put_tuning_di_data(void)
         }
     }
 }
+#endif //DRIVE_EVENTS_OSC_SELFTUNE
 
 err_t drive_events_write_current_oscillogram(drive_event_id_t event_id)
 {
@@ -336,16 +345,25 @@ err_t drive_events_write_current_oscillogram(drive_event_id_t event_id)
     }
     
     for(; osc_ch_index < DRIVE_POWER_OSC_CHANNELS_COUNT; osc_ch_index ++){
-        if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Urot){
-            drive_events_put_tuning_urot_data();
-        }else if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Irot){
-            drive_events_put_tuning_irot_data();
-        }else if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Iexc){
-            drive_events_put_tuning_time_data();
-        }else if(osc_ch_index == DRIVE_POWER_OSC_CHANNEL_Ib){
-            drive_events_put_tuning_di_data();
-        }else{
-            RETURN_ERR_IF_FAIL(drive_power_osc_channel_get(osc_ch_index, &events.osc_buf));
+        
+        switch(osc_ch_index){
+#ifdef DRIVE_EVENTS_OSC_SELFTUNE
+            case DRIVE_POWER_OSC_CHANNEL_Urot:
+                drive_events_put_tuning_urot_data();
+                break;
+            case DRIVE_POWER_OSC_CHANNEL_Irot:
+                drive_events_put_tuning_irot_data();
+                break;
+            case DRIVE_POWER_OSC_CHANNEL_Iexc:
+                drive_events_put_tuning_time_data();
+                break;
+            case DRIVE_POWER_OSC_CHANNEL_Ib:
+                drive_events_put_tuning_di_data();
+                break;
+#endif //DRIVE_EVENTS_OSC_SELFTUNE
+            default:
+                RETURN_ERR_IF_FAIL(drive_power_osc_channel_get(osc_ch_index, &events.osc_buf));
+                break;
         }
         RETURN_ERR_IF_FAIL(drive_events_write_osc_channel_impl(osc_index, osc_ch_index, &events.osc_buf));
     }
