@@ -18,7 +18,7 @@ typedef struct _Drive_Regulator {
     
     drive_regulator_mode_t mode; //!< Режим регулятора.
     
-    fixed32_t reference; //!< Задание.
+    reference_t reference; //!< Задание.
     
     ramp_t ramp; //!< Разгон.
     
@@ -113,7 +113,7 @@ void drive_regulator_set_mode(drive_regulator_mode_t mode)
 
 reference_t drive_regulator_reference(void)
 {
-    return fixed32_get_int(regulator.reference);
+    return regulator.reference;
 }
 
 fixed32_t drive_regulator_current_reference(void)
@@ -124,7 +124,8 @@ fixed32_t drive_regulator_current_reference(void)
 err_t drive_regulator_set_reference(reference_t reference)
 {
     // 0 ... 100 == 12000 (TRIACS_TIM_ANGLE_TICKS_MAX) ... 0
-    if(reference > REFERENCE_MAX) return E_OUT_OF_RANGE;
+    if(reference > REFERENCE_MAX_F) return E_OUT_OF_RANGE;
+    if(reference < REFERENCE_MIN_F) return E_OUT_OF_RANGE;
     
     err_t err = E_NO_ERROR;
     
@@ -134,7 +135,7 @@ err_t drive_regulator_set_reference(reference_t reference)
     }
     
     if(err == E_NO_ERROR){
-        regulator.reference = fixed32_make_from_int(reference);
+        regulator.reference = reference;
     }
     
     return err;
@@ -148,7 +149,7 @@ void drive_regulator_inc_reference(void)
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, regulator.reference);
     }
 }
 
@@ -160,7 +161,7 @@ void drive_regulator_dec_reference(void)
     
     if(regulator.state == DRIVE_REGULATOR_STATE_RUN ||
        regulator.state == DRIVE_REGULATOR_STATE_START){
-        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, regulator.reference);
     }
 }
 
@@ -192,7 +193,7 @@ void drive_regulator_start(void)
         
         regulator.state = DRIVE_REGULATOR_STATE_START;
         
-        ramp_set_target_reference(&regulator.ramp, fixed32_get_int(regulator.reference));
+        ramp_set_target_reference(&regulator.ramp, regulator.reference);
     }
 }
 
@@ -424,7 +425,7 @@ static void drive_regulator_process_impl(void)
     if(regulator.rot_enabled){
         
         ramp_calc_step(&regulator.ramp);
-        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.ramp) / RAMP_REFERENCE_MAX;
+        fixed32_t ramp_cur_ref = ramp_current_reference(&regulator.ramp) / 100; //0..100% -> 0.0..1.0
         
         if(regulator.mode == DRIVE_REGULATOR_MODE_SPEED){
             fixed32_t rpm_rot_max = drive_motor_rpm_max();

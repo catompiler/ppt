@@ -55,8 +55,9 @@ void gui_statusbar_repaint_reference_n_icons(gui_statusbar_t* statusbar, const r
         
         char ref_str[6];  
         // отрисовка задания привода
-        if (statusbar->reference != drive_reference()) {
-            statusbar->reference = drive_reference();
+        uint32_t reference_i = fixed32_get_int(drive_reference());
+        if (statusbar->reference != reference_i) {
+            statusbar->reference = reference_i;
             
             snprintf(ref_str, 6, GUI_STATUSBAR_REF_STR_FORMAT, (int)statusbar->reference);
             graphics_pos_t text_y;

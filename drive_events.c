@@ -105,7 +105,7 @@ void drive_events_make_event(drive_event_t* event, drive_event_type_t type)
     event->starting_state = (uint8_t)drive_starting();
     event->stopping_state = (uint8_t)drive_stopping();
     event->err_stopping_state = (uint8_t)drive_err_stopping();
-    event->reference = drive_reference();
+    event->reference = fixed32_get_int(drive_reference());
     event->flags = drive_flags();
     event->warnings = drive_warnings();
     event->errors = drive_errors();

@@ -796,9 +796,8 @@ bool drive_calculate_currrent(void);
  */
 ALWAYS_INLINE static err_t drive_inc_reference()
 {
-    reference_t reference = drive_reference();
-    if(reference < REFERENCE_MAX) reference ++;
-    return drive_set_reference(reference);
+    drive_regulator_inc_reference();
+    return E_NO_ERROR;
 }
 
 /**
@@ -807,9 +806,8 @@ ALWAYS_INLINE static err_t drive_inc_reference()
  */
 ALWAYS_INLINE static err_t drive_dec_reference()
 {
-    reference_t reference = drive_reference();
-    if(reference > 0) reference --;
-    return drive_set_reference(reference);
+    drive_regulator_dec_reference();
+    return E_NO_ERROR;
 }
 
 #endif	/* DRIVE_H */

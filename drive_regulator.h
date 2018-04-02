@@ -28,10 +28,10 @@ typedef enum _Drive_Regulator_Mode {
 //! Тип задания.
 typedef ramp_reference_t reference_t;
 //! Минимальное задание.
-#define REFERENCE_MIN 0
+//#define REFERENCE_MIN 0
 #define REFERENCE_MIN_F 0
 //! Максимальное задание.
-#define REFERENCE_MAX 100
+//#define REFERENCE_MAX 100
 #define REFERENCE_MAX_F 0x640000
 
 /**

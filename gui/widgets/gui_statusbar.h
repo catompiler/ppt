@@ -104,7 +104,7 @@ struct _Gui_Statusbar {
     gui_icon_t* icons; //!< Иконки статуса.
     graphics_t* icon_graphics; //!< Изображение значков
     uint8_t icon_count; //!< Количество значков в изображении
-    reference_t reference; //!< Отображаемое значение задания привода.
+    uint32_t reference; //!< Отображаемое значение задания привода.
 };
 
 //! Приводит указатель statusbar к типу статусбара.

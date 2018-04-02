@@ -84,9 +84,10 @@ static fixed32_t ramp_get_step(ramp_t* ramp)
 
 err_t ramp_set_target_reference(ramp_t* ramp, ramp_reference_t reference)
 {
-    if(reference > RAMP_REFERENCE_MAX) return E_OUT_OF_RANGE;
+    if(reference > RAMP_REFERENCE_MAX_F) return E_OUT_OF_RANGE;
+    if(reference < RAMP_REFERENCE_MIN_F) return E_OUT_OF_RANGE;
     
-    ramp->target_ref = fixed32_make_from_int((fixed32_t)reference);
+    ramp->target_ref = reference;
     
     return E_NO_ERROR;
 }

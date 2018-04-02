@@ -31,14 +31,14 @@ typedef struct _Ramp {
 } ramp_t;
 
 //! Тип задания разгона.
-typedef uint32_t ramp_reference_t;
+typedef fixed32_t ramp_reference_t;
 
 //! Минимальное задание.
-#define RAMP_REFERENCE_MIN 0
-#define RAMP_REFERENCE_MIN_F (fixed32_make_from_int(RAMP_REFERENCE_MIN))
+//#define RAMP_REFERENCE_MIN 0
+#define RAMP_REFERENCE_MIN_F (fixed32_make_from_int(0))
 //! Максимальное задание.
-#define RAMP_REFERENCE_MAX 100
-#define RAMP_REFERENCE_MAX_F (fixed32_make_from_int(RAMP_REFERENCE_MAX))
+//#define RAMP_REFERENCE_MAX 100
+#define RAMP_REFERENCE_MAX_F (fixed32_make_from_int(100))
 
 //! Тип времени разгона.
 typedef fixed32_t ramp_time_t;
@@ -169,7 +169,7 @@ ALWAYS_INLINE static void ramp_flush(ramp_t* ramp)
  */
 ALWAYS_INLINE static ramp_reference_t ramp_target_reference(ramp_t* ramp)
 {
-    return fixed32_get_int(ramp->target_ref);
+    return ramp->target_ref;
 }
 
 /**
@@ -177,7 +177,7 @@ ALWAYS_INLINE static ramp_reference_t ramp_target_reference(ramp_t* ramp)
  * @param ramp Разгон.
  * @return Текущее задание разгона.
  */
-ALWAYS_INLINE static fixed32_t ramp_current_reference(ramp_t* ramp)
+ALWAYS_INLINE static ramp_reference_t ramp_current_reference(ramp_t* ramp)
 {
     return ramp->current_ref;
 }
