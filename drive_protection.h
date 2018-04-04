@@ -189,6 +189,7 @@ extern bool drive_protection_init(void);
 
 /**
  * Обновляет параметры защиты из настроек.
+ * Thread-safe.
  */
 extern void drive_protection_update_settings(void);
 

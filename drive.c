@@ -2443,7 +2443,7 @@ err_t drive_init(void)
 
 err_t drive_update_settings(void)
 {
-    drive_protection_update_settings();
+    drive_protection_update_settings(); //thread-safe.
 
     drive_power_set_phase_calc_current((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_CURRENT));
     drive_power_set_phase_calc_voltage((phase_t)settings_valueu(PARAM_ID_CALC_PHASE_VOLTAGE));

@@ -1,6 +1,7 @@
 #include "drive_protection.h"
 #include <string.h>
 #include "utils/utils.h"
+#include "utils/critical.h"
 #include "settings.h"
 #include "drive_power.h"
 #include "drive_phase_state.h"
@@ -667,34 +668,48 @@ static void drive_prot_power_update_item_settings(drive_prot_index_t index)
     // Дескриптор элемента защиты.
     const drive_protection_power_descr_t* descr = drive_protection_power_get_item_descr(index);
     
-    drive_prot_update_base_item_settings(&item->base_item,
-            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action, DRIVE_PROT_ACTION_EMERGENCY_STOP);
-    
     // Значение уровня элемента защиты.
     fixed32_t ref_val = 0;
     // Если задано опорное значение.
     if(descr->param_ref != 0){
         ref_val = settings_valuef(descr->param_ref);
     }
+    
+    // Значение коэффициента элемента защиты.
+    uint32_t ref_level = 0;
+    // Если задан коэффициент.
+    if(descr->param_level){
+        ref_level = settings_valueu(descr->param_level);
+    }
+    
+    
     // Если защита по мгновенным значениям (отсечка) и имеем дело с переменным напряжением,
     // то вычислим амплитудное значение номинального действующего значения.
     if(descr->type == DRIVE_PROT_TYPE_CUT && drive_power_channel_type(descr->power_channel) == POWER_CHANNEL_AC){
         ref_val = fixed32_mul((int64_t)ref_val, 0x16a10); // ref_val *= sqrt(2);
     }
+    
+    CRITICAL_ENTER();
+    
+    drive_prot_update_base_item_settings(&item->base_item,
+            descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action, DRIVE_PROT_ACTION_EMERGENCY_STOP);
+    
     // Вычислим уровень защиты в зависимости от типа (от повышения или от понижения значения).
     switch(descr->type){
         case DRIVE_PROT_TYPE_CUT:
             item->base_item.pie_inc = DRIVE_PROT_CUTOFF_PIE_INC;
         case DRIVE_PROT_TYPE_OVF:
-            item->value_level = drive_protection_get_ovf_level(ref_val, settings_valueu(descr->param_level));
+            item->value_level = drive_protection_get_ovf_level(ref_val, ref_level);
             break;
         case DRIVE_PROT_TYPE_UDF:
-            item->value_level = drive_protection_get_udf_level(ref_val, settings_valueu(descr->param_level));
+            item->value_level = drive_protection_get_udf_level(ref_val, ref_level);
             break;
         case DRIVE_PROT_TYPE_ZERO:
-            item->value_level = settings_valuef(descr->param_level);
+            item->value_level = fixed32_make_from_int(ref_level);
             break;
     }
+    
+    CRITICAL_EXIT();
 }
 
 /**
@@ -737,6 +752,8 @@ static void drive_prot_update_item_settings(drive_prot_index_t index)
     // Дескриптор элемента защиты.
     const drive_protection_descr_t* descr = drive_protection_get_item_descr(index);
     
+    CRITICAL_ENTER();
+    
     drive_prot_update_base_item_settings(&item->base_item,
             descr->param_ena, descr->param_time, descr->param_latch_ena, descr->param_action, descr->default_action);
     
@@ -744,6 +761,8 @@ static void drive_prot_update_item_settings(drive_prot_index_t index)
     if(descr->param_level){
         item->value_level = settings_valuef(descr->param_level);
     }
+    
+    CRITICAL_EXIT();
 }
 
 /**
@@ -766,6 +785,8 @@ static void drive_prot_update_items_settings(void)
  */
 static void drive_protection_update_top_settings(void)
 {
+    CRITICAL_ENTER();
+    
     drive_prot.top.I_allow = drive_protection_get_ovf_level(drive_prot.I_rot,
                              settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_DEAD_ZONE));
     
@@ -783,6 +804,8 @@ static void drive_protection_update_top_settings(void)
     }
     
     drive_prot.top.action = settings_valueu(PARAM_ID_THERMAL_OVERLOAD_PROT_ACTION);
+    
+    CRITICAL_EXIT();
 }
 
 /*
@@ -1082,9 +1105,13 @@ static bool drive_prot_check_sensor_i_exc(drive_protection_item_t* item)
  */
 void drive_protection_fan_update_settings(void)
 {
+    CRITICAL_ENTER();
+    
     drive_prot.fan.I_fan_nom = settings_valuef(PARAM_ID_FAN_I_NOM);
     drive_prot.fan.I_fan_zero_noise = settings_valuef(PARAM_ID_FAN_I_ZERO_NOISE);
     drive_prot.fan.I_fan_ovf = drive_protection_get_ovf_level(drive_prot.fan.I_fan_nom, settings_valueu(PARAM_ID_FAN_PROT_OVF_LEVEL));
+    
+    CRITICAL_EXIT();
 }
 
 /**
@@ -1092,13 +1119,18 @@ void drive_protection_fan_update_settings(void)
  */
 void drive_protection_triacs_update_settings(void)
 {
+    CRITICAL_ENTER();
+    
     drive_prot.triacs.min_angle = settings_valuef(PARAM_ID_PROT_TRIACS_WARN_MIN_ANGLE);
     drive_prot.triacs.min_current = settings_valuef(PARAM_ID_PROT_TRIACS_WARN_MIN_CURRENT);
+    
+    CRITICAL_EXIT();
 }
 
 void drive_protection_sensors_update_settings(void)
 {
     // Датчики напряжения сети.
+    CRITICAL_ENTER();
     drive_prot.sensors.sensor_u_in.adc_range_min = settings_valueu(PARAM_ID_PROT_SENSORS_U_IN_ADC_RANGE_MIN);
     drive_prot.sensors.sensor_u_in.adc_range_max = settings_valueu(PARAM_ID_PROT_SENSORS_U_IN_ADC_RANGE_MAX);
     drive_prot.sensors.sensor_u_in.emulation_enabled = settings_valueu(PARAM_ID_PROT_SENSORS_U_IN_EMULATION_ENABLED);
@@ -1118,12 +1150,16 @@ void drive_protection_sensors_update_settings(void)
     drive_prot.sensors.sensor_i_exc.adc_range_min = settings_valueu(PARAM_ID_PROT_SENSORS_I_EXC_ADC_RANGE_MIN);
     drive_prot.sensors.sensor_i_exc.adc_range_max = settings_valueu(PARAM_ID_PROT_SENSORS_I_EXC_ADC_RANGE_MAX);
     drive_prot.sensors.sensor_i_exc.emulation_enabled = settings_valueu(PARAM_ID_PROT_SENSORS_I_EXC_EMULATION_ENABLED);
+    CRITICAL_EXIT();
     
     drive_prot_index_t item_index = 0;
     drive_protection_item_t* item = NULL;
     for(item_index = DRIVE_PROT_ITEMS_SENSOR_BEGIN; item_index <= DRIVE_PROT_ITEMS_SENSOR_END; item_index ++){
         item = drive_protection_get_item(item_index);
+        
+        //CRITICAL_ENTER();
         item->base_item.pie_inc = DRIVE_PROT_SENSOR_PIE_INC;
+        //CRITICAL_EXIT();
     }
 }
 
@@ -1141,6 +1177,7 @@ bool drive_protection_init(void)
 
 void drive_protection_update_settings(void)
 {
+    CRITICAL_ENTER();
     drive_prot.U_in = settings_valuef(PARAM_ID_U_NOM);
     drive_prot.U_rot = settings_valuef(PARAM_ID_MOTOR_U_ROT_NOM);
     drive_prot.I_rot = settings_valuef(PARAM_ID_MOTOR_I_ROT_NOM);
@@ -1149,19 +1186,20 @@ void drive_protection_update_settings(void)
     drive_prot.U_rot_idle = settings_valuef(PARAM_ID_PROT_U_ROT_IDLE_FAULT_LEVEL_VALUE);
     drive_prot.I_rot_idle = settings_valuef(PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE);
     
-    drive_prot_power_update_items_settings();
-    
-    drive_prot_update_items_settings();
-    
-    drive_protection_update_top_settings();
-    
-    drive_protection_fan_update_settings();
-    
-    drive_protection_triacs_update_settings();
-    
-    drive_protection_sensors_update_settings();
-    
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
+    CRITICAL_EXIT();
+    
+    drive_prot_power_update_items_settings(); // thread safe
+    
+    drive_prot_update_items_settings(); // thread safe
+    
+    drive_protection_update_top_settings(); // thread safe
+    
+    drive_protection_fan_update_settings(); // thread safe
+    
+    drive_protection_triacs_update_settings(); // thread safe
+    
+    drive_protection_sensors_update_settings(); // thread safe
 }
 
 drive_power_errors_t drive_protection_power_errs_mask(void)
