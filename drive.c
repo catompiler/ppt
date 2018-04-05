@@ -1275,6 +1275,18 @@ static void drive_check_prots(void)
     res_action = drive_prot_get_hard_action(res_action,
             drive_check_prot_item(DRIVE_PROT_ITEM_WARN_TRIACS, DRIVE_ERROR_NONE, DRIVE_WARNING_TRIAC));
     
+    
+    // Предупреждение параметров двигателя.
+    if(!drive_motor_parameters_valid()){
+        if(!drive_warning(DRIVE_WARNING_MOTOR_PARAMS)){
+            res_action = drive_prot_get_hard_action(res_action, DRIVE_PROT_ACTION_WARNING);
+        }
+        drive_set_warning(DRIVE_WARNING_MOTOR_PARAMS);
+    }else{
+        drive_clear_warning(DRIVE_WARNING_MOTOR_PARAMS);
+    }
+    
+    
     bool running = drive_get_state() == DRIVE_STATE_RUN;
     
     // Если требуется действие.

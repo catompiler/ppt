@@ -179,7 +179,8 @@ typedef enum _Drive_Warning {
     DRIVE_WARNING_HEATSINK_TEMP    = 0x200, //!< Перегрев радиатора.
     DRIVE_WARNING_SENSOR           = 0x400, //!< Ошибка датчиков.
     DRIVE_WARNING_FAN_FAIL         = 0x800, //!< Ошибка вентилятора.
-    DRIVE_WARNING_TRIAC            = 0x1000  //!< Ошибка тиристоров.
+    DRIVE_WARNING_TRIAC            = 0x1000, //!< Ошибка тиристоров.
+    DRIVE_WARNING_MOTOR_PARAMS     = 0x2000  //!< Ошибка параметров двигателя.
 } drive_warning_t;
 
 //! Тип предупреждений привода.
