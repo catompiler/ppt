@@ -16,7 +16,8 @@
 
 //! Структура двигателя привода.
 typedef struct _Drive_Motor {
-    bool valid; //!< Флаг допустимости параметров двигателя.
+    bool valid; //!< Флаг допустимости текущих параметров двигателя.
+    bool params_valid; //!< Флаг допустимости заданных параметров двигателя.
     bool ir_comp_enabled; //!< Разрешение IR-компенсации.
     fixed32_t Eff; //!< КПД.
     fixed32_t U_max; //!< Максимальное выходное напряжение.
@@ -121,7 +122,7 @@ err_t drive_motor_update_settings(void)
     if(P_f == 0 || RPM_nom == 0 ||
        U_rot == 0 || I_rot_f == 0 ||
        U_exc == 0 || I_exc_f == 0){
-        motor.valid = false;
+        motor.params_valid = false;
         return E_INVALID_VALUE;
     }
     
@@ -131,7 +132,7 @@ err_t drive_motor_update_settings(void)
     }
     
     if(eff_f <= 0 || eff_f >= fixed32_make_from_int(1)){
-        motor.valid = false;
+        motor.params_valid = false;
         return E_INVALID_VALUE;
     }
     
@@ -154,7 +155,7 @@ err_t drive_motor_update_settings(void)
     }
     
     if(R_rot <= 0){
-        motor.valid = false;
+        motor.params_valid = false;
         return E_INVALID_VALUE;
     }
     fixed32_t R_rot75 = fixed32_mul((int64_t)R_rot, K_R75);
@@ -167,7 +168,7 @@ err_t drive_motor_update_settings(void)
     }
     
     if(R_exc <= 0){
-        motor.valid = false;
+        motor.params_valid = false;
         return E_INVALID_VALUE;
     }
     fixed32_t R_exc75 = fixed32_mul((int64_t)R_exc, K_R75);
@@ -184,7 +185,7 @@ err_t drive_motor_update_settings(void)
     }
     
     if(L_rot <= 0){
-        motor.valid = false;
+        motor.params_valid = false;
         return E_INVALID_VALUE;
     }
     
@@ -221,6 +222,7 @@ err_t drive_motor_update_settings(void)
     channel_filter_resize_ms(&motor.torque_filter, avg_time_torque);
     
     motor.valid = true;
+    motor.params_valid = true;
     
     return E_NO_ERROR;
 }
@@ -228,6 +230,11 @@ err_t drive_motor_update_settings(void)
 bool drive_motor_ready(void)
 {
     return motor.valid;
+}
+
+bool drive_motor_parameters_valid(void)
+{
+    return motor.params_valid;
 }
 
 bool drive_motor_ir_compensation_enabled(void)

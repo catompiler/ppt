@@ -2640,9 +2640,7 @@ drive_err_stopping_t drive_err_stopping(void)
 
 bool drive_ok(void)
 {
-    return drive.state != DRIVE_STATE_ERROR &&
-           drive_protection_top_ready() &&
-           drive_motor_ready();
+    return drive.state != DRIVE_STATE_ERROR;
 }
 
 bool drive_ready(void)
@@ -2651,7 +2649,8 @@ bool drive_ready(void)
            (drive.state != DRIVE_STATE_ERROR) &&
             drive_flags_is_set(DRIVE_READY_FLAGS) &&
             drive_protection_top_ready() &&
-            drive_motor_ready();
+            drive_motor_ready() &&
+            (drive_motor_parameters_valid() || (drive.status == DRIVE_STATUS_RUN));
 }
 
 bool drive_start(void)

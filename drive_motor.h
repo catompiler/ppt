@@ -30,6 +30,12 @@ extern err_t drive_motor_update_settings(void);
 extern bool drive_motor_ready(void);
 
 /**
+ * Получает флаг валидности заданных параметров двигателя.
+ * @return Флаг валидности заданных параметров двигателя.
+ */
+extern bool drive_motor_parameters_valid(void);
+
+/**
  * Получает разрешение IR-компенсации.
  * @return Разрешение IR-компенсации.
  */
