@@ -6,6 +6,7 @@
 #include <string.h>
 #include "settings.h"
 #include "channel_filter.h"
+#include "utils/critical.h"
 
 
 //! Ёмкость фильтра оборотов двигателя.
@@ -202,6 +203,7 @@ err_t drive_motor_update_settings(void)
     fixed32_t M_nom = fixed32_mul((int64_t)CmF, I_rot_f);
     
     
+    CRITICAL_ENTER();
     motor.Eff = eff_f;
     motor.I_exc = I_exc_f;
     motor.Cn = CeF_Iexc;
@@ -215,6 +217,7 @@ err_t drive_motor_update_settings(void)
     motor.RPM_nom = fixed32_make_from_int(RPM_nom);
     motor.RPM_max = fixed32_make_from_int(RPM_max);
     motor.U_max = U_max;
+    CRITICAL_EXIT();
     
     drive_motor_update_calc_params();
     
