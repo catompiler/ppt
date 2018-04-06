@@ -123,9 +123,7 @@ fixed32_t drive_regulator_current_reference(void)
 
 err_t drive_regulator_set_reference(reference_t reference)
 {
-    // 0 ... 100 == 12000 (TRIACS_TIM_ANGLE_TICKS_MAX) ... 0
-    if(reference > REFERENCE_MAX_F) return E_OUT_OF_RANGE;
-    if(reference < REFERENCE_MIN_F) return E_OUT_OF_RANGE;
+    reference = CLAMP(reference, REFERENCE_MIN_F, REFERENCE_MAX_F);
     
     err_t err = E_NO_ERROR;
     
