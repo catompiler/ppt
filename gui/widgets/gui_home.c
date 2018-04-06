@@ -8,6 +8,11 @@
 #include "drive_keypad.h"
 #include "drive.h"
 
+
+// Инкремент задания при нажатии на кнопку.
+#define GUI_HOME_DRIVE_REFERENCE_DELTA (fixed32_make_from_int(1))
+
+
 err_t gui_home_init(gui_home_t* home, gui_metro_t* gui)
 {
     return gui_home_init_parent(home, gui, NULL);
@@ -40,14 +45,24 @@ void gui_home_on_repaint(gui_home_t* home, const rect_t* rect)
     */
 }
 
+static void gui_home_on_inc_reference(void)
+{
+    drive_set_reference(drive_reference() + GUI_HOME_DRIVE_REFERENCE_DELTA);
+}
+
+static void gui_home_on_dec_reference(void)
+{
+    drive_set_reference(drive_reference() - GUI_HOME_DRIVE_REFERENCE_DELTA);
+}
+
 void gui_home_on_key_press(gui_home_t* home, keycode_t key)
 {
     switch (key) {
         case KEY_MINUS:
-            drive_dec_reference();
+            gui_home_on_dec_reference();
             break;
         case KEY_PLUS:
-            drive_inc_reference();
+            gui_home_on_inc_reference();
             break;
         case KEY_ENTER:
             home->on_enter(home);
