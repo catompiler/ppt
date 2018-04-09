@@ -38,12 +38,23 @@ GUI_TILE_CONDITIONS(gui_tile_conditions, GUI_TILE_CONDITIONS_COUNT) {
 };
 
 
+/*
+ * Цифровой фильтр значения на плитке.
+ */
+//! Вес фильтра.
+#define GUI_TILE_FILTER_WEIGHT 0xe700
+
+
 err_t gui_tile_init(gui_tile_t* tile, gui_metro_t* gui)
 {
     gui_metro_theme_t* theme = gui_metro_theme(gui_object_gui(GUI_OBJECT(tile)));
 
     tile->status = GUI_TILE_STATUS_OK;
     tile->status_color = theme->color_tile;
+    
+    filter_ab_init(&tile->filter);
+    filter_ab_set_weight(&tile->filter, GUI_TILE_FILTER_WEIGHT);
+    
     return gui_tile_init_parent(tile, gui, NULL);
 }
 
@@ -85,6 +96,8 @@ void gui_tile_set_type(gui_tile_t* tile, const gui_tile_type_t type)
 {
     if (tile->type.param_id != type.param_id) {
         tile->type = type;
+        //filter_ab_reset(&tile->filter);
+        filter_ab_set_value(&tile->filter, settings_valuef(tile->type.param_id));
         gui_widget_repaint(GUI_WIDGET(tile), NULL);
     }
 }
@@ -245,6 +258,10 @@ void gui_tile_repaint_value(gui_tile_t* tile, const rect_t* rect)
                 param_t* param_warn_max = settings_param_by_id(tile->type.warn_max);
                 param_t* param_alarm_max = settings_param_by_id(tile->type.alarm_max);
                 fixed32_t valf = settings_param_valuef(param);
+                // Фильтр.
+                filter_ab_put(&tile->filter, valf);
+                valf = filter_ab_value(&tile->filter);
+                
                 fixed32_t alarm_min = settings_param_valuef(param_alarm_min);
                 fixed32_t warn_min = settings_param_valuef(param_warn_min);
                 fixed32_t warn_max = settings_param_valuef(param_warn_max);

@@ -14,6 +14,8 @@
 #include "defs/defs.h"
 #include "drive_events.h"
 #include <sys/time.h>
+#include "filter_ab/filter_ab.h"
+
 
 #define GUI_TILE_VALUE_FONT_WIDTH 24
 #define GUI_TILE_VALUE_FONT_SPACE 2
@@ -89,6 +91,7 @@ struct _Gui_Tile {
     bool update_errors; //! Необходимость обновления отображения ошибок
     gui_tile_status_t status; //!< Статус плитки.
     graphics_color_t status_color; //!< Цвет фона плитки
+    filter_ab_t filter; //!< Фильтр значения.
 };
 
 //! Приводит указатель tile к типу плитки.
