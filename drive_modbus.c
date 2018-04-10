@@ -330,7 +330,7 @@ static modbus_rtu_error_t drive_modbus_on_read_hold_reg(uint16_t address, uint16
             *value = settings_param_value_raw(param);
             break;
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
-            *value = fixed32_get_int(drive_reference());
+            *value = fixed32_get_int(fixed32_round(drive_reference() * 10));
             break;
         case DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR:
             tm = time(NULL);
@@ -376,7 +376,7 @@ static modbus_rtu_error_t drive_modbus_on_write_reg(uint16_t address, uint16_t v
             settings_param_set_value_raw(param, (param_data_t)value);
             break;
         case DRIVE_MODBUS_HOLD_REG_REFERENCE:
-            if(drive_set_reference(fixed32_make_from_int((fixed32_t)value)) != E_NO_ERROR)
+            if(drive_set_reference(fixed32_make_from_fract((fixed32_t)value, 10)) != E_NO_ERROR)
                 return MODBUS_RTU_ERROR_INVALID_DATA;
             break;
         case DRIVE_MODBUS_HOLD_REG_DATETIME_YEAR:

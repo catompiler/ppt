@@ -25,7 +25,7 @@ typedef struct _Gui_Icon gui_icon_t;
 #define GUI_STATUSBAR_TYPE_ID 201
 
 #define GUI_STATUSBAR_ICONS_COUNT 10
-#define GUI_STATUSBAR_REF_STR_FORMAT "% 4d%%"
+#define GUI_STATUSBAR_REF_STR_FORMAT "%4d.%1d%%"
 
 typedef bool (*gui_icon_condition_callback_t)();
 
@@ -104,7 +104,7 @@ struct _Gui_Statusbar {
     gui_icon_t* icons; //!< Иконки статуса.
     graphics_t* icon_graphics; //!< Изображение значков
     uint8_t icon_count; //!< Количество значков в изображении
-    uint32_t reference; //!< Отображаемое значение задания привода.
+    reference_t reference; //!< Отображаемое значение задания привода.
 };
 
 //! Приводит указатель statusbar к типу статусбара.

@@ -53,24 +53,30 @@ void gui_statusbar_repaint_reference_n_icons(gui_statusbar_t* statusbar, const r
         painter_set_font(&painter, theme->middle_font);
         painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMASK);
         
-        char ref_str[6];  
+        reference_t reference = drive_reference();
+        
+        int32_t int_part = fixed32_get_int(reference);
+        int32_t fract_part = fixed32_get_fract_by_denom(fixed_abs(reference), 10);
+        
+#define REF_STR_LEN 8
+        
+        char ref_str[REF_STR_LEN];
+        
+        snprintf(ref_str, REF_STR_LEN, GUI_STATUSBAR_REF_STR_FORMAT, (int)int_part, (int)fract_part);
+        
+#undef REF_STR_LEN
+        
+        painter_string_size(&painter, ref_str, &width, &height);
+        
         // отрисовка задания привода
-        uint32_t reference_i = fixed32_get_int(drive_reference());
-        if (statusbar->reference != reference_i) {
-            statusbar->reference = reference_i;
+        if (statusbar->reference != reference) {
+            statusbar->reference = reference;
             
-            snprintf(ref_str, 6, GUI_STATUSBAR_REF_STR_FORMAT, (int)statusbar->reference);
-            graphics_pos_t text_y;
-            text_y = -1;
-
-            painter_string_size(&painter, ref_str, &width, &height);
+            graphics_pos_t text_y = -1;
             
             painter_draw_string(&painter, text_x, text_y, ref_str);
         }
-        else {
-            snprintf(ref_str, 6, GUI_STATUSBAR_REF_STR_FORMAT, (int)statusbar->reference);
-            painter_string_size(&painter, ref_str, &width, &height);
-        }
+        
         text_x += width + 3;
         // прорисовка иконок
         snprintf(ref_str, 6, GUI_TIME_STR_FORMAT, 0, 0);

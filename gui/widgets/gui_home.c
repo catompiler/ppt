@@ -10,7 +10,7 @@
 
 
 // Инкремент задания при нажатии на кнопку.
-#define GUI_HOME_DRIVE_REFERENCE_DELTA (fixed32_make_from_int(1))
+#define GUI_HOME_DRIVE_REFERENCE_DELTA (fixed32_make_from_fract(1, 2))
 
 
 err_t gui_home_init(gui_home_t* home, gui_metro_t* gui)
