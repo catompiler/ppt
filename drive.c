@@ -2714,6 +2714,23 @@ bool drive_emergency_stop(void)
     return false;
 }
 
+void drive_mcu_fault(void)
+{
+    drive_supply_off();
+    
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR, DRIVE_DIO_ON);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_RUNNING, DRIVE_DIO_OFF);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_READY, DRIVE_DIO_OFF);
+    drive_dio_set_output_type_state(DRIVE_DIO_OUT_OK, DRIVE_DIO_OFF);
+}
+
+void drive_watchdog_timeout(void)
+{
+    drive_set_error(DRIVE_ERROR_WATCHDOG);
+    drive_set_state(DRIVE_STATE_ERROR);
+    drive_task_events_write(DRIVE_EVENT_TYPE_ERROR, false);
+}
+
 bool drive_calibrate_power(void)
 {
     if(drive.state == DRIVE_STATE_IDLE ||

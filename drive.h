@@ -110,7 +110,8 @@ typedef enum _Drive_Error {
     DRIVE_ERROR_ROT_BREAK            = 0x80, //!< Обрыв якоря.
     DRIVE_ERROR_ROT_MEASURE_BREAK    = 0x100, //!< Обрыв измерения якоря.
     DRIVE_ERROR_HEATSINK_TEMP        = 0x200, //!< Перегрев радиатора.
-    DRIVE_ERROR_SENSOR               = 0x400  //!< Ошибка датчиков.
+    DRIVE_ERROR_SENSOR               = 0x400, //!< Ошибка датчиков.
+    DRIVE_ERROR_WATCHDOG             = 0x4000 //!< Срабатывание сторожевого таймера.
 } drive_error_t;
 
 //! Тип ошибок привода.
@@ -581,6 +582,19 @@ extern bool drive_stop(void);
  * @return Флаг останова привода.
  */
 extern bool drive_emergency_stop(void);
+
+/**
+ * Обработчик внутренней ошибки.
+ * Отключает тиристоры,
+ * устанавливает цифровой выход ошибки.
+ */
+extern void drive_mcu_fault(void);
+
+/**
+ * Обработчик перезагрузки по сторожевому таймеру.
+ * Записывает событие, устанавливает флаг ошибки.
+ */
+extern void drive_watchdog_timeout(void);
 
 /**
  * Выполняет калибровку питания.

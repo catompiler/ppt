@@ -302,26 +302,79 @@ static uint16_t adc_raw_tuning_buffer[ADC_TUNING_BUFFER_LEN];
 
 
 /*
+ * Выкидывать жалко.
+ */
+
+/*
+// Время моргания для аппаратных ошибок.
+#define DRIVE_MCU_FAULT_T_ON 4
+#define DRIVE_MCU_FAULT_T_OFF 1
+
+// Время моргания для ошибки переполнения стека.
+#define DRIVE_STACK_OVERFLOW_T_ON 2
+#define DRIVE_STACK_OVERFLOW_T_OFF 2
+
+
+
+//! Задержка на заданное число секунд.
+static void delay_s(uint32_t t)
+{
+    while(t --){
+        delay_ms(1000);
+    }
+}
+
+
+//! Моргание выходом ERROR.
+//! Индикация фатальной ошибки.
+static void mcu_fault_blink_loop(uint32_t t_on_s, uint32_t t_off_s)
+{
+    for(;;){
+        drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR, DRIVE_DIO_ON);
+        delay_s(t_on_s);
+        drive_dio_set_output_type_state(DRIVE_DIO_OUT_ERROR, DRIVE_DIO_OFF);
+        delay_s(t_off_s);
+    }
+}
+*/
+
+/*
  * Обработчики исключений.
  */
 
 IRQ_ATTRIBS void HardFault_Handler(void)
 {
+    drive_mcu_fault();
+    
+    //mcu_fault_blink_loop(DRIVE_MCU_FAULT_T_ON, DRIVE_MCU_FAULT_T_OFF);
+    
     for(;;);
 }
 
 IRQ_ATTRIBS void MemManage_Handler(void)
 {
+    drive_mcu_fault();
+    
+    //mcu_fault_blink_loop(DRIVE_MCU_FAULT_T_ON, DRIVE_MCU_FAULT_T_OFF);
+    
     for(;;);
 }
 
 IRQ_ATTRIBS void BusFault_Handler(void)
 {
+    drive_mcu_fault();
+    
+    //mcu_fault_blink_loop(DRIVE_MCU_FAULT_T_ON, DRIVE_MCU_FAULT_T_OFF);
+    
     for(;;);
 }
 
 IRQ_ATTRIBS void UsageFault_Handler(void)
 {
+    drive_mcu_fault();
+    
+    //mcu_fault_blink_loop(DRIVE_MCU_FAULT_T_ON, DRIVE_MCU_FAULT_T_OFF);
+    
     for(;;);
 }
 
@@ -598,11 +651,15 @@ IRQ_ATTRIBS void TIM4_IRQHandler(void)
     drive_triac_exc_timer_irq_handler();
 }
 
+// Функция сброса сторожевого таймера.
+static void reset_watchdog(void);
+// Прерывание таймера виртуального нуля.
 IRQ_ATTRIBS void TIM7_IRQHandler(void)
 {
     if(TIM_GetITStatus(DRIVE_MAIN_TIM, TIM_IT_Update) != RESET){
         TIM_ClearITPendingBit(DRIVE_MAIN_TIM, TIM_IT_Update);
         
+        reset_watchdog();
     
         if(drive_state() == DRIVE_STATE_SELFTUNE && drive_selftuning_data_collecting()){
             drive_selftuning_set_data_collecting(false);
@@ -787,6 +844,60 @@ static void init_PDR(void)
 {
     PWR->CR |= PWR_CR_PLS_2V9;
     PWR->CR |= PWR_CR_PVDE;
+}
+
+// Ключи сторожевого таймера.
+// Ключ снятия защиты на запись.
+#define WDT_UNPROTECT_KEY 0x5555
+// Ключ установки зашиты на запись - любое значение.
+#define WDT_PROTECT_KEY 0xFFFF
+// Ключ перезапуска таймера.
+#define WDT_RELOAD_KEY 0xAAAA
+// Ключ запуска таймера.
+#define WDT_START_KEY 0xCCCC
+
+static void init_watchdog(void)
+{
+    // Включим внутренний осциллятор 40 кГц.
+    RCC->CSR |= RCC_CSR_LSION;
+    // Подождём запуска.
+    while(!(RCC->CSR & RCC_CSR_LSIRDY));
+    
+    // Разблокируем защиту на запись.
+    IWDG->KR = WDT_UNPROTECT_KEY;
+    
+    // Подождём сброса бита обновления предделителя.
+    while((IWDG->SR & IWDG_SR_PVU));
+    // Запишем значение предделителя.
+    IWDG->PR = 0x0;
+    
+    // Подождём сброса бита обновления загружаемого значения.
+    while((IWDG->SR & IWDG_SR_RVU));
+    // Запишем загружаемое значение.
+    IWDG->RLR = 0x64;
+    
+    // Заблокируем защиту на запись.
+    IWDG->KR = WDT_PROTECT_KEY;
+    
+    // Получаем время счёта таймера 10 мс.
+    
+    // Запустим таймер.
+    IWDG->KR = WDT_START_KEY;
+}
+
+static bool check_watchdog_reset(void)
+{
+    return (RCC->CSR & RCC_CSR_IWDGRSTF) != 0;
+}
+
+static void clear_watchdog_reset_flag(void)
+{
+    RCC->CSR |= RCC_CSR_RMVF;
+}
+
+static void reset_watchdog(void)
+{
+    IWDG->KR = WDT_RELOAD_KEY;
 }
 
 /*
@@ -2040,11 +2151,16 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
 
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 {
-	( void ) pxTask;
-	( void ) pcTaskName;
+    ( void ) pxTask;
+    ( void ) pcTaskName;
 
-        __disable_irq();
-	for( ;; );
+    __disable_irq();
+
+    drive_mcu_fault();
+
+    //mcu_fault_blink_loop(DRIVE_STACK_OVERFLOW_T_ON, DRIVE_STACK_OVERFLOW_T_OFF);
+
+    for( ;; );
 }
 
 #endif
@@ -2115,7 +2231,13 @@ int main(void)
     init_adc();
     init_adc_timer();
     
+    init_watchdog();
     init_drive_main_timer();
+    
+    if(check_watchdog_reset()){
+        clear_watchdog_reset_flag();
+        drive_watchdog_timeout();
+    }
     
     init_modbus_usart();
     init_modbus();
