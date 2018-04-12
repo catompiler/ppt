@@ -2,6 +2,8 @@
 #include "nvdata.h"
 #include <string.h>
 #include "settings.h"
+#include "storage.h"
+#include "crc/crc16_ccitt.h"
 
 
 //! Magic - контрольное значение валидности данных.
@@ -32,6 +34,15 @@
 //#define DRIVE_NVDATA__ADDRESS 
 //#define DRIVE_NVDATA__SIZE 
 
+#pragma pack(push, 1)
+typedef struct _Drive_Nvdata_Backup {
+    uint32_t lifetime;
+    uint32_t runtime;
+    uint32_t fan_runtime;
+    uint16_t crc;
+} drive_nvdata_backup_t;
+#pragma pack(pop)
+
 
 //! Структура энергонезависимых данных привода.
 typedef struct _Drive_Nvdata {
@@ -58,6 +69,35 @@ void drive_nvdata_init(void)
     nvdata.param_runtime = settings_param_by_id(PARAM_ID_RUNTIME);
     nvdata.param_fan_runtime = settings_param_by_id(PARAM_ID_FAN_RUNTIME);
     nvdata.param_last_runtime = settings_param_by_id(PARAM_ID_LAST_RUNTIME);
+}
+
+err_t drive_nvdata_read(void)
+{
+    drive_nvdata_backup_t data;
+    
+    err_t err = storage_read(STORAGE_RGN_NVDATA_ADDRESS, &data, sizeof(drive_nvdata_backup_t));
+    if(err != E_NO_ERROR) return err;
+    
+    uint16_t crc = crc16_ccitt(&data, sizeof(drive_nvdata_backup_t) - sizeof(uint16_t));
+    if(crc != data.crc) return E_CRC;
+    
+    drive_nvdata_set_lifetime(data.lifetime);
+    drive_nvdata_set_runtime(data.runtime);
+    drive_nvdata_set_fan_runtime(data.fan_runtime);
+    
+    return E_NO_ERROR;
+}
+
+err_t drive_nvdata_write(void)
+{
+    drive_nvdata_backup_t data;
+    
+    data.lifetime = drive_nvdata_lifetime();
+    data.runtime = drive_nvdata_runtime();
+    data.fan_runtime = drive_nvdata_fan_runtime();
+    data.crc = crc16_ccitt(&data, sizeof(drive_nvdata_backup_t) - sizeof(uint16_t));
+    
+    return storage_write(STORAGE_RGN_NVDATA_ADDRESS, &data, sizeof(drive_nvdata_backup_t));
 }
 
 bool drive_nvdata_valid(void)

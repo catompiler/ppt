@@ -14,14 +14,19 @@
 #define STORAGE_RGN_SETTINGS_SIZE 0x400
 
 //! Адрес региона.
-#define STORAGE_RGN_EVMAP_ADDRESS 0x400
+#define STORAGE_RGN_NVDATA_ADDRESS 0x400
+//! Размер региона.
+#define STORAGE_RGN_NVDATA_SIZE 0x40
+
+//! Адрес региона.
+#define STORAGE_RGN_EVMAP_ADDRESS 0x440
 //! Размер региона.
 #define STORAGE_RGN_EVMAP_SIZE 0x40
 
 //! Адрес региона.
-#define STORAGE_RGN_EVENTS_ADDRESS 0x440
+#define STORAGE_RGN_EVENTS_ADDRESS 0x480
 //! Размер региона.
-#define STORAGE_RGN_EVENTS_SIZE 0xbc0
+#define STORAGE_RGN_EVENTS_SIZE 0xb80
 
 //! Адрес региона.
 #define STORAGE_RGN_OSC_ADDRESS 0x1000
