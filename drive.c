@@ -2728,7 +2728,7 @@ void drive_watchdog_timeout(void)
 {
     drive_set_error(DRIVE_ERROR_WATCHDOG);
     drive_set_state(DRIVE_STATE_ERROR);
-    drive_task_events_write(DRIVE_EVENT_TYPE_ERROR, false);
+    drive_task_storage_write_event(DRIVE_EVENT_TYPE_ERROR, false);
 }
 
 bool drive_calibrate_power(void)

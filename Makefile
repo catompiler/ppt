@@ -15,7 +15,7 @@ OBJECTS   = main.o FreeRTOS-openocd.o power.o triac.o triac_pair.o\
             drive_temp.o drive_motor.o channel_filter.o drive_overload.o\
             drive_selfstart.o drive_math.o drive_hires_timer.o\
             drive_task_i2c_watchdog.o drive_task_buzz.o drive_task_temp.o\
-            drive_task_ui.o drive_task_settings.o drive_task_events.o\
+            drive_task_ui.o drive_task_utils.o drive_task_storage.o\
             drive_task_main.o drive_task_adc.o drive_task_modbus.o\
             drive_task_triacs.o drive_task_sync.o drive_selftuning.o\
 	    drive_task_selftune.o

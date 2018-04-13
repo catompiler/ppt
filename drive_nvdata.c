@@ -81,6 +81,8 @@ err_t drive_nvdata_read(void)
     uint16_t crc = crc16_ccitt(&data, sizeof(drive_nvdata_backup_t) - sizeof(uint16_t));
     if(crc != data.crc) return E_CRC;
     
+    drive_nvdata_clear();
+    
     drive_nvdata_set_lifetime(data.lifetime);
     drive_nvdata_set_runtime(data.runtime);
     drive_nvdata_set_fan_runtime(data.fan_runtime);

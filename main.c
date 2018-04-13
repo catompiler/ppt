@@ -285,8 +285,8 @@ static uint16_t adc_raw_tuning_buffer[ADC_TUNING_BUFFER_LEN];
 #define DRIVE_TASK_PRIORITY_TRIACS 13
 #define DRIVE_TASK_PRIORITY_MAIN 12
 #define DRIVE_TASK_PRIORITY_MODBUS 10
-#define DRIVE_TASK_PRIORITY_EVENTS 8
-#define DRIVE_TASK_PRIORITY_SETTINGS 7
+#define DRIVE_TASK_PRIORITY_STORAGE 8
+#define DRIVE_TASK_PRIORITY_UTILS 7
 #define DRIVE_TASK_PRIORITY_SELFTUNE 6
 //#define DRIVE_TASK_PRIORITY_TIMER 5
 #define DRIVE_TASK_PRIORITY_I2C_WDT 4
@@ -913,12 +913,11 @@ static void init_rtc_alarm_exti_line(void)
 }
 */
 
-static void init_rtc_nvdata(void)
+static void init_rtc(void)
 {
-    drive_nvdata_init();
     rtc_init();
     
-    if(rtc_state() == DISABLE || !drive_nvdata_valid()){
+    if(rtc_state() == DISABLE){
         PWR_BackupAccessCmd(ENABLE);
         
         RCC_BackupResetCmd(ENABLE);
@@ -926,8 +925,6 @@ static void init_rtc_nvdata(void)
         RCC_BackupResetCmd(DISABLE);
         
         PWR_BackupAccessCmd(ENABLE);
-        
-        drive_nvdata_clear();
         
         RCC_LSEConfig(RCC_LSE_ON);
         while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET);
@@ -950,6 +947,17 @@ static void init_rtc_nvdata(void)
     //NVIC_SetPriority(RTCAlarm_IRQn, IRQ_PRIOR_RTC_ALARM);
     NVIC_EnableIRQ(RTC_IRQn);
     //NVIC_EnableIRQ(RTCAlarm_IRQn);
+}
+
+static void init_nvdata(void)
+{
+    drive_nvdata_init();
+    
+    if(!drive_nvdata_valid()){
+        if(drive_nvdata_read() != E_NO_ERROR){
+            drive_nvdata_clear();
+        }
+    }
 }
 
 /*
@@ -2093,8 +2101,8 @@ static void init_drive_tasks(void)
     drive_task_main_init(DRIVE_TASK_PRIORITY_MAIN);
     drive_task_modbus_init(DRIVE_TASK_PRIORITY_MODBUS);
     drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
-    drive_task_events_init(DRIVE_TASK_PRIORITY_EVENTS);
-    drive_task_settings_init(DRIVE_TASK_PRIORITY_SETTINGS);
+    drive_task_storage_init(DRIVE_TASK_PRIORITY_STORAGE);
+    drive_task_utils_init(DRIVE_TASK_PRIORITY_UTILS);
     drive_task_selftune_init(DRIVE_TASK_PRIORITY_SELFTUNE);
     drive_task_i2c_watchdog_init(DRIVE_TASK_PRIORITY_I2C_WDT);
     setup_i2c_watchdogs();
@@ -2199,7 +2207,7 @@ int main(void)
     
     init_usart();
     
-    init_rtc_nvdata();
+    init_rtc();
     init_hires_timer();
     
     printf("STM32 MCU\r\n");
@@ -2207,6 +2215,8 @@ int main(void)
     init_spi2();
     init_eeprom();
     init_storage();
+    
+    init_nvdata();
     
     drive_events_init();
     if(drive_events_read() != E_NO_ERROR){

@@ -34,36 +34,36 @@ err_t drive_tasks_apply_settings(void)
 
 err_t drive_tasks_save_settings(void)
 {
-    drive_task_settings_save();
+    drive_task_storage_save_settings();
     return E_NO_ERROR;
 }
 
 err_t drive_tasks_write_error_event(void)
 {
-    return drive_task_events_write(DRIVE_EVENT_TYPE_ERROR, true);
+    return drive_task_storage_write_event(DRIVE_EVENT_TYPE_ERROR, true);
 }
 
 err_t drive_tasks_write_status_event(void)
 {
-    return drive_task_events_write(DRIVE_EVENT_TYPE_STATUS, true);
+    return drive_task_storage_write_event(DRIVE_EVENT_TYPE_STATUS, true);
 }
 
 err_t drive_tasks_write_warning_event(void)
 {
-    return drive_task_events_write(DRIVE_EVENT_TYPE_WARNING, false);
+    return drive_task_storage_write_event(DRIVE_EVENT_TYPE_WARNING, false);
 }
 
 err_t drive_tasks_read_event(future_t* future, drive_event_index_t event_index, drive_event_t* event)
 {
-    return drive_task_events_read(future, event_index, event);
+    return drive_task_storage_read_event(future, event_index, event);
 }
 
 err_t drive_tasks_read_osc_channel(future_t* future, drive_osc_index_t osc_index, size_t osc_channel)
 {
-    return drive_task_events_read_osc_channel(future, osc_index, osc_channel);
+    return drive_task_storage_read_osc_channel(future, osc_index, osc_channel);
 }
 
 err_t drive_tasks_clear_events(void)
 {
-    return drive_task_events_clear();
+    return drive_task_storage_clear_events();
 }
