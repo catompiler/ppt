@@ -27,6 +27,7 @@
 #include "drive_modbus.h"
 #include "drive_tasks.h"
 #include "drive_dio.h"
+#include "drive_dip.h"
 #include "drive_nvdata.h"
 #include "drive_temp.h"
 #include "drive_hires_timer.h"
@@ -758,10 +759,18 @@ static void modbus_on_msg_sent(void)
  * Инициализация.
  */
 
+static void init_dip(void)
+{
+    drive_dip_init();
+    drive_dip_update();
+}
+
 static void remap_config(void)
 {
     GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);          
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        GPIO_PinRemapConfig(GPIO_Remap_SPI1, ENABLE);
+    }
     GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_TIM4, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
@@ -788,14 +797,20 @@ static void init_periph_clock(void)
     // DMA.
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
-    // SPI.
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+    // SPI1.
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+    }
     // SPI2.
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
     // I2C1.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+    }
     // I2C2.
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2, ENABLE);
+    if(drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
+        RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C2, ENABLE);
+    }
     // TIM1.
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);    // Включаем тактирование General-purpose TIM2
     // TIM2.
@@ -2054,11 +2069,15 @@ static void init_drive_temp(void)
     struct timeval io_timeout = {0, HEATSINK_SENSOR_IO_TIMEOUT_US};
     struct timeval timeout = {HEATSINK_SENSOR_TIMEOUT_S, 0};
     
-    temp_is.heatsink_sensor = &heatsink_sensor;
-    temp_is.heatsink_sensor_reset_proc = reset_heatsink_sensor;
-    temp_is.heatsink_sensor_io_timeout = &io_timeout;
-    temp_is.heatsink_sensor_timeout = &timeout;
-    temp_is.heatsink_sensor_i2c_watchdog = WATCHDOG_I2C2;
+    memset(&temp_is, 0x0, sizeof(drive_temp_init_t));
+
+    if(drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
+        temp_is.heatsink_sensor = &heatsink_sensor;
+        temp_is.heatsink_sensor_reset_proc = reset_heatsink_sensor;
+        temp_is.heatsink_sensor_io_timeout = &io_timeout;
+        temp_is.heatsink_sensor_timeout = &timeout;
+        temp_is.heatsink_sensor_i2c_watchdog = WATCHDOG_I2C2;
+    }
     temp_is.update_interval = &temp_interval;
     temp_is.set_fan_rpm_proc = fan_pwm_set_value;
     
@@ -2087,8 +2106,12 @@ static void on_i2c_watchdog_timeout(uint32_t i2c_number)
 
 static void setup_i2c_watchdogs(void)
 {
-    drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C1, on_i2c_watchdog_timeout);
-    drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C2, on_i2c_watchdog_timeout);
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C1, on_i2c_watchdog_timeout);
+    }
+    if(drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
+        drive_task_i2c_watchdog_set_reset_callback(WATCHDOG_I2C2, on_i2c_watchdog_timeout);
+    }
 }
 
 static void init_drive_tasks(void)
@@ -2104,11 +2127,18 @@ static void init_drive_tasks(void)
     drive_task_storage_init(DRIVE_TASK_PRIORITY_STORAGE);
     drive_task_utils_init(DRIVE_TASK_PRIORITY_UTILS);
     drive_task_selftune_init(DRIVE_TASK_PRIORITY_SELFTUNE);
-    drive_task_i2c_watchdog_init(DRIVE_TASK_PRIORITY_I2C_WDT);
+
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD) || drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
+        drive_task_i2c_watchdog_init(DRIVE_TASK_PRIORITY_I2C_WDT);
+    }
     setup_i2c_watchdogs();
+
     drive_task_temp_init(DRIVE_TASK_PRIORITY_TEMP);
-    drive_task_buzz_init(DRIVE_TASK_PRIORITY_BUZZ);
-    drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
+
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        drive_task_buzz_init(DRIVE_TASK_PRIORITY_BUZZ);
+        drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
+    }
 }
 
 static void drive_reinit_gui(void)
@@ -2123,7 +2153,9 @@ static void drive_reinit_gui(void)
 
 static void on_drive_reset(void)
 {
-    drive_reinit_gui();
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        drive_reinit_gui();
+    }
 }
 
 /*
@@ -2200,11 +2232,13 @@ int main(void)
     
     NVIC_SetPriorityGrouping(0x3);
     
+    init_dip();
+
     init_periph_clock();
     init_PDR();
     
     remap_config();
-    
+
     init_usart();
     
     init_rtc();
@@ -2253,13 +2287,17 @@ int main(void)
     init_modbus();
     init_drive_modbus();
     
-    init_i2c1();
-    init_spi();
-    init_drive_ui();
-    init_exti_pca9555();
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        init_i2c1();
+        init_spi();
+        init_drive_ui();
+        init_exti_pca9555();
+    }
     
-    init_i2c2();
-    init_heatsink_sensor();
+    if(drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
+        init_i2c2();
+        init_heatsink_sensor();
+    }
     init_fan_pwm();
     init_drive_temp();
     

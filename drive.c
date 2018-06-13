@@ -1740,6 +1740,7 @@ static void drive_setup_triacs_open(phase_t phase, phase_t last_open_phase, phas
     drive_triacs_setup_exc(phase, last_open_phase, sensor_time);
 }
 
+/*
 fixed32_t calc_open_angle_rms(fixed32_t Umax, fixed32_t U)
 {
     fixed32_t U_Umax = fixed32_div((int64_t)U, Umax);
@@ -1756,6 +1757,7 @@ fixed32_t calc_open_angle_inst(fixed32_t Umax, fixed32_t U)
     
     return angle;
 }
+*/
 
 static void drive_on_triac_pair_opened(triac_pair_number_t pair)
 {

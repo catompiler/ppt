@@ -18,7 +18,7 @@ OBJECTS   = main.o FreeRTOS-openocd.o power.o triac.o triac_pair.o\
             drive_task_ui.o drive_task_utils.o drive_task_storage.o\
             drive_task_main.o drive_task_adc.o drive_task_modbus.o\
             drive_task_triacs.o drive_task_sync.o drive_selftuning.o\
-	    drive_task_selftune.o
+            drive_task_selftune.o drive_dip.o
 
 # Собственные библиотеки в исходниках.
 SRC_LIBS  = circular_buffer usart_buf newlib_stubs\

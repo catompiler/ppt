@@ -64,33 +64,36 @@ ALWAYS_INLINE static fixed32_t fixed16_to_32(fixed16_t f)
 err_t drive_temp_init(drive_temp_init_t* temp_is)
 {
     if(temp_is == NULL) return E_NULL_POINTER;
-    if(temp_is->heatsink_sensor == NULL) return E_NULL_POINTER;
+    //if(temp_is->heatsink_sensor == NULL) return E_NULL_POINTER;
     
     memset(&drive_temp, 0x0, sizeof(drive_temp_t));
     
     drive_temp.heatsink_sensor = temp_is->heatsink_sensor;
-    drive_temp.heatsink_sensor_reset = temp_is->heatsink_sensor_reset_proc;
+    
+    if(drive_temp.heatsink_sensor){
+        drive_temp.heatsink_sensor_reset = temp_is->heatsink_sensor_reset_proc;
+
+        if(temp_is->heatsink_sensor_io_timeout){
+            memcpy(&drive_temp.heatsink_sensor_io_timeout, temp_is->heatsink_sensor_io_timeout, sizeof(struct timeval));
+        }else{
+            drive_temp.heatsink_sensor_io_timeout.tv_sec = 0;
+            drive_temp.heatsink_sensor_io_timeout.tv_usec = DRIVE_TEMP_IO_TIMEOUT_DEFAULT_US;
+        }
+
+        drive_temp.heatsink_sensor_i2c_watchdog = temp_is->heatsink_sensor_i2c_watchdog;
+
+        if(temp_is->heatsink_sensor_timeout){
+            memcpy(&drive_temp.heatsink_sensor_timeout, temp_is->heatsink_sensor_timeout, sizeof(struct timeval));
+        }else{
+            drive_temp.heatsink_sensor_timeout.tv_sec = DRIVE_TEMP_TIMEOUT_DEFAULT_S;
+            drive_temp.heatsink_sensor_timeout.tv_usec = 0;
+        }
+    }
     
     if(temp_is->update_interval){
         memcpy(&drive_temp.update_interval, temp_is->update_interval, sizeof(struct timeval));
     }
-    
-    if(temp_is->heatsink_sensor_io_timeout){
-        memcpy(&drive_temp.heatsink_sensor_io_timeout, temp_is->heatsink_sensor_io_timeout, sizeof(struct timeval));
-    }else{
-        drive_temp.heatsink_sensor_io_timeout.tv_sec = 0;
-        drive_temp.heatsink_sensor_io_timeout.tv_usec = DRIVE_TEMP_IO_TIMEOUT_DEFAULT_US;
-    }
-    
-    drive_temp.heatsink_sensor_i2c_watchdog = temp_is->heatsink_sensor_i2c_watchdog;
-    
-    if(temp_is->heatsink_sensor_timeout){
-        memcpy(&drive_temp.heatsink_sensor_timeout, temp_is->heatsink_sensor_timeout, sizeof(struct timeval));
-    }else{
-        drive_temp.heatsink_sensor_timeout.tv_sec = DRIVE_TEMP_TIMEOUT_DEFAULT_S;
-        drive_temp.heatsink_sensor_timeout.tv_usec = 0;
-    }
-    
+
     drive_temp.set_fan_rpm = temp_is->set_fan_rpm_proc;
     
     drive_temp_update_settings();
@@ -128,7 +131,10 @@ void drive_temp_regulate_fan(void)
             
             timersub(&cur_tv, &drive_temp.heatsink_temp_time, &diff_tv);
 
-            if(!drive_temp.heatsink_temp_avail && timercmp(&diff_tv, &drive_temp.heatsink_sensor_timeout, >)){
+            if(!drive_temp.heatsink_sensor ||
+                    (!drive_temp.heatsink_temp_avail &&
+                      timercmp(&diff_tv, &drive_temp.heatsink_sensor_timeout, >))
+                      ){
                 rpm = DRIVE_TEMP_FAN_RPM_MAX;
             }else if(drive_temp.heatsink_temp <= drive_temp.fan_temp_min){
                 rpm = drive_temp.fan_rpm_min;
@@ -204,23 +210,28 @@ bool drive_temp_update(void)
     
     fixed16_t temp16 = 0;
     
-    if(drive_temp.updated || !drive_temp.heatsink_temp_avail){
-        
-        uint32_t timeout_ms = drive_temp.heatsink_sensor_io_timeout.tv_sec * 1000 +
-                drive_temp.heatsink_sensor_io_timeout.tv_usec / 1000;
-        
-        drive_task_i2c_watchdog_start(drive_temp.heatsink_sensor_i2c_watchdog, timeout_ms);
-        
-        if(lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
-            drive_temp.heatsink_temp_avail = true;
-            drive_temp.heatsink_temp = fixed16_to_32(temp16);
-            memcpy(&drive_temp.heatsink_temp_time, &cur_time, sizeof(struct timeval));
-        }else{
-            drive_temp.heatsink_temp_avail = false;
-            update_success = false;
+    if(drive_temp.heatsink_sensor){
+        if(drive_temp.updated || !drive_temp.heatsink_temp_avail){
+
+            uint32_t timeout_ms = drive_temp.heatsink_sensor_io_timeout.tv_sec * 1000 +
+                    drive_temp.heatsink_sensor_io_timeout.tv_usec / 1000;
+
+            drive_task_i2c_watchdog_start(drive_temp.heatsink_sensor_i2c_watchdog, timeout_ms);
+
+            if(lm75_read_temp(drive_temp.heatsink_sensor, &temp16) == E_NO_ERROR){
+                drive_temp.heatsink_temp_avail = true;
+                drive_temp.heatsink_temp = fixed16_to_32(temp16);
+                memcpy(&drive_temp.heatsink_temp_time, &cur_time, sizeof(struct timeval));
+            }else{
+                drive_temp.heatsink_temp_avail = false;
+                update_success = false;
+            }
+
+            drive_task_i2c_watchdog_stop(drive_temp.heatsink_sensor_i2c_watchdog);
         }
-        
-        drive_task_i2c_watchdog_stop(drive_temp.heatsink_sensor_i2c_watchdog);
+    }else{
+        drive_temp.heatsink_temp_avail = false;
+        update_success = false;
     }
     
     if(update_success && timerisset(&drive_temp.update_interval)){
