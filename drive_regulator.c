@@ -5,6 +5,7 @@
 #include "drive_power.h"
 #include "drive_motor.h"
 #include "drive_overload.h"
+#include "mid_filter/mid_filter3i.h"
 #include <string.h>
 
 
@@ -31,6 +32,8 @@ typedef struct _Drive_Regulator {
     fixed32_t I_exc; //!< Номинальный ток возбуждения.
     fixed32_t rpm_rot_ref; //!< Текущие обороты задания.
     fixed32_t i_rot_ref; //!< Текущий ток задания.
+
+    mid_filter3i_t rpm_mid; //!< Медианный фильтр ограничителя напряжения (оборотов).
     
     pid_controller_t spd_pid; //!< ПИД-регулятор скорости.
     pid_controller_t rot_pid; //!< ПИД-регулятор тока якоря.
@@ -49,6 +52,8 @@ err_t drive_regulator_init(void)
     pid_controller_init(&regulator.rot_pid, 0, 0, 0);
     pid_controller_init(&regulator.exc_pid, 0, 0, 0);
     
+    mid_filter3i_init(&regulator.rpm_mid);
+
     return E_NO_ERROR;
 }
 
@@ -192,6 +197,10 @@ void drive_regulator_start(void)
         regulator.state = DRIVE_REGULATOR_STATE_START;
         
         ramp_set_target_reference(&regulator.ramp, regulator.reference);
+    }
+
+    if(regulator.state == DRIVE_REGULATOR_STATE_IDLE){
+        mid_filter3i_reset(&regulator.rpm_mid);
     }
 }
 
@@ -431,9 +440,14 @@ static void drive_regulator_process_impl(void)
 
             fixed32_t rpm_rot_ref = fixed32_mul((int64_t)rpm_rot_max, ramp_cur_ref);
 
-            if(rpm_rot_ref > rpm_rot_cur_max){
-                rpm_rot_ref = rpm_rot_cur_max;
-                ramp_adjust_current_reference(&regulator.ramp, rpm_rot_cur_max, rpm_rot_max);
+            mid_filter3i_put(&regulator.rpm_mid, rpm_rot_cur_max);
+            rpm_rot_cur_max = mid_filter3i_value(&regulator.rpm_mid);
+
+            bool rpm_clamp = rpm_rot_ref > rpm_rot_cur_max;
+
+            if(rpm_clamp){
+                    rpm_rot_ref = rpm_rot_cur_max;
+                    ramp_adjust_current_reference(&regulator.ramp, rpm_rot_cur_max, rpm_rot_max);
             }
 
             regulator.rpm_rot_ref = rpm_rot_ref;
