@@ -15,6 +15,9 @@
 // Длина очереди.
 #define QUEUE_UTILS_SIZE 4
 
+// Ожидание очереди.
+#define TASK_UTILS_WAIT 0
+
 // Число таймеров.
 #define TIMERS_COUNT 1
 // Таймер записи наработки.
@@ -24,6 +27,8 @@
 // Команды задачи.
 //! Применение настроек.
 #define TASK_UTILS_CMD_APPLY_SETTINGS 0
+//! Сброс задачи UI.
+#define TASK_UTILS_CMD_RESET_UI 1
 
 
 typedef struct _Task_Utils {
@@ -38,6 +43,9 @@ typedef struct _Task_Utils {
     // Таймер.
     StaticTimer_t timer_buffer[TIMERS_COUNT]; //!< Буфер таймера.
     TimerHandle_t timer_handle[TIMERS_COUNT]; //!< Идентификатор таймера.
+
+    // Данные.
+    drive_task_utils_callback_t reset_ui; //!< Каллбэк сброса UI.
 } task_utils_t;
 
 
@@ -72,10 +80,20 @@ err_t drive_task_utils_init(uint32_t priority)
     return E_NO_ERROR;
 }
 
+void drive_task_utils_set_reset_ui_callback(drive_task_utils_callback_t callback)
+{
+    utils_task.reset_ui = callback;
+}
+
 static void utils_task_apply_impl(void)
 {
     drive_update_settings();
     drive_temp_update_settings();
+}
+
+static void utils_task_reset_ui_impl(void)
+{
+    if(utils_task.reset_ui) utils_task.reset_ui();
 }
 
 static void utils_task_proc(void* arg)
@@ -91,6 +109,9 @@ static void utils_task_proc(void* arg)
                 case TASK_UTILS_CMD_APPLY_SETTINGS:
                     utils_task_apply_impl();
                     break;
+                case TASK_UTILS_CMD_RESET_UI:
+                    utils_task_reset_ui_impl();
+                    break;
             }
         }
     }
@@ -103,8 +124,20 @@ void utils_task_nvdata_proc(void* arg)
     drive_task_storage_save_nvdata();
 }
 
-void drive_task_settings_apply(void)
+err_t drive_task_settings_apply(void)
 {
     uint8_t cmd = TASK_UTILS_CMD_APPLY_SETTINGS;
-    xQueueSendToBack(utils_task.queue_handle, &cmd, portMAX_DELAY);
+    if(xQueueSendToBack(utils_task.queue_handle, &cmd, TASK_UTILS_WAIT) != pdTRUE){
+        return E_OUT_OF_MEMORY;
+    }
+    return E_NO_ERROR;
+}
+
+err_t drive_task_utils_reset_ui(void)
+{
+    uint8_t cmd = TASK_UTILS_CMD_RESET_UI;
+    if(xQueueSendToBack(utils_task.queue_handle, &cmd, TASK_UTILS_WAIT) != pdTRUE){
+        return E_OUT_OF_MEMORY;
+    }
+    return E_NO_ERROR;
 }

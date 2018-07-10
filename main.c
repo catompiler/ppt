@@ -2114,6 +2114,23 @@ static void setup_i2c_watchdogs(void)
     }
 }
 
+static void drive_reinit_gui(void)
+{
+    drive_task_ui_deinit();
+
+    drive_ui_deinit();
+    init_drive_ui();
+
+    drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
+}
+
+static void on_drive_reset(void)
+{
+    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
+        drive_task_utils_reset_ui();
+    }
+}
+
 static void init_drive_tasks(void)
 {
     drive_tasks_init();
@@ -2126,6 +2143,7 @@ static void init_drive_tasks(void)
     drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
     drive_task_storage_init(DRIVE_TASK_PRIORITY_STORAGE);
     drive_task_utils_init(DRIVE_TASK_PRIORITY_UTILS);
+    drive_task_utils_set_reset_ui_callback(drive_reinit_gui);
     drive_task_selftune_init(DRIVE_TASK_PRIORITY_SELFTUNE);
 
     if(drive_dip_pin_state(DRIVE_DIP_UI_PAD) || drive_dip_pin_state(DRIVE_DIP_HS_TEMP)){
@@ -2138,23 +2156,6 @@ static void init_drive_tasks(void)
     if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
         drive_task_buzz_init(DRIVE_TASK_PRIORITY_BUZZ);
         drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
-    }
-}
-
-static void drive_reinit_gui(void)
-{
-    drive_task_ui_deinit();
-    
-    drive_ui_deinit();
-    init_drive_ui();
-    
-    drive_task_ui_init(DRIVE_TASK_PRIORITY_UI);
-}
-
-static void on_drive_reset(void)
-{
-    if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){
-        drive_reinit_gui();
     }
 }
 
