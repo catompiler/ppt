@@ -18,7 +18,7 @@
 #define NOUNITS (NULL)
 
 // Число реальных параметров.
-#define PARAMETERS_REAL_COUNT 426
+#define PARAMETERS_REAL_COUNT 427
 // Число виртуальных параметров.
 #define PARAMETERS_VIRT_COUNT 55
 // Общее число параметров.
@@ -170,6 +170,8 @@ PARAM_DESCRS(parameters_descrs, PARAMETERS_COUNT) {
     PARAM_DESCR(PARAM_ID_SELFTUNE_AB_FILTER_WEIGHT, PARAM_TYPE_FRACT_1000, 0, F32(999, 1000), F32(6, 10), 0, NOUNITS),
     
     // Общая защита.
+    PARAM_DESCR(PARAM_ID_PROT_WARNING_WRITE_OSC,        PARAM_TYPE_UINT,      0,         1,       0, 0, NOUNITS),
+
     PARAM_DESCR(PARAM_ID_EMERGENCY_STOP_ACTION,         PARAM_TYPE_UINT,      0,         4,       4, 0, NOUNITS),
     
     PARAM_DESCR(PARAM_ID_THERMAL_OVERLOAD_PROT_ENABLE,  PARAM_TYPE_UINT,      0,         1,       1, 0, NOUNITS),

@@ -6,6 +6,7 @@
 #include "drive_temp.h"
 #include "drive.h"
 #include "drive_events.h"
+#include "drive_protection.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -50,7 +51,7 @@ err_t drive_tasks_write_status_event(void)
 
 err_t drive_tasks_write_warning_event(void)
 {
-    return drive_task_storage_write_event(DRIVE_EVENT_TYPE_WARNING, false);
+    return drive_task_storage_write_event(DRIVE_EVENT_TYPE_WARNING, drive_protection_warning_write_osc());
 }
 
 err_t drive_tasks_read_event(future_t* future, drive_event_index_t event_index, drive_event_t* event)

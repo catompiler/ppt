@@ -475,6 +475,7 @@ typedef struct _Drive_Protection {
     drive_triacs_prot_t triacs; //!< Защита тиристоров.
     drive_sensors_prot_t sensors; //!< Защиты датчиков.
     drive_prot_action_t emergency_stop_action; //!< Действие при нажатии грибка.
+    bool warning_write_osc; //!< Флаг записи осциллограммы при предупреждении.
     drive_protection_item_t prot_items[DRIVE_PROT_ITEMS_COUNT];
 } drive_protection_t;
 
@@ -1187,6 +1188,8 @@ void drive_protection_update_settings(void)
     drive_prot.I_rot_idle = settings_valuef(PARAM_ID_PROT_I_ROT_IDLE_FAULT_LEVEL_VALUE);
     
     drive_prot.emergency_stop_action = settings_valueu(PARAM_ID_EMERGENCY_STOP_ACTION);
+
+    drive_prot.warning_write_osc = settings_valueu(PARAM_ID_PROT_WARNING_WRITE_OSC);
     CRITICAL_EXIT();
     
     drive_prot_power_update_items_settings(); // thread safe
@@ -1200,6 +1203,11 @@ void drive_protection_update_settings(void)
     drive_protection_triacs_update_settings(); // thread safe
     
     drive_protection_sensors_update_settings(); // thread safe
+}
+
+bool drive_protection_warning_write_osc(void)
+{
+    return drive_prot.warning_write_osc;
 }
 
 drive_power_errors_t drive_protection_power_errs_mask(void)

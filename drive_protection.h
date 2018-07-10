@@ -193,6 +193,12 @@ extern bool drive_protection_init(void);
  */
 extern void drive_protection_update_settings(void);
 
+/**
+ * Получает флаг необходимости записи осциллограммы при предупреждении.
+ * @return Флаг необходимости записи осциллограммы при предупреждении.
+ */
+extern bool drive_protection_warning_write_osc(void);
+
 /*
  * Маска ошибок для проверки средних(rms) значений.
  */
@@ -390,7 +396,6 @@ extern drive_power_warnings_t drive_protection_power_item_warning(drive_prot_ind
  * @return Флаг ошибки элемента защиты.
  */
 extern drive_power_errors_t drive_protection_power_item_error(drive_prot_index_t index);
-
 
 /*
  * Тепловая защита.
