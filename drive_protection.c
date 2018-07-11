@@ -502,11 +502,6 @@ static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
         item->enabled = true;
     }
     
-    // Если элемент запрещён.
-    if(!item->enabled){
-        // Сбросим накопление.
-        item->pie = 0;
-    }
     // Если задан параметр допустимого времени отклонения.
     if(param_time != 0){
         // Допустимое время в мс.
@@ -521,23 +516,36 @@ static void drive_prot_update_base_item_settings(drive_prot_base_item_t* item,
         // По-умолчанию - максимальное приращение.
         item->pie_inc = DRIVE_PROT_PIE_MAX;
     }
+
     // Разрешение защёлки.
     if(param_latch_ena != 0){
         item->latch_enabled = (bool)settings_valueu(param_latch_ena);
     }else{
         item->latch_enabled = false;
     }
-    // Если запрещён элемент или защёлка.
-    if(!item->enabled || !item->latch_enabled){
-        // Сбросим значение защёлки.
-        item->hold_value = false;
-    }
+
     // Действие при срабатывании элемента защиты.
     if(param_action != 0){
         item->action = settings_valueu(param_action);
     }else{
         // По-умолчанию - экстренное отключение.
         item->action = default_action;
+    }
+
+    // Если элемент запрещён.
+    if(!item->enabled){
+        // Сбросим накопление.
+        item->pie = 0;
+        // Установим флаг допустимости.
+        item->allow = true;
+        //Если не включена защёлка - сбросим флаг активности.
+        if(!item->latch_enabled) item->active = false;
+    }
+
+    // Если запрещён элемент или защёлка.
+    if(!item->enabled || !item->latch_enabled){
+        // Сбросим значение защёлки.
+        item->hold_value = false;
     }
 }
 
@@ -677,10 +685,10 @@ static void drive_prot_power_update_item_settings(drive_prot_index_t index)
     }
     
     // Значение коэффициента элемента защиты.
-    uint32_t ref_level = 0;
+    fixed32_t ref_level = 0;
     // Если задан коэффициент.
     if(descr->param_level){
-        ref_level = settings_valueu(descr->param_level);
+        ref_level = settings_valuef(descr->param_level);
     }
     
     
@@ -700,13 +708,13 @@ static void drive_prot_power_update_item_settings(drive_prot_index_t index)
         case DRIVE_PROT_TYPE_CUT:
             item->base_item.pie_inc = DRIVE_PROT_CUTOFF_PIE_INC;
         case DRIVE_PROT_TYPE_OVF:
-            item->value_level = drive_protection_get_ovf_level(ref_val, ref_level);
+            item->value_level = drive_protection_get_ovf_level(ref_val, fixed32_get_int(ref_level));
             break;
         case DRIVE_PROT_TYPE_UDF:
-            item->value_level = drive_protection_get_udf_level(ref_val, ref_level);
+            item->value_level = drive_protection_get_udf_level(ref_val, fixed32_get_int(ref_level));
             break;
         case DRIVE_PROT_TYPE_ZERO:
-            item->value_level = fixed32_make_from_int(ref_level);
+            item->value_level = ref_level;
             break;
     }
     
