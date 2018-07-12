@@ -191,7 +191,8 @@ typedef int8_t triac_pair_number_t;
 typedef enum _Drive_Triacs_Exc_Mode {
     DRIVE_TRIACS_EXC_FIXED = 0, //!< Фиксированная подача возбуждения.
     DRIVE_TRIACS_EXC_REGULATED = 1, //!< Регулирование тока возбуждения.
-    DRIVE_TRIACS_EXC_EXTERNAL = 2 //!< Внешнее возбуждение.
+    DRIVE_TRIACS_EXC_EXTERNAL = 2, //!< Внешнее возбуждение.
+    DRIVE_TRIACS_EXC_FIXED_PULSE = 3 //!< Открытие тиристора на максимальный угол.
 } drive_triacs_exc_mode_t;
 
 
@@ -423,6 +424,126 @@ extern uint16_t drive_triacs_exc_open_delay_us(void);
  * @return Код ошибки.
  */
 extern err_t drive_triacs_set_exc_open_delay_us(uint16_t time);
+
+/*
+ * Гребёнка.
+ */
+
+/*
+ * Разрешение.
+ */
+
+/**
+ * Получает разрешение гребёнки тиристорных пар.
+ * @return Разрешение гребёнки.
+ */
+extern bool drive_triacs_pairs_pulse_train_enabled(void);
+
+/**
+ * Устанавливает разрешение гребёнки тиристорных пар.
+ * @param enabled Разрешение гребёнки.
+ */
+extern void drive_triacs_set_pairs_pulse_train_enabled(bool enabled);
+
+/**
+ * Получает разрешение гребёнки симистора возбуждения.
+ * @return Разрешение гребёнки.
+ */
+extern bool drive_triacs_exc_pulse_train_enabled(void);
+
+/**
+ * Устанавливает разрешение гребёнки симистора возбуждения.
+ * @param enabled Разрешение гребёнки.
+ */
+extern void drive_triacs_set_exc_pulse_train_enabled(bool enabled);
+
+/*
+ * Ширина.
+ */
+
+/**
+ * Получает ширину гребёнки тиристорных пар.
+ * @return Ширина гребёнки.
+ */
+extern fixed32_t drive_triacs_pairs_pulse_train_width(void);
+
+/**
+ * Устанавливает ширину гребёнки тиристорных пар.
+ * @param width Ширина гребёнки.
+ */
+extern void drive_triacs_set_pairs_pulse_train_width(fixed32_t width);
+
+/**
+ * Получает ширину гребёнки симистора возбуждения.
+ * @return Ширина гребёнки.
+ */
+extern fixed32_t drive_triacs_exc_pulse_train_width(void);
+
+/**
+ * Устанавливает ширину гребёнки симистора возбуждения.
+ * @param width Ширина гребёнки.
+ */
+extern void drive_triacs_set_exc_pulse_train_width(fixed32_t width);
+
+/*
+ * Коэффициент заполнения.
+ */
+
+/**
+ * Получает коэффициент заполнения гребёнки тиристорных пар.
+ * @return Коэффициент заполнения гребёнки.
+ */
+extern fixed32_t drive_triacs_pairs_pulse_train_duty_ratio(void);
+
+/**
+ * Устанавливает коэффициент заполнения гребёнки тиристорных пар.
+ * @param duty_ratio Коэффициент заполнения гребёнки.
+ */
+extern void drive_triacs_set_pairs_pulse_train_duty_ratio(fixed32_t duty_ratio);
+
+/**
+ * Получает коэффициент заполнения гребёнки симистора возбуждения.
+ * @return Коэффициент заполнения гребёнки.
+ */
+extern fixed32_t drive_triacs_exc_pulse_train_duty_ratio(void);
+
+/**
+ * Устанавливает коэффициент заполнения гребёнки симистора возбуждения.
+ * @param duty_ratio Коэффициент заполнения гребёнки.
+ */
+extern void drive_triacs_set_exc_pulse_train_duty_ratio(fixed32_t duty_ratio);
+
+/*
+ * Минимальный угол.
+ */
+
+/**
+ * Получает минимальный угол гребёнки тиристорных пар.
+ * @return Минимальный угол гребёнки.
+ */
+extern fixed32_t drive_triacs_pairs_pulse_train_angle_min(void);
+
+/**
+ * Устанавливает минимальный угол гребёнки тиристорных пар.
+ * @param angle_min Минимальный угол гребёнки.
+ */
+extern void drive_triacs_set_pairs_pulse_train_angle_min(fixed32_t angle_min);
+
+/**
+ * Получает минимальный угол гребёнки симистора возбуждения.
+ * @return Минимальный угол гребёнки.
+ */
+extern fixed32_t drive_triacs_exc_pulse_train_angle_min(void);
+
+/**
+ * Устанавливает минимальный угол гребёнки симистора возбуждения.
+ * @param angle_min Минимальный угол гребёнки.
+ */
+extern void drive_triacs_set_exc_pulse_train_angle_min(fixed32_t angle_min);
+
+/*
+ * Прочее.
+ */
 
 /**
  * Получает фазу возбуждения.

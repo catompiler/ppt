@@ -29,6 +29,9 @@
 #define TRIAC_EXC_OFFSET (TRIAC_EXC_TIM_TICKS * 30 / 360)
 
 
+//! Максимальный коэффициент заполнения гребёнки.
+#define TRIACS_PULSE_TRAIN_DUTY_RATIO_MAX (0x8000) // 0.5f
+
 
 // Смещения в массивах последовательностей направления для датчиков нуля.
 //! Датчик нуля фазы A.
@@ -62,7 +65,9 @@ static const triac_pair_number_t triac_open_seq_bwd[TRIAC_PAIRS_COUNT] = {
 typedef struct _Timer_Triacs {
     TIM_TypeDef* timer; //!< Таймер для включения тиристоров.
     triac_pair_number_t triacs_a; //!< Пара тиристоров А.
-    triac_pair_number_t triacs_b; //!< Пара тиристоров B.
+    //triac_pair_number_t triacs_b; //!< Пара тиристоров B.
+    uint16_t pulse_train_remain; //!< Оставшееся время гребёнки.
+    int16_t pulse_train_offset; //!< Смещение импульса открытия.
 } timer_triacs_t;
 
 //! Тип структуры тиристоров привода.
@@ -75,6 +80,7 @@ typedef struct _Drive_Triacs {
     
     fixed32_t triac_exc_min_angle; //!< Минимальный угол открытия симистора возбуждения.
     fixed32_t triac_exc_max_angle; //!< Максимальный угол открытия симистора возбуждения.
+    fixed32_t triac_exc_max_angle_ticks; //!< Максимальный угол открытия симистора в тиках таймера.
     
     fixed32_t triacs_pairs_open_angle; //!< Угол открытия тиристорных пар.
     fixed32_t triac_exc_open_angle; //!< Угол открытия симистора возбуждения.
@@ -86,7 +92,25 @@ typedef struct _Drive_Triacs {
     uint16_t triac_exc_angle_ticks; //!< Угол открытия симистора возбуждения - значение регистра сравнения таймера.
     uint16_t triac_exc_open_ticks; //!< Время открытия симистора возбуждения в тиках таймера.
     uint16_t triac_exc_delay_ticks; //!< Время задержки открытия симистора возбуждения в тиках таймера.
-    
+
+    bool triacs_pairs_pt_enabled; //!< Разрешение гребёнки тиристорных пар.
+    bool triac_exc_pt_enabled; //!< Разрешение гребёнки симистора возбуждения.
+
+    fixed32_t triacs_pairs_pt_width; //!< Длина гребёнки тиристорных пар.
+    uint16_t triacs_pairs_pt_width_ticks; //!< Длина гребёнки тиристорных пар в тиках таймера.
+    fixed32_t triac_exc_pt_width; //!< Длина гребёнки симистора возбуждения.
+    uint16_t triac_exc_pt_width_ticks; //!< Длина гребёнки симистора возбуждения в тиках таймера.
+
+    fixed32_t triacs_pairs_pt_duty; //!< Коэффициент заполнения гребёнки тиристорных пар.
+    uint16_t triacs_pairs_pt_open_delta; //!< Время между импульсами открытия гребёнки тиристорных пар.
+    fixed32_t triac_exc_pt_duty; //!< Коэффициент заполнения гребёнки симистора возбуждения.
+    uint16_t triac_exc_pt_open_delta; //!< Время между импульсами открытия гребёнки симистора возбуждения.
+
+    fixed32_t triacs_pairs_pt_angle_min; //!< Минимальный угол гребёнки тиристорных пар.
+    uint16_t triacs_pairs_pt_angle_min_ticks; //!< Минимальный угол гребёнки тиристорных пар в тиках таймера.
+    fixed32_t triac_exc_pt_angle_min; //!< Минимальный угол гребёнки симистора возбуждения.
+    uint16_t triac_exc_pt_angle_min_ticks; //!< Минимальный угол гребёнки симистора возбуждения в тиках таймера.
+
     triac_pair_t triac_pairs[TRIAC_PAIRS_COUNT]; //!< Пары тиристоров.
     triac_t triac_exc; //!< Тиристор возбуждения.
     
@@ -94,6 +118,9 @@ typedef struct _Drive_Triacs {
     size_t current_timer_triacs; //!< Текущий индекс таймеров тиристоров.
     
     TIM_TypeDef* timer_exc; //!< Таймер для открытия симистора возбуждения.
+    uint16_t exc_pulse_train_remain_first; //!< Оставшееся время гребёнки симистора возбуждения первого полупериода.
+    uint16_t exc_pulse_train_remain_second; //!< Оставшееся время гребёнки симистора возбуждения второго полупериода.
+    int16_t exc_pulse_train_offset; //!< Смещение открытия.
     
     phase_t phase_exc; //!< Фаза возбуждения.
     drive_triacs_exc_mode_t exc_mode; //!< Режим возбуждения.
@@ -117,6 +144,7 @@ err_t drive_triacs_init(void)
     
     drive_triacs.triac_exc_min_angle = TRIAC_EXC_ANGLE_MIN_F;
     drive_triacs.triac_exc_max_angle = TRIAC_EXC_ANGLE_MAX_F;
+    drive_triacs.triac_exc_max_angle_ticks = TRIAC_EXC_MAX_TICKS;
     
     drive_triacs.triacs_pairs_open_ticks = TRIACS_TIM_OPEN_TIME_DEFAULT;
     drive_triacs.triac_exc_open_ticks = TRIAC_EXC_TIM_OPEN_TIME_DEFAULT;
@@ -335,6 +363,9 @@ err_t drive_triacs_clamp_exc_open_angle(fixed32_t angle_min, fixed32_t angle_max
     drive_triacs.triac_exc_min_angle = angle_min;
     drive_triacs.triac_exc_max_angle = angle_max;
     
+    angle_max /= TRIAC_EXC_MAX_TICKS_ANGLE;
+    drive_triacs.triac_exc_max_angle_ticks = fixed32_mul(angle_max, TRIAC_EXC_MAX_TICKS);
+
     return err;
 }
 
@@ -373,6 +404,7 @@ fixed32_t drive_triacs_exc_open_angle(void)
     if(!drive_triacs.exc_enabled) return 0;
     if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_EXTERNAL) return 0;
     if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_FIXED) return TRIAC_EXC_ANGLE_MAX_F;
+    if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_FIXED_PULSE) return drive_triacs.triac_exc_max_angle;
     return drive_triacs.triac_exc_open_angle;
 }
 
@@ -450,6 +482,134 @@ err_t drive_triacs_set_exc_open_delay_us(uint16_t time)
     drive_triacs.triac_exc_delay_ticks = TIME_TO_TICKS(time);
     
     return E_NO_ERROR;
+}
+
+bool drive_triacs_pairs_pulse_train_enabled(void)
+{
+    return drive_triacs.triacs_pairs_pt_enabled;
+}
+
+void drive_triacs_set_pairs_pulse_train_enabled(bool enabled)
+{
+    drive_triacs.triacs_pairs_pt_enabled = enabled;
+}
+
+bool drive_triacs_exc_pulse_train_enabled(void)
+{
+    return drive_triacs.triac_exc_pt_enabled;
+}
+
+void drive_triacs_set_exc_pulse_train_enabled(bool enabled)
+{
+    drive_triacs.triac_exc_pt_enabled = enabled;
+}
+
+fixed32_t drive_triacs_pairs_pulse_train_width(void)
+{
+    return drive_triacs.triacs_pairs_pt_width;
+}
+
+void drive_triacs_set_pairs_pulse_train_width(fixed32_t width)
+{
+    fixed32_t angle_width = drive_triacs.triacs_pairs_max_angle -
+                            drive_triacs.triacs_pairs_min_angle;
+
+    width = CLAMP(width, 0, angle_width);
+
+    drive_triacs.triacs_pairs_pt_width = width;
+
+    width /= TRIACS_TIM_MAX_TICKS_ANGLE;
+    drive_triacs.triacs_pairs_pt_width_ticks = fixed32_mul(width, TRIACS_TIM_MAX_TICKS);
+}
+
+fixed32_t drive_triacs_exc_pulse_train_width(void)
+{
+    return drive_triacs.triac_exc_pt_width;
+}
+
+void drive_triacs_set_exc_pulse_train_width(fixed32_t width)
+{
+    fixed32_t angle_width = drive_triacs.triac_exc_max_angle -
+                            drive_triacs.triac_exc_min_angle;
+
+    width = CLAMP(width, 0, angle_width);
+
+    drive_triacs.triac_exc_pt_width = width;
+
+    width /= TRIAC_EXC_MAX_TICKS_ANGLE;
+    drive_triacs.triac_exc_pt_width_ticks = fixed32_mul(width, TRIAC_EXC_MAX_TICKS);
+}
+
+fixed32_t drive_triacs_pairs_pulse_train_duty_ratio(void)
+{
+    return drive_triacs.triacs_pairs_pt_duty;
+}
+
+void drive_triacs_set_pairs_pulse_train_duty_ratio(fixed32_t duty_ratio)
+{
+    duty_ratio = CLAMP(duty_ratio, 0, TRIACS_PULSE_TRAIN_DUTY_RATIO_MAX);
+
+    fixed32_t delta_ratio = fixed32_make_from_int(1) - duty_ratio;
+
+    // b = a * (1 - duty) / duty;
+    // k = (1 - d) / d;
+    fixed32_t k = fixed32_div((int64_t)delta_ratio, duty_ratio);
+
+    int32_t open_ticks = drive_triacs.triacs_pairs_open_ticks;
+    fixed32_t open_delta_ticks_f = open_ticks * k;
+
+    drive_triacs.triacs_pairs_pt_open_delta = fixed32_get_int(open_delta_ticks_f);
+}
+
+fixed32_t drive_triacs_exc_pulse_train_duty_ratio(void)
+{
+    return drive_triacs.triac_exc_pt_duty;
+}
+
+void drive_triacs_set_exc_pulse_train_duty_ratio(fixed32_t duty_ratio)
+{
+    duty_ratio = CLAMP(duty_ratio, 0, TRIACS_PULSE_TRAIN_DUTY_RATIO_MAX);
+
+    fixed32_t delta_ratio = fixed32_make_from_int(1) - duty_ratio;
+
+    // b = a * (1 - duty) / duty;
+    // k = (1 - d) / d;
+    fixed32_t k = fixed32_div((int64_t)delta_ratio, duty_ratio);
+
+    int32_t open_ticks = drive_triacs.triac_exc_open_ticks;
+    fixed32_t open_delta_ticks_f = open_ticks * k;
+
+    drive_triacs.triac_exc_pt_open_delta = fixed32_get_int(open_delta_ticks_f);
+}
+
+fixed32_t drive_triacs_pairs_pulse_train_angle_min(void)
+{
+    return drive_triacs.triacs_pairs_pt_angle_min;
+}
+
+void drive_triacs_set_pairs_pulse_train_angle_min(fixed32_t angle_min)
+{
+    angle_min = CLAMP(angle_min, TRIACS_PAIRS_ANGLE_MIN_F, TRIACS_PAIRS_ANGLE_MAX_F);
+
+    drive_triacs.triacs_pairs_pt_angle_min = angle_min;
+
+    angle_min /= TRIACS_TIM_MAX_TICKS_ANGLE;
+    drive_triacs.triacs_pairs_pt_angle_min_ticks = fixed32_mul(angle_min, TRIACS_TIM_MAX_TICKS);
+}
+
+fixed32_t drive_triacs_exc_pulse_train_angle_min(void)
+{
+    return drive_triacs.triac_exc_pt_angle_min;
+}
+
+void drive_triacs_set_exc_pulse_train_angle_min(fixed32_t angle_min)
+{
+    angle_min = CLAMP(angle_min, TRIAC_EXC_ANGLE_MIN_F, TRIAC_EXC_ANGLE_MAX_F);
+
+    drive_triacs.triac_exc_pt_angle_min = angle_min;
+
+    angle_min /= TRIAC_EXC_MAX_TICKS_ANGLE;
+    drive_triacs.triac_exc_pt_angle_min_ticks = fixed32_mul(angle_min, TRIAC_EXC_MAX_TICKS);
 }
 
 phase_t drive_triacs_exc_phase(void)
@@ -532,6 +692,30 @@ ALWAYS_INLINE static void drive_triacs_on_open_pair(void)
     if(drive_triacs.open_pair_callback) drive_triacs.open_pair_callback(drive_triacs.last_opened_pair);
 }
 
+static void drive_triacs_pairs_pulse_train_setup_next(timer_triacs_t* tim_triacs)
+{
+    if(!drive_triacs.triacs_pairs_pt_enabled) return;
+
+    uint16_t cur_ticks = TIM_GetCounter(tim_triacs->timer);
+    uint16_t pulse = drive_triacs.triacs_pairs_open_ticks + drive_triacs.triacs_pairs_pt_open_delta;
+
+    if(tim_triacs->pulse_train_remain < pulse) return;
+
+    tim_triacs->pulse_train_remain -= pulse;
+
+    uint16_t next_open_pulse = cur_ticks + drive_triacs.triacs_pairs_pt_open_delta;
+    uint16_t next_close_pulse = cur_ticks + pulse;
+
+    if(next_close_pulse < TRIACS_TIM_MAX_TICKS -
+            drive_triacs.triacs_pairs_pt_angle_min_ticks - tim_triacs->pulse_train_offset){
+        TIM_SetCompare1(tim_triacs->timer, next_open_pulse);
+        TIM_SetCompare2(tim_triacs->timer, next_close_pulse);
+
+        TIM_ITConfig(tim_triacs->timer, TRIACS_A_OPEN_CHANNEL_IT, ENABLE);
+        TIM_ITConfig(tim_triacs->timer, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE);
+    }
+}
+
 static void drive_triacs_timer_irq_handler_impl(timer_triacs_t* tim_triacs)
 {
     TIM_TypeDef* TIM = tim_triacs->timer;
@@ -557,6 +741,7 @@ static void drive_triacs_timer_irq_handler_impl(timer_triacs_t* tim_triacs)
                 get_triac_pair(tim_triacs->triacs_a)
             );
         if(drive_triacs.pairs_enabled){
+            drive_triacs_pairs_pulse_train_setup_next(tim_triacs);
             drive_triacs.last_opened_pair = tim_triacs->triacs_a;
             drive_triacs_on_open_pair();
         }
@@ -597,6 +782,54 @@ void drive_triacs_timer1_irq_handler(void)
     drive_triacs_timer_irq_handler_impl(tim_triacs);
 }
 
+static void drive_triacs_exc_pulse_train_setup_next_first(void)
+{
+    if(!drive_triacs.triac_exc_pt_enabled) return;
+
+    uint16_t cur_ticks = TIM_GetCounter(drive_triacs.timer_exc);
+    uint16_t pulse = drive_triacs.triac_exc_open_ticks + drive_triacs.triac_exc_pt_open_delta;
+
+    if(drive_triacs.exc_pulse_train_remain_first < pulse) return;
+
+    drive_triacs.exc_pulse_train_remain_first -= pulse;
+
+    uint16_t next_open_pulse = cur_ticks + drive_triacs.triac_exc_pt_open_delta;
+    uint16_t next_close_pulse = cur_ticks + pulse;
+
+    if(next_close_pulse < TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET -
+            drive_triacs.triac_exc_pt_angle_min_ticks - drive_triacs.exc_pulse_train_offset){
+        TIM_SetCompare1(drive_triacs.timer_exc, next_open_pulse);
+        TIM_SetCompare2(drive_triacs.timer_exc, next_close_pulse);
+
+        TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
+        TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
+    }
+}
+
+static void drive_triacs_exc_pulse_train_setup_next_second(void)
+{
+    if(!drive_triacs.triac_exc_pt_enabled) return;
+
+    uint16_t cur_ticks = TIM_GetCounter(drive_triacs.timer_exc);
+    uint16_t pulse = drive_triacs.triac_exc_open_ticks + drive_triacs.triac_exc_pt_open_delta;
+
+    if(drive_triacs.exc_pulse_train_remain_second < pulse) return;
+
+    drive_triacs.exc_pulse_train_remain_second -= pulse;
+
+    uint16_t next_open_pulse = cur_ticks + drive_triacs.triac_exc_pt_open_delta;
+    uint16_t next_close_pulse = cur_ticks + pulse;
+
+    if(next_close_pulse < TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET -
+            drive_triacs.triac_exc_pt_angle_min_ticks - drive_triacs.exc_pulse_train_offset){
+        TIM_SetCompare3(drive_triacs.timer_exc, next_open_pulse);
+        TIM_SetCompare4(drive_triacs.timer_exc, next_close_pulse);
+
+        TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
+        TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
+    }
+}
+
 void drive_triacs_exc_timer_irq_handler(void)
 {
     TIM_TypeDef* TIM = drive_triacs.timer_exc;
@@ -615,6 +848,9 @@ void drive_triacs_exc_timer_irq_handler(void)
         TIM_ITConfig(TIM, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, DISABLE);
         
         triac_close(&drive_triacs.triac_exc);
+        if(drive_triacs.exc_enabled){
+            drive_triacs_exc_pulse_train_setup_next_first();
+        }
     } // Если нужно открыть симистор второго полупериода.
     if(TIM_GetITStatus(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT) != RESET){
         TIM_ClearITPendingBit(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT);
@@ -630,6 +866,9 @@ void drive_triacs_exc_timer_irq_handler(void)
         TIM_ITConfig(TIM, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, DISABLE);
         
         triac_close(&drive_triacs.triac_exc);
+        if(drive_triacs.exc_enabled){
+            drive_triacs_exc_pulse_train_setup_next_second();
+        }
     }
 }
 
@@ -651,8 +890,12 @@ ALWAYS_INLINE static uint16_t timer_exc_clamp(int32_t ticks)
  * Инициализирует таймер для открытия пары тиристоров.
  * @param triacs_pair Номер первой пары тиристоров.
  * @param offset_ticks Компенсация времени до запуска открытия тиристоров в тиках таймера.
+ * @param angle_ticks Угол открытия в тиках таймера.
+ * @param open_ticks Время открытия в тиках таймера.
+ * @param delay_ticks Задержка открытия в тиках таймера.
  */
-static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int16_t offset_ticks)
+static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int32_t offset_ticks,
+                                         int32_t angle_ticks, int32_t open_ticks, int32_t delay_ticks)
 {
     // Получим следующий свободный таймер тиристоров.
     timer_triacs_t* tim_trcs = timer_triacs_next();
@@ -663,22 +906,43 @@ static void timer_triacs_setup_next_pair(triac_pair_number_t triacs_pair, int16_
     // Очистим флаги прерываний на открытие тиристоров.
     // Первая пара.
     TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT);
+    TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_A_CLOSE_CHANNEL_IT);
     // Вторая пара.
     //TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_B_OPEN_CHANNEL_IT);
+    //TIM_ClearITPendingBit(tim_trcs->timer, TRIACS_B_CLOSE_CHANNEL_IT);
+    // Закроем первую тиристорную пару.
+    if(TRIAC_PAIR_VALID(tim_trcs->triacs_a)){
+        triac_pair_close(get_triac_pair(tim_trcs->triacs_a));
+    }
+    // Закроем вторую тиристорную пару.
+    //if(TRIAC_PAIR_VALID(tim_trcs->triacs_b)){
+    //    triac_pair_close(get_triac_pair(tim_trcs->triacs_b));
+    //}
     // Установим тиристорные пары таймера.
     // Первая пара тиристоров.
     tim_trcs->triacs_a = triacs_pair;
     // Вторая пара тиристоров.
-    tim_trcs->triacs_b = triacs_pair;
+    //tim_trcs->triacs_b = triacs_pair;
+    // Время гребёнки.
+    tim_trcs->pulse_train_remain = drive_triacs.triacs_pairs_pt_width_ticks;
+    // Смещение открытия.
+    tim_trcs->pulse_train_offset = offset_ticks + delay_ticks;
+    // Тики таймера.
+    // Угол открытия.
+    //uint16_t angle_ticks = drive_triacs.triacs_pairs_angle_ticks;
+    // Время открытия.
+    //uint16_t open_ticks = drive_triacs.triacs_pairs_open_ticks;
+    // Задержка открытия.
+    //uint16_t delay_ticks = drive_triacs.triacs_pairs_delay_ticks;
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
     TIM_SetCompare1(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks -
-                                     drive_triacs.triacs_pairs_delay_ticks));
+                                     angle_ticks - offset_ticks -
+                                     delay_ticks));
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + drive_triacs.triacs_pairs_open_ticks) -
-                                     drive_triacs.triacs_pairs_angle_ticks - offset_ticks -
-                                     drive_triacs.triacs_pairs_delay_ticks));
+    TIM_SetCompare2(tim_trcs->timer, timer_triacs_clamp((int32_t)(TRIACS_TIM_MAX_TICKS + open_ticks) -
+                                     angle_ticks - offset_ticks -
+                                     delay_ticks));
     // Разрешим прерывания.
     TIM_ITConfig(tim_trcs->timer, TRIACS_A_OPEN_CHANNEL_IT, ENABLE);
     TIM_ITConfig(tim_trcs->timer, TRIACS_A_CLOSE_CHANNEL_IT, ENABLE);
@@ -701,10 +965,18 @@ err_t drive_triacs_setup_next_pair(phase_t phase, phase_t last_open_phase, int16
         return E_NO_ERROR;
     }
     
-    int16_t offset_ticks = TIME_TO_TICKS(offset);
+    int32_t offset_ticks = TIME_TO_TICKS(offset);
     
+    // Тики таймера.
+    // Угол открытия.
+    int32_t angle_ticks = drive_triacs.triacs_pairs_angle_ticks;
+    // Время открытия.
+    int32_t open_ticks = drive_triacs.triacs_pairs_open_ticks;
+    // Задержка открытия.
+    int32_t delay_ticks = drive_triacs.triacs_pairs_delay_ticks;
+
     // Нужен угол открытия не меньше смещения.
-    if(drive_triacs.triacs_pairs_angle_ticks <= offset_ticks) return E_NO_ERROR;
+    if(angle_ticks <= offset_ticks) return E_NO_ERROR;
     
     // Индекс пары тиристоров.
     size_t triacs_index = 0;
@@ -748,7 +1020,8 @@ err_t drive_triacs_setup_next_pair(phase_t phase, phase_t last_open_phase, int16
         triacs_index ++;
     }
     
-    timer_triacs_setup_next_pair(triacs_seq[triacs_index], offset_ticks);
+    timer_triacs_setup_next_pair(triacs_seq[triacs_index], offset_ticks, angle_ticks,
+                                 open_ticks, delay_ticks);
     
     return E_NO_ERROR;
 }
@@ -756,39 +1029,60 @@ err_t drive_triacs_setup_next_pair(phase_t phase, phase_t last_open_phase, int16
 /**
  * Инициализирует таймер для открытия симистора возбуждения.
  * @param offset_ticks Компенсация времени до запуска открытия симистора в тиках таймера.
+ * @param angle_ticks Угол открытия в тиках таймера.
+ * @param open_ticks Время открытия в тиках таймера.
+ * @param delay_ticks Задержка открытия в тиках таймера.
  */
-static void timer_triac_exc_setup(int16_t offset_ticks)
+static void timer_triac_exc_setup(int32_t offset_ticks, int32_t angle_ticks,
+                                  int32_t open_ticks, int32_t delay_ticks)
 {
     // Остановим таймер.
     TIM_Cmd(drive_triacs.timer_exc, DISABLE);
     // Сбросим счётчик.
     TIM_SetCounter(drive_triacs.timer_exc, 0);
+    // Очистить флаги прерываний.
+    TIM_ClearITPendingBit(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT);
+    TIM_ClearITPendingBit(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT);
+    TIM_ClearITPendingBit(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT);
+    TIM_ClearITPendingBit(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT);
     // Закроем симистор возбуждения.
     triac_close(&drive_triacs.triac_exc);
+    // Время гребёнки.
+    drive_triacs.exc_pulse_train_remain_first = drive_triacs.triac_exc_pt_width_ticks;
+    drive_triacs.exc_pulse_train_remain_second = drive_triacs.triac_exc_pt_width_ticks;
+    // Смещение открытия.
+    drive_triacs.exc_pulse_train_offset = offset_ticks + delay_ticks;
+    // Тики таймера.
+    // Угол открытия.
+    //uint16_t angle_ticks = drive_triacs.triac_exc_angle_ticks;
+    // Время открытия.
+    //uint16_t open_ticks = drive_triacs.triac_exc_open_ticks;
+    // Задержка открытия.
+    //uint16_t delay_ticks = drive_triacs.triac_exc_delay_ticks;
     // Установим каналы таймера.
     // Открытие первой пары тиристоров.
     TIM_SetCompare1(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
-                                            drive_triacs.triac_exc_delay_ticks));
+                                            angle_ticks - offset_ticks -
+                                            delay_ticks));
     // Закрытие первой пары тиристоров.
-    TIM_SetCompare2(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + drive_triacs.triac_exc_open_ticks) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
-                                            drive_triacs.triac_exc_delay_ticks));
+    TIM_SetCompare2(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + open_ticks) -
+                                            angle_ticks - offset_ticks -
+                                            delay_ticks));
     // Открытие второй пары тиристоров.
     TIM_SetCompare3(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
-                                            drive_triacs.triac_exc_delay_ticks));
+                                            angle_ticks - offset_ticks -
+                                            delay_ticks));
     // Закрытие второй пары тиристоров.
     TIM_SetCompare4(drive_triacs.timer_exc, timer_exc_clamp((TRIAC_EXC_MAX_TICKS + TRIAC_EXC_OFFSET + TRIAC_EXC_TIM_HALF_CYCLE_OFFSET +
-                                            drive_triacs.triac_exc_open_ticks) -
-                                            drive_triacs.triac_exc_angle_ticks - offset_ticks -
-                                            drive_triacs.triac_exc_delay_ticks));
+                                            open_ticks) -
+                                            angle_ticks - offset_ticks -
+                                            delay_ticks));
     // Разрешить прерывания.
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_FIRST_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_OPEN_CHANNEL_IT, ENABLE);
     TIM_ITConfig(drive_triacs.timer_exc, TRIAC_EXC_SECOND_HALF_CYCLE_CLOSE_CHANNEL_IT, ENABLE);
-    //! Запустим таймер.
+    // Запустим таймер.
     TIM_Cmd(drive_triacs.timer_exc, ENABLE);
 }
 
@@ -800,7 +1094,8 @@ static void timer_triac_exc_setup(int16_t offset_ticks)
 err_t drive_triacs_setup_exc(phase_t phase, phase_t last_open_phase, int16_t offset)
 {
     // Нужен режим регулирования.
-    if(drive_triacs.exc_mode != DRIVE_TRIACS_EXC_REGULATED) return E_NO_ERROR;
+    if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_EXTERNAL ||
+       drive_triacs.exc_mode == DRIVE_TRIACS_EXC_FIXED) return E_NO_ERROR;
     // Нужна определённая фаза.
     if(phase == PHASE_UNK) return E_INVALID_VALUE;
     // Направление вращения.
@@ -816,11 +1111,22 @@ err_t drive_triacs_setup_exc(phase_t phase, phase_t last_open_phase, int16_t off
         return E_NO_ERROR;
     }
     
-    int16_t offset_ticks = TIME_TO_TICKS(offset);
+    int32_t offset_ticks = TIME_TO_TICKS(offset);
+
+    // Тики таймера.
+    // Угол открытия.
+    int32_t angle_ticks = drive_triacs.triac_exc_angle_ticks;
+    if(drive_triacs.exc_mode == DRIVE_TRIACS_EXC_FIXED_PULSE){
+        angle_ticks = drive_triacs.triac_exc_max_angle_ticks;
+    }
+    // Время открытия.
+    int32_t open_ticks = drive_triacs.triac_exc_open_ticks;
+    // Задержка открытия.
+    int32_t delay_ticks = drive_triacs.triac_exc_delay_ticks;
     
     // Нужен угол открытия не меньше смещения.
-    if(drive_triacs.triac_exc_angle_ticks <= offset_ticks) return E_NO_ERROR;
-    
+    if(angle_ticks <= offset_ticks) return E_NO_ERROR;
+
     phase_t exc_ctl_phase = drive_triacs.phase_exc;
     
     if(dir == DRIVE_DIR_BACKW){
@@ -828,7 +1134,8 @@ err_t drive_triacs_setup_exc(phase_t phase, phase_t last_open_phase, int16_t off
     }
     
     if(exc_ctl_phase == phase){
-        timer_triac_exc_setup(offset_ticks);
+        timer_triac_exc_setup(offset_ticks, angle_ticks,
+                              open_ticks, delay_ticks);
     }
     
     return E_NO_ERROR;

@@ -2489,6 +2489,15 @@ err_t drive_update_settings(void)
     drive_triacs_set_pairs_open_delay_us(settings_valueu(PARAM_ID_TRIACS_PAIRS_OPEN_DELAY));
     drive_triacs_set_exc_open_delay_us(settings_valueu(PARAM_ID_TRIAC_EXC_OPEN_DELAY));
     
+    drive_triacs_set_pairs_pulse_train_enabled(settings_valueu(PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_ENABLED));
+    drive_triacs_set_pairs_pulse_train_width(settings_valuef(PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_WIDTH));
+    drive_triacs_set_pairs_pulse_train_duty_ratio(settings_valuef(PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_DUTY_RATIO) / 100);
+    drive_triacs_set_pairs_pulse_train_angle_min(settings_valuef(PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_ANGLE_MIN));
+    drive_triacs_set_exc_pulse_train_enabled(settings_valueu(PARAM_ID_TRIAC_EXC_PULSE_TRAIN_ENABLED));
+    drive_triacs_set_exc_pulse_train_width(settings_valuef(PARAM_ID_TRIAC_EXC_PULSE_TRAIN_WIDTH));
+    drive_triacs_set_exc_pulse_train_duty_ratio(settings_valuef(PARAM_ID_TRIAC_EXC_PULSE_TRAIN_DUTY_RATIO) / 100);
+    drive_triacs_set_exc_pulse_train_angle_min(settings_valuef(PARAM_ID_TRIAC_EXC_PULSE_TRAIN_ANGLE_MIN));
+
     drive_motor_update_settings();
     drive_motor_set_ir_compensation_enabled(settings_valueu(PARAM_ID_REGULATOR_IR_COMPENSATION));
     

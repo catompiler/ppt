@@ -398,6 +398,42 @@
 #define PARAM_ID_TRIAC_EXC_ANGLE_MAX 1411
 
 /*
+ * Тиристоры - гребёнка.
+ */
+/**
+ * Использование гребёнки при открытии тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_ENABLED 1420
+/**
+ * Использование гребёнки при открытии тиристоров возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_PULSE_TRAIN_ENABLED 1421
+/**
+ * Длительность гребёнки при открытии тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_WIDTH 1425
+/**
+ * Длительность гребёнки при открытии тиристоров возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_PULSE_TRAIN_WIDTH 1426
+/**
+ * Коэффициент заполнения гребёнки при открытии тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_DUTY_RATIO 1430
+/**
+ * Коэффициент заполнения гребёнки при открытии тиристоров возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_PULSE_TRAIN_DUTY_RATIO 1431
+/**
+ * Минимальный угол формирования гребёнки при открытии тиристорных пар.
+ */
+#define PARAM_ID_TRIACS_PAIRS_PULSE_TRAIN_ANGLE_MIN 1435
+/**
+ * Минимальный угол формирования гребёнки при открытии тиристоров возбуждения.
+ */
+#define PARAM_ID_TRIAC_EXC_PULSE_TRAIN_ANGLE_MIN 1436
+
+/*
  * Управление вентиляторами.
  */
 /**
