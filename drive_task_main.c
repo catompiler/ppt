@@ -6,7 +6,7 @@
 #include <task.h>
 
 
-#define TASK_MAIN_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#define TASK_MAIN_STACK_SIZE (configMINIMAL_STACK_SIZE * 3)
 
 typedef struct _Main_Task {
     // Задача.

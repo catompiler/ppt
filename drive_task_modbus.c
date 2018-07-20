@@ -5,7 +5,7 @@
 #include <task.h>
 
 
-#define TASK_MODBUS_STACK_SIZE (configMINIMAL_STACK_SIZE)
+#define TASK_MODBUS_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 
 typedef struct _Modbus_Task {
     // Задача.

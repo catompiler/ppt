@@ -6,7 +6,7 @@
 #include "drive_keypad.h"
 
 
-#define TASK_BUZZER_STACK_SIZE configMINIMAL_STACK_SIZE
+#define TASK_BUZZER_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 
 typedef struct _Buzzer_Task {
     // Задача.

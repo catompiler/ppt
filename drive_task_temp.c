@@ -6,7 +6,7 @@
 #include "drive_temp.h"
 
 
-#define TASK_HS_TEMP_STACK_SIZE configMINIMAL_STACK_SIZE
+#define TASK_HS_TEMP_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #define TASK_HS_TEMP_UPDATE_PERIOD_MS 1000
 
 

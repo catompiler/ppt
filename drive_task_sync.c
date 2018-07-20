@@ -6,7 +6,7 @@
 #include <task.h>
 
 
-#define TASK_SYNC_STACK_SIZE (configMINIMAL_STACK_SIZE)
+#define TASK_SYNC_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 
 typedef struct _Zero_Task {
     // Задача.

@@ -7,7 +7,7 @@
 #include <task.h>
 
 
-#define TASK_UI_STACK_SIZE (configMINIMAL_STACK_SIZE * 3)
+#define TASK_UI_STACK_SIZE (configMINIMAL_STACK_SIZE * 4)
 
 
 typedef struct _Ui_Task {

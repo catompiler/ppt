@@ -11,7 +11,7 @@
 
 
 // Стэк.
-#define TASK_UTILS_STACK_SIZE configMINIMAL_STACK_SIZE
+#define TASK_UTILS_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 // Длина очереди.
 #define QUEUE_UTILS_SIZE 4
 

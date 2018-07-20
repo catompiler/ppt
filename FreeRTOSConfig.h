@@ -28,9 +28,9 @@
 // Поддержка динамического выделения памяти.
 #define configSUPPORT_DYNAMIC_ALLOCATION            0
 // Проверка переполнения стека.
-#define configCHECK_FOR_STACK_OVERFLOW              2
+#define configCHECK_FOR_STACK_OVERFLOW              0//2
 // Сохранение максимального адреса стека.
-#define configRECORD_STACK_HIGH_ADDRESS             1
+#define configRECORD_STACK_HIGH_ADDRESS             0
 
 // Планировщик.
 // Использование вытеснения.
@@ -60,7 +60,7 @@
 // Длина очереди команд управления таймерами.
 #define configTIMER_QUEUE_LENGTH                    8
 // Размер стека задачи управления таймерами.
-#define configTIMER_TASK_STACK_DEPTH                configMINIMAL_STACK_SIZE
+#define configTIMER_TASK_STACK_DEPTH                (configMINIMAL_STACK_SIZE * 2)
 
 // IPC.
 // Уведомления потоков.
@@ -90,9 +90,9 @@
 
 // Статистика.
 // Сбор статистики времени выполнения.
-#define configGENERATE_RUN_TIME_STATS               1
+#define configGENERATE_RUN_TIME_STATS               0
 // Функционал для трассировки и визуализации выполнения.
-#define configUSE_TRACE_FACILITY                    1
+#define configUSE_TRACE_FACILITY                    0
 // Функции получения форматированной статистики.
 #define configUSE_STATS_FORMATTING_FUNCTIONS        0
 // Первый запуск задачи управления таймерами.
