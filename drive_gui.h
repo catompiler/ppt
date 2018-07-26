@@ -87,6 +87,11 @@ extern void drive_gui_update_tiles();
 extern void drive_gui_modbus_set_last_time();
 
 /**
+ * Устанавливает последнее время обработки callback BT для отображения статуса в GUI
+ */
+extern void drive_gui_modbus_bt_set_last_time();
+
+/**
  * Статус обмена сообщениями по Modbus для GUI
  */
 extern bool drive_gui_modbus_status_work(void);
@@ -95,6 +100,17 @@ extern bool drive_gui_modbus_status_work(void);
  * Статус простоя (ожидания) по Modbus для GUI
  */
 extern bool drive_gui_modbus_status_idle(void);
+
+
+/**
+ * Статус обмена сообщениями по BT Modbus для GUI
+ */
+extern bool drive_gui_modbus_bt_status_work(void);
+
+/**
+ * Статус простоя (ожидания) по BT Modbus для GUI
+ */
+extern bool drive_gui_modbus_bt_status_idle(void);
 
 extern bool drive_gui_menu_user_is(menu_user_t user);
 

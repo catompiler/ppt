@@ -54,7 +54,7 @@ typedef struct _Gui_Icon_Condition {
 EXTERN bool gui_statusbar_drive_ready();
 
 //! Таблица отображения иконок в зависимости от условий
-#define GUI_ICON_CONDITIONS_COUNT 24
+#define GUI_ICON_CONDITIONS_COUNT 26
 GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // состояние
     GUI_ICON_CONDITION(gui_statusbar_drive_ready,     NULL,   0,  THEME_COLOR_BLUE_L,    &icons_statusbar_anim_ready),
@@ -83,6 +83,9 @@ GUI_ICON_CONDITIONS(gui_icon_conditions, GUI_ICON_CONDITIONS_COUNT) {
     // информация
     GUI_ICON_CONDITION(drive_gui_modbus_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_work),
     GUI_ICON_CONDITION(drive_gui_modbus_status_idle,    NULL,   ICONS_STATUSBAR_VAL_MODBUS_IDLE,    THEME_COLOR_WHITE, NULL),
+    GUI_ICON_CONDITION(drive_gui_modbus_bt_status_work,    NULL,   0,                               THEME_COLOR_WHITE, &icons_statusbar_anim_modbus_bt_work),
+    GUI_ICON_CONDITION(drive_gui_modbus_bt_status_idle,    NULL,   ICONS_STATUSBAR_VAL_BT,    THEME_COLOR_WHITE, NULL),
+
     GUI_ICON_CONDITION(drive_ui_sound_disabled,         NULL,   ICONS_STATUSBAR_VAL_BEEP_OFF,    THEME_COLOR_WHITE, NULL),
     
     GUI_ICON_CONDITION(drive_gui_menu_user_is,  MENU_USER_ROOT,     ICONS_STATUSBAR_VAL_ROOT,    THEME_COLOR_WHITE, NULL),

@@ -81,6 +81,9 @@ HOME_TILES_VALUES(gui_tiles_values)
 // последнее время обработки callback_modbus
 static uint32_t drive_modbus_last_time; 
 
+// последнее время обработки callback_modbus BT
+static uint32_t drive_modbus_bt_last_time;
+
 //! Первый буфер кэша TFT.
 static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
 //! Второй буфер кэша TFT.
@@ -381,6 +384,7 @@ err_t drive_gui_init(drive_gui_init_t* gui_is)
     tft_cache.tft = gui_is->tft;
     
     drive_modbus_last_time = (uint32_t)time(NULL) - DRIVE_MODBUS_GUI_ICON_IDLE_SEC;
+    drive_modbus_bt_last_time = (uint32_t)time(NULL) - DRIVE_MODBUS_GUI_ICON_IDLE_SEC;
     
     //RETURN_ERR_IF_FAIL(drive_gui_init_tft());
     RETURN_ERR_IF_FAIL(gui_metro_init(&gui.gui, &graphics, &theme));
@@ -446,6 +450,13 @@ void drive_gui_modbus_set_last_time()
     drive_modbus_last_time = (uint32_t)time(NULL);
 }
 
+
+void drive_gui_modbus_bt_set_last_time()
+{
+    drive_modbus_bt_last_time = (uint32_t)time(NULL);
+}
+
+
 bool drive_gui_modbus_status_work()
 {
     uint32_t cur = (uint32_t)time(NULL);
@@ -460,6 +471,23 @@ bool drive_gui_modbus_status_idle()
     // и при этом последний прием/передача была N2 сек. назад - статус IDLE
     return ((cur - drive_modbus_last_time) >= DRIVE_MODBUS_GUI_ICON_WORK_SEC)\
             && ((cur - drive_modbus_last_time) < DRIVE_MODBUS_GUI_ICON_IDLE_SEC);
+}
+
+
+bool drive_gui_modbus_bt_status_work()
+{
+    uint32_t cur = (uint32_t)time(NULL);
+    // Если были прием/передача N секунд - статус WORK
+    return ((cur - drive_modbus_bt_last_time) < DRIVE_MODBUS_GUI_ICON_WORK_SEC);
+}
+
+bool drive_gui_modbus_bt_status_idle()
+{
+    uint32_t cur = (uint32_t)time(NULL);
+    // Если не было приема/передачи N секунд
+    // и при этом последний прием/передача была N2 сек. назад - статус IDLE
+    return ((cur - drive_modbus_bt_last_time) >= DRIVE_MODBUS_GUI_ICON_WORK_SEC)\
+            && ((cur - drive_modbus_bt_last_time) < DRIVE_MODBUS_GUI_ICON_IDLE_SEC);
 }
 
 bool drive_gui_menu_user_is(menu_user_t user)

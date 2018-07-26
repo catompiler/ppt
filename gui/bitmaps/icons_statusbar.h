@@ -75,6 +75,14 @@ static const uint8_t icons_statusbar_anim_modbus_work[ICONS_STATUSBAR_ANIM_MODBU
     ICONS_STATUSBAR_VAL_MODBUS_RX,
     ICONS_STATUSBAR_VAL_MODBUS_TX,
 };
+// прием/передача сообщений по Bluetoth Modbus
+#define ICONS_STATUSBAR_ANIM_MODBUS_BT_WORK 2
+static const uint8_t icons_statusbar_anim_modbus_bt_work[ICONS_STATUSBAR_ANIM_MODBUS_BT_WORK] =
+{
+    ICONS_STATUSBAR_VAL_NOTHING,
+    ICONS_STATUSBAR_VAL_BT,
+};
+
 
 static const uint8_t icons_statusbar_data[2088] =
 {

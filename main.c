@@ -785,7 +785,7 @@ static bool usart_bt_tx_callback(void)
 
 static void modbus_bt_on_msg_recv(void)
 {
-    drive_gui_modbus_set_last_time();
+    drive_gui_modbus_bt_set_last_time();
 
     BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
 
@@ -796,7 +796,7 @@ static void modbus_bt_on_msg_recv(void)
 
 static void modbus_bt_on_msg_sent(void)
 {
-    drive_gui_modbus_set_last_time();
+    drive_gui_modbus_bt_set_last_time();
 }
 
 /*
