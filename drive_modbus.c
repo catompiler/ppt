@@ -33,7 +33,6 @@ typedef struct _DriveModbusId {
 
 //! Тип интерфейса Modbus привода.
 typedef struct _Drive_modbus {
-    modbus_rtu_t* modbus;
     drive_modbus_id_t id;
     apply_settings_callback_t apply_settings_callback;
     save_settings_callback_t save_settings_callback;
@@ -741,29 +740,33 @@ modbus_rtu_error_t drive_modbus_on_custom_func(modbus_rtu_func_t func, const voi
 }
 
 
-err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_is)
+err_t drive_modbus_init(drive_modbus_init_t* drive_modbus_is)
 {
-    if(modbus == NULL) return E_NULL_POINTER;
-    
     drive_modbus.id.magic = DRIVE_ID_MAGIC;
     drive_modbus.id.major = DRIVE_ID_MAJOR;
     drive_modbus.id.minor = DRIVE_ID_MINOR;
     memcpy(drive_modbus.id.name, DRIVE_ID_NAME, strlen(DRIVE_ID_NAME) + 1);
     
-    drive_modbus.modbus = modbus;
     drive_modbus.apply_settings_callback = drive_modbus_is->apply_settings_callback;
     drive_modbus.save_settings_callback = drive_modbus_is->save_settings_callback;
     
-    modbus_rtu_set_read_coil_callback(drive_modbus.modbus, drive_modbus_on_read_coil);
-    modbus_rtu_set_read_din_callback(drive_modbus.modbus, drive_modbus_on_read_din);
-    modbus_rtu_set_read_holding_reg_callback(drive_modbus.modbus, drive_modbus_on_read_hold_reg);
-    modbus_rtu_set_read_input_reg_callback(drive_modbus.modbus, drive_modbus_on_read_inp_reg);
-    modbus_rtu_set_write_coil_callback(drive_modbus.modbus, drive_modbus_on_write_coil);
-    modbus_rtu_set_write_holding_reg_callback(drive_modbus.modbus, drive_modbus_on_write_reg);
-    modbus_rtu_set_report_slave_id_callback(drive_modbus.modbus, drive_modbus_on_report_slave_id);
-    modbus_rtu_set_read_file_record_callback(drive_modbus.modbus, drive_modbus_rtu_read_file_record);
-    modbus_rtu_set_write_file_record_callback(drive_modbus.modbus, drive_modbus_rtu_write_file_record);
-    modbus_rtu_set_custom_function_callback(drive_modbus.modbus, drive_modbus_on_custom_func);
+    return E_NO_ERROR;
+}
+
+err_t drive_modbus_setup(modbus_rtu_t* modbus)
+{
+    if(modbus == NULL) return E_NULL_POINTER;
+
+    modbus_rtu_set_read_coil_callback(modbus, drive_modbus_on_read_coil);
+    modbus_rtu_set_read_din_callback(modbus, drive_modbus_on_read_din);
+    modbus_rtu_set_read_holding_reg_callback(modbus, drive_modbus_on_read_hold_reg);
+    modbus_rtu_set_read_input_reg_callback(modbus, drive_modbus_on_read_inp_reg);
+    modbus_rtu_set_write_coil_callback(modbus, drive_modbus_on_write_coil);
+    modbus_rtu_set_write_holding_reg_callback(modbus, drive_modbus_on_write_reg);
+    modbus_rtu_set_report_slave_id_callback(modbus, drive_modbus_on_report_slave_id);
+    modbus_rtu_set_read_file_record_callback(modbus, drive_modbus_rtu_read_file_record);
+    modbus_rtu_set_write_file_record_callback(modbus, drive_modbus_rtu_write_file_record);
+    modbus_rtu_set_custom_function_callback(modbus, drive_modbus_on_custom_func);
     
     return E_NO_ERROR;
 }

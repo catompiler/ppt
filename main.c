@@ -2,8 +2,6 @@
  * @file main.c Главный файл проекта ППТ.
  */
 #include "stm32f10x.h"
-#define USART_STDIO
-#include "usart/usart_buf.h"
 #include "usart/usart_bus.h"
 #include "modbus/modbus_rtu.h"
 #include <stdio.h>
@@ -40,29 +38,27 @@
 #include <FreeRTOS.h>
 #include <list.h>
 #include <task.h>
+#include <errno.h>
 
-
-//! Буфер записи USART.
-#define USART_WRITE_BUFFER_SIZE 128
-static uint8_t usart_write_buffer[USART_WRITE_BUFFER_SIZE];
-//! Буфер чтения USART.
-#define USART_READ_BUFFER_SIZE 32
-static uint8_t usart_read_buffer[USART_READ_BUFFER_SIZE];
-//! Буферизированый USART.
-static usart_buf_t usart_buf;
-
-//! Шина USART для Modbus.
-static usart_bus_t usart_bus;
 
 //! GPIO контроля интерфейса RS485.
 #define RS485_IFACE_CTL_GPIO GPIOC
 //! Пин контроля интерфейса RS485.
 #define RS485_IFACE_CTL_PIN GPIO_Pin_9
 
-//! Modbus.
-static modbus_rtu_t modbus;
-//! Сообщения Modbus.
-static modbus_rtu_message_t modbus_rx_msg, modbus_tx_msg;
+//! Шина USART для Modbus 485.
+static usart_bus_t usart_bus_485;
+//! Modbus 485.
+static modbus_rtu_t modbus_485;
+//! Сообщения Modbus 485.
+static modbus_rtu_message_t modbus_485_rx_msg, modbus_485_tx_msg;
+
+//! Шина USART для Modbus BT.
+static usart_bus_t usart_bus_bt;
+//! Modbus BT.
+static modbus_rtu_t modbus_bt;
+//! Сообщения Modbus BT.
+static modbus_rtu_message_t modbus_bt_rx_msg, modbus_bt_tx_msg;
 
 //! Счётчик миллисекунд для функции gettimeofday.
 static uint32_t counter_ms_gtod = 0;
@@ -385,12 +381,12 @@ IRQ_ATTRIBS void UsageFault_Handler(void)
 
 IRQ_ATTRIBS void USART1_IRQHandler(void)
 {
-    usart_bus_irq_handler(&usart_bus);
+    usart_bus_irq_handler(&usart_bus_485);
 }
 
 IRQ_ATTRIBS void USART3_IRQHandler(void)
 {
-    usart_buf_irq_handler(&usart_buf);
+    usart_bus_irq_handler(&usart_bus_bt);
 }
 
 IRQ_ATTRIBS void SPI1_IRQHandler(void)
@@ -405,24 +401,26 @@ IRQ_ATTRIBS void SPI2_IRQHandler(void)
 
 IRQ_ATTRIBS void DMA1_Channel2_IRQHandler(void)
 {
+    usart_bus_dma_tx_channel_irq_handler(&usart_bus_bt) ||
     spi_bus_dma_rx_channel_irq_handler(&spi);
 }
 
 IRQ_ATTRIBS void DMA1_Channel3_IRQHandler(void)
 {
+    usart_bus_dma_rx_channel_irq_handler(&usart_bus_bt) ||
     spi_bus_dma_tx_channel_irq_handler(&spi);
 }
 
 IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
 {
-    usart_bus_dma_tx_channel_irq_handler(&usart_bus) ||
+    usart_bus_dma_tx_channel_irq_handler(&usart_bus_485) ||
     spi_bus_dma_rx_channel_irq_handler(&spi2) ||
     i2c_bus_dma_tx_channel_irq_handler(&i2c2);
 }
 
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
-    usart_bus_dma_rx_channel_irq_handler(&usart_bus) ||
+    usart_bus_dma_rx_channel_irq_handler(&usart_bus_485) ||
     spi_bus_dma_tx_channel_irq_handler(&spi2) ||
     i2c_bus_dma_rx_channel_irq_handler(&i2c2);
 }
@@ -709,6 +707,10 @@ static bool spi2_callback(void)
     return m95x_spi_callback(&eeprom);
 }
 
+/*
+ * Modbus rs485
+ */
+
 static void modbus_rs485_set_input(void)
 {
     RS485_IFACE_CTL_GPIO->BRR = RS485_IFACE_CTL_PIN;
@@ -719,38 +721,80 @@ static void modbus_rs485_set_output(void)
     RS485_IFACE_CTL_GPIO->BSRR = RS485_IFACE_CTL_PIN;
 }
 
-static bool usart_rx_byte_callback(uint8_t byte)
+static bool usart_485_rx_byte_callback(uint8_t byte)
 {
-    return modbus_rtu_usart_rx_byte_callback(&modbus, byte);
+    return modbus_rtu_usart_rx_byte_callback(&modbus_485, byte);
 }
 
-static bool usart_rx_callback(void)
+static bool usart_485_rx_callback(void)
 {
-    return modbus_rtu_usart_rx_callback(&modbus);
+    return modbus_rtu_usart_rx_callback(&modbus_485);
 }
 
-static bool usart_tx_callback(void)
+static bool usart_485_tx_callback(void)
 {
-    return modbus_rtu_usart_tx_callback(&modbus);
+    return modbus_rtu_usart_tx_callback(&modbus_485);
 }
 
-static bool usart_tc_callback(void)
+static bool usart_485_tc_callback(void)
 {
     modbus_rs485_set_input();
     
     return true;
 }
 
-static void modbus_on_msg_recv(void)
+static void modbus_485_on_msg_recv(void)
 {
     drive_gui_modbus_set_last_time();
     
-    if(drive_task_modbus_process_isr()){
-        portYIELD();
+    BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+
+    if(drive_task_modbus_process_isr(&modbus_485, true, &pxHigherPriorityTaskWoken)){
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
     }
 }
 
-static void modbus_on_msg_sent(void)
+static void modbus_485_on_msg_sent(void)
+{
+    drive_gui_modbus_set_last_time();
+}
+
+/*
+ * Modbus Bluetooth.
+ */
+
+static bool usart_bt_rx_byte_callback(uint8_t byte)
+{
+    return modbus_rtu_usart_rx_byte_callback(&modbus_bt, byte);
+}
+
+static bool usart_bt_rx_callback(void)
+{
+    return modbus_rtu_usart_rx_callback(&modbus_bt);
+}
+
+static bool usart_bt_tx_callback(void)
+{
+    return modbus_rtu_usart_tx_callback(&modbus_bt);
+}
+
+/*static bool usart_bt_tc_callback(void)
+{
+    return true;
+}*/
+
+static void modbus_bt_on_msg_recv(void)
+{
+    drive_gui_modbus_set_last_time();
+
+    BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+
+    if(drive_task_modbus_process_isr(&modbus_bt, false, &pxHigherPriorityTaskWoken)){
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+    }
+}
+
+static void modbus_bt_on_msg_sent(void)
 {
     drive_gui_modbus_set_last_time();
 }
@@ -773,7 +817,7 @@ static void remap_config(void)
     }
     GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_TIM4, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
+    //GPIO_PinRemapConfig(GPIO_Remap_USART2, ENABLE);
 }
 
 static void init_periph_clock(void)
@@ -830,30 +874,30 @@ static void init_periph_clock(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_BKP, ENABLE);
 }
 
-static void init_usart(void)
-{
-    GPIO_InitTypeDef gpio_tx =
-        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
-    GPIO_InitTypeDef gpio_rx =
-        {.GPIO_Pin = GPIO_Pin_11, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
-    GPIO_Init(GPIOC, &gpio_tx);
-    GPIO_Init(GPIOC, &gpio_rx);
-    
-    USART_InitTypeDef usart_is =
-        {.USART_BaudRate = 115200, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
-         .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
-    USART_Init(USART3, &usart_is);
-    USART_Cmd(USART3, ENABLE);
-    
-    usart_buf_init_t usartb_is = {.usart = USART3,
-         .write_buffer = usart_write_buffer, .write_buffer_size = USART_WRITE_BUFFER_SIZE,
-         .read_buffer = usart_read_buffer, .read_buffer_size = USART_READ_BUFFER_SIZE};
-    usart_buf_init(&usart_buf, &usartb_is);
-    usart_setup_stdio(&usart_buf);
-    
-    NVIC_SetPriority(USART3_IRQn, IRQ_PRIOR_USART);
-    NVIC_EnableIRQ(USART3_IRQn);
-}
+//static void init_usart(void)
+//{
+//    GPIO_InitTypeDef gpio_tx =
+//        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+//    GPIO_InitTypeDef gpio_rx =
+//        {.GPIO_Pin = GPIO_Pin_11, .GPIO_Speed = GPIO_Speed_50MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+//    GPIO_Init(GPIOC, &gpio_tx);
+//    GPIO_Init(GPIOC, &gpio_rx);
+//
+//    USART_InitTypeDef usart_is =
+//        {.USART_BaudRate = 115200, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
+//         .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
+//    USART_Init(USART3, &usart_is);
+//    USART_Cmd(USART3, ENABLE);
+//
+//    usart_buf_init_t usartb_is = {.usart = USART3,
+//         .write_buffer = usart_write_buffer, .write_buffer_size = USART_WRITE_BUFFER_SIZE,
+//         .read_buffer = usart_read_buffer, .read_buffer_size = USART_READ_BUFFER_SIZE};
+//    usart_buf_init(&usart_buf, &usartb_is);
+//    usart_setup_stdio(&usart_buf);
+//
+//    NVIC_SetPriority(USART3_IRQn, IRQ_PRIOR_USART);
+//    NVIC_EnableIRQ(USART3_IRQn);
+//}
 
 static void init_PDR(void)
 {
@@ -975,53 +1019,52 @@ static void init_nvdata(void)
     }
 }
 
-/*
-static void init_modbus_usart2(void)
+static void init_modbus_usart_bt(void)
 {
     GPIO_InitTypeDef gpio_tx =
-        {.GPIO_Pin = GPIO_Pin_5, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
+        {.GPIO_Pin = GPIO_Pin_10, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
     GPIO_InitTypeDef gpio_rx =
-        {.GPIO_Pin = GPIO_Pin_6, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_IN_FLOATING};
+        {.GPIO_Pin = GPIO_Pin_11, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_IPU};
     
     USART_InitTypeDef usart_is =
-        {.USART_BaudRate = 9600, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
+        {.USART_BaudRate = 38400, .USART_WordLength = USART_WordLength_8b, .USART_StopBits = USART_StopBits_1,
          .USART_Parity = USART_Parity_No, .USART_Mode = USART_Mode_Rx | USART_Mode_Tx, .USART_HardwareFlowControl = USART_HardwareFlowControl_None};
     
     usart_bus_init_t usartb_is = {
-        .usart_device = USART2,
-        .dma_tx_channel = DMA1_Channel7,
-        .dma_rx_channel = DMA1_Channel6
+        .usart_device = USART3,
+        .dma_tx_channel = DMA1_Channel2,
+        .dma_rx_channel = DMA1_Channel3
     };
     
-    param_t* baud_param = settings_param_by_id(PARAM_ID_MODBUS_BAUD);
+    /*param_t* baud_param = settings_param_by_id(PARAM_ID_MODBUS_BAUD);
     if(baud_param){
         usart_is.USART_BaudRate = settings_param_valueu(baud_param);
-    }
+    }*/
     
-    GPIO_Init(GPIOD, &gpio_tx);
-    GPIO_Init(GPIOD, &gpio_rx);
+    GPIO_Init(GPIOC, &gpio_tx);
+    GPIO_Init(GPIOC, &gpio_rx);
     
-    USART_Init(USART2, &usart_is);
-    USART_Cmd(USART2, ENABLE);
-    usart_bus_init(&usart_bus, &usartb_is);
+    USART_Init(USART3, &usart_is);
+    USART_Cmd(USART3, ENABLE);
+    usart_bus_init(&usart_bus_bt, &usartb_is);
     
-    usart_bus_set_rx_callback(&usart_bus, usart_rx_callback);
-    usart_bus_set_tx_callback(&usart_bus, usart_tx_callback);
-    usart_bus_set_rx_byte_callback(&usart_bus, usart_rx_byte_callback);
+    usart_bus_set_rx_callback(&usart_bus_bt, usart_bt_rx_callback);
+    usart_bus_set_tx_callback(&usart_bus_bt, usart_bt_tx_callback);
+    //usart_bus_set_tc_callback(&usart_bus_bt, usart_bt_tc_callback);
+    usart_bus_set_rx_byte_callback(&usart_bus_bt, usart_bt_rx_byte_callback);
     
-    usart_bus_set_idle_mode(&usart_bus, USART_IDLE_MODE_END_RX);
+    usart_bus_set_idle_mode(&usart_bus_bt, USART_IDLE_MODE_END_RX);
     
-    NVIC_SetPriority(USART2_IRQn, IRQ_PRIOR_MODBUS_USART);
-    NVIC_EnableIRQ(USART2_IRQn);
+    NVIC_SetPriority(USART3_IRQn, IRQ_PRIOR_MODBUS_USART);
+    NVIC_EnableIRQ(USART3_IRQn);
     
-    //NVIC_SetPriority(DMA1_Channel6_IRQn, IRQ_PRIOR_DMA_CH6);
-    //NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-    //NVIC_SetPriority(DMA1_Channel7_IRQn, IRQ_PRIOR_DMA_CH7);
-    //NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+    //NVIC_SetPriority(DMA1_Channel2_IRQn, IRQ_PRIOR_DMA_CH2);
+    //NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+    //NVIC_SetPriority(DMA1_Channel3_IRQn, IRQ_PRIOR_DMA_CH3);
+    //NVIC_EnableIRQ(DMA1_Channel3_IRQn);
 }
-*/
 
-static void init_modbus_usart(void)
+static void init_modbus_usart_485(void)
 {
     GPIO_InitTypeDef gpio_tx =
         {.GPIO_Pin = GPIO_Pin_9, .GPIO_Speed = GPIO_Speed_10MHz, .GPIO_Mode = GPIO_Mode_AF_PP};
@@ -1048,14 +1091,14 @@ static void init_modbus_usart(void)
     
     USART_Init(USART1, &usart_is);
     USART_Cmd(USART1, ENABLE);
-    usart_bus_init(&usart_bus, &usartb_is);
+    usart_bus_init(&usart_bus_485, &usartb_is);
     
-    usart_bus_set_rx_callback(&usart_bus, usart_rx_callback);
-    usart_bus_set_tx_callback(&usart_bus, usart_tx_callback);
-    usart_bus_set_tc_callback(&usart_bus, usart_tc_callback);
-    usart_bus_set_rx_byte_callback(&usart_bus, usart_rx_byte_callback);
+    usart_bus_set_rx_callback(&usart_bus_485, usart_485_rx_callback);
+    usart_bus_set_tx_callback(&usart_bus_485, usart_485_tx_callback);
+    usart_bus_set_tc_callback(&usart_bus_485, usart_485_tc_callback);
+    usart_bus_set_rx_byte_callback(&usart_bus_485, usart_485_rx_byte_callback);
     
-    usart_bus_set_idle_mode(&usart_bus, USART_IDLE_MODE_END_RX);
+    usart_bus_set_idle_mode(&usart_bus_485, USART_IDLE_MODE_END_RX);
     
     NVIC_SetPriority(USART1_IRQn, IRQ_PRIOR_MODBUS_USART);
     NVIC_EnableIRQ(USART1_IRQn);
@@ -1066,11 +1109,26 @@ static void init_modbus_usart(void)
     NVIC_EnableIRQ(DMA1_Channel5_IRQn);*/
 }
 
-static void init_modbus(void)
+static void init_modbus_bt(void)
+{
+    modbus_rtu_init_t modbus_is;
+
+    modbus_is.usart = &usart_bus_bt;
+    modbus_is.mode = MODBUS_RTU_MODE_SLAVE;
+    modbus_is.address = 0x1;
+    modbus_is.rx_message = &modbus_bt_rx_msg;
+    modbus_is.tx_message = &modbus_bt_tx_msg;
+
+    modbus_rtu_init(&modbus_bt, &modbus_is);
+    modbus_rtu_set_msg_recv_callback(&modbus_bt, modbus_bt_on_msg_recv);
+    modbus_rtu_set_msg_sent_callback(&modbus_bt, modbus_bt_on_msg_sent);
+}
+
+static void init_modbus_485(void)
 {
     modbus_rtu_init_t modbus_is;
     
-    modbus_is.usart = &usart_bus;
+    modbus_is.usart = &usart_bus_485;
     modbus_is.mode = MODBUS_RTU_MODE_SLAVE;
     param_t* address_param = settings_param_by_id(PARAM_ID_MODBUS_ADDRESS);
     if(address_param){
@@ -1078,12 +1136,12 @@ static void init_modbus(void)
     }else{
         modbus_is.address = 0xaa;//0x10;
     }
-    modbus_is.rx_message = &modbus_rx_msg;
-    modbus_is.tx_message = &modbus_tx_msg;
+    modbus_is.rx_message = &modbus_485_rx_msg;
+    modbus_is.tx_message = &modbus_485_tx_msg;
     
-    modbus_rtu_init(&modbus, &modbus_is);
-    modbus_rtu_set_msg_recv_callback(&modbus, modbus_on_msg_recv);
-    modbus_rtu_set_msg_sent_callback(&modbus, modbus_on_msg_sent);
+    modbus_rtu_init(&modbus_485, &modbus_is);
+    modbus_rtu_set_msg_recv_callback(&modbus_485, modbus_485_on_msg_recv);
+    modbus_rtu_set_msg_sent_callback(&modbus_485, modbus_485_on_msg_sent);
     
     modbus_rs485_set_input();
 }
@@ -1095,7 +1153,10 @@ static void init_drive_modbus(void)
     drive_modbus_is.apply_settings_callback = (apply_settings_callback_t)drive_tasks_apply_settings;
     drive_modbus_is.save_settings_callback = (save_settings_callback_t)drive_tasks_save_settings;
     
-    drive_modbus_init(&modbus, &drive_modbus_is);
+    drive_modbus_init(&drive_modbus_is);
+
+    drive_modbus_setup(&modbus_485);
+    drive_modbus_setup(&modbus_bt);
 }
 
 static void init_spi(void)
@@ -2140,7 +2201,7 @@ static void init_drive_tasks(void)
     drive_task_triacs_init(DRIVE_TASK_PRIORITY_TRIACS);
     drive_task_main_init(DRIVE_TASK_PRIORITY_MAIN);
     drive_task_modbus_init(DRIVE_TASK_PRIORITY_MODBUS);
-    drive_task_modbus_setup(&modbus, modbus_rs485_set_output, modbus_rs485_set_input);
+    drive_task_modbus_setup(modbus_rs485_set_output, modbus_rs485_set_input);
     drive_task_storage_init(DRIVE_TASK_PRIORITY_STORAGE);
     drive_task_utils_init(DRIVE_TASK_PRIORITY_UTILS);
     drive_task_utils_set_reset_ui_callback(drive_reinit_gui);
@@ -2240,12 +2301,12 @@ int main(void)
     
     remap_config();
 
-    init_usart();
+    //init_usart();
     
     init_rtc();
     init_hires_timer();
     
-    printf("STM32 MCU\r\n");
+    //printf("STM32 MCU\r\n");
     
     init_spi2();
     init_eeprom();
@@ -2284,8 +2345,10 @@ int main(void)
         drive_watchdog_timeout();
     }
     
-    init_modbus_usart();
-    init_modbus();
+    init_modbus_usart_485();
+    init_modbus_485();
+    init_modbus_usart_bt();
+    init_modbus_bt();
     init_drive_modbus();
     
     if(drive_dip_pin_state(DRIVE_DIP_UI_PAD)){

@@ -21,10 +21,16 @@ typedef struct _Drive_Modbus_Init {
 
 /**
  * Инициализирует интерфейс Modbus привода.
- * @param modbus Протокол Modbus.
  * @return Код ошибки.
  */
-extern err_t drive_modbus_init(modbus_rtu_t* modbus, drive_modbus_init_t* drive_modbus_is);
+extern err_t drive_modbus_init(drive_modbus_init_t* drive_modbus_is);
+
+/**
+ * Настраивает интерфейс modbus на взаимодействие с приводом.
+ * @param modbus Интерфейс Modbus.
+ * @return Код ошибки.
+ */
+extern err_t drive_modbus_setup(modbus_rtu_t* modbus);
 
 #endif /* DRIVE_MODBUS_H */
 

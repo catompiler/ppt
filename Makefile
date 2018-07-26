@@ -21,8 +21,7 @@ OBJECTS   = main.o FreeRTOS-openocd.o power.o triac.o triac_pair.o\
             drive_task_selftune.o drive_dip.o
 
 # Собственные библиотеки в исходниках.
-SRC_LIBS  = circular_buffer usart_buf newlib_stubs\
-            spi dma future mutex delay rtc\
+SRC_LIBS  = newlib_stubs spi dma future mutex delay rtc\
             tft9341 tft9341_cache graphics painter font\
             i2c pca9555 list key_input cordic32\
             pid_controller m95x menu localization\
