@@ -855,8 +855,8 @@
 #define TR_ID_DRIVE_WARNING_THERMAL_OVERLOAD          2205 //!< Перегрев.
 #define TR_ID_DRIVE_WARNING_FAN_FAIL                  2206 //!< Ошибка вентилятора
 #define TR_ID_DRIVE_WARNING_HEATSINK_TEMP             2207 //!< Перегрев радиатора
-#define TR_ID_DRIVE_WARNING_TRIAC                     2108 //!< Ошибка тиристоров.
-#define TR_ID_DRIVE_WARNING_SENSOR                    2109 //!< Ошибка датчиков.
+#define TR_ID_DRIVE_WARNING_TRIAC                     2208 //!< Ошибка тиристоров.
+#define TR_ID_DRIVE_WARNING_SENSOR                    2209 //!< Ошибка датчиков.
 //! Описание предупреждений питания привода
 #define TR_ID_DRIVE_POWER_WARNING_UNDERFLOW_Ua          2221 //!<
 #define TR_ID_DRIVE_POWER_WARNING_OVERFLOW_Ua           2222 //!<
