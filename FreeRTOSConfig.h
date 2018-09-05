@@ -143,4 +143,7 @@ extern uint32_t getHiresCounterValue(void);
 #define INCLUDE_xTaskAbortDelay                     0
 #define INCLUDE_xTaskGetHandle                      0
 
+//extern void vFreeRtosAssert(void);
+//#define configASSERT( x ) if( ( x ) == 0 ) { vFreeRtosAssert(); }
+
 #endif  //FREERTOS_CONFIG_H

@@ -2283,6 +2283,14 @@ uint32_t getHiresCounterValue(void)
 
 #endif
 
+#if configASSERT_DEFINED == 1
+void vFreeRtosAssert(void)
+{
+    taskDISABLE_INTERRUPTS();
+    for( ;; );
+}
+#endif
+
 int main(void)
 {
     // ACTLR
@@ -2303,17 +2311,16 @@ int main(void)
 
     //init_usart();
     
-    init_rtc();
-    init_hires_timer();
-    
     //printf("STM32 MCU\r\n");
-    
+
     init_spi2();
     init_eeprom();
     init_storage();
     
+    __enable_irq();
+
     init_nvdata();
-    
+
     drive_events_init();
     if(drive_events_read() != E_NO_ERROR){
         drive_events_reset();
@@ -2324,6 +2331,11 @@ int main(void)
         settings_default();
     }
     
+    __disable_irq();
+
+    init_rtc();
+    init_hires_timer();
+
     init_drive_tasks();
     
     init_gpio();
