@@ -440,11 +440,9 @@ static void drive_regulator_process_impl(void)
             mid_filter3i_put(&regulator.rpm_mid, rpm_rot_cur_max);
             rpm_rot_cur_max = mid_filter3i_value(&regulator.rpm_mid);
 
-            bool rpm_clamp = rpm_rot_ref > rpm_rot_cur_max;
-
-            if(rpm_clamp){
-                    rpm_rot_ref = rpm_rot_cur_max;
-                    ramp_adjust_current_reference(&regulator.ramp, rpm_rot_cur_max, rpm_rot_max);
+            if(rpm_rot_ref > rpm_rot_cur_max){
+                rpm_rot_ref = rpm_rot_cur_max;
+                //ramp_adjust_current_reference(&regulator.ramp, rpm_rot_cur_max, rpm_rot_max);
             }
 
             regulator.rpm_rot_ref = rpm_rot_ref;
