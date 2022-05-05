@@ -1699,7 +1699,6 @@ static bool drive_regulate(void)
     
     if(!drive_can_open_triacs()){
         drive_regulator_adjust_cur_reference();
-        return false;
     }
 
     drive_regulator_regulate_speed(DRIVE_PID_DT);
@@ -2893,15 +2892,15 @@ void drive_process_triacs_iter(void)
     err_t calc_err = E_NO_ERROR;
     bool calculated = drive_power_calc_values(DRIVE_FAST_POWER_CHANNELS, &calc_err);
     
+    if(calculated && calc_err == E_NO_ERROR){
+        drive_regulate_current();
+    }
+
     if(phase != PHASE_UNK && drive_can_open_triacs()){
         
         phase_t last_open_phase = drive_phase_state_half_phase();
         
         int16_t offset = 0;
-        
-        if(calculated && calc_err == E_NO_ERROR){
-            drive_regulate_current();
-        }
         
         CRITICAL_ENTER();
         
