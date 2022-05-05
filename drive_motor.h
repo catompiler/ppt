@@ -10,6 +10,11 @@
 #include "fixed/fixed32.h"
 #include <stdbool.h>
 
+//! Максимальное значение вычисленных оборотов в fixed32_t
+#define DRIVE_MOTOR_RPM_MAX_F INT32_MAX
+//! Минимальное значение вычисленных оборотов в fixed32_t
+#define DRIVE_MOTOR_RPM_MIN_F INT32_MIN
+
 
 /**
  * Инициализирует двигатель привода.

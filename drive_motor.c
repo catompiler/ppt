@@ -253,6 +253,21 @@ void drive_motor_set_ir_compensation_enabled(bool enabled)
 static fixed32_t drive_motor_calc_rpm(fixed32_t U_minus_IR, fixed32_t I_exc)
 {
     fixed32_t C_Iexc = fixed32_mul((int64_t)motor.Cn, I_exc);
+
+    // Абсолютное значение напряжения.
+    fixed32_t U_minus_IR_abs = fixed_abs(U_minus_IR);
+    // Вычислим минимальное значение C_Iexc (при максимуме оборотов 0x7fff.ffff).
+    fixed32_t C_Iexc_min = fixed32_div((int64_t)U_minus_IR_abs, DRIVE_MOTOR_RPM_MAX_F);
+    // Если текущее значение меньше минимального.
+    if(C_Iexc <= C_Iexc_min){
+        // Вернём возможный максимум.
+        if(U_minus_IR >= 0){
+            return DRIVE_MOTOR_RPM_MAX_F;
+        }else{
+            return DRIVE_MOTOR_RPM_MIN_F;
+        }
+    }
+
     fixed32_t N = fixed32_div((int64_t)U_minus_IR, C_Iexc);
     
     return N;
