@@ -203,6 +203,12 @@ extern phase_t drive_phase_sync_next_phase(void);
 extern bool drive_phase_sync_calc_offsets(void);
 
 /**
+ * Вычисляет смещение фаз относительно предыдущих.
+ * @return Флаг расчёта.
+ */
+extern bool drive_phase_sync_calc_deltas(void);
+
+/**
  * Выполняет вычисления и регулирование
  * синхронизации с фазами.
  * @return Флаг разрешения регулирования.
