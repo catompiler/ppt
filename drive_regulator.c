@@ -184,9 +184,6 @@ void drive_regulator_adjust_cur_reference(void)
     }
     
     ramp_adjust_current_reference(&regulator.ramp, cur_val, max_val);
-    
-    pid_controller_reset(&regulator.spd_pid);
-    pid_controller_reset(&regulator.rot_pid);
 }
 
 void drive_regulator_start(void)
