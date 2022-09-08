@@ -1680,7 +1680,7 @@ static void drive_update_digital_outputs(void)
 static bool drive_can_open_triacs(void)
 {
     if(drive_phase_state_errors() != PHASE_NO_ERROR) return false;
-    if(!drive_phase_sync_synchronized()) return  false;
+    //if(!drive_phase_sync_synchronized()) return  false;
     //if(drive_dio_output_type_state(DRIVE_DIO_OUT_USER) == DRIVE_DIO_ON) return false;
     if(!drive_running()) return false;
     
