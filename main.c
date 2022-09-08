@@ -401,28 +401,28 @@ IRQ_ATTRIBS void SPI2_IRQHandler(void)
 
 IRQ_ATTRIBS void DMA1_Channel2_IRQHandler(void)
 {
-    usart_bus_dma_tx_channel_irq_handler(&usart_bus_bt) ||
-    spi_bus_dma_rx_channel_irq_handler(&spi);
+    if(usart_bus_dma_tx_channel_irq_handler(&usart_bus_bt)) return;
+    if(spi_bus_dma_rx_channel_irq_handler(&spi)) return;
 }
 
 IRQ_ATTRIBS void DMA1_Channel3_IRQHandler(void)
 {
-    usart_bus_dma_rx_channel_irq_handler(&usart_bus_bt) ||
-    spi_bus_dma_tx_channel_irq_handler(&spi);
+    if(usart_bus_dma_rx_channel_irq_handler(&usart_bus_bt)) return;
+    if(spi_bus_dma_tx_channel_irq_handler(&spi)) return;
 }
 
 IRQ_ATTRIBS void DMA1_Channel4_IRQHandler(void)
 {
-    usart_bus_dma_tx_channel_irq_handler(&usart_bus_485) ||
-    spi_bus_dma_rx_channel_irq_handler(&spi2) ||
-    i2c_bus_dma_tx_channel_irq_handler(&i2c2);
+    if(usart_bus_dma_tx_channel_irq_handler(&usart_bus_485)) return;
+    if(spi_bus_dma_rx_channel_irq_handler(&spi2)) return;
+    if(i2c_bus_dma_tx_channel_irq_handler(&i2c2)) return;
 }
 
 IRQ_ATTRIBS void DMA1_Channel5_IRQHandler(void)
 {
-    usart_bus_dma_rx_channel_irq_handler(&usart_bus_485) ||
-    spi_bus_dma_tx_channel_irq_handler(&spi2) ||
-    i2c_bus_dma_rx_channel_irq_handler(&i2c2);
+    if(usart_bus_dma_rx_channel_irq_handler(&usart_bus_485)) return;
+    if(spi_bus_dma_tx_channel_irq_handler(&spi2)) return;
+    if(i2c_bus_dma_rx_channel_irq_handler(&i2c2)) return;
 }
 
 IRQ_ATTRIBS void DMA1_Channel6_IRQHandler(void)
