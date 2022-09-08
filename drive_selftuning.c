@@ -40,7 +40,7 @@ typedef struct _Selftuning_Tree_Item {
 } tuning_tree_item_t;
 
 //! Число элементов пула дерева (количесвто элементов для самонастройки).
-#define TUNING_POOL_SIZE DRIVE_POWER_OSC_CHANNEL_LEN //100
+#define TUNING_POOL_SIZE 128 //DRIVE_POWER_OSC_CHANNEL_LEN
 
 //! Пул элементов дерева самонастройки.
 typedef struct _Tuning_Tree_Pool {
