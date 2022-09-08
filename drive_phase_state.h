@@ -14,15 +14,6 @@
 //! Число фаз.
 #define PHASES_COUNT 3
 
-//! Идеальное время между фазами.
-#define PHASE_TIME_US 6667
-//! Максимальная разница во времени между фазами.
-#define PHASE_DELTA_US_MAX 250 // 0.25 мс
-//! Минимальный допустимый интервал времени между фазами.
-#define PHASE_TIME_US_MIN (PHASE_TIME_US - PHASE_DELTA_US_MAX)
-//! Максимальный допустимый интервал времени между фазами.
-#define PHASE_TIME_US_MAX (PHASE_TIME_US + PHASE_DELTA_US_MAX)
-
 
 /*
  * Структуры для отслеживания состояния фаз.
@@ -52,11 +43,7 @@ typedef enum _DrivePhaseErr {
     PHASE_C_ERROR      = 0x8,
     PHASE_AB_ERROR     = 0x6,
     PHASE_BC_ERROR     = 0xC,
-    PHASE_AC_ERROR     = 0xA,
-    PHASE_UNK_TIME_ERROR = 0x10,
-    PHASE_A_TIME_ERROR = 0x20,
-    PHASE_B_TIME_ERROR = 0x40,
-    PHASE_C_TIME_ERROR = 0x80
+    PHASE_AC_ERROR     = 0xA
 } drive_phase_error_t;
 
 //! Тип ошибок фаз.
@@ -130,20 +117,6 @@ extern phase_t drive_phase_state_current_phase(void);
  * @return Направление.
  */
 extern drive_dir_t drive_phase_state_direction(void);
-
-/**
- * Получает время между датчиками нуля фазы.
- * @param phase Фаза.
- * @return Время между датчиками нуля.
- */
-extern phase_time_t drive_phase_state_phase_time(phase_t phase);
-
-/**
- * Получает флаг допустимости времени между срабатываниями датчиков нуля.
- * @param time Время между срабатываниями датчиков нуля.
- * @return Флаг допустимости времени между срабатываниями датчиков нуля.
- */
-extern bool drive_phase_state_time_valid(phase_time_t time);
 
 /**
  * Получает следующую фазу после заданной при заданном направлении вращения.

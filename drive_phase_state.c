@@ -105,13 +105,6 @@ phase_states [PHASE_STATES_COUNT][PHASE_VALUES_COUNT] = {
     },*/
 };
 
-#define PHASE_TIME_ERRORS_COUNT 3
-static const drive_phase_error_t
-phase_time_errors[PHASE_TIME_ERRORS_COUNT] = {
-    PHASE_A_TIME_ERROR,
-    PHASE_B_TIME_ERROR,
-    PHASE_C_TIME_ERROR
-};
 
 //! Тип состояния фазы.
 typedef struct _DrivePhaseState {
@@ -122,7 +115,6 @@ typedef struct _DrivePhaseState {
     bool zero_reached; //!< Флаг прохождения нуля.
     drive_dir_t drive_dir; //!< Направление.
     drive_phase_errors_t phase_errs; //!< Ошибки.
-    phase_time_t phases_time[PHASES_COUNT]; //!< Время между датчиками нуля.
     drive_phase_state_error_callback_t error_callback; //!< Каллбэк ошибки фаз.
 } drive_phase_state_t;
 
@@ -134,31 +126,6 @@ ALWAYS_INLINE static void drive_phase_state_on_error(void)
     if(state.error_callback) state.error_callback();
 }
 
-ALWAYS_INLINE static void drive_phase_state_set_time(phase_t phase, phase_time_t time)
-{
-    if(phase != PHASE_UNK){
-        state.phases_time[phase - 1] = time;
-    }
-}
-
-ALWAYS_INLINE static drive_phase_error_t drive_phase_state_get_time_error(phase_t phase)
-{
-    if(phase == PHASE_UNK) return PHASE_UNK_TIME_ERROR;
-    
-    return phase_time_errors[phase - 1];
-}
-
-ALWAYS_INLINE static phase_time_t drive_phase_state_delta(phase_time_t time)
-{
-    if(time < PHASE_TIME_US) return PHASE_TIME_US - time;
-    return time - PHASE_TIME_US;
-}
-
-ALWAYS_INLINE static bool drive_phase_state_time_check(phase_time_t time)
-{
-    if(drive_phase_state_delta(time) > PHASE_DELTA_US_MAX) return false;
-    return true;
-}
 
 err_t drive_phase_state_init(void)
 {
@@ -174,14 +141,6 @@ void drive_phase_state_set_error_callback(drive_phase_state_error_callback_t cal
 
 void drive_phase_state_handle(phase_t phase)
 {
-    phase_time_t time = 0;
-    
-    time = drive_phase_sync_delta(phase);
-    
-    // Если время равно нулю - скорее всего было
-    // переполнение - установим время в максимум + 1.
-    if(time == 0) time = PHASE_TIME_US_MAX + 1;
-    
     const phase_state_values_t* state_values = 
                     &phase_states[state.state][phase];
     
@@ -192,12 +151,6 @@ void drive_phase_state_handle(phase_t phase)
     state.cur_phase = phase;
     
     state.zero_reached = true;
-    
-    drive_phase_state_set_time(phase, time);
-    
-    if(!drive_phase_state_time_check(time)){
-        state.phase_errs |= drive_phase_state_get_time_error(phase);
-    }
     
     if(state.phase_errs != PHASE_NO_ERROR) drive_phase_state_on_error();
 }
@@ -238,18 +191,6 @@ phase_t drive_phase_state_last_phase(void)
 drive_dir_t drive_phase_state_direction(void)
 {
     return state.drive_dir;
-}
-
-phase_time_t drive_phase_state_phase_time(phase_t phase)
-{
-    if(phase == PHASE_UNK) return 0;
-    
-    return state.phases_time[phase - 1];
-}
-
-bool drive_phase_state_time_valid(phase_time_t time)
-{
-    return drive_phase_state_time_check(time);
 }
 
 #define NEXT_PHASE_TABLE
